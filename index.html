@@ -14,7 +14,6 @@ body {
   color: #2d3748;
 }
 
-/* HEADER */
 .header {
   background: linear-gradient(135deg,#1a2a44,#243b63);
   color: white;
@@ -22,7 +21,6 @@ body {
   text-align: center;
 }
 
-/* FILTROS */
 .filters {
   display:flex;
   justify-content:center;
@@ -38,19 +36,11 @@ body {
   cursor:pointer;
 }
 
-.filter-btn:hover,
-.filter-btn.active {
+.filter-btn:hover {
   background:#1a2a44;
   color:white;
 }
 
-/* SELECT */
-.select-box {
-  text-align:center;
-  margin-bottom:20px;
-}
-
-/* GRID */
 .grid {
   max-width:1100px;
   margin:auto;
@@ -60,18 +50,12 @@ body {
   padding:20px;
 }
 
-/* CARD */
 .card {
   background:white;
   padding:20px;
   border-radius:18px;
   box-shadow:0 10px 25px rgba(0,0,0,0.06);
   cursor:pointer;
-  transition:0.2s;
-}
-
-.card:hover {
-  transform:translateY(-4px);
 }
 
 .badge {
@@ -114,7 +98,6 @@ body {
   overflow-y:auto;
 }
 
-/* SECTIONS */
 .section {
   margin-top:15px;
   background:#f7f8fa;
@@ -127,7 +110,6 @@ body {
   font-weight:600;
 }
 
-.section-content { margin-top:8px; }
 .hidden { display:none; }
 
 .comp {
@@ -148,12 +130,8 @@ body {
 
 <div class="filters">
   <button onclick="setMode('todos')">Todos</button>
-  <button onclick="setMode('piso')">Piso</button>
-  <button onclick="setMode('vista')">Vista</button>
-  <button onclick="setMode('um')">Selecionar</button>
 </div>
 
-<div class="select-box" id="selectBox"></div>
 <div class="grid" id="grid"></div>
 
 <!-- MODAL -->
