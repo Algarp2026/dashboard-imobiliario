@@ -116,7 +116,7 @@ function render(){
   }).join("");
 }
 
-/* ================= MODAL ================= */
+/* ================= MODAL PRINCIPAL ================= */
 
 function abrir(encoded){
 
@@ -151,7 +151,7 @@ function abrir(encoded){
 
       return `
         <div class="compRow" 
-             onclick='event.stopPropagation(); abrir("${encodeURIComponent(JSON.stringify(c))}")'>
+             onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
 
           <div>
             <strong>${c.Empreendimento} - ${c.Fração}</strong><br>
@@ -181,7 +181,6 @@ function abrir(encoded){
     </div>
 
     <div class="pricingGrid">
-
       <div class="priceBox blue">
         <div class="label">Fallback</div>
         <div class="value">${Math.round(fallback).toLocaleString()}€</div>
@@ -197,33 +196,49 @@ function abrir(encoded){
         <div class="value">${ia.valor.toLocaleString()}€</div>
         <div class="desc">${ia.exp}</div>
       </div>
-
     </div>
 
     <div class="section">
-      <div class="section-header" onclick="toggle(this)">
-        🔴 Diretos (${grupos.diretos.length})
-      </div>
+      <div class="section-header" onclick="toggle(this)">🔴 Diretos (${grupos.diretos.length})</div>
       <div class="section-body">${renderLista(grupos.diretos)}</div>
     </div>
 
     <div class="section">
-      <div class="section-header" onclick="toggle(this)">
-        🟠 Indiretos (${grupos.indiretos.length})
-      </div>
+      <div class="section-header" onclick="toggle(this)">🟠 Indiretos (${grupos.indiretos.length})</div>
       <div class="section-body">${renderLista(grupos.indiretos)}</div>
     </div>
 
     <div class="section">
-      <div class="section-header" onclick="toggle(this)">
-        🟡 Pouco concorrente (${grupos.poucos.length})
-      </div>
+      <div class="section-header" onclick="toggle(this)">🟡 Pouco (${grupos.poucos.length})</div>
       <div class="section-body">${renderLista(grupos.poucos)}</div>
     </div>
   `;
 
   document.getElementById("modal").style.display = "block";
 }
+
+/* ================= POPUP CONCORRENTE ================= */
+
+function abrirConcorrente(encoded){
+
+  const c = JSON.parse(decodeURIComponent(encoded));
+
+  const abp = c["Área Bruta"] || c["ABP"] || "-";
+  const varanda = c["Varanda"] || c["Varanda/Terraço"] || "-";
+  const total = c["Área Total"] || c["Total"] || "-";
+
+  alert(
+`${c.Empreendimento} - ${c.Fração}
+
+Preço: ${c.PVP.toLocaleString()}€
+
+ABP: ${abp} m²
+Varanda: ${varanda} m²
+Total: ${total} m²`
+  );
+}
+
+/* ================= RESTO ================= */
 
 function fecharModal(){
   document.getElementById("modal").style.display = "none";
@@ -233,8 +248,6 @@ function toggle(el){
   const body = el.nextElementSibling;
   body.style.display = body.style.display === "block" ? "none" : "block";
 }
-
-/* ================= LÓGICA ================= */
 
 function classificarConcorrentes(f, comps){
 
@@ -264,37 +277,21 @@ function media(lista){
 }
 
 function precoFallback(f, g){
-
   if(g.diretos.length) return media(g.diretos);
   if(g.indiretos.length) return media(g.indiretos);
   if(g.poucos.length) return media(g.poucos);
-
   return f.PVP;
 }
 
 function precoRigoroso(g){
 
-  let total = 0;
-  let peso = 0;
+  let total = 0, peso = 0;
 
-  if(g.diretos.length){
-    total += media(g.diretos) * 0.6;
-    peso += 0.6;
-  }
+  if(g.diretos.length){ total += media(g.diretos)*0.6; peso+=0.6; }
+  if(g.indiretos.length){ total += media(g.indiretos)*0.3; peso+=0.3; }
+  if(g.poucos.length){ total += media(g.poucos)*0.1; peso+=0.1; }
 
-  if(g.indiretos.length){
-    total += media(g.indiretos) * 0.3;
-    peso += 0.3;
-  }
-
-  if(g.poucos.length){
-    total += media(g.poucos) * 0.1;
-    peso += 0.1;
-  }
-
-  if(!peso) return 0;
-
-  return total / peso;
+  return peso ? total/peso : 0;
 }
 
 function calcularPrecoIA(f, g){
@@ -304,36 +301,29 @@ function calcularPrecoIA(f, g){
 
   let lista = [];
 
-  const push = (c,peso)=>{
-    if(c["Área Total"]) lista.push({v:c.PVP/c["Área Total"], p:peso});
+  const push = (c,p)=>{
+    if(c["Área Total"]) lista.push({v:c.PVP/c["Área Total"], p});
   };
 
   g.diretos.forEach(c=>push(c,1));
   g.indiretos.forEach(c=>push(c,0.8));
   g.poucos.forEach(c=>push(c,0.6));
 
-  if(!lista.length){
-    return {valor:f.PVP, exp:"Sem dados suficientes"};
-  }
+  if(!lista.length) return {valor:f.PVP, exp:"Sem dados"};
 
   lista.sort((a,b)=>a.v-b.v);
 
   const corte = Math.floor(lista.length*0.1);
   lista = lista.slice(corte, lista.length-corte);
 
-  let soma = 0, peso = 0;
+  let soma=0, peso=0;
+  lista.forEach(i=>{ soma+=i.v*i.p; peso+=i.p; });
 
-  lista.forEach(i=>{
-    soma += i.v * i.p;
-    peso += i.p;
-  });
-
-  const mediaM2 = soma/peso;
-
-  const preco = mediaM2 * 1.1 * area;
+  const m2 = soma/peso;
+  const preco = m2*1.1*area;
 
   return {
     valor: Math.round(preco),
-    exp: `€/m² ponderado (${Math.round(mediaM2)}€/m²) + ajuste 10%`
+    exp: `€/m² (${Math.round(m2)}) + ajuste`
   };
 }
