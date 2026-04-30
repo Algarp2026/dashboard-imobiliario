@@ -33,13 +33,17 @@ function diff(p, m) {
   return ((p/m -1)*100);
 }
 
+function diffEntre(base, comp) {
+  return ((base / comp -1)*100);
+}
+
 function arrow(v) {
-  if (v === "-") return "";
+  if (v === "-" || v === null) return "";
   return v > 0 ? "▲" : "▼";
 }
 
 function classe(v) {
-  if (v === "-") return "";
+  if (v === "-" || v === null) return "";
   return v > 0 ? "up" : "down";
 }
 
@@ -74,6 +78,11 @@ function render() {
 
       <b>${ap["Fração"]}</b><br>
       Piso ${ap.Piso} • Vista ${ap.Vista}
+
+      <div style="font-size:12px; color:#666; margin-top:5px;">
+        ${ap["Área Bruta"] || "-"} m² • Varanda ${ap["Varanda"] || "-"} m²<br>
+        Total: ${ap["Área Total"] || "-"} m²
+      </div>
 
       <div class="price">${ap.PVP.toLocaleString()}€</div>
 
@@ -122,24 +131,34 @@ function abrirModal(ap) {
     <p><b>${ap.Tipologia}</b> • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
     <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
 
-    ${sec("🔴 Diretos", direto)}
-    ${sec("🟠 Indiretos", indireto)}
-    ${sec("🟡 Pouco concorrente", pouco)}
+    ${sec("🔴 Diretos", direto, ap.PVP)}
+    ${sec("🟠 Indiretos", indireto, ap.PVP)}
+    ${sec("🟡 Pouco concorrente", pouco, ap.PVP)}
   `;
 }
 
-function sec(titulo, arr) {
-  if (!arr.length) return `<div class="section"><b>${titulo}</b><p>Nenhum encontrado</p></div>`;
+function sec(titulo, arr, precoBase) {
+  if (!arr.length) {
+    return `<div class="section"><b>${titulo}</b><p>Nenhum encontrado</p></div>`;
+  }
 
   return `
     <div class="section">
       <b>${titulo} (${arr.length})</b>
-      ${arr.map(d => `
-        <div class="comp">
-          <span>${d.Empreendimento} - ${d["Fração"]}</span>
-          <span>${d.PVP.toLocaleString()}€</span>
-        </div>
-      `).join("")}
+      ${arr.map(d => {
+        const dif = diffEntre(precoBase, d.PVP);
+        return `
+          <div class="comp">
+            <span>${d.Empreendimento} - ${d["Fração"]}</span>
+            <span>
+              ${d.PVP.toLocaleString()}€ 
+              <span class="${classe(dif)}">
+                ${arrow(dif)} ${Math.abs(dif).toFixed(1)}%
+              </span>
+            </span>
+          </div>
+        `;
+      }).join("")}
     </div>
   `;
 }
