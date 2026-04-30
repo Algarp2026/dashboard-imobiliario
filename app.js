@@ -7,28 +7,15 @@ fetch('data.xlsx')
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     data = XLSX.utils.sheet_to_json(sheet);
 
-    if (!data.length) {
-      document.body.innerHTML = "Erro: Excel vazio ou mal formatado";
-      return;
-    }
-
     cleanData();
-    initDropdown();
-  })
-  .catch(err => {
-    document.body.innerHTML = "Erro ao carregar data.xlsx";
-    console.error(err);
+    render();
   });
 
 function cleanData() {
   data.forEach(d => {
-    d.Empreendimento = String(d.Empreendimento || "").trim();
-
     if (d.Piso === "R/C") d.Piso = 0;
-    d.Piso = Number(d.Piso || 0);
-
-    d.PVP = Number(d.PVP || 0);
-    d.Vista = Number(d.Vista || 0);
+    d.Piso = Number(d.Piso);
+    d.PVP = Number(d.PVP);
   });
 }
 
@@ -37,46 +24,26 @@ function mapTipologia(t) {
   return t;
 }
 
-function initDropdown() {
-  const dropdown = document.getElementById("dropdown");
-  const empreendimentos = [...new Set(data.map(d => d.Empreendimento).filter(Boolean))];
-
-  if (!empreendimentos.length) {
-    document.body.innerHTML = "Erro: Nenhum empreendimento encontrado";
-    return;
-  }
-
-  empreendimentos.forEach(e => {
-    const opt = document.createElement("option");
-    opt.value = e;
-    opt.innerText = e;
-    dropdown.appendChild(opt);
-  });
-
-  dropdown.onchange = () => render(dropdown.value);
-  render("The View");
-}
-
 function media(arr) {
   if (!arr.length) return null;
-  return arr.reduce((a,b)=>a+Number(b.PVP),0)/arr.length;
+  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
 }
 
 function diff(preco, media) {
   if (!media) return "-";
-  return ((preco / media - 1) * 100).toFixed(1) + "%";
+  return ((preco/media -1)*100).toFixed(1) + "%";
 }
 
-function lista(arr) {
-  return arr.map(d => d.Empreendimento + " - " + d["Fração"]).join(", ") || "-";
+function corClasse(valor) {
+  if (valor === "-" || valor === null) return "";
+  return parseFloat(valor) > 0 ? "red" : "green";
 }
 
-function render(selected) {
-  const container = document.getElementById("output");
-  container.innerHTML = "";
+function render() {
+  const tbody = document.getElementById("tabela");
 
-  const base = data.filter(d => d.Empreendimento === selected);
-  const comp = data.filter(d => d.Empreendimento !== selected);
+  const base = data.filter(d => d.Empreendimento === "The View");
+  const comp = data.filter(d => d.Empreendimento !== "The View");
 
   base.forEach(ap => {
     const tip = mapTipologia(ap.Tipologia);
@@ -92,35 +59,27 @@ function render(selected) {
       c.Piso === ap.Piso
     );
 
-    const pouco = comp.filter(c =>
-      mapTipologia(c.Tipologia) === tip &&
-      Math.abs(c.Piso - ap.Piso) <= 1
-    );
-
     const mDir = media(direto);
     const mInd = media(indireto);
-    const mPou = media(pouco);
 
-    const div = document.createElement("div");
-    div.className = "card";
+    const dDir = diff(ap.PVP, mDir);
+    const dInd = diff(ap.PVP, mInd);
 
-    div.innerHTML = `
-      <h3>${ap["Fração"] || "-"}</h3>
-      <p><b>Piso:</b> ${ap.Piso} | <b>${ap.Tipologia}</b> | Vista ${ap.Vista}</p>
-      <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
+    const tr = document.createElement("tr");
 
-      <div><b>Direto:</b> ${mDir ? mDir.toLocaleString()+"€" : "-"} | ${diff(ap.PVP, mDir)}</div>
-      <div class="small">${lista(direto)}</div>
-
-      <div><b>Indireto:</b> ${mInd ? mInd.toLocaleString()+"€" : "-"} | ${diff(ap.PVP, mInd)}</div>
-      <div class="small">${lista(indireto)}</div>
-
-      <div><b>Pouco:</b> ${mPou ? mPou.toLocaleString()+"€" : "-"} | ${diff(ap.PVP, mPou)}</div>
-      <div class="small">${lista(pouco)}</div>
-
-      <hr>
+    tr.innerHTML = `
+      <td>${ap["Fração"]}</td>
+      <td>${ap.Piso}</td>
+      <td>${ap.Tipologia}</td>
+      <td>Vista ${ap.Vista}</td>
+      <td>${ap.PVP.toLocaleString()}€</td>
+      <td>${mDir ? mDir.toLocaleString()+"€" : "-"}</td>
+      <td class="${corClasse(dDir)}">${dDir}</td>
+      <td>${mInd ? mInd.toLocaleString()+"€" : "-"}</td>
+      <td class="${corClasse(dInd)}">${dInd}</td>
+      <td><button class="btn">Ver</button></td>
     `;
 
-    container.appendChild(div);
+    tbody.appendChild(tr);
   });
 }
