@@ -8,34 +8,65 @@
 
 <style>
 body {
-  font-family: Inter, Arial;
-  margin: 0;
-  background: #f5f7fa;
-  color: #2d3748;
+  margin:0;
+  font-family: Inter, sans-serif;
+  background:#f4f6f9;
 }
 
-.header {
-  background: linear-gradient(135deg,#1a2a44,#243b63);
-  color: white;
-  padding: 50px;
-  text-align: center;
+/* LAYOUT */
+.container {
+  display:flex;
 }
 
+.sidebar {
+  width:260px;
+  background:#1a2a44;
+  color:white;
+  padding:20px;
+  height:100vh;
+}
+
+.sidebar h2 {
+  margin-bottom:30px;
+}
+
+.sidebar label {
+  font-size:12px;
+  opacity:0.7;
+}
+
+.sidebar input {
+  width:100%;
+  margin-bottom:15px;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+}
+
+/* MAIN */
+.main {
+  flex:1;
+  padding:30px;
+}
+
+/* GRID */
 .grid {
-  max-width:1100px;
-  margin:auto;
   display:grid;
   grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
   gap:20px;
-  padding:20px;
 }
 
+/* CARD */
 .card {
   background:white;
-  padding:20px;
-  border-radius:18px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.06);
+  padding:18px;
+  border-radius:16px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.06);
   cursor:pointer;
+}
+
+.card:hover {
+  transform:translateY(-3px);
 }
 
 .badge {
@@ -46,7 +77,7 @@ body {
 }
 
 .price {
-  font-size:24px;
+  font-size:22px;
   font-weight:600;
 }
 
@@ -59,7 +90,7 @@ body {
 .down { color:#38a169; }
 
 /* MODAL */
-#modal, #modalConc {
+.modal {
   display:none;
   position:fixed;
   top:0;left:0;
@@ -70,7 +101,7 @@ body {
 .modal-box {
   background:white;
   width:700px;
-  margin:60px auto;
+  margin:50px auto;
   padding:20px;
   border-radius:12px;
   max-height:80vh;
@@ -78,18 +109,11 @@ body {
 }
 
 .section {
-  margin-top:15px;
+  margin-top:10px;
   background:#f7f8fa;
   padding:10px;
   border-radius:8px;
 }
-
-.section-header {
-  cursor:pointer;
-  font-weight:600;
-}
-
-.hidden { display:none; }
 
 .comp {
   display:flex;
@@ -102,32 +126,43 @@ body {
 
 <body>
 
-<div class="header">
-  <h1>The View — Dashboard</h1>
-  <p>Análise de posicionamento de preço</p>
+<div class="container">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>⚙️ Config</h2>
+
+    <label>Diretos - Piso</label>
+    <input type="number" id="cfg_direto_piso" value="0">
+
+    <label>Diretos - Mesma Vista</label>
+    <input type="checkbox" id="cfg_direto_vista" checked>
+
+    <label>Indiretos - Piso</label>
+    <input type="number" id="cfg_indireto_piso" value="0">
+
+    <label>Pouco - Piso</label>
+    <input type="number" id="cfg_pouco_piso" value="1">
+
+    <button onclick="render()">Atualizar</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <h1>The View Dashboard</h1>
+    <div class="grid" id="grid"></div>
+  </div>
+
 </div>
 
-<div class="grid" id="grid"></div>
-
 <!-- MODAL -->
-<div id="modal">
+<div id="modal" class="modal">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;">
       <h3 id="modalTitulo"></h3>
       <button onclick="fecharModal()">X</button>
     </div>
     <div id="modalConteudo"></div>
-  </div>
-</div>
-
-<!-- MODAL CONCORRENTE -->
-<div id="modalConc">
-  <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;">
-      <h3 id="concTitulo"></h3>
-      <button onclick="fecharConc()">X</button>
-    </div>
-    <div id="concConteudo"></div>
   </div>
 </div>
 
