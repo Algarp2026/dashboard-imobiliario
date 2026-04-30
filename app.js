@@ -77,9 +77,66 @@ function render() {
       <td class="${corClasse(dDir)}">${dDir}</td>
       <td>${mInd ? mInd.toLocaleString()+"€" : "-"}</td>
       <td class="${corClasse(dInd)}">${dInd}</td>
-      <td><button class="btn">Ver</button></td>
+      <td><button class="btn" onclick='abrirModal(${JSON.stringify(ap)})'>Ver</button></td>
     `;
 
     tbody.appendChild(tr);
   });
+}
+function abrirModal(ap) {
+
+  const comp = data.filter(d => d.Empreendimento !== "The View");
+  const tip = mapTipologia(ap.Tipologia);
+
+  const direto = comp.filter(c =>
+    mapTipologia(c.Tipologia) === tip &&
+    c.Piso === ap.Piso &&
+    c.Vista === ap.Vista
+  );
+
+  const indireto = comp.filter(c =>
+    mapTipologia(c.Tipologia) === tip &&
+    c.Piso === ap.Piso
+  );
+
+  const pouco = comp.filter(c =>
+    mapTipologia(c.Tipologia) === tip &&
+    Math.abs(c.Piso - ap.Piso) <= 1
+  );
+
+  document.getElementById("modal").style.display = "block";
+  document.getElementById("modalTitulo").innerText = ap["Fração"];
+
+  document.getElementById("modalConteudo").innerHTML = `
+    
+    <p><b>Piso:</b> ${ap.Piso}</p>
+    <p><b>Tipologia:</b> ${ap.Tipologia}</p>
+    <p><b>Vista:</b> ${ap.Vista}</p>
+    <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
+
+    <hr>
+
+    <h4>🔴 Diretos (${direto.length})</h4>
+    ${listaDetalhada(direto)}
+
+    <h4>🟠 Indiretos (${indireto.length})</h4>
+    ${listaDetalhada(indireto)}
+
+    <h4>🟡 Pouco concorrente (${pouco.length})</h4>
+    ${listaDetalhada(pouco)}
+  `;
+}
+
+function listaDetalhada(arr) {
+  if (!arr.length) return "<p>Nenhum encontrado</p>";
+
+  return arr.map(d => `
+    <div style="margin-bottom:5px;">
+      ${d.Empreendimento} - ${d["Fração"]} — ${d.PVP.toLocaleString()}€
+    </div>
+  `).join("");
+}
+
+function fecharModal() {
+  document.getElementById("modal").style.display = "none";
 }
