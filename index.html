@@ -73,5 +73,17 @@
 </div>
 
 <script src="app.js"></script>
+<div id="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+  <div style="background:white; width:600px; margin:50px auto; padding:20px; border-radius:10px; max-height:80%; overflow:auto;">
+    
+    <div style="display:flex; justify-content:space-between;">
+      <h3 id="modalTitulo"></h3>
+      <button onclick="fecharModal()">X</button>
+    </div>
+
+    <div id="modalConteudo"></div>
+
+  </div>
+</div>
 </body>
 </html>
