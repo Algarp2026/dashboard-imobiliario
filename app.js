@@ -69,7 +69,6 @@ function render(){
   const piso = document.getElementById("piso").value;
   const vista = document.getElementById("vista").value;
   const fracs = getSelecionados("fractionsBox");
-  const emps = getSelecionados("empreBox");
 
   let base = dados.filter(d => d.Empreendimento === "The View");
 
@@ -78,11 +77,6 @@ function render(){
   if(fracs.length > 0) base = base.filter(d => fracs.includes(d.Fração));
 
   const grid = document.getElementById("grid");
-
-  if(!base.length){
-    grid.innerHTML = `<p style="padding:20px">Nenhum resultado.</p>`;
-    return;
-  }
 
   grid.innerHTML = base.map(f => {
 
@@ -94,7 +88,7 @@ function render(){
         <div class="badge">${f.Tipologia}</div>
         <div class="title">${f.Fração}</div>
         <div class="meta">Piso ${f.Piso} • ${f.Vista}</div>
-        <div class="area">${abp} m² • Varanda ${varanda} m²</div>
+        <div class="area">${abp} m² • Var ${varanda}</div>
         <div class="price">${f.PVP.toLocaleString()}€</div>
       </div>
     `;
@@ -147,31 +141,46 @@ function abrir(encoded){
   }
 
   document.getElementById("modalConteudo").innerHTML = `
+    <div class="modalHeader">
+      <h2>${f.Fração}</h2>
+      <span class="closeBtn" onclick="fecharModal()">✕</span>
+    </div>
+
     <div class="bigPrice">${f.PVP.toLocaleString()}€</div>
-    <div class="areas">ABP ${abp} • Var ${varanda} • Total ${total}</div>
+
+    <div class="areas">
+      ABP ${abp} • Var ${varanda} • Total ${total}
+    </div>
 
     <h3>Concorrência</h3>
 
     <div class="section">
-      <b>Diretos</b>
+      <b>Diretos (${grupos.diretos.length})</b>
       ${renderLista(grupos.diretos)}
     </div>
 
     <div class="section">
-      <b>Indiretos</b>
+      <b>Indiretos (${grupos.indiretos.length})</b>
       ${renderLista(grupos.indiretos)}
     </div>
 
     <div class="section">
-      <b>Pouco</b>
+      <b>Pouco (${grupos.poucos.length})</b>
       ${renderLista(grupos.poucos)}
     </div>
   `;
 
-  document.getElementById("modal").style.display = "block";
+  const modal = document.getElementById("modal");
+  modal.style.display = "flex";
 }
 
-/* ================= POPUP PREMIUM ================= */
+/* ================= FECHAR ================= */
+
+function fecharModal(){
+  document.getElementById("modal").style.display = "none";
+}
+
+/* ================= POPUP ================= */
 
 function abrirConcorrente(encoded){
 
@@ -185,23 +194,28 @@ function abrirConcorrente(encoded){
   if(m2C < m2F) status = "melhor";
   if(m2C > m2F) status = "pior";
 
-  document.getElementById("popup").innerHTML = `
+  const popup = document.getElementById("popup");
+
+  popup.innerHTML = `
     <div class="popupCard">
 
-      <h3>${c.Empreendimento} - ${c.Fração}</h3>
+      <div class="popupHeader">
+        <b>${c.Empreendimento} - ${c.Fração}</b>
+        <span onclick="fecharPopup()">✕</span>
+      </div>
 
       <div class="compareGrid">
 
         <div>
-          <b>The View</b><br>
+          <small>The View</small><br>
           ${f.PVP.toLocaleString()}€<br>
-          ${Math.round(m2F)}€/m²
+          ${Math.round(m2F)} €/m²
         </div>
 
         <div>
-          <b>Concorrente</b><br>
+          <small>Concorrente</small><br>
           ${c.PVP.toLocaleString()}€<br>
-          ${Math.round(m2C)}€/m²
+          ${Math.round(m2C)} €/m²
         </div>
 
       </div>
@@ -209,17 +223,15 @@ function abrirConcorrente(encoded){
       <div class="highlight ${status}">
         ${
           status === "melhor" ? "🟢 Melhor oportunidade" :
-          status === "pior" ? "🔴 Mais caro que o mercado" :
-          "⚪ Preço semelhante"
+          status === "pior" ? "🔴 Mais caro" :
+          "⚪ Similar"
         }
       </div>
-
-      <button onclick="fecharPopup()">Fechar</button>
 
     </div>
   `;
 
-  document.getElementById("popup").style.display = "flex";
+  popup.style.display = "flex";
 }
 
 function fecharPopup(){
@@ -238,8 +250,7 @@ function classificarConcorrentes(f, comps){
 
   const indiretos = comps.filter(c =>
     c.Tipologia === f.Tipologia &&
-    Number(c.Piso) === Number(f.Piso) &&
-    c.Vista !== f.Vista
+    Number(c.Piso) === Number(f.Piso)
   );
 
   const poucos = comps.filter(c =>
