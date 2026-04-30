@@ -27,23 +27,9 @@ body {
 }
 
 .sidebar h2 {
-  margin-bottom:30px;
+  margin-bottom:20px;
 }
 
-.sidebar label {
-  font-size:12px;
-  opacity:0.7;
-}
-
-.sidebar input {
-  width:100%;
-  margin-bottom:15px;
-  padding:6px;
-  border-radius:6px;
-  border:none;
-}
-
-/* MAIN */
 .main {
   flex:1;
   padding:30px;
@@ -63,6 +49,7 @@ body {
   border-radius:16px;
   box-shadow:0 8px 20px rgba(0,0,0,0.06);
   cursor:pointer;
+  transition:0.2s;
 }
 
 .card:hover {
@@ -115,6 +102,13 @@ body {
   border-radius:8px;
 }
 
+.section-header {
+  font-weight:600;
+  cursor:pointer;
+}
+
+.hidden { display:none; }
+
 .comp {
   display:flex;
   justify-content:space-between;
@@ -130,26 +124,13 @@ body {
 
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <h2>⚙️ Config</h2>
-
-    <label>Diretos - Piso</label>
-    <input type="number" id="cfg_direto_piso" value="0">
-
-    <label>Diretos - Mesma Vista</label>
-    <input type="checkbox" id="cfg_direto_vista" checked>
-
-    <label>Indiretos - Piso</label>
-    <input type="number" id="cfg_indireto_piso" value="0">
-
-    <label>Pouco - Piso</label>
-    <input type="number" id="cfg_pouco_piso" value="1">
-
-    <button onclick="render()">Atualizar</button>
+    <h2>The View</h2>
+    <p style="opacity:0.7;">Dashboard Competitivo</p>
   </div>
 
   <!-- MAIN -->
   <div class="main">
-    <h1>The View Dashboard</h1>
+    <h1>Frações</h1>
     <div class="grid" id="grid"></div>
   </div>
 
@@ -163,6 +144,17 @@ body {
       <button onclick="fecharModal()">X</button>
     </div>
     <div id="modalConteudo"></div>
+  </div>
+</div>
+
+<!-- MODAL CONCORRENTE -->
+<div id="modalConc" class="modal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;">
+      <h3 id="concTitulo"></h3>
+      <button onclick="fecharConc()">X</button>
+    </div>
+    <div id="concConteudo"></div>
   </div>
 </div>
 
