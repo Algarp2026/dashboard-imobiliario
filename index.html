@@ -1,17 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt">
-<header class="hero">
-  <div class="hero-overlay">
-    <h1>The View</h1>
-    <p>Dashboard competitivo imobiliário</p>
-  </div>
-</header>
+<head>
+  <meta charset="UTF-8">
+  <title>The View Dashboard</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+</head>
 
 <body>
 
-  <!-- HEADER -->
-  <header class="header">
-    <h1>The View Dashboard</h1>
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-overlay">
+      <h1>The View</h1>
+      <p>Dashboard competitivo imobiliário</p>
+    </div>
   </header>
 
   <!-- CONTAINER -->
@@ -57,9 +64,11 @@
   <div id="modal" class="modal" onclick="fecharModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
 
-      <div class="modal-top">
+      <div class="modalHeader">
         <h2 id="modalTitulo"></h2>
-        <button onclick="fecharModal()" class="closeBtn">✕</button>
+        <button onclick="fecharModal()" style="border:none;background:none;font-size:18px;cursor:pointer;">
+          ✕
+        </button>
       </div>
 
       <div id="modalConteudo"></div>
