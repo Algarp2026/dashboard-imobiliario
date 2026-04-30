@@ -1,108 +1,45 @@
-let data = [];
+let dados = [];
 
-/* ================= LOAD ================= */
+fetch("data.xlsx")
+  .then(res => res.arrayBuffer())
+  .then(ab => {
+    const wb = XLSX.read(ab);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    dados = XLSX.utils.sheet_to_json(ws);
 
-fetch('data.xlsx')
-.then(res=>res.arrayBuffer())
-.then(buffer=>{
-  const wb = XLSX.read(buffer,{type:"array"});
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  data = XLSX.utils.sheet_to_json(sheet);
-
-  initFiltros();
-  render();
-});
-
-/* ================= UTILS ================= */
-
-function toNumber(v){
-  if(!v) return null;
-  return parseFloat(v.toString().replace(",", "."));
-}
-
-function getAreas(o){
-  const abp = toNumber(o["ABP"]);
-  const varan = toNumber(o["Varanda/Terraço"]);
-  const total = toNumber(o["Área Total"]) || ((abp||0)+(varan||0));
-  return {abp,varan,total};
-}
-
-function mapTipologia(t){
-  return (t==="T1+1"||t==="T1 Duplex")?"T2":t;
-}
-
-function media(arr){
-  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
-}
-
-function mediaM2(arr){
-  return arr.reduce((a,b)=>{
-    const ar = getAreas(b);
-    return a + (b.PVP/(ar.total||1));
-  },0)/arr.length;
-}
-
-/* ================= PRICING ================= */
-
-function precoFallback(d,i,p){
-  if(d.length) return {valor:media(d), origem:"Baseado em Diretos"};
-  if(i.length) return {valor:media(i), origem:"Baseado em Indiretos"};
-  if(p.length) return {valor:media(p), origem:"Baseado em Pouco concorrente"};
-  return null;
-}
-
-function precoRigoroso(d,i,p){
-  let soma=0,total=0;
-
-  if(d.length){ soma+=media(d)*0.6; total+=0.6; }
-  if(i.length){ soma+=media(i)*0.3; total+=0.3; }
-  if(p.length){ soma+=media(p)*0.1; total+=0.1; }
-
-  if(!total) return null;
-
-  return {
-    valor:soma/total,
-    explicacao:"Modelo ponderado: 60% Diretos • 30% Indiretos • 10% restantes"
-  };
-}
-
-function precoIdeal(ap,d,i,p){
-  const areas=getAreas(ap);
-  let base = d.length ? d : (i.length ? i : p);
-  if(!base.length) return null;
-
-  const m2 = mediaM2(base);
-  const preco = m2 * (areas.total||1);
-
-  return {
-    valor:preco,
-    explicacao:`€/m² médio (${m2.toFixed(0)}€/m²) ajustado à área`
-  };
-}
-
-/* ================= FILTROS ================= */
+    initFiltros();
+    render();
+  });
 
 function initFiltros(){
+  const pisos = [...new Set(dados.map(d=>d.Piso))];
+  const vistas = [...new Set(dados.map(d=>d.Vista))];
 
-  const base = data.filter(d=>d.Empreendimento==="The View");
-  const comps = data.filter(d=>d.Empreendimento!=="The View");
+  document.getElementById("piso").innerHTML =
+    `<option value="">Todos</option>` +
+    pisos.map(p=>`<option>${p}</option>`).join("");
 
-  piso.innerHTML=`<option value="">Todos os pisos</option>`+
-    [...new Set(base.map(d=>d.Piso))]
-    .map(p=>`<option>${p}</option>`);
+  document.getElementById("vista").innerHTML =
+    `<option value="">Todas</option>` +
+    vistas.map(v=>`<option>${v}</option>`).join("");
 
-  vista.innerHTML=`<option value="">Todas as vistas</option>`+
-    [...new Set(base.map(d=>d.Vista))]
-    .map(v=>`<option>${v}</option>`);
+  // FRAÇÕES
+  const fracBox = document.getElementById("fractionsBox");
+  fracBox.innerHTML = dados
+    .filter(d=>d.Empreendimento==="The View")
+    .map(d=>`
+      <label class="checkItem">
+        <input type="checkbox" value="${d.Fração}" checked onchange="render()">
+        ${d.Fração}
+      </label>
+    `).join("");
 
-  fractionsBox.innerHTML = base.map(d=>`
-    <label class="checkItem">
-      <input type="checkbox" value="${d["Fração"]}" onchange="render()">
-      ${d["Fração"]}
-    </label>
-  `).join("");
+  // EMPREENDIMENTOS
+  const emp = [...new Set(dados.map(d=>d.Empreendimento))];
 
-  empreBox.innerHTML = [...new Set(comps.map(d=>d.Empreendimento))]
+  const empBox = document.getElementById("empreBox");
+  empBox.innerHTML = emp
+    .filter(e=>e!=="The View")
     .map(e=>`
       <label class="checkItem">
         <input type="checkbox" value="${e}" checked onchange="render()">
@@ -111,180 +48,148 @@ function initFiltros(){
     `).join("");
 }
 
-function getChecked(id){
+function getSelecionados(id){
   return [...document.querySelectorAll(`#${id} input:checked`)]
     .map(i=>i.value);
 }
 
 function resetFiltros(){
-  piso.value="";
-  vista.value="";
-  document.querySelectorAll("#fractionsBox input").forEach(i=>i.checked=false);
-  document.querySelectorAll("#empreBox input").forEach(i=>i.checked=true);
+  document.getElementById("piso").value="";
+  document.getElementById("vista").value="";
+
+  document.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked=true);
+
   render();
 }
 
-/* ================= RENDER ================= */
-
 function render(){
 
-  let base = data.filter(d=>d.Empreendimento==="The View");
+  const piso = document.getElementById("piso").value;
+  const vista = document.getElementById("vista").value;
+  const fracs = getSelecionados("fractionsBox");
+  const emps = getSelecionados("empreBox");
 
-  const p = piso.value;
-  const v = vista.value;
-  const selectedFractions = getChecked("fractionsBox");
-  const selectedEmpre = getChecked("empreBox");
+  let base = dados.filter(d=>d.Empreendimento==="The View");
 
-  if(p) base = base.filter(d=>d.Piso==p);
-  if(v) base = base.filter(d=>d.Vista==v);
-  if(selectedFractions.length){
-    base = base.filter(d=>selectedFractions.includes(d["Fração"]));
-  }
+  if(piso) base = base.filter(d=>d.Piso==piso);
+  if(vista) base = base.filter(d=>d.Vista==vista);
+  if(fracs.length) base = base.filter(d=>fracs.includes(d.Fração));
 
-  const comp = data.filter(d=>
-    d.Empreendimento !== "The View" &&
-    selectedEmpre.includes(d.Empreendimento)
-  );
+  const grid = document.getElementById("grid");
 
-  grid.innerHTML="";
+  grid.innerHTML = base.map(f=>{
 
-  base.forEach(ap=>{
+    const comps = dados.filter(d=>
+      d.Empreendimento!=="The View" &&
+      emps.includes(d.Empreendimento)
+    );
 
-    const areas=getAreas(ap);
-    const tip=mapTipologia(ap.Tipologia);
+    const media = mediaPreco(f, comps);
 
-    const direto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
-    const indireto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
-    const pouco=comp.filter(c=>mapTipologia(c.Tipologia)===tip && Math.abs(c.Piso-ap.Piso)<=1);
+    const diff = ((f.PVP-media)/media)*100;
 
-    const f = precoFallback(direto,indireto,pouco);
-    const diff = f ? ((ap.PVP/f.valor)-1)*100 : null;
+    return `
+      <div class="card" onclick='abrir(${JSON.stringify(f)})'>
 
-    const card=document.createElement("div");
-    card.className="card premium";
+        <div class="badge">${f.Tipologia}</div>
+        <div class="title">${f.Fração}</div>
+        <div class="meta">Piso ${f.Piso} • Vista ${f.Vista}</div>
 
-    card.innerHTML=`
-      <div class="badge">${ap.Tipologia}</div>
+        <div class="area">
+          ${f["Área Bruta"] || "-"} m² • Varanda ${f["Varanda"] || "-"} m²
+        </div>
 
-      <div class="title">${ap["Fração"]}</div>
+        <div class="price">
+          ${f.PVP.toLocaleString()}€
+        </div>
 
-      <div class="meta">
-        Piso ${ap.Piso} • ${ap.Vista}
-      </div>
-
-      <div class="area">
-        ${areas.total||"-"} m²
-      </div>
-
-      <div class="price">
-        ${ap.PVP.toLocaleString()}€
-      </div>
-
-      ${
-        diff!==null ? `
         <div class="delta ${diff>0?'up':'down'}">
-          ${diff>0?'+':''}${diff.toFixed(1)}%
-        </div>` : ''
-      }
+          ${diff.toFixed(1)}%
+        </div>
+
+      </div>
     `;
-
-    card.onclick=()=>abrirModal(ap,direto,indireto,pouco);
-
-    grid.appendChild(card);
-  });
+  }).join("");
 }
 
-/* ================= MODAL ================= */
+function mediaPreco(f, comps){
+  const list = comps.map(c=>c.PVP);
+  if(!list.length) return f.PVP;
 
-function abrirModal(ap,d,i,p){
+  return list.reduce((a,b)=>a+b,0)/list.length;
+}
 
-  const areas=getAreas(ap);
+function abrir(f){
 
-  const f = precoFallback(d,i,p);
-  const r = precoRigoroso(d,i,p);
-  const ideal = precoIdeal(ap,d,i,p);
+  const comps = dados.filter(d=>d.Empreendimento!=="The View");
 
-  modal.style.display="block";
-  modalTitulo.innerText=ap["Fração"];
+  const {precoIA, explicacao} = calcularPrecoIA(f, comps);
 
-  modalConteudo.innerHTML=`
+  document.getElementById("modalTitulo").innerText = f.Fração;
 
-    <div class="modalHeader">
-      <div>
-        <b>${ap.Tipologia}</b> • Piso ${ap.Piso} • ${ap.Vista}
-      </div>
-      <div class="bigPrice">${ap.PVP.toLocaleString()}€</div>
-    </div>
+  document.getElementById("modalConteudo").innerHTML = `
+    <div class="bigPrice">${f.PVP.toLocaleString()}€</div>
 
     <div class="areas">
-      ${areas.abp||"-"} m² • Var ${areas.varan||"-"} • Total ${areas.total||"-"}
+      ABP: ${f["Área Bruta"] || "-"} m² |
+      Varanda: ${f["Varanda"] || "-"} m² |
+      Total: ${f["Área Total"] || "-"} m²
     </div>
 
     <div class="pricingGrid">
-      ${boxPreco("Recomendado",f,"blue")}
-      ${boxPreco("Rigoroso",r,"purple")}
-      ${boxPreco("Ideal",ideal,"green")}
-    </div>
 
-    ${sec("Diretos",d,ap)}
-    ${sec("Indiretos",i,ap)}
-    ${sec("Pouco concorrente",p,ap)}
-  `;
-}
-
-/* ================= UI ================= */
-
-function boxPreco(titulo,obj,color){
-
-  if(!obj) return `<div class="priceBox empty">${titulo}<br>Sem dados</div>`;
-
-  return `
-    <div class="priceBox ${color}">
-      <div class="label">${titulo}</div>
-      <div class="value">${obj.valor.toLocaleString()}€</div>
-      <div class="desc">${obj.explicacao || obj.origem}</div>
-    </div>
-  `;
-}
-
-function sec(nome,arr,base){
-
-  return `
-    <div class="section">
-      <div class="section-header" onclick="toggle(this)">
-        ▶ ${nome} (${arr.length})
+      <div class="priceBox green">
+        <div class="label">Preço IA</div>
+        <div class="value">${precoIA.toLocaleString()}€</div>
+        <div class="desc">${explicacao}</div>
       </div>
 
-      <div class="section-body">
-        ${arr.map(c=>{
-          const diff=((base.PVP/c.PVP)-1)*100;
-          return `
-            <div class="compRow">
-              <div>
-                ${c.Empreendimento}<br>
-                <small>${c["Fração"]}</small>
-              </div>
-              <div>
-                ${c.PVP.toLocaleString()}€<br>
-                <span class="${diff>0?'up':'down'}">
-                  ${diff.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
     </div>
-  `;
-}
 
-function toggle(el){
-  const body = el.nextElementSibling;
-  const isOpen = body.style.display==="block";
-  body.style.display = isOpen?"none":"block";
-  el.innerText = (isOpen?"▶ ":"▼ ") + el.innerText.slice(2);
+  `;
+
+  document.getElementById("modal").style.display="block";
 }
 
 function fecharModal(){
-  modal.style.display="none";
+  document.getElementById("modal").style.display="none";
+}
+
+/* ================= IA ================= */
+
+function calcularPrecoIA(f, comps){
+
+  const area = f["Área Total"];
+  if(!area) return {precoIA:f.PVP, explicacao:"Sem área disponível"};
+
+  let lista = comps.map(c=>{
+    const a = c["Área Total"];
+    if(!a) return null;
+    return c.PVP / a;
+  }).filter(Boolean);
+
+  if(!lista.length){
+    return {
+      precoIA:f.PVP,
+      explicacao:"Sem concorrentes válidos"
+    };
+  }
+
+  // remover outliers (10%)
+  lista.sort((a,b)=>a-b);
+  const corte = Math.floor(lista.length*0.1);
+  lista = lista.slice(corte, lista.length-corte);
+
+  const media = lista.reduce((a,b)=>a+b,0)/lista.length;
+
+  const ajustePremium = 1.15;
+
+  const precoIA = media * ajustePremium * area;
+
+  return {
+    precoIA: Math.round(precoIA),
+    explicacao:
+      `Baseado em €/m² (${Math.round(media)}€/m²), removendo extremos, ` +
+      `+ ajuste premium de 15%`
+  };
 }
