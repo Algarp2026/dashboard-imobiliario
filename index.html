@@ -13,7 +13,6 @@ body {
   background:#f4f6f9;
 }
 
-/* LAYOUT */
 .container {
   display:flex;
 }
@@ -26,13 +25,21 @@ body {
   height:100vh;
 }
 
-.sidebar h2 {
-  margin-bottom:20px;
-}
-
 .main {
   flex:1;
   padding:30px;
+}
+
+/* FILTROS */
+.filters {
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+select {
+  padding:6px;
+  border-radius:6px;
 }
 
 /* GRID */
@@ -49,11 +56,6 @@ body {
   border-radius:16px;
   box-shadow:0 8px 20px rgba(0,0,0,0.06);
   cursor:pointer;
-  transition:0.2s;
-}
-
-.card:hover {
-  transform:translateY(-3px);
 }
 
 .badge {
@@ -122,15 +124,28 @@ body {
 
 <div class="container">
 
-  <!-- SIDEBAR -->
   <div class="sidebar">
     <h2>The View</h2>
-    <p style="opacity:0.7;">Dashboard Competitivo</p>
+    <p>Dashboard Competitivo</p>
   </div>
 
-  <!-- MAIN -->
   <div class="main">
     <h1>Frações</h1>
+
+    <div class="filters">
+      <select id="modo" onchange="render()">
+        <option value="todos">Todos</option>
+        <option value="piso">Por Piso</option>
+        <option value="vista">Por Vista</option>
+        <option value="manual">Selecionar</option>
+      </select>
+
+      <select id="piso" onchange="render()"></select>
+      <select id="vista" onchange="render()"></select>
+
+      <select id="manual" multiple style="display:none;" onchange="render()"></select>
+    </div>
+
     <div class="grid" id="grid"></div>
   </div>
 
