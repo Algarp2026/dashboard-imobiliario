@@ -14,6 +14,7 @@ fetch("data.xlsx")
 /* ================= FILTROS ================= */
 
 function initFiltros(){
+
   const pisos = [...new Set(dados.map(d=>d.Piso))];
   const vistas = [...new Set(dados.map(d=>d.Vista))];
 
@@ -26,7 +27,7 @@ function initFiltros(){
     vistas.map(v=>`<option>${v}</option>`).join("");
 
   document.getElementById("fractionsBox").innerHTML =
-    dados.filter(d=>d.Empreendimento==="The View")
+    dados.filter(d=>d.Empreendimento === "The View")
       .map(d=>`
         <label class="checkItem">
           <input type="checkbox" value="${d.Fração}" checked onchange="render()">
@@ -37,7 +38,7 @@ function initFiltros(){
   const emp = [...new Set(dados.map(d=>d.Empreendimento))];
 
   document.getElementById("empreBox").innerHTML =
-    emp.filter(e=>e!=="The View")
+    emp.filter(e=>e !== "The View")
       .map(e=>`
         <label class="checkItem">
           <input type="checkbox" value="${e}" checked onchange="render()">
@@ -52,9 +53,9 @@ function getSelecionados(id){
 }
 
 function resetFiltros(){
-  document.getElementById("piso").value="";
-  document.getElementById("vista").value="";
-  document.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked=true);
+  document.getElementById("piso").value = "";
+  document.getElementById("vista").value = "";
+  document.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked = true);
   render();
 }
 
@@ -67,26 +68,31 @@ function render(){
   const fracs = getSelecionados("fractionsBox");
   const emps = getSelecionados("empreBox");
 
-  let base = dados.filter(d=>d.Empreendimento==="The View");
+  let base = dados.filter(d => d.Empreendimento === "The View");
 
-  if(piso) base = base.filter(d=>d.Piso==piso);
-  if(vista) base = base.filter(d=>d.Vista==vista);
-  if(fracs.length) base = base.filter(d=>fracs.includes(d.Fração));
+  if(piso) base = base.filter(d => d.Piso == piso);
+  if(vista) base = base.filter(d => d.Vista == vista);
+  if(fracs.length > 0) base = base.filter(d => fracs.includes(d.Fração));
 
   const grid = document.getElementById("grid");
 
-  grid.innerHTML = base.map(f=>{
+  if(!base.length){
+    grid.innerHTML = `<p style="padding:20px">Nenhum resultado com os filtros atuais.</p>`;
+    return;
+  }
 
-    const comps = dados.filter(d=>
-      d.Empreendimento!=="The View" &&
+  grid.innerHTML = base.map(f => {
+
+    const comps = dados.filter(d =>
+      d.Empreendimento !== "The View" &&
       emps.includes(d.Empreendimento)
     );
 
-    const media = media(comps);
-    const diff = media ? ((f.PVP-media)/media)*100 : 0;
+    const mediaComp = comps.length ? media(comps) : f.PVP;
+    const diff = ((f.PVP - mediaComp) / mediaComp) * 100;
 
     return `
-      <div class="card" onclick='abrir(${JSON.stringify(f)})'>
+      <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
 
         <div class="badge">${f.Tipologia}</div>
         <div class="title">${f.Fração}</div>
@@ -109,12 +115,14 @@ function render(){
 
 /* ================= MODAL ================= */
 
-function abrir(f){
+function abrir(encoded){
+
+  const f = JSON.parse(decodeURIComponent(encoded));
 
   const emps = getSelecionados("empreBox");
 
-  const comps = dados.filter(d=>
-    d.Empreendimento!=="The View" &&
+  const comps = dados.filter(d =>
+    d.Empreendimento !== "The View" &&
     emps.includes(d.Empreendimento)
   );
 
@@ -127,8 +135,8 @@ function abrir(f){
   function renderLista(lista){
     if(!lista.length) return "<p>Nenhum encontrado</p>";
 
-    return lista.map(c=>{
-      const diff = ((f.PVP - c.PVP)/c.PVP)*100;
+    return lista.map(c => {
+      const diff = ((f.PVP - c.PVP) / c.PVP) * 100;
 
       return `
         <div class="compRow">
@@ -195,11 +203,11 @@ function abrir(f){
     </div>
   `;
 
-  document.getElementById("modal").style.display="block";
+  document.getElementById("modal").style.display = "block";
 }
 
 function fecharModal(){
-  document.getElementById("modal").style.display="none";
+  document.getElementById("modal").style.display = "none";
 }
 
 function toggle(el){
@@ -293,15 +301,15 @@ function calcularPrecoIA(f, g){
 
   lista.sort((a,b)=>a-b);
 
-  const corte = Math.floor(lista.length*0.1);
-  lista = lista.slice(corte, lista.length-corte);
+  const corte = Math.floor(lista.length * 0.1);
+  lista = lista.slice(corte, lista.length - corte);
 
-  const media = lista.reduce((a,b)=>a+b,0)/lista.length;
+  const mediaM2 = lista.reduce((a,b)=>a+b,0) / lista.length;
 
-  const preco = media * 1.15 * area;
+  const preco = mediaM2 * 1.15 * area;
 
   return {
     valor: Math.round(preco),
-    exp: `€/m² (${Math.round(media)}€/m²) + pesos + premium 15%`
+    exp: `€/m² (${Math.round(mediaM2)}€/m²) + pesos + premium 15%`
   };
 }
