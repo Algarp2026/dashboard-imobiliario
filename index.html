@@ -9,37 +9,35 @@
 <style>
 body {
   margin:0;
-  font-family: Inter, sans-serif;
+  font-family: Inter;
   background:#f4f6f9;
 }
 
-.container {
-  display:flex;
-}
+.container { display:flex; }
 
+/* SIDEBAR */
 .sidebar {
-  width:260px;
+  width:280px;
   background:#1a2a44;
   color:white;
   padding:20px;
   height:100vh;
+  overflow:auto;
 }
 
+.sidebar h3 { margin-top:20px; }
+
+.sidebar select {
+  width:100%;
+  margin-bottom:10px;
+  padding:6px;
+  border-radius:6px;
+}
+
+/* MAIN */
 .main {
   flex:1;
   padding:30px;
-}
-
-/* FILTROS */
-.filters {
-  display:flex;
-  gap:10px;
-  margin-bottom:20px;
-}
-
-select {
-  padding:6px;
-  border-radius:6px;
 }
 
 /* GRID */
@@ -49,7 +47,6 @@ select {
   gap:20px;
 }
 
-/* CARD */
 .card {
   background:white;
   padding:18px;
@@ -58,22 +55,9 @@ select {
   cursor:pointer;
 }
 
-.badge {
-  background:#edf2f7;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:12px;
-}
-
-.price {
-  font-size:22px;
-  font-weight:600;
-}
-
-.small {
-  font-size:13px;
-  color:#718096;
-}
+.badge { background:#edf2f7; padding:4px 8px; border-radius:6px; }
+.price { font-size:22px; font-weight:600; }
+.small { font-size:13px; color:#718096; }
 
 .up { color:#e53e3e; }
 .down { color:#38a169; }
@@ -89,11 +73,11 @@ select {
 
 .modal-box {
   background:white;
-  width:700px;
-  margin:50px auto;
+  width:720px;
+  margin:40px auto;
   padding:20px;
   border-radius:12px;
-  max-height:80vh;
+  max-height:85vh;
   overflow-y:auto;
 }
 
@@ -104,18 +88,9 @@ select {
   border-radius:8px;
 }
 
-.section-header {
-  font-weight:600;
-  cursor:pointer;
-}
-
-.hidden { display:none; }
-
 .comp {
   display:flex;
   justify-content:space-between;
-  padding:6px 0;
-  cursor:pointer;
 }
 </style>
 </head>
@@ -124,52 +99,35 @@ select {
 
 <div class="container">
 
-  <div class="sidebar">
-    <h2>The View</h2>
-    <p>Dashboard Competitivo</p>
-  </div>
+<div class="sidebar">
 
-  <div class="main">
-    <h1>Frações</h1>
+  <h2>Filtros</h2>
 
-    <div class="filters">
-      <select id="modo" onchange="render()">
-        <option value="todos">Todos</option>
-        <option value="piso">Por Piso</option>
-        <option value="vista">Por Vista</option>
-        <option value="manual">Selecionar</option>
-      </select>
+  <h3>Piso</h3>
+  <select id="piso" onchange="render()"></select>
 
-      <select id="piso" onchange="render()"></select>
-      <select id="vista" onchange="render()"></select>
+  <h3>Vista</h3>
+  <select id="vista" onchange="render()"></select>
 
-      <select id="manual" multiple style="display:none;" onchange="render()"></select>
-    </div>
+  <h3>Frações</h3>
+  <select id="manual" multiple onchange="render()"></select>
 
-    <div class="grid" id="grid"></div>
-  </div>
+  <h3>Empreendimentos</h3>
+  <select id="empre" multiple onchange="render()"></select>
 
 </div>
 
-<!-- MODAL -->
+<div class="main">
+  <h1>The View Dashboard</h1>
+  <div class="grid" id="grid"></div>
+</div>
+
+</div>
+
 <div id="modal" class="modal">
   <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;">
-      <h3 id="modalTitulo"></h3>
-      <button onclick="fecharModal()">X</button>
-    </div>
+    <h3 id="modalTitulo"></h3>
     <div id="modalConteudo"></div>
-  </div>
-</div>
-
-<!-- MODAL CONCORRENTE -->
-<div id="modalConc" class="modal">
-  <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;">
-      <h3 id="concTitulo"></h3>
-      <button onclick="fecharConc()">X</button>
-    </div>
-    <div id="concConteudo"></div>
   </div>
 </div>
 
