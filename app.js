@@ -36,15 +36,30 @@ function getVal(obj, keys){
 }
 
 function getAreas(obj){
-  const bruta = getVal(obj, ["Área Bruta","Area Bruta","Área","Area","ABP"]);
-  const varanda = getVal(obj, ["Varanda","Varanda (m²)","Varanda m2"]);
 
-  const total = (bruta||0)+(varanda||0);
+  // leitura direta (exata do Excel)
+  const abp = obj["ABP"] ?? obj["Área Bruta"] ?? null;
+  const varanda = obj["Varanda/Terraço"] ?? obj["Varanda"] ?? null;
+  const totalExcel = obj["Área Total"] ?? obj["Area Total"] ?? null;
+
+  // garantir números
+  const areaBruta = abp ? parseFloat(abp) : null;
+  const areaVaranda = varanda ? parseFloat(varanda) : null;
+  const areaTotalExcel = totalExcel ? parseFloat(totalExcel) : null;
+
+  // lógica correta
+  let total = null;
+
+  if(areaTotalExcel){
+    total = areaTotalExcel;
+  } else if(areaBruta || areaVaranda){
+    total = (areaBruta || 0) + (areaVaranda || 0);
+  }
 
   return {
-    bruta,
-    varanda,
-    total: total>0 ? total : null
+    bruta: areaBruta,
+    varanda: areaVaranda,
+    total: total
   };
 }
 
