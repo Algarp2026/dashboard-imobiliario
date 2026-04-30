@@ -1,17 +1,76 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Dashboard Imobiliário</title>
+  <title>The View — Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f5f6fa; }
+
+    h1 { margin-bottom: 5px; }
+    h2 { color: #555; font-weight: normal; margin-top: 0; }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #fafafa;
+      font-weight: bold;
+    }
+
+    .green { color: #27ae60; }
+    .red { color: #e74c3c; }
+
+    .btn {
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #fff;
+    }
+  </style>
 </head>
 
 <body>
 
-<h2>Dashboard Imobiliário</h2>
+<h1>The View — Dashboard Competitivo</h1>
+<h2>Análise dinâmica de concorrência imobiliária</h2>
 
-<select id="dropdown"></select>
-
-<div id="output"></div>
+<div class="container">
+  <table>
+    <thead>
+      <tr>
+        <th>Fração</th>
+        <th>Piso</th>
+        <th>Tipologia</th>
+        <th>Vista</th>
+        <th>PVP (€)</th>
+        <th>Médio Direto (€)</th>
+        <th>Dif. Direto</th>
+        <th>Médio Indireto (€)</th>
+        <th>Dif. Indireto</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody id="tabela"></tbody>
+  </table>
+</div>
 
 <script src="app.js"></script>
 </body>
