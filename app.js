@@ -240,17 +240,19 @@ function classificarConcorrentes(f, comps){
 
   const diretos = comps.filter(c =>
     c.Tipologia === f.Tipologia &&
-    c.Piso == f.Piso &&
-    c.Vista == f.Vista
+    Number(c.Piso) === Number(f.Piso) &&
+    c.Vista === f.Vista
   );
 
   const indiretos = comps.filter(c =>
     c.Tipologia === f.Tipologia &&
-    (c.Piso != f.Piso || c.Vista != f.Vista)
+    Number(c.Piso) === Number(f.Piso) &&
+    c.Vista !== f.Vista
   );
 
   const poucos = comps.filter(c =>
-    c.Tipologia !== f.Tipologia
+    c.Tipologia === f.Tipologia &&
+    Math.abs(Number(c.Piso) - Number(f.Piso)) === 1
   );
 
   return {diretos, indiretos, poucos};
@@ -302,40 +304,36 @@ function calcularPrecoIA(f, g){
 
   let lista = [];
 
-  const pushSafe = (c, peso)=>{
-    if(c["Área Total"]){
-      lista.push({valor: c.PVP / c["Área Total"], peso});
-    }
+  const push = (c,peso)=>{
+    if(c["Área Total"]) lista.push({v:c.PVP/c["Área Total"], p:peso});
   };
 
-  g.diretos.forEach(c => pushSafe(c, 1.0));
-  g.indiretos.forEach(c => pushSafe(c, 0.7));
-  g.poucos.forEach(c => pushSafe(c, 0.4));
+  g.diretos.forEach(c=>push(c,1));
+  g.indiretos.forEach(c=>push(c,0.8));
+  g.poucos.forEach(c=>push(c,0.6));
 
   if(!lista.length){
     return {valor:f.PVP, exp:"Sem dados suficientes"};
   }
 
-  // remover extremos
-  lista.sort((a,b)=>a.valor-b.valor);
-  const corte = Math.floor(lista.length * 0.1);
-  lista = lista.slice(corte, lista.length - corte);
+  lista.sort((a,b)=>a.v-b.v);
 
-  // média ponderada correta
-  let soma = 0;
-  let pesos = 0;
+  const corte = Math.floor(lista.length*0.1);
+  lista = lista.slice(corte, lista.length-corte);
+
+  let soma = 0, peso = 0;
 
   lista.forEach(i=>{
-    soma += i.valor * i.peso;
-    pesos += i.peso;
+    soma += i.v * i.p;
+    peso += i.p;
   });
 
-  const mediaM2 = soma / pesos;
+  const mediaM2 = soma/peso;
 
-  const preco = mediaM2 * 1.15 * area;
+  const preco = mediaM2 * 1.1 * area;
 
   return {
     valor: Math.round(preco),
-    exp: `€/m² ponderado (${Math.round(mediaM2)}€/m²) + ajuste premium`
+    exp: `€/m² ponderado (${Math.round(mediaM2)}€/m²) + ajuste 10%`
   };
 }
