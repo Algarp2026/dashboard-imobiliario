@@ -82,6 +82,7 @@ body {
   padding:18px;
   border-radius:16px;
   box-shadow:0 6px 20px rgba(0,0,0,0.06);
+  cursor:pointer;
 }
 
 .badge {
@@ -155,10 +156,10 @@ body {
 </div>
 
 <div class="filters">
-  <button onclick="setMode('todos')">Todos</button>
-  <button onclick="setMode('piso')">Piso</button>
-  <button onclick="setMode('vista')">Vista</button>
-  <button onclick="setMode('um')">Selecionar</button>
+  <button class="filter-btn" onclick="setMode('todos')">Todos</button>
+  <button class="filter-btn" onclick="setMode('piso')">Piso</button>
+  <button class="filter-btn" onclick="setMode('vista')">Vista</button>
+  <button class="filter-btn" onclick="setMode('um')">Selecionar</button>
 </div>
 
 <div class="select-box" id="selectBox"></div>
