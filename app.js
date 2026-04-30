@@ -35,7 +35,7 @@ function media(arr){
   return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
 }
 
-/* ================= NOVO PRICING ================= */
+/* ================= PRICING ================= */
 
 function precoFallback(d,i,p){
   if(d.length) return media(d);
@@ -69,20 +69,47 @@ function precoRigoroso(d,i,p){
 
 function initFiltros(){
 
-  const base=data.filter(d=>d.Empreendimento==="The View");
+  const base = data.filter(d=>d.Empreendimento==="The View");
+  const comps = data.filter(d=>d.Empreendimento!=="The View");
 
+  // Piso
   piso.innerHTML=`<option value="">Todos</option>`+
     [...new Set(base.map(d=>d.Piso))]
     .map(p=>`<option>${p}</option>`);
 
+  // Vista
   vista.innerHTML=`<option value="">Todas</option>`+
     [...new Set(base.map(d=>d.Vista))]
     .map(v=>`<option>${v}</option>`);
+
+  // Frações
+  fractionsBox.innerHTML = base.map(d=>`
+    <label>
+      <input type="checkbox" value="${d["Fração"]}" onchange="render()">
+      ${d["Fração"]}
+    </label>
+  `).join("");
+
+  // Empreendimentos
+  empreBox.innerHTML = [...new Set(comps.map(d=>d.Empreendimento))]
+    .map(e=>`
+      <label>
+        <input type="checkbox" value="${e}" checked onchange="render()">
+        ${e}
+      </label>
+    `).join("");
+}
+
+function getChecked(id){
+  return [...document.querySelectorAll(`#${id} input:checked`)]
+    .map(i=>i.value);
 }
 
 function resetFiltros(){
   piso.value="";
   vista.value="";
+  document.querySelectorAll("#fractionsBox input").forEach(i=>i.checked=false);
+  document.querySelectorAll("#empreBox input").forEach(i=>i.checked=true);
   render();
 }
 
@@ -90,15 +117,24 @@ function resetFiltros(){
 
 function render(){
 
-  let base=data.filter(d=>d.Empreendimento==="The View");
+  let base = data.filter(d=>d.Empreendimento==="The View");
 
-  const p=piso.value;
-  const v=vista.value;
+  const p = piso.value;
+  const v = vista.value;
+  const selectedFractions = getChecked("fractionsBox");
+  const selectedEmpre = getChecked("empreBox");
 
-  if(p) base=base.filter(d=>d.Piso==p);
-  if(v) base=base.filter(d=>d.Vista==v);
+  if(p) base = base.filter(d=>d.Piso==p);
+  if(v) base = base.filter(d=>d.Vista==v);
 
-  const comp=data.filter(d=>d.Empreendimento!=="The View");
+  if(selectedFractions.length){
+    base = base.filter(d=>selectedFractions.includes(d["Fração"]));
+  }
+
+  const comp = data.filter(d=>
+    d.Empreendimento !== "The View" &&
+    selectedEmpre.includes(d.Empreendimento)
+  );
 
   grid.innerHTML="";
 
@@ -174,13 +210,10 @@ function abrirModal(ap,d,i,p){
       <b>${ap.PVP.toLocaleString()}€</b>
     </p>
 
-    <!-- 🔥 PRICING CARDS -->
     <div style="display:grid;gap:10px;margin:15px 0;">
-
       ${cardPreco("🔵 Recomendado", fallback, diffF, "#e6f0ff")}
       ${cardPreco("🟡 Fallback", fallback, diffF, "#fff7d6")}
       ${cardPreco("🟣 Rigoroso", rigor, diffR, "#f0e6ff")}
-
     </div>
 
     ${sec("Diretos",d,ap)}
@@ -189,7 +222,7 @@ function abrirModal(ap,d,i,p){
   `;
 }
 
-/* ================= CARD PREÇO ================= */
+/* ================= UI ================= */
 
 function cardPreco(titulo,valor,diff,color){
 
@@ -200,11 +233,7 @@ function cardPreco(titulo,valor,diff,color){
   `;
 
   return `
-    <div style="
-      background:${color};
-      padding:12px;
-      border-radius:10px;
-    ">
+    <div style="background:${color};padding:12px;border-radius:10px;">
       <b>${titulo}</b><br>
       ${valor.toLocaleString()}€<br>
       <span class="${diff>0?'up':'down'}">
@@ -213,8 +242,6 @@ function cardPreco(titulo,valor,diff,color){
     </div>
   `;
 }
-
-/* ================= CONCORRENTES ================= */
 
 function sec(nome,arr,base){
 
@@ -244,8 +271,6 @@ function sec(nome,arr,base){
     </div>
   `;
 }
-
-/* ================= UX ================= */
 
 function toggle(el){
   const c=el.nextElementSibling;
