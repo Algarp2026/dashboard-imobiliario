@@ -1,82 +1,95 @@
-let data = [];
+let data=[];
 
 fetch('data.xlsx')
-.then(res=>res.arrayBuffer())
-.then(buffer=>{
-  const wb = XLSX.read(buffer,{type:"array"});
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  data = XLSX.utils.sheet_to_json(sheet);
-
+.then(r=>r.arrayBuffer())
+.then(b=>{
+  const wb=XLSX.read(b,{type:"array"});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  data=XLSX.utils.sheet_to_json(sheet);
   render();
 });
 
-/* ---------- UTIL ---------- */
+/* ---------- AREAS ---------- */
 
 function toNumber(v){
   if(!v) return null;
   return parseFloat(v.toString().replace(",", "."));
 }
 
-function getAreas(obj){
+function getAreas(o){
+  const abp=toNumber(o["ABP"]);
+  const varan=toNumber(o["Varanda/Terraço"]);
+  const totalExcel=toNumber(o["Área Total"]);
 
-  const abp = obj["ABP"];
-  const varanda = obj["Varanda/Terraço"];
-  const totalExcel = obj["Área Total"] || obj["Area Total"];
+  let total= totalExcel || ((abp||0)+(varan||0));
 
-  const areaBruta = toNumber(abp);
-  const areaVaranda = toNumber(varanda);
-  const areaTotalExcel = toNumber(totalExcel);
+  return { bruta:abp, varanda:varan, total };
+}
 
-  let total = null;
+function getPricePerM2(o){
+  const a=getAreas(o);
+  if(!a.total||!o.PVP) return null;
+  return o.PVP/a.total;
+}
 
-  if(areaTotalExcel){
-    total = areaTotalExcel;
-  } else if(areaBruta || areaVaranda){
-    total = (areaBruta || 0) + (areaVaranda || 0);
-  }
+/* ---------- CONFIG DINÂMICA ---------- */
 
+function getConfig(){
   return {
-    bruta: areaBruta,
-    varanda: areaVaranda,
-    total: total
+    direto:{
+      piso: parseInt(document.getElementById("cfg_direto_piso").value),
+      vista: document.getElementById("cfg_direto_vista").checked
+    },
+    indireto:{
+      piso: parseInt(document.getElementById("cfg_indireto_piso").value),
+      vista:false
+    },
+    pouco:{
+      piso: parseInt(document.getElementById("cfg_pouco_piso").value),
+      vista:false
+    }
   };
 }
 
-function getPricePerM2(obj){
-  const areas = getAreas(obj);
-  if(!areas.total || !obj.PVP) return null;
-  return obj.PVP / areas.total;
-}
+/* ---------- LOGICA ---------- */
 
 function mapTipologia(t){
   return (t==="T1+1"||t==="T1 Duplex")?"T2":t;
 }
 
-function media(arr){
-  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
+function getConc(ap,tipo){
+
+  const cfg=getConfig()[tipo];
+  const comp=data.filter(d=>d.Empreendimento!=="The View");
+  const tip=mapTipologia(ap.Tipologia);
+
+  return comp.filter(c=>{
+    return mapTipologia(c.Tipologia)===tip &&
+      Math.abs(c.Piso-ap.Piso)<=cfg.piso &&
+      (cfg.vista ? c.Vista===ap.Vista : true);
+  });
 }
 
 /* ---------- RENDER ---------- */
 
 function render(){
 
-  const base = data.filter(d=>d.Empreendimento==="The View");
-  const comp = data.filter(d=>d.Empreendimento!=="The View");
-
+  const base=data.filter(d=>d.Empreendimento==="The View");
   const grid=document.getElementById("grid");
   grid.innerHTML="";
 
   base.forEach(ap=>{
 
-    const areas = getAreas(ap);
-    const priceM2 = getPricePerM2(ap);
-    const tip=mapTipologia(ap.Tipologia);
+    const areas=getAreas(ap);
+    const m2=getPricePerM2(ap);
 
-    const direto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
-    const indireto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
+    const direto=getConc(ap,"direto");
+    const indireto=getConc(ap,"indireto");
 
-    const dDir = direto.length ? ((ap.PVP/media(direto)-1)*100) : null;
-    const dInd = indireto.length ? ((ap.PVP/media(indireto)-1)*100) : null;
+    const avg = arr => arr.length?arr.reduce((a,b)=>a+b.PVP,0)/arr.length:null;
+
+    const dDir = direto.length?((ap.PVP/avg(direto)-1)*100):null;
+    const dInd = indireto.length?((ap.PVP/avg(indireto)-1)*100):null;
 
     const card=document.createElement("div");
     card.className="card";
@@ -87,19 +100,14 @@ function render(){
       Piso ${ap.Piso} • Vista ${ap.Vista}
 
       <div class="small">
-        ${areas.bruta ?? "-"} m² • 
-        Varanda ${areas.varanda ?? "-"} m² • 
-        Total ${areas.total ? areas.total.toFixed(1) : "-"} m²
+        ${areas.bruta} m² • Var ${areas.varanda} • Total ${areas.total}
       </div>
 
       <div class="price">${ap.PVP.toLocaleString()}€</div>
+      <div class="small">${m2?m2.toFixed(0):"-"} €/m²</div>
 
-      <div class="small">
-        ${priceM2 ? priceM2.toFixed(0) + " €/m²" : "-"}
-      </div>
-
-      ${dDir!==null ? `<div class="${dDir>0?'up':'down'}">${dDir.toFixed(1)}% vs Diretos</div>`:""}
-      ${dInd!==null ? `<div class="${dInd>0?'up':'down'}">${dInd.toFixed(1)}% vs Indiretos</div>`:""}
+      ${dDir!==null?`<div class="${dDir>0?'up':'down'}">${dDir.toFixed(1)}% Diretos</div>`:""}
+      ${dInd!==null?`<div class="${dInd>0?'up':'down'}">${dInd.toFixed(1)}% Indiretos</div>`:""}
     `;
 
     card.onclick=()=>abrirModal(ap);
@@ -111,101 +119,41 @@ function render(){
 
 function abrirModal(ap){
 
-  const areas = getAreas(ap);
-  const priceM2 = getPricePerM2(ap);
+  const areas=getAreas(ap);
+  const m2=getPricePerM2(ap);
 
-  const comp = data.filter(d=>d.Empreendimento!=="The View");
-  const tip=mapTipologia(ap.Tipologia);
+  const direto=getConc(ap,"direto");
+  const indireto=getConc(ap,"indireto");
+  const pouco=getConc(ap,"pouco");
 
-  const direto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
-  const indireto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
-  const pouco=comp.filter(c=>mapTipologia(c.Tipologia)===tip && Math.abs(c.Piso-ap.Piso)<=1);
+  const sec=(t,arr)=>`
+    <div class="section">
+      <b>${t} (${arr.length})</b>
+      ${arr.map(c=>`
+        <div class="comp">
+          ${c.Empreendimento} - ${c["Fração"]}
+          <span>${c.PVP.toLocaleString()}€</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
 
   document.getElementById("modal").style.display="block";
   document.getElementById("modalTitulo").innerText=ap["Fração"];
 
   document.getElementById("modalConteudo").innerHTML=`
-    <p><b>${ap.Tipologia}</b> • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
+    <p>${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
 
-    <p>
-      Área: ${areas.bruta ?? "-"} m² |
-      Varanda: ${areas.varanda ?? "-"} m² |
-      Total: ${areas.total ? areas.total.toFixed(1) : "-"} m²
-    </p>
+    <p>${areas.bruta} | Var ${areas.varanda} | Total ${areas.total}</p>
 
-    <p>
-      <b>${ap.PVP.toLocaleString()}€</b><br>
-      ${priceM2 ? priceM2.toFixed(0) + " €/m²" : "-"}
-    </p>
+    <p><b>${ap.PVP.toLocaleString()}€</b> (${m2?m2.toFixed(0):"-"} €/m²)</p>
 
-    ${sec("Diretos", direto, ap.PVP, "d")}
-    ${sec("Indiretos", indireto, ap.PVP, "i")}
-    ${sec("Pouco concorrente", pouco, ap.PVP, "p")}
+    ${sec("Diretos",direto)}
+    ${sec("Indiretos",indireto)}
+    ${sec("Pouco",pouco)}
   `;
 }
-
-function sec(titulo, arr, base, id){
-  return `
-    <div class="section">
-      <div class="section-header" onclick="toggle('${id}')">
-        ${titulo} (${arr.length})
-      </div>
-
-      <div id="${id}">
-        ${arr.map(d=>{
-          const dif = ((base/d.PVP -1)*100);
-          return `
-            <div class="comp" onclick='abrirConc(${JSON.stringify(d)})'>
-              <span>${d.Empreendimento} - ${d["Fração"]}</span>
-              <span>${d.PVP.toLocaleString()}€ (${dif.toFixed(1)}%)</span>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function toggle(id){
-  document.getElementById(id).classList.toggle("hidden");
-}
-
-/* ---------- CONCORRENTE ---------- */
-
-function abrirConc(c){
-
-  const areas = getAreas(c);
-  const priceM2 = getPricePerM2(c);
-
-  document.getElementById("modalConc").style.display="block";
-  document.getElementById("concTitulo").innerText=c["Fração"];
-
-  document.getElementById("concConteudo").innerHTML=`
-    <p><b>${c.Empreendimento}</b></p>
-
-    <p>Tipologia: ${c.Tipologia}</p>
-    <p>Piso: ${c.Piso}</p>
-    <p>Vista: ${c.Vista}</p>
-
-    <p>
-      Área: ${areas.bruta ?? "-"} m² |
-      Varanda: ${areas.varanda ?? "-"} m² |
-      Total: ${areas.total ? areas.total.toFixed(1) : "-"} m²
-    </p>
-
-    <p>
-      <b>${c.PVP.toLocaleString()}€</b><br>
-      ${priceM2 ? priceM2.toFixed(0) + " €/m²" : "-"}
-    </p>
-  `;
-}
-
-/* ---------- CLOSE ---------- */
 
 function fecharModal(){
   document.getElementById("modal").style.display="none";
-}
-
-function fecharConc(){
-  document.getElementById("modalConc").style.display="none";
 }
