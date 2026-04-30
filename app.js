@@ -32,7 +32,7 @@ function render(){
     card.innerHTML=`
       <b>${ap["Fração"]}</b><br>
       Piso ${ap.Piso} • Vista ${ap.Vista}
-      <div class="price">${ap.PVP.toLocaleString()}€</div>
+      <div><b>${ap.PVP.toLocaleString()}€</b></div>
     `;
 
     card.onclick=()=>abrirModal(ap);
@@ -42,34 +42,59 @@ function render(){
 
 function abrirModal(ap){
 
-  const comp=data.filter(d=>d.Empreendimento!=="The View");
-  const tip=mapTipologia(ap.Tipologia);
+  const comp = data.filter(d => d.Empreendimento !== "The View");
+  const tip = mapTipologia(ap.Tipologia);
 
-  const concorrentes=comp.filter(c=>mapTipologia(c.Tipologia)===tip);
+  const direto = comp.filter(c => mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
+  const indireto = comp.filter(c => mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
+  const pouco = comp.filter(c => mapTipologia(c.Tipologia)===tip && Math.abs(c.Piso-ap.Piso)<=1);
 
   document.getElementById("modal").style.display="block";
   document.getElementById("modalTitulo").innerText=ap["Fração"];
 
   document.getElementById("modalConteudo").innerHTML=`
     <p><b>${ap.Tipologia}</b> • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
-    <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
+    <p><b>${ap.PVP.toLocaleString()}€</b></p>
 
+    ${sec("🔴 Diretos", direto, ap.PVP, "d")}
+    ${sec("🟠 Indiretos", indireto, ap.PVP, "i")}
+    ${sec("🟡 Pouco concorrente", pouco, ap.PVP, "p")}
+  `;
+}
+
+function sec(titulo, arr, base, id){
+  return `
     <div class="section">
-      <b>Concorrentes</b>
-      ${concorrentes.map(c=>`
-        <div class="comp" onclick='abrirConc(${JSON.stringify(c)})'>
-          <span>${c.Empreendimento} - ${c["Fração"]}</span>
-          <span>${c.PVP.toLocaleString()}€</span>
-        </div>
-      `).join("")}
+      <div class="section-header" onclick="toggle('${id}')">
+        ${titulo} (${arr.length})
+      </div>
+
+      <div class="section-content" id="${id}">
+        ${arr.map(d=>{
+          const dif = ((base/d.PVP -1)*100);
+          return `
+            <div class="comp" onclick='abrirConc(${JSON.stringify(d)})'>
+              <span>${d.Empreendimento} - ${d["Fração"]}</span>
+              <span>
+                ${d.PVP.toLocaleString()}€ 
+                (${dif.toFixed(1)}%)
+              </span>
+            </div>
+          `;
+        }).join("")}
+      </div>
     </div>
   `;
 }
 
-function abrirConc(c){
+function toggle(id){
+  document.getElementById(id).classList.toggle("hidden");
+}
 
+/* NOVO — DETALHE CONCORRENTE */
+function abrirConc(c){
   document.getElementById("modalConc").style.display="block";
-  document.getElementById("concTitulo").innerText = c["Fração"];
+  document.getElementById("concTitulo").innerText=c["Fração"];
 
   document.getElementById("concConteudo").innerHTML=`
     <p><b>${c.Empreendimento}</b></p>
