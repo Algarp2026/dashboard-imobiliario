@@ -1,0 +1,73 @@
+.card.premium{
+  background:white;
+  border-radius:12px;
+  padding:15px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.08);
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.card.premium:hover{
+  transform:translateY(-3px);
+}
+
+.badge{
+  font-size:12px;
+  color:#888;
+}
+
+.title{
+  font-size:18px;
+  font-weight:bold;
+}
+
+.meta{
+  font-size:12px;
+  color:#666;
+}
+
+.area{
+  font-size:13px;
+  margin-top:5px;
+}
+
+.price{
+  font-size:20px;
+  font-weight:bold;
+  margin-top:10px;
+}
+
+.delta{
+  margin-top:5px;
+  font-weight:bold;
+}
+
+.up{color:#e74c3c;}
+.down{color:#2ecc71;}
+
+.pricingGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:15px 0;
+}
+
+.priceBox{
+  padding:12px;
+  border-radius:10px;
+}
+
+.priceBox.blue{background:#e6f0ff;}
+.priceBox.purple{background:#f0e6ff;}
+.priceBox.green{background:#eafaf1;}
+
+.priceBox .value{
+  font-size:18px;
+  font-weight:bold;
+}
+
+.compRow{
+  display:flex;
+  justify-content:space-between;
+  margin:5px 0;
+}
