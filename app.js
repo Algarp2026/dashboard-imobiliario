@@ -150,7 +150,8 @@ function abrir(encoded){
       const diff = ((f.PVP - c.PVP) / c.PVP) * 100;
 
       return `
-        <div class="compRow" onclick='abrir("${encodeURIComponent(JSON.stringify(c))}")'>
+        <div class="compRow" 
+             onclick='event.stopPropagation(); abrir("${encodeURIComponent(JSON.stringify(c))}")'>
 
           <div>
             <strong>${c.Empreendimento} - ${c.Fração}</strong><br>
@@ -301,33 +302,40 @@ function calcularPrecoIA(f, g){
 
   let lista = [];
 
-  g.diretos.forEach(c=>{
-    if(c["Área Total"]) lista.push((c.PVP/c["Área Total"])*1.0);
-  });
+  const pushSafe = (c, peso)=>{
+    if(c["Área Total"]){
+      lista.push({valor: c.PVP / c["Área Total"], peso});
+    }
+  };
 
-  g.indiretos.forEach(c=>{
-    if(c["Área Total"]) lista.push((c.PVP/c["Área Total"])*0.7);
-  });
-
-  g.poucos.forEach(c=>{
-    if(c["Área Total"]) lista.push((c.PVP/c["Área Total"])*0.4);
-  });
+  g.diretos.forEach(c => pushSafe(c, 1.0));
+  g.indiretos.forEach(c => pushSafe(c, 0.7));
+  g.poucos.forEach(c => pushSafe(c, 0.4));
 
   if(!lista.length){
     return {valor:f.PVP, exp:"Sem dados suficientes"};
   }
 
-  lista.sort((a,b)=>a-b);
-
+  // remover extremos
+  lista.sort((a,b)=>a.valor-b.valor);
   const corte = Math.floor(lista.length * 0.1);
   lista = lista.slice(corte, lista.length - corte);
 
-  const mediaM2 = lista.reduce((a,b)=>a+b,0) / lista.length;
+  // média ponderada correta
+  let soma = 0;
+  let pesos = 0;
+
+  lista.forEach(i=>{
+    soma += i.valor * i.peso;
+    pesos += i.peso;
+  });
+
+  const mediaM2 = soma / pesos;
 
   const preco = mediaM2 * 1.15 * area;
 
   return {
     valor: Math.round(preco),
-    exp: `€/m² (${Math.round(mediaM2)}€/m²) + pesos + premium 15%`
+    exp: `€/m² ponderado (${Math.round(mediaM2)}€/m²) + ajuste premium`
   };
 }
