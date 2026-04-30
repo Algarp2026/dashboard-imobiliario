@@ -1,213 +1,143 @@
-let data = [];
+let data=[];
 
 fetch('data.xlsx')
-.then(res=>res.arrayBuffer())
-.then(buffer=>{
-  const wb = XLSX.read(buffer,{type:"array"});
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  data = XLSX.utils.sheet_to_json(sheet);
-
+.then(r=>r.arrayBuffer())
+.then(b=>{
+  const wb=XLSX.read(b,{type:"array"});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  data=XLSX.utils.sheet_to_json(sheet);
   initFiltros();
   render();
 });
 
 /* ---------- UTIL ---------- */
 
-function toNumber(v){
-  if(!v) return null;
-  return parseFloat(v.toString().replace(",", "."));
+const num = v => v ? parseFloat(v.toString().replace(",",".")) : null;
+
+function getAreas(o){
+  const abp=num(o["ABP"]);
+  const varan=num(o["Varanda/Terraço"]);
+  const total=num(o["Área Total"]) || ((abp||0)+(varan||0));
+  return {abp,varan,total};
 }
 
-function getAreas(obj){
-  const abp = toNumber(obj["ABP"]);
-  const varanda = toNumber(obj["Varanda/Terraço"]);
-  const totalExcel = toNumber(obj["Área Total"]);
-
-  let total = totalExcel || ((abp||0)+(varanda||0));
-
-  return { bruta:abp, varanda:varanda, total };
+function m2(o){
+  const a=getAreas(o);
+  return (a.total && o.PVP)?o.PVP/a.total:null;
 }
 
-function getPricePerM2(obj){
-  const a = getAreas(obj);
-  if(!a.total || !obj.PVP) return null;
-  return obj.PVP / a.total;
-}
-
-function mapTipologia(t){
-  return (t==="T1+1"||t==="T1 Duplex")?"T2":t;
-}
-
-function media(arr){
-  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
-}
+function mapT(t){ return (t==="T1+1"||t==="T1 Duplex")?"T2":t; }
 
 /* ---------- FILTROS ---------- */
 
 function initFiltros(){
 
-  const base = data.filter(d=>d.Empreendimento==="The View");
+  const base=data.filter(d=>d.Empreendimento==="The View");
+  const comps=data.filter(d=>d.Empreendimento!=="The View");
 
-  const pisos = [...new Set(base.map(d=>d.Piso))];
-  const vistas = [...new Set(base.map(d=>d.Vista))];
+  document.getElementById("piso").innerHTML =
+    `<option value="">Todos</option>`+
+    [...new Set(base.map(d=>d.Piso))].map(p=>`<option>${p}</option>`);
 
-  const selPiso = document.getElementById("piso");
-  const selVista = document.getElementById("vista");
-  const selManual = document.getElementById("manual");
+  document.getElementById("vista").innerHTML =
+    `<option value="">Todas</option>`+
+    [...new Set(base.map(d=>d.Vista))].map(v=>`<option>${v}</option>`);
 
-  selPiso.innerHTML = `<option value="">Piso</option>` + pisos.map(p=>`<option>${p}</option>`).join("");
-  selVista.innerHTML = `<option value="">Vista</option>` + vistas.map(v=>`<option>${v}</option>`).join("");
+  document.getElementById("manual").innerHTML =
+    base.map(d=>`<option value="${d["Fração"]}">${d["Fração"]}</option>`);
 
-  selManual.innerHTML = base.map(d=>`<option value="${d["Fração"]}">${d["Fração"]}</option>`).join("");
+  document.getElementById("empre").innerHTML =
+    [...new Set(comps.map(d=>d.Empreendimento))]
+      .map(e=>`<option selected>${e}</option>`);
 }
 
 /* ---------- RENDER ---------- */
 
 function render(){
 
-  const modo = document.getElementById("modo").value;
+  let base=data.filter(d=>d.Empreendimento==="The View");
 
-  document.getElementById("manual").style.display = modo==="manual" ? "block":"none";
+  const piso=document.getElementById("piso").value;
+  const vista=document.getElementById("vista").value;
+  const manual=[...document.getElementById("manual").selectedOptions].map(o=>o.value);
+  const empre=[...document.getElementById("empre").selectedOptions].map(o=>o.value);
 
-  let base = data.filter(d=>d.Empreendimento==="The View");
+  if(piso) base=base.filter(d=>d.Piso==piso);
+  if(vista) base=base.filter(d=>d.Vista==vista);
+  if(manual.length) base=base.filter(d=>manual.includes(d["Fração"]));
 
-  if(modo==="piso"){
-    const piso = document.getElementById("piso").value;
-    base = base.filter(d=>d.Piso==piso);
-  }
+  const comp=data.filter(d=>empre.includes(d.Empreendimento));
 
-  if(modo==="vista"){
-    const vista = document.getElementById("vista").value;
-    base = base.filter(d=>d.Vista==vista);
-  }
-
-  if(modo==="manual"){
-    const selected = [...document.getElementById("manual").selectedOptions].map(o=>o.value);
-    base = base.filter(d=>selected.includes(d["Fração"]));
-  }
-
-  const comp = data.filter(d=>d.Empreendimento!=="The View");
-
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
+  const grid=document.getElementById("grid");
+  grid.innerHTML="";
 
   base.forEach(ap=>{
 
-    const areas = getAreas(ap);
-    const m2 = getPricePerM2(ap);
-    const tip = mapTipologia(ap.Tipologia);
+    const areas=getAreas(ap);
+    const priceM2=m2(ap);
 
-    const direto = comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
-    const indireto = comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
+    const tip=mapT(ap.Tipologia);
 
-    const dDir = direto.length ? ((ap.PVP/media(direto)-1)*100) : null;
-    const dInd = indireto.length ? ((ap.PVP/media(indireto)-1)*100) : null;
+    const concorrentes=comp.filter(c=>mapT(c.Tipologia)===tip);
 
-    const card = document.createElement("div");
-    card.className = "card";
+    const avgM2 = concorrentes.length
+      ? concorrentes.reduce((a,b)=>a+m2(b),0)/concorrentes.length
+      : null;
 
-    card.innerHTML = `
-      <div class="badge">${ap.Tipologia}</div>
+    const precoIdeal = avgM2 ? avgM2 * areas.total : null;
+
+    const card=document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
       <b>${ap["Fração"]}</b><br>
-      Piso ${ap.Piso} • Vista ${ap.Vista}
+      ${ap.Tipologia} • Piso ${ap.Piso}
 
-      <div class="small">
-        ${areas.bruta ?? "-"} m² • 
-        Varanda ${areas.varanda ?? "-"} • 
-        Total ${areas.total ?? "-"}
-      </div>
+      <div class="small">${areas.total} m²</div>
 
       <div class="price">${ap.PVP.toLocaleString()}€</div>
-      <div class="small">${m2 ? m2.toFixed(0) : "-"} €/m²</div>
 
-      ${dDir!==null ? `<div class="${dDir>0?'up':'down'}">${dDir.toFixed(1)}% Diretos</div>`:""}
-      ${dInd!==null ? `<div class="${dInd>0?'up':'down'}">${dInd.toFixed(1)}% Indiretos</div>`:""}
+      <div class="small">${priceM2?priceM2.toFixed(0):"-"} €/m²</div>
+
+      ${precoIdeal ? `<div class="small">Ideal: ${precoIdeal.toLocaleString()}€</div>`:""}
     `;
 
-    card.onclick = ()=>abrirModal(ap);
+    card.onclick=()=>abrirModal(ap, concorrentes, avgM2, precoIdeal);
+
     grid.appendChild(card);
   });
 }
 
 /* ---------- MODAL ---------- */
 
-function abrirModal(ap){
+function abrirModal(ap, concorrentes, avgM2, precoIdeal){
 
-  const areas = getAreas(ap);
-  const m2 = getPricePerM2(ap);
-
-  const comp = data.filter(d=>d.Empreendimento!=="The View");
-  const tip = mapTipologia(ap.Tipologia);
-
-  const direto = comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
-  const indireto = comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
-  const pouco = comp.filter(c=>mapTipologia(c.Tipologia)===tip && Math.abs(c.Piso-ap.Piso)<=1);
+  const areas=getAreas(ap);
 
   document.getElementById("modal").style.display="block";
   document.getElementById("modalTitulo").innerText=ap["Fração"];
 
   document.getElementById("modalConteudo").innerHTML=`
-    <p>${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
 
-    <p>${areas.bruta} | Var ${areas.varanda} | Total ${areas.total}</p>
+    <p><b>${ap.PVP.toLocaleString()}€</b></p>
 
-    <p><b>${ap.PVP.toLocaleString()}€</b> (${m2?m2.toFixed(0):"-"} €/m²)</p>
+    <p>${areas.total} m²</p>
 
-    ${sec("Diretos",direto,ap.PVP,"d")}
-    ${sec("Indiretos",indireto,ap.PVP,"i")}
-    ${sec("Pouco",pouco,ap.PVP,"p")}
-  `;
-}
+    <h4>Preço Ideal</h4>
+    <p>${precoIdeal ? precoIdeal.toLocaleString()+"€" : "N/A"}</p>
 
-function sec(t,arr,base,id){
-  return `
+    <p style="font-size:12px;color:#666;">
+      Fórmula: média €/m² dos concorrentes (${avgM2?.toFixed(0)}) × área (${areas.total})
+    </p>
+
     <div class="section">
-      <div class="section-header" onclick="toggle('${id}')">${t} (${arr.length})</div>
-      <div id="${id}">
-        ${arr.map(c=>{
-          const dif = ((base/c.PVP-1)*100);
-          return `
-            <div class="comp" onclick='abrirConc(${JSON.stringify(c)})'>
-              <span>${c.Empreendimento} - ${c["Fração"]}</span>
-              <span>${c.PVP.toLocaleString()}€ (${dif.toFixed(1)}%)</span>
-            </div>
-          `;
-        }).join("")}
-      </div>
+      <b>Concorrentes (${concorrentes.length})</b>
+      ${concorrentes.map(c=>`
+        <div class="comp">
+          ${c.Empreendimento} - ${c["Fração"]}
+          <span>${c.PVP.toLocaleString()}€</span>
+        </div>
+      `).join("")}
     </div>
   `;
-}
-
-function toggle(id){
-  document.getElementById(id).classList.toggle("hidden");
-}
-
-/* ---------- CONCORRENTE ---------- */
-
-function abrirConc(c){
-
-  const areas = getAreas(c);
-  const m2 = getPricePerM2(c);
-
-  document.getElementById("modalConc").style.display="block";
-  document.getElementById("concTitulo").innerText=c["Fração"];
-
-  document.getElementById("concConteudo").innerHTML=`
-    <p><b>${c.Empreendimento}</b></p>
-    <p>${c.Tipologia} • Piso ${c.Piso} • Vista ${c.Vista}</p>
-
-    <p>${areas.bruta} | Var ${areas.varanda} | Total ${areas.total}</p>
-
-    <p><b>${c.PVP.toLocaleString()}€</b> (${m2?m2.toFixed(0):"-"} €/m²)</p>
-  `;
-}
-
-/* ---------- CLOSE ---------- */
-
-function fecharModal(){
-  document.getElementById("modal").style.display="none";
-}
-
-function fecharConc(){
-  document.getElementById("modalConc").style.display="none";
 }
