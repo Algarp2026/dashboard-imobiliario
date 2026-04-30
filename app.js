@@ -188,37 +188,54 @@ function abrirModal(ap){
     <p><b>${ap.Tipologia}</b> • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
     <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
 
-    ${sec("🔴 Diretos", direto, ap.PVP)}
-    ${sec("🟠 Indiretos", indireto, ap.PVP)}
-    ${sec("🟡 Pouco concorrente", pouco, ap.PVP)}
+    ${sec("🔴 Diretos", direto, ap.PVP, "dir")}
+    ${sec("🟠 Indiretos", indireto, ap.PVP, "ind")}
+    ${sec("🟡 Pouco concorrente", pouco, ap.PVP, "pouco")}
   `;
 }
 
-function sec(titulo, arr, base){
+function sec(titulo, arr, base, id){
+
   if(!arr.length){
-    return `<div class="section"><b>${titulo}</b><p>Nenhum encontrado</p></div>`;
+    return `
+      <div class="section">
+        <div class="section-header">${titulo}</div>
+        <div class="section-content">Nenhum encontrado</div>
+      </div>
+    `;
   }
 
   return `
     <div class="section">
-      <b>${titulo} (${arr.length})</b>
-      ${arr.map(d=>{
-        const dif = ((base / d.PVP - 1) * 100);
+      <div class="section-header" onclick="toggle('${id}')">
+        <span>${titulo} (${arr.length})</span>
+        <span>▼</span>
+      </div>
 
-        return `
-          <div class="comp">
-            <span>${d.Empreendimento} - ${d["Fração"]}</span>
-            <span>
-              ${d.PVP.toLocaleString()}€ 
-              <span class="${dif > 0 ? 'up' : 'down'}">
-                ${dif > 0 ? '▲' : '▼'} ${Math.abs(dif).toFixed(1)}%
+      <div class="section-content" id="${id}">
+        ${arr.map(d=>{
+          const dif = ((base / d.PVP - 1) * 100);
+
+          return `
+            <div class="comp">
+              <span>${d.Empreendimento} - ${d["Fração"]}</span>
+              <span>
+                ${d.PVP.toLocaleString()}€ 
+                <span class="${dif > 0 ? 'up' : 'down'}">
+                  ${dif > 0 ? '▲' : '▼'} ${Math.abs(dif).toFixed(1)}%
+                </span>
               </span>
-            </span>
-          </div>
-        `;
-      }).join("")}
+            </div>
+          `;
+        }).join("")}
+      </div>
     </div>
   `;
+}
+
+function toggle(id){
+  const el = document.getElementById(id);
+  el.classList.toggle("hidden");
 }
 
 function fecharModal(){
