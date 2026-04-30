@@ -25,18 +25,7 @@ body {
   overflow:auto;
 }
 
-.btn {
-  width:100%;
-  margin:5px 0;
-  padding:8px;
-  border:none;
-  border-radius:6px;
-  background:#2d3e5f;
-  color:white;
-  cursor:pointer;
-}
-
-.btn:hover { background:#3f557d; }
+.sidebar h3 { margin-top:20px; }
 
 .checkbox-group {
   max-height:150px;
@@ -51,11 +40,16 @@ body {
   font-size:13px;
 }
 
-select {
+/* BUTTON */
+.btn {
+  margin-top:15px;
+  padding:8px;
   width:100%;
-  margin-bottom:10px;
-  padding:6px;
+  border:none;
   border-radius:6px;
+  background:#38a169;
+  color:white;
+  cursor:pointer;
 }
 
 /* MAIN */
@@ -64,6 +58,7 @@ select {
   padding:30px;
 }
 
+/* GRID */
 .grid {
   display:grid;
   grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
@@ -98,9 +93,6 @@ select {
 .up { color:#e53e3e; }
 .down { color:#38a169; }
 
-.view { margin-top:20px; }
-.hidden { display:none; }
-
 /* MODAL */
 .modal {
   display:none;
@@ -132,6 +124,8 @@ select {
   cursor:pointer;
 }
 
+.hidden { display:none; }
+
 .comp {
   display:flex;
   justify-content:space-between;
@@ -147,14 +141,7 @@ select {
 
 <div class="sidebar">
 
-  <h2>Menu</h2>
-
-  <button class="btn" onclick="trocarView('home')">Home</button>
-  <button class="btn" onclick="trocarView('precos')">Preços Ideais</button>
-  <button class="btn" onclick="trocarView('dashboard')">Dashboard</button>
-  <button class="btn" onclick="trocarView('analise')">Análise</button>
-
-  <hr>
+  <h2>Filtros</h2>
 
   <h3>Piso</h3>
   <select id="piso" onchange="render()"></select>
@@ -173,23 +160,13 @@ select {
 </div>
 
 <div class="main">
-
   <h1>The View Dashboard</h1>
-
-  <div id="view-home" class="view"></div>
-  <div id="view-precos" class="view hidden"></div>
-  <div id="view-dashboard" class="view hidden"></div>
-
-  <!-- 👇 AQUI FICA O SISTEMA ORIGINAL -->
-  <div id="view-analise" class="view hidden">
-    <div class="grid" id="grid"></div>
-  </div>
-
+  <div class="grid" id="grid"></div>
 </div>
 
 </div>
 
-<!-- MODAL ORIGINAL (NÃO MEXER) -->
+<!-- MODAL -->
 <div id="modal" class="modal">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;">
@@ -200,6 +177,7 @@ select {
   </div>
 </div>
 
+<!-- MODAL CONCORRENTE -->
 <div id="modalConc" class="modal">
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;">
