@@ -108,6 +108,10 @@ function aplicarFiltro(val){
   render(base);
 }
 
+function media(arr){
+  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
+}
+
 function render(lista){
   const grid=document.getElementById("grid");
   grid.innerHTML="";
@@ -156,17 +160,64 @@ function render(lista){
   });
 }
 
-function media(arr){
-  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
-}
-
 function abrirModal(ap){
-  document.getElementById("modal").style.display="block";
-  document.getElementById("modalTitulo").innerText=ap["Fração"];
 
-  document.getElementById("modalConteudo").innerHTML=`
+  const comp = data.filter(d => d.Empreendimento !== "The View");
+  const tip = mapTipologia(ap.Tipologia);
+
+  const direto = comp.filter(c =>
+    mapTipologia(c.Tipologia) === tip &&
+    c.Piso === ap.Piso &&
+    c.Vista === ap.Vista
+  );
+
+  const indireto = comp.filter(c =>
+    mapTipologia(c.Tipologia) === tip &&
+    c.Piso === ap.Piso
+  );
+
+  const pouco = comp.filter(c =>
+    mapTipologia(c.Tipologia) === tip &&
+    Math.abs(c.Piso - ap.Piso) <= 1
+  );
+
+  document.getElementById("modal").style.display = "block";
+  document.getElementById("modalTitulo").innerText = ap["Fração"];
+
+  document.getElementById("modalConteudo").innerHTML = `
     <p><b>${ap.Tipologia}</b> • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
     <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
+
+    ${sec("🔴 Diretos", direto, ap.PVP)}
+    ${sec("🟠 Indiretos", indireto, ap.PVP)}
+    ${sec("🟡 Pouco concorrente", pouco, ap.PVP)}
+  `;
+}
+
+function sec(titulo, arr, base){
+  if(!arr.length){
+    return `<div class="section"><b>${titulo}</b><p>Nenhum encontrado</p></div>`;
+  }
+
+  return `
+    <div class="section">
+      <b>${titulo} (${arr.length})</b>
+      ${arr.map(d=>{
+        const dif = ((base / d.PVP - 1) * 100);
+
+        return `
+          <div class="comp">
+            <span>${d.Empreendimento} - ${d["Fração"]}</span>
+            <span>
+              ${d.PVP.toLocaleString()}€ 
+              <span class="${dif > 0 ? 'up' : 'down'}">
+                ${dif > 0 ? '▲' : '▼'} ${Math.abs(dif).toFixed(1)}%
+              </span>
+            </span>
+          </div>
+        `;
+      }).join("")}
+    </div>
   `;
 }
 
