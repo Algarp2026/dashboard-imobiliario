@@ -7,21 +7,28 @@ fetch('data.xlsx')
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     data = XLSX.utils.sheet_to_json(sheet);
 
+    if (!data.length) {
+      document.body.innerHTML = "Erro: Excel vazio ou mal formatado";
+      return;
+    }
+
     cleanData();
     initDropdown();
+  })
+  .catch(err => {
+    document.body.innerHTML = "Erro ao carregar data.xlsx";
+    console.error(err);
   });
 
 function cleanData() {
   data.forEach(d => {
-    // Converter piso
+    d.Empreendimento = String(d.Empreendimento || "").trim();
+
     if (d.Piso === "R/C") d.Piso = 0;
-    d.Piso = Number(d.Piso);
+    d.Piso = Number(d.Piso || 0);
 
-    // Converter preço
-    d.PVP = Number(d.PVP);
-
-    // Limpar texto
-    d.Empreendimento = String(d.Empreendimento).trim();
+    d.PVP = Number(d.PVP || 0);
+    d.Vista = Number(d.Vista || 0);
   });
 }
 
@@ -32,7 +39,12 @@ function mapTipologia(t) {
 
 function initDropdown() {
   const dropdown = document.getElementById("dropdown");
-  const empreendimentos = [...new Set(data.map(d => d.Empreendimento))];
+  const empreendimentos = [...new Set(data.map(d => d.Empreendimento).filter(Boolean))];
+
+  if (!empreendimentos.length) {
+    document.body.innerHTML = "Erro: Nenhum empreendimento encontrado";
+    return;
+  }
 
   empreendimentos.forEach(e => {
     const opt = document.createElement("option");
@@ -42,7 +54,7 @@ function initDropdown() {
   });
 
   dropdown.onchange = () => render(dropdown.value);
-  render("The View"); // começa já no The View
+  render("The View");
 }
 
 function media(arr) {
@@ -67,7 +79,6 @@ function render(selected) {
   const comp = data.filter(d => d.Empreendimento !== selected);
 
   base.forEach(ap => {
-
     const tip = mapTipologia(ap.Tipologia);
 
     const direto = comp.filter(c =>
@@ -94,30 +105,20 @@ function render(selected) {
     div.className = "card";
 
     div.innerHTML = `
-      <h3>${ap["Fração"]}</h3>
+      <h3>${ap["Fração"] || "-"}</h3>
       <p><b>Piso:</b> ${ap.Piso} | <b>${ap.Tipologia}</b> | Vista ${ap.Vista}</p>
       <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
 
-      <div class="section direct">
-        <b>Direto</b><br>
-        Média: ${mDir ? mDir.toLocaleString() + "€" : "-"}  
-        | Dif: ${diff(ap.PVP, mDir)}<br>
-        <span class="small">${lista(direto)}</span>
-      </div>
+      <div><b>Direto:</b> ${mDir ? mDir.toLocaleString()+"€" : "-"} | ${diff(ap.PVP, mDir)}</div>
+      <div class="small">${lista(direto)}</div>
 
-      <div class="section indirect">
-        <b>Indireto</b><br>
-        Média: ${mInd ? mInd.toLocaleString() + "€" : "-"}  
-        | Dif: ${diff(ap.PVP, mInd)}<br>
-        <span class="small">${lista(indireto)}</span>
-      </div>
+      <div><b>Indireto:</b> ${mInd ? mInd.toLocaleString()+"€" : "-"} | ${diff(ap.PVP, mInd)}</div>
+      <div class="small">${lista(indireto)}</div>
 
-      <div class="section low">
-        <b>Pouco concorrente</b><br>
-        Média: ${mPou ? mPou.toLocaleString() + "€" : "-"}  
-        | Dif: ${diff(ap.PVP, mPou)}<br>
-        <span class="small">${lista(pouco)}</span>
-      </div>
+      <div><b>Pouco:</b> ${mPou ? mPou.toLocaleString()+"€" : "-"} | ${diff(ap.PVP, mPou)}</div>
+      <div class="small">${lista(pouco)}</div>
+
+      <hr>
     `;
 
     container.appendChild(div);
