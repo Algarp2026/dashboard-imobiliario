@@ -30,12 +30,17 @@ function media(arr) {
 
 function diff(p, m) {
   if (!m) return "-";
-  return ((p/m -1)*100).toFixed(1);
+  return ((p/m -1)*100);
 }
 
-function cor(v) {
+function arrow(v) {
   if (v === "-") return "";
-  return v > 0 ? "red" : "green";
+  return v > 0 ? "▲" : "▼";
+}
+
+function classe(v) {
+  if (v === "-") return "";
+  return v > 0 ? "up" : "down";
 }
 
 function render() {
@@ -65,13 +70,20 @@ function render() {
     card.className = "card";
 
     card.innerHTML = `
+      <div class="badge">${ap.Tipologia}</div>
+
       <b>${ap["Fração"]}</b><br>
-      ${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}
+      Piso ${ap.Piso} • Vista ${ap.Vista}
 
       <div class="price">${ap.PVP.toLocaleString()}€</div>
 
-      <div>Direto: ${dDir==="-"?"-":`<span class="${cor(dDir)}">${dDir}%</span>`}</div>
-      <div>Indireto: ${dInd==="-"?"-":`<span class="${cor(dInd)}">${dInd}%</span>`}</div>
+      <div class="diff ${classe(dDir)}">
+        ${dDir === "-" ? "-" : `${arrow(dDir)} ${Math.abs(dDir).toFixed(1)}% vs Direto`}
+      </div>
+
+      <div class="diff ${classe(dInd)}">
+        ${dInd === "-" ? "-" : `${arrow(dInd)} ${Math.abs(dInd).toFixed(1)}% vs Indireto`}
+      </div>
 
       <button class="btn">Ver análise</button>
     `;
