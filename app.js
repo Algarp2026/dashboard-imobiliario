@@ -45,9 +45,9 @@ function mediaM2(arr){
 /* ================= PRICING ================= */
 
 function precoFallback(d,i,p){
-  if(d.length) return {valor:media(d), origem:"Diretos"};
-  if(i.length) return {valor:media(i), origem:"Indiretos"};
-  if(p.length) return {valor:media(p), origem:"Pouco concorrente"};
+  if(d.length) return {valor:media(d), origem:"Baseado em Diretos"};
+  if(i.length) return {valor:media(i), origem:"Baseado em Indiretos"};
+  if(p.length) return {valor:media(p), origem:"Baseado em Pouco concorrente"};
   return null;
 }
 
@@ -62,14 +62,12 @@ function precoRigoroso(d,i,p){
 
   return {
     valor:soma/total,
-    explicacao:"60% Diretos, 30% Indiretos, 10% Pouco concorrente"
+    explicacao:"Modelo ponderado: 60% Diretos • 30% Indiretos • 10% restantes"
   };
 }
 
 function precoIdeal(ap,d,i,p){
-
   const areas=getAreas(ap);
-
   let base = d.length ? d : (i.length ? i : p);
   if(!base.length) return null;
 
@@ -78,7 +76,7 @@ function precoIdeal(ap,d,i,p){
 
   return {
     valor:preco,
-    explicacao:`Baseado em €/m² médio (${m2.toFixed(0)}€/m²) ajustado à área da fração`
+    explicacao:`€/m² médio (${m2.toFixed(0)}€/m²) ajustado à área`
   };
 }
 
@@ -89,16 +87,16 @@ function initFiltros(){
   const base = data.filter(d=>d.Empreendimento==="The View");
   const comps = data.filter(d=>d.Empreendimento!=="The View");
 
-  piso.innerHTML=`<option value="">Todos</option>`+
+  piso.innerHTML=`<option value="">Todos os pisos</option>`+
     [...new Set(base.map(d=>d.Piso))]
     .map(p=>`<option>${p}</option>`);
 
-  vista.innerHTML=`<option value="">Todas</option>`+
+  vista.innerHTML=`<option value="">Todas as vistas</option>`+
     [...new Set(base.map(d=>d.Vista))]
     .map(v=>`<option>${v}</option>`);
 
   fractionsBox.innerHTML = base.map(d=>`
-    <label>
+    <label class="checkItem">
       <input type="checkbox" value="${d["Fração"]}" onchange="render()">
       ${d["Fração"]}
     </label>
@@ -106,7 +104,7 @@ function initFiltros(){
 
   empreBox.innerHTML = [...new Set(comps.map(d=>d.Empreendimento))]
     .map(e=>`
-      <label>
+      <label class="checkItem">
         <input type="checkbox" value="${e}" checked onchange="render()">
         ${e}
       </label>
@@ -155,36 +153,39 @@ function render(){
     const areas=getAreas(ap);
     const tip=mapTipologia(ap.Tipologia);
 
-    const direto=comp.filter(c=>
-      mapTipologia(c.Tipologia)===tip &&
-      c.Piso===ap.Piso &&
-      c.Vista===ap.Vista
-    );
+    const direto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
+    const indireto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
+    const pouco=comp.filter(c=>mapTipologia(c.Tipologia)===tip && Math.abs(c.Piso-ap.Piso)<=1);
 
-    const indireto=comp.filter(c=>
-      mapTipologia(c.Tipologia)===tip &&
-      c.Piso===ap.Piso
-    );
-
-    const pouco=comp.filter(c=>
-      mapTipologia(c.Tipologia)===tip &&
-      Math.abs(c.Piso-ap.Piso)<=1
-    );
+    const f = precoFallback(direto,indireto,pouco);
+    const diff = f ? ((ap.PVP/f.valor)-1)*100 : null;
 
     const card=document.createElement("div");
-    card.className="card";
+    card.className="card premium";
 
     card.innerHTML=`
-      <b>${ap["Fração"]}</b><br>
-      ${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}
+      <div class="badge">${ap.Tipologia}</div>
 
-      <div style="font-size:12px;margin-top:5px;">
-        ${areas.abp||"-"} m² • Var ${areas.varan||"-"} • Total ${areas.total||"-"}
+      <div class="title">${ap["Fração"]}</div>
+
+      <div class="meta">
+        Piso ${ap.Piso} • ${ap.Vista}
       </div>
 
-      <div style="margin-top:10px;font-size:18px;font-weight:bold;">
+      <div class="area">
+        ${areas.total||"-"} m²
+      </div>
+
+      <div class="price">
         ${ap.PVP.toLocaleString()}€
       </div>
+
+      ${
+        diff!==null ? `
+        <div class="delta ${diff>0?'up':'down'}">
+          ${diff>0?'+':''}${diff.toFixed(1)}%
+        </div>` : ''
+      }
     `;
 
     card.onclick=()=>abrirModal(ap,direto,indireto,pouco);
@@ -208,22 +209,21 @@ function abrirModal(ap,d,i,p){
 
   modalConteudo.innerHTML=`
 
-    <p>${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
+    <div class="modalHeader">
+      <div>
+        <b>${ap.Tipologia}</b> • Piso ${ap.Piso} • ${ap.Vista}
+      </div>
+      <div class="bigPrice">${ap.PVP.toLocaleString()}€</div>
+    </div>
 
-    <p>
-      ABP: ${areas.abp || "-"} m²<br>
-      Varanda: ${areas.varan || "-"} m²<br>
-      Total: ${areas.total || "-"} m²
-    </p>
+    <div class="areas">
+      ${areas.abp||"-"} m² • Var ${areas.varan||"-"} • Total ${areas.total||"-"}
+    </div>
 
-    <p><b>${ap.PVP.toLocaleString()}€</b></p>
-
-    <div style="display:grid;gap:10px;margin:15px 0;">
-
-      ${boxPreco("🔵 Recomendado",f)}
-      ${boxPreco("🟣 Rigoroso",r)}
-      ${boxPreco("🟢 Ideal",ideal)}
-
+    <div class="pricingGrid">
+      ${boxPreco("Recomendado",f,"blue")}
+      ${boxPreco("Rigoroso",r,"purple")}
+      ${boxPreco("Ideal",ideal,"green")}
     </div>
 
     ${sec("Diretos",d,ap)}
@@ -234,19 +234,15 @@ function abrirModal(ap,d,i,p){
 
 /* ================= UI ================= */
 
-function boxPreco(titulo,obj){
+function boxPreco(titulo,obj,color){
 
-  if(!obj) return `
-    <div style="background:#eee;padding:10px;border-radius:10px;">
-      ${titulo}<br>Sem dados
-    </div>
-  `;
+  if(!obj) return `<div class="priceBox empty">${titulo}<br>Sem dados</div>`;
 
   return `
-    <div style="background:#f4f6fb;padding:12px;border-radius:10px;">
-      <b>${titulo}</b><br>
-      ${obj.valor.toLocaleString()}€<br>
-      <small>${obj.explicacao || obj.origem}</small>
+    <div class="priceBox ${color}">
+      <div class="label">${titulo}</div>
+      <div class="value">${obj.valor.toLocaleString()}€</div>
+      <div class="desc">${obj.explicacao || obj.origem}</div>
     </div>
   `;
 }
@@ -254,17 +250,26 @@ function boxPreco(titulo,obj){
 function sec(nome,arr,base){
 
   return `
-    <div style="margin-top:10px;">
-      <div style="font-weight:bold;cursor:pointer;" onclick="toggle(this)">
-        ${nome} (${arr.length})
+    <div class="section">
+      <div class="section-header" onclick="toggle(this)">
+        ▶ ${nome} (${arr.length})
       </div>
-      <div>
+
+      <div class="section-body">
         ${arr.map(c=>{
           const diff=((base.PVP/c.PVP)-1)*100;
           return `
-            <div style="display:flex;justify-content:space-between;font-size:13px;">
-              ${c.Empreendimento} - ${c["Fração"]}
-              <span>${c.PVP.toLocaleString()}€ (${diff.toFixed(1)}%)</span>
+            <div class="compRow">
+              <div>
+                ${c.Empreendimento}<br>
+                <small>${c["Fração"]}</small>
+              </div>
+              <div>
+                ${c.PVP.toLocaleString()}€<br>
+                <span class="${diff>0?'up':'down'}">
+                  ${diff.toFixed(1)}%
+                </span>
+              </div>
             </div>
           `;
         }).join("")}
@@ -274,8 +279,10 @@ function sec(nome,arr,base){
 }
 
 function toggle(el){
-  const c=el.nextElementSibling;
-  c.style.display = c.style.display==="none"?"block":"none";
+  const body = el.nextElementSibling;
+  const isOpen = body.style.display==="block";
+  body.style.display = isOpen?"none":"block";
+  el.innerText = (isOpen?"▶ ":"▼ ") + el.innerText.slice(2);
 }
 
 function fecharModal(){
