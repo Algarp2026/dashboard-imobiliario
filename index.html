@@ -17,7 +17,7 @@ body {
 
 /* SIDEBAR */
 .sidebar {
-  width:260px;
+  width:280px;
   background:#1a2a44;
   color:white;
   padding:20px;
@@ -27,11 +27,29 @@ body {
 
 .sidebar h3 { margin-top:20px; }
 
-.sidebar select {
+.checkbox-group {
+  max-height:150px;
+  overflow:auto;
+  background:#223355;
+  padding:10px;
+  border-radius:8px;
+}
+
+.checkbox-group label {
+  display:block;
+  font-size:13px;
+}
+
+/* BUTTON */
+.btn {
+  margin-top:15px;
+  padding:8px;
   width:100%;
-  padding:6px;
+  border:none;
   border-radius:6px;
-  margin-bottom:10px;
+  background:#38a169;
+  color:white;
+  cursor:pointer;
 }
 
 /* MAIN */
@@ -47,7 +65,6 @@ body {
   gap:20px;
 }
 
-/* CARD */
 .card {
   background:white;
   padding:18px;
@@ -133,10 +150,12 @@ body {
   <select id="vista" onchange="render()"></select>
 
   <h3>Frações</h3>
-  <select id="manual" multiple onchange="render()"></select>
+  <div id="fractionsBox" class="checkbox-group"></div>
 
   <h3>Empreendimentos</h3>
-  <select id="empre" multiple onchange="render()"></select>
+  <div id="empreBox" class="checkbox-group"></div>
+
+  <button class="btn" onclick="resetFiltros()">Limpar filtros</button>
 
 </div>
 
