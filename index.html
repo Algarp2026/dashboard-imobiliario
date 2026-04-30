@@ -9,7 +9,7 @@
 <style>
 body {
   margin:0;
-  font-family: Inter;
+  font-family: Inter, sans-serif;
   background:#f4f6f9;
 }
 
@@ -17,7 +17,7 @@ body {
 
 /* SIDEBAR */
 .sidebar {
-  width:280px;
+  width:260px;
   background:#1a2a44;
   color:white;
   padding:20px;
@@ -29,9 +29,9 @@ body {
 
 .sidebar select {
   width:100%;
-  margin-bottom:10px;
   padding:6px;
   border-radius:6px;
+  margin-bottom:10px;
 }
 
 /* MAIN */
@@ -47,6 +47,7 @@ body {
   gap:20px;
 }
 
+/* CARD */
 .card {
   background:white;
   padding:18px;
@@ -55,9 +56,22 @@ body {
   cursor:pointer;
 }
 
-.badge { background:#edf2f7; padding:4px 8px; border-radius:6px; }
-.price { font-size:22px; font-weight:600; }
-.small { font-size:13px; color:#718096; }
+.badge {
+  background:#edf2f7;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+}
+
+.price {
+  font-size:22px;
+  font-weight:600;
+}
+
+.small {
+  font-size:13px;
+  color:#718096;
+}
 
 .up { color:#e53e3e; }
 .down { color:#38a169; }
@@ -88,9 +102,18 @@ body {
   border-radius:8px;
 }
 
+.section-header {
+  font-weight:600;
+  cursor:pointer;
+}
+
+.hidden { display:none; }
+
 .comp {
   display:flex;
   justify-content:space-between;
+  padding:6px 0;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -124,10 +147,25 @@ body {
 
 </div>
 
+<!-- MODAL -->
 <div id="modal" class="modal">
   <div class="modal-box">
-    <h3 id="modalTitulo"></h3>
+    <div style="display:flex;justify-content:space-between;">
+      <h3 id="modalTitulo"></h3>
+      <button onclick="fecharModal()">X</button>
+    </div>
     <div id="modalConteudo"></div>
+  </div>
+</div>
+
+<!-- MODAL CONCORRENTE -->
+<div id="modalConc" class="modal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;">
+      <h3 id="concTitulo"></h3>
+      <button onclick="fecharConc()">X</button>
+    </div>
+    <div id="concConteudo"></div>
   </div>
 </div>
 
