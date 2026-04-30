@@ -1,5 +1,8 @@
 let data = [];
 
+/* =========================
+   LOAD EXCEL
+========================= */
 fetch('data.xlsx')
 .then(res=>res.arrayBuffer())
 .then(buffer=>{
@@ -8,10 +11,12 @@ fetch('data.xlsx')
   data = XLSX.utils.sheet_to_json(sheet);
 
   initFiltros();
-  render();
+  trocarView("home");
 });
 
-/* ================= UTIL ================= */
+/* =========================
+   UTIL
+========================= */
 
 function toNumber(v){
   if(!v) return null;
@@ -27,7 +32,7 @@ function getAreas(o){
 
 function getPricePerM2(o){
   const a=getAreas(o);
-  if(!a.total||!o.PVP) return null;
+  if(!a.total || !o.PVP) return null;
   return o.PVP/a.total;
 }
 
@@ -39,39 +44,24 @@ function media(arr){
   return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
 }
 
-/* ================= NOVAS FUNÇÕES ================= */
+/* =========================
+   VIEW CONTROL (UX)
+========================= */
 
-function precoFallback(d,i,p){
-  if(d.length) return media(d);
-  if(i.length) return media(i);
-  if(p.length) return media(p);
-  return null;
+function trocarView(nome){
+
+  document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
+  document.getElementById("view-"+nome).classList.remove("hidden");
+
+  if(nome==="home") renderHome();
+  if(nome==="precos") renderPrecos();
+  if(nome==="dashboard") renderDashboard();
+  if(nome==="analise") render(); // motor original
 }
 
-function precoRigoroso(d,i,p){
-
-  let pesos={d:0.6,i:0.3,p:0.1};
-  let soma=0, total=0;
-
-  if(d.length){
-    soma+=media(d)*pesos.d;
-    total+=pesos.d;
-  }
-
-  if(i.length){
-    soma+=media(i)*pesos.i;
-    total+=pesos.i;
-  }
-
-  if(p.length){
-    soma+=media(p)*pesos.p;
-    total+=pesos.p;
-  }
-
-  return total? soma/total : null;
-}
-
-/* ================= FILTROS ================= */
+/* =========================
+   FILTROS
+========================= */
 
 function initFiltros(){
 
@@ -105,7 +95,77 @@ function resetFiltros(){
   render();
 }
 
-/* ================= RENDER ================= */
+/* =========================
+   HOME
+========================= */
+
+function renderHome(){
+
+  const base=data.filter(d=>d.Empreendimento==="The View");
+
+  document.getElementById("view-home").innerHTML=`
+    <div class="card">
+      <h2>Total de Frações</h2>
+      <h1>${base.length}</h1>
+      <p>Use o menu para navegar</p>
+    </div>
+  `;
+}
+
+/* =========================
+   PREÇOS IDEAIS
+========================= */
+
+function renderPrecos(){
+
+  const base=data.filter(d=>d.Empreendimento==="The View");
+  const comp=data.filter(d=>d.Empreendimento!=="The View");
+
+  let html="<h2>Preços Ideais</h2><div class='grid'>";
+
+  base.forEach(ap=>{
+
+    const areas=getAreas(ap);
+
+    const avgM2 = comp.reduce((a,b)=>a+getPricePerM2(b),0)/comp.length;
+    const ideal = avgM2 * areas.total;
+
+    const diff = ((ap.PVP/ideal)-1)*100;
+
+    html+=`
+      <div class="card">
+        <b>${ap["Fração"]}</b><br>
+        Atual: ${ap.PVP.toLocaleString()}€<br>
+        Ideal: ${ideal.toLocaleString()}€<br>
+        <span class="${diff>0?'up':'down'}">${diff.toFixed(1)}%</span>
+      </div>
+    `;
+  });
+
+  html+="</div>";
+
+  document.getElementById("view-precos").innerHTML=html;
+}
+
+/* =========================
+   DASHBOARD
+========================= */
+
+function renderDashboard(){
+
+  const comp=data.filter(d=>d.Empreendimento!=="The View");
+
+  const avgM2 = comp.reduce((a,b)=>a+getPricePerM2(b),0)/comp.length;
+
+  document.getElementById("view-dashboard").innerHTML=`
+    <div class="card">Média Mercado: ${avgM2.toFixed(0)} €/m²</div>
+    <div class="card">Concorrentes: ${comp.length}</div>
+  `;
+}
+
+/* =========================
+   ANALISE (CORE ORIGINAL)
+========================= */
 
 function render(){
 
@@ -122,6 +182,7 @@ function render(){
 
   const comp=data.filter(d=>e.includes(d.Empreendimento));
 
+  const grid=document.getElementById("grid");
   grid.innerHTML="";
 
   base.forEach(ap=>{
@@ -133,6 +194,9 @@ function render(){
     const direto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
     const indireto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso);
     const pouco=comp.filter(c=>mapTipologia(c.Tipologia)===tip && Math.abs(c.Piso-ap.Piso)<=1);
+
+    const dDir = direto.length ? ((ap.PVP/media(direto)-1)*100) : null;
+    const dInd = indireto.length ? ((ap.PVP/media(indireto)-1)*100) : null;
 
     const card=document.createElement("div");
     card.className="card";
@@ -148,63 +212,47 @@ function render(){
 
       <div class="price">${ap.PVP.toLocaleString()}€</div>
       <div class="small">${m2?m2.toFixed(0):"-"} €/m²</div>
+
+      ${dDir!==null?`<div class="${dDir>0?'up':'down'}">${dDir.toFixed(1)}% vs Diretos</div>`:""}
+      ${dInd!==null?`<div class="${dInd>0?'up':'down'}">${dInd.toFixed(1)}% vs Indiretos</div>`:""}
     `;
 
-    card.onclick=()=>abrirModal(ap,direto,indireto,pouco);
+    card.onclick=()=>abrirModal(ap, direto, indireto, pouco);
 
     grid.appendChild(card);
   });
 }
 
-/* ================= MODAL ================= */
+/* =========================
+   MODAL COMPLETO
+========================= */
 
-function abrirModal(ap,d,i,p){
+function abrirModal(ap, direto, indireto, pouco){
 
   const areas=getAreas(ap);
-
-  const fallback = precoFallback(d,i,p);
-  const rigor = precoRigoroso(d,i,p);
-
-  const diffF = fallback ? ((ap.PVP/fallback)-1)*100 : null;
-  const diffR = rigor ? ((ap.PVP/rigor)-1)*100 : null;
+  const m2=getPricePerM2(ap);
 
   modal.style.display="block";
   modalTitulo.innerText=ap["Fração"];
 
   modalConteudo.innerHTML=`
+    <p>${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
 
-    <p><b>${ap.PVP.toLocaleString()}€</b></p>
+    <p>
+      ABP: ${areas.abp || "-"} m²<br>
+      Varanda: ${areas.varan || "-"} m²<br>
+      Total: ${areas.total || "-"} m²
+    </p>
 
-    <div style="display:grid;gap:10px;margin:15px 0;">
+    <p><b>${ap.PVP.toLocaleString()}€</b> (${m2?m2.toFixed(0):"-"} €/m²)</p>
 
-      ${cardPreco("🔵 Recomendado", fallback, diffF, "#e6f0ff")}
-      ${cardPreco("🟡 Fallback", fallback, diffF, "#fff7d6")}
-      ${cardPreco("🟣 Rigoroso", rigor, diffR, "#f0e6ff")}
-
-    </div>
-
-    ${sec("Diretos",d,ap)}
-    ${sec("Indiretos",i,ap)}
-    ${sec("Pouco",p,ap)}
+    ${sec("Diretos", direto, ap)}
+    ${sec("Indiretos", indireto, ap)}
+    ${sec("Pouco concorrente", pouco, ap)}
   `;
 }
 
-function cardPreco(titulo,valor,diff,color){
-
-  if(!valor) return "";
-
-  return `
-    <div style="background:${color};padding:12px;border-radius:10px;">
-      <b>${titulo}</b><br>
-      ${valor.toLocaleString()}€<br>
-      <span class="${diff>0?'up':'down'}">${diff.toFixed(1)}%</span>
-    </div>
-  `;
-}
-
-/* ================= SEC ================= */
-
-function sec(nome,arr,base){
+function sec(nome, arr, base){
 
   return `
     <div class="section">
@@ -212,24 +260,64 @@ function sec(nome,arr,base){
         ${nome} (${arr.length})
       </div>
 
-      <div>
-        ${arr.map(c=>{
-          const diff=((base.PVP/c.PVP)-1)*100;
-          return `
-            <div class="comp">
-              ${c.Empreendimento} - ${c["Fração"]}
-              <span>${c.PVP.toLocaleString()}€ (${diff.toFixed(1)}%)</span>
-            </div>
-          `;
-        }).join("")}
+      <div class="section-content">
+
+        ${arr.length===0 ? "Nenhum encontrado" :
+
+          arr.map(c=>{
+            const diff=((base.PVP/c.PVP)-1)*100;
+            return `
+              <div class="comp" onclick="abrirConc(event, ${encodeURIComponent(JSON.stringify(c))})">
+                ${c.Empreendimento} - ${c["Fração"]}
+                <span>
+                  ${c.PVP.toLocaleString()}€
+                  (${diff.toFixed(1)}%)
+                </span>
+              </div>
+            `;
+          }).join("")
+        }
+
       </div>
     </div>
   `;
 }
 
+/* =========================
+   TOGGLE
+========================= */
+
 function toggle(el){
-  const c=el.nextElementSibling;
-  c.style.display = c.style.display==="none"?"block":"none";
+  const content = el.nextElementSibling;
+  content.style.display = content.style.display === "none" ? "block" : "none";
+}
+
+/* =========================
+   MODAL CONCORRENTE
+========================= */
+
+function abrirConc(e, obj){
+  e.stopPropagation();
+
+  const c = JSON.parse(decodeURIComponent(obj));
+  const areas=getAreas(c);
+
+  modalConc.style.display="block";
+  concTitulo.innerText=c["Fração"];
+
+  concConteudo.innerHTML=`
+    <p>${c.Empreendimento}</p>
+    <p>Piso ${c.Piso} • Vista ${c.Vista}</p>
+
+    <p>
+      ABP: ${areas.abp || "-"} m²<br>
+      Varanda: ${areas.varan || "-"} m²<br>
+      Total: ${areas.total || "-"} m²
+    </p>
+
+    <p><b>${c.PVP.toLocaleString()}€</b></p>
+  `;
 }
 
 function fecharModal(){ modal.style.display="none"; }
+function fecharConc(){ modalConc.style.display="none"; }
