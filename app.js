@@ -83,6 +83,9 @@ function render(){
 
   grid.innerHTML = base.map(f => {
 
+    const abp = f["Área Bruta"] || f["ABP"] || "-";
+    const varanda = f["Varanda"] || f["Varanda/Terraço"] || "-";
+
     const comps = dados.filter(d =>
       d.Empreendimento !== "The View" &&
       emps.includes(d.Empreendimento)
@@ -99,7 +102,7 @@ function render(){
         <div class="meta">Piso ${f.Piso} • Vista ${f.Vista}</div>
 
         <div class="area">
-          ${f["Área Bruta"] || "-"} m² • Varanda ${f["Varanda"] || "-"} m²
+          ${abp} m² • Varanda ${varanda} m²
         </div>
 
         <div class="price">${f.PVP.toLocaleString()}€</div>
@@ -119,6 +122,10 @@ function abrir(encoded){
 
   const f = JSON.parse(decodeURIComponent(encoded));
 
+  const abp = f["Área Bruta"] || f["ABP"] || "-";
+  const varanda = f["Varanda"] || f["Varanda/Terraço"] || "-";
+  const total = f["Área Total"] || f["Total"] || "-";
+
   const emps = getSelecionados("empreBox");
 
   const comps = dados.filter(d =>
@@ -136,15 +143,26 @@ function abrir(encoded){
     if(!lista.length) return "<p>Nenhum encontrado</p>";
 
     return lista.map(c => {
+
+      const cabp = c["Área Bruta"] || c["ABP"] || "-";
+      const cvar = c["Varanda"] || c["Varanda/Terraço"] || "-";
+
       const diff = ((f.PVP - c.PVP) / c.PVP) * 100;
 
       return `
-        <div class="compRow">
-          <span>${c.Empreendimento} - ${c.Fração}</span>
-          <span>${c.PVP.toLocaleString()}€</span>
-          <span class="${diff>0?'up':'down'}">
+        <div class="compRow" onclick='abrir("${encodeURIComponent(JSON.stringify(c))}")'>
+
+          <div>
+            <strong>${c.Empreendimento} - ${c.Fração}</strong><br>
+            <small>${cabp} m² • Varanda ${cvar} m²</small>
+          </div>
+
+          <div>${c.PVP.toLocaleString()}€</div>
+
+          <div class="${diff>0?'up':'down'}">
             ${diff.toFixed(1)}%
-          </span>
+          </div>
+
         </div>
       `;
     }).join("");
@@ -156,9 +174,9 @@ function abrir(encoded){
     <div class="bigPrice">${f.PVP.toLocaleString()}€</div>
 
     <div class="areas">
-      ABP: ${f["Área Bruta"] || "-"} m² |
-      Varanda: ${f["Varanda"] || "-"} m² |
-      Total: ${f["Área Total"] || "-"} m²
+      ABP: ${abp} m² |
+      Varanda: ${varanda} m² |
+      Total: ${total} m²
     </div>
 
     <div class="pricingGrid">
