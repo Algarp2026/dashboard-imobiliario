@@ -131,13 +131,31 @@ body {
   margin:60px auto;
   padding:20px;
   border-radius:12px;
+  max-height:80vh;
+  overflow-y:auto;
 }
 
+/* SECTIONS */
 .section {
   margin-top:15px;
   background:#f7f8fa;
   padding:10px;
   border-radius:8px;
+}
+
+.section-header {
+  display:flex;
+  justify-content:space-between;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.section-content {
+  margin-top:8px;
+}
+
+.hidden {
+  display:none;
 }
 
 .comp {
