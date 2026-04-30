@@ -24,28 +24,26 @@ function initFiltros(){
     vistas.map(v=>`<option>${v}</option>`).join("");
 
   // FRAÇÕES
-  const fracBox = document.getElementById("fractionsBox");
-  fracBox.innerHTML = dados
-    .filter(d=>d.Empreendimento==="The View")
-    .map(d=>`
-      <label class="checkItem">
-        <input type="checkbox" value="${d.Fração}" checked onchange="render()">
-        ${d.Fração}
-      </label>
-    `).join("");
+  document.getElementById("fractionsBox").innerHTML =
+    dados.filter(d=>d.Empreendimento==="The View")
+      .map(d=>`
+        <label class="checkItem">
+          <input type="checkbox" value="${d.Fração}" checked onchange="render()">
+          ${d.Fração}
+        </label>
+      `).join("");
 
   // EMPREENDIMENTOS
   const emp = [...new Set(dados.map(d=>d.Empreendimento))];
 
-  const empBox = document.getElementById("empreBox");
-  empBox.innerHTML = emp
-    .filter(e=>e!=="The View")
-    .map(e=>`
-      <label class="checkItem">
-        <input type="checkbox" value="${e}" checked onchange="render()">
-        ${e}
-      </label>
-    `).join("");
+  document.getElementById("empreBox").innerHTML =
+    emp.filter(e=>e!=="The View")
+      .map(e=>`
+        <label class="checkItem">
+          <input type="checkbox" value="${e}" checked onchange="render()">
+          ${e}
+        </label>
+      `).join("");
 }
 
 function getSelecionados(id){
@@ -56,9 +54,7 @@ function getSelecionados(id){
 function resetFiltros(){
   document.getElementById("piso").value="";
   document.getElementById("vista").value="";
-
   document.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked=true);
-
   render();
 }
 
@@ -85,7 +81,6 @@ function render(){
     );
 
     const media = mediaPreco(f, comps);
-
     const diff = ((f.PVP-media)/media)*100;
 
     return `
@@ -99,9 +94,7 @@ function render(){
           ${f["Área Bruta"] || "-"} m² • Varanda ${f["Varanda"] || "-"} m²
         </div>
 
-        <div class="price">
-          ${f.PVP.toLocaleString()}€
-        </div>
+        <div class="price">${f.PVP.toLocaleString()}€</div>
 
         <div class="delta ${diff>0?'up':'down'}">
           ${diff.toFixed(1)}%
@@ -115,15 +108,43 @@ function render(){
 function mediaPreco(f, comps){
   const list = comps.map(c=>c.PVP);
   if(!list.length) return f.PVP;
-
   return list.reduce((a,b)=>a+b,0)/list.length;
 }
 
+/* ================= MODAL ================= */
+
 function abrir(f){
 
-  const comps = dados.filter(d=>d.Empreendimento!=="The View");
+  const emps = getSelecionados("empreBox");
+
+  const comps = dados.filter(d=>
+    d.Empreendimento!=="The View" &&
+    emps.includes(d.Empreendimento)
+  );
 
   const {precoIA, explicacao} = calcularPrecoIA(f, comps);
+
+  const diretos = comps.filter(c => c.Tipologia === f.Tipologia);
+  const indiretos = comps.filter(c => c.Tipologia !== f.Tipologia);
+  const poucos = comps.slice(0,10);
+
+  function renderLista(lista){
+    if(!lista.length) return "<p>Nenhum encontrado</p>";
+
+    return lista.map(c=>{
+      const diff = ((f.PVP - c.PVP)/c.PVP)*100;
+
+      return `
+        <div class="compRow">
+          <span>${c.Empreendimento} - ${c.Fração}</span>
+          <span>${c.PVP.toLocaleString()}€</span>
+          <span class="${diff>0?'up':'down'}">
+            ${diff.toFixed(1)}%
+          </span>
+        </div>
+      `;
+    }).join("");
+  }
 
   document.getElementById("modalTitulo").innerText = f.Fração;
 
@@ -146,6 +167,26 @@ function abrir(f){
 
     </div>
 
+    <div class="section">
+      <div class="section-header" onclick="toggle(this)">
+        🔴 Diretos (${diretos.length})
+      </div>
+      <div class="section-body">${renderLista(diretos)}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-header" onclick="toggle(this)">
+        🟠 Indiretos (${indiretos.length})
+      </div>
+      <div class="section-body">${renderLista(indiretos)}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-header" onclick="toggle(this)">
+        🟡 Pouco concorrente (${poucos.length})
+      </div>
+      <div class="section-body">${renderLista(poucos)}</div>
+    </div>
   `;
 
   document.getElementById("modal").style.display="block";
@@ -153,6 +194,11 @@ function abrir(f){
 
 function fecharModal(){
   document.getElementById("modal").style.display="none";
+}
+
+function toggle(el){
+  const body = el.nextElementSibling;
+  body.style.display = body.style.display === "block" ? "none" : "block";
 }
 
 /* ================= IA ================= */
@@ -175,7 +221,7 @@ function calcularPrecoIA(f, comps){
     };
   }
 
-  // remover outliers (10%)
+  // remover extremos (10%)
   lista.sort((a,b)=>a-b);
   const corte = Math.floor(lista.length*0.1);
   lista = lista.slice(corte, lista.length-corte);
@@ -189,7 +235,6 @@ function calcularPrecoIA(f, comps){
   return {
     precoIA: Math.round(precoIA),
     explicacao:
-      `Baseado em €/m² (${Math.round(media)}€/m²), removendo extremos, ` +
-      `+ ajuste premium de 15%`
+      `Baseado em €/m² (${Math.round(media)}€/m²), removendo extremos + ajuste premium 15%`
   };
 }
