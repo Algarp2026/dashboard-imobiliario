@@ -1,115 +1,172 @@
+/* ================= BASE ================= */
+
 body{
   margin:0;
-  font-family:Arial, sans-serif;
-  background:#f5f6fa;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background:#f7f8fa;
+  color:#1c1c1c;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
+
 .header{
-  background:#1e2a44;
+  padding:30px 40px;
+  background:linear-gradient(120deg,#1f3c73,#2a5298);
   color:white;
-  padding:20px;
 }
 
-/* LAYOUT */
+.header h1{
+  margin:0;
+  font-weight:500;
+  letter-spacing:1px;
+}
+
+/* ================= CONTAINER ================= */
+
 .container{
-  padding:20px;
+  padding:30px 40px;
+  max-width:1400px;
+  margin:auto;
 }
 
-/* FILTROS */
+/* ================= FILTROS ================= */
+
 .filtros{
   background:white;
-  padding:15px;
-  border-radius:10px;
-  margin-bottom:20px;
+  border-radius:14px;
+  padding:20px;
+  margin-bottom:30px;
+
   display:flex;
   flex-wrap:wrap;
-  gap:15px;
+  gap:20px;
+
+  box-shadow:0 10px 30px rgba(0,0,0,0.05);
 }
 
-.filtro{
-  min-width:150px;
+.filtro label{
+  display:block;
+  font-size:13px;
+  color:#777;
+  margin-bottom:5px;
 }
+
+.filtro select{
+  padding:8px;
+  border-radius:6px;
+  border:1px solid #ddd;
+}
+
+/* CHECKBOX GROUP */
 
 .checkboxGroup{
-  max-height:120px;
+  max-height:140px;
   overflow:auto;
-  border:1px solid #ddd;
-  padding:5px;
-  border-radius:5px;
+  border:1px solid #eee;
+  border-radius:8px;
+  padding:8px;
 }
 
 .checkItem{
   display:block;
   font-size:13px;
+  margin-bottom:4px;
 }
 
 /* BOTÃO */
+
 .btnReset{
-  background:#2ecc71;
+  background:#2d6cdf;
   color:white;
   border:none;
-  padding:8px 12px;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:15px;
-}
-
-/* CARDS */
-.card.premium{
-  background:white;
-  border-radius:12px;
-  padding:15px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.08);
+  padding:10px 14px;
+  border-radius:8px;
   cursor:pointer;
   transition:0.2s;
 }
 
-.card.premium:hover{
-  transform:translateY(-3px);
+.btnReset:hover{
+  background:#1f4fb8;
 }
+
+/* ================= GRID ================= */
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:20px;
+}
+
+/* ================= CARD ================= */
+
+.card{
+  background:white;
+  border-radius:16px;
+  padding:20px;
+  cursor:pointer;
+
+  transition:0.25s;
+
+  box-shadow:0 15px 35px rgba(0,0,0,0.06);
+}
+
+.card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 25px 50px rgba(0,0,0,0.1);
+}
+
+/* BADGE */
 
 .badge{
-  font-size:12px;
+  font-size:11px;
   color:#888;
+  margin-bottom:5px;
 }
+
+/* TITLE */
 
 .title{
-  font-size:18px;
-  font-weight:bold;
+  font-size:20px;
+  font-weight:600;
+  margin-bottom:5px;
 }
+
+/* META */
 
 .meta{
-  font-size:12px;
-  color:#666;
+  font-size:13px;
+  color:#777;
 }
+
+/* AREA */
 
 .area{
+  margin-top:8px;
   font-size:13px;
-  margin-top:5px;
+  color:#555;
 }
+
+/* PRICE */
 
 .price{
-  font-size:20px;
-  font-weight:bold;
-  margin-top:10px;
+  margin-top:12px;
+  font-size:24px;
+  font-weight:700;
 }
 
+/* DELTA */
+
 .delta{
-  margin-top:5px;
-  font-weight:bold;
+  margin-top:6px;
+  font-size:14px;
+  font-weight:600;
 }
 
 .up{color:#e74c3c;}
-.down{color:#2ecc71;}
+.down{color:#27ae60;}
 
-/* MODAL */
+/* ================= MODAL ================= */
+
 .modal{
   display:none;
   position:fixed;
@@ -121,65 +178,94 @@ body{
 .modal-content{
   background:white;
   margin:50px auto;
-  padding:20px;
+  padding:25px;
   width:90%;
-  max-width:600px;
-  border-radius:10px;
-  max-height:80vh;
+  max-width:650px;
+  border-radius:16px;
+
+  max-height:85vh;
   overflow:auto;
 }
 
-.modal-top{
+/* HEADER MODAL */
+
+.modalHeader{
   display:flex;
   justify-content:space-between;
   align-items:center;
+  margin-bottom:10px;
 }
 
-.closeBtn{
-  background:none;
-  border:none;
-  font-size:18px;
-  cursor:pointer;
+.bigPrice{
+  font-size:22px;
+  font-weight:700;
+  color:#2d6cdf;
 }
 
-/* PRICING */
+/* ÁREAS */
+
+.areas{
+  font-size:13px;
+  color:#666;
+  margin-bottom:15px;
+}
+
+/* ================= PRICING ================= */
+
 .pricingGrid{
   display:grid;
-  gap:10px;
+  gap:12px;
   margin:15px 0;
 }
 
 .priceBox{
-  padding:12px;
-  border-radius:10px;
+  padding:14px;
+  border-radius:12px;
 }
 
-.priceBox.blue{background:#e6f0ff;}
-.priceBox.purple{background:#f0e6ff;}
-.priceBox.green{background:#eafaf1;}
+.priceBox .label{
+  font-size:12px;
+  color:#666;
+}
 
 .priceBox .value{
-  font-size:18px;
-  font-weight:bold;
+  font-size:20px;
+  font-weight:700;
 }
 
-/* CONCORRENTES */
-.compRow{
-  display:flex;
-  justify-content:space-between;
-  margin:5px 0;
+.priceBox .desc{
+  font-size:12px;
+  margin-top:4px;
+  color:#777;
 }
+
+/* CORES */
+
+.priceBox.blue{background:#e8f1ff;}
+.priceBox.purple{background:#f1e8ff;}
+.priceBox.green{background:#e8f8f0;}
+
+/* ================= CONCORRENTES ================= */
 
 .section{
-  margin-top:10px;
+  margin-top:12px;
 }
 
 .section-header{
-  font-weight:bold;
+  font-weight:600;
   cursor:pointer;
-  margin-top:10px;
+  padding:8px 0;
 }
 
 .section-body{
   display:none;
+}
+
+/* ROW */
+
+.compRow{
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  border-bottom:1px solid #eee;
 }
