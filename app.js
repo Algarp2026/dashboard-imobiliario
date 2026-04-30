@@ -12,42 +12,21 @@ fetch('data.xlsx')
 
 /* ---------- UTIL ---------- */
 
-function normalize(str){
-  return str?.toString()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"")
-    .replace(/\s/g,"");
-}
-
-function getVal(obj, keys){
-  const objKeys = Object.keys(obj);
-
-  for(let key of keys){
-    const nk = normalize(key);
-
-    for(let k of objKeys){
-      if(normalize(k) === nk){
-        return parseFloat(obj[k]) || null;
-      }
-    }
-  }
-  return null;
+function toNumber(v){
+  if(!v) return null;
+  return parseFloat(v.toString().replace(",", "."));
 }
 
 function getAreas(obj){
 
-  // leitura direta (exata do Excel)
-  const abp = obj["ABP"] ?? obj["Área Bruta"] ?? null;
-  const varanda = obj["Varanda/Terraço"] ?? obj["Varanda"] ?? null;
-  const totalExcel = obj["Área Total"] ?? obj["Area Total"] ?? null;
+  const abp = obj["ABP"];
+  const varanda = obj["Varanda/Terraço"];
+  const totalExcel = obj["Área Total"] || obj["Area Total"];
 
-  // garantir números
-  const areaBruta = abp ? parseFloat(abp) : null;
-  const areaVaranda = varanda ? parseFloat(varanda) : null;
-  const areaTotalExcel = totalExcel ? parseFloat(totalExcel) : null;
+  const areaBruta = toNumber(abp);
+  const areaVaranda = toNumber(varanda);
+  const areaTotalExcel = toNumber(totalExcel);
 
-  // lógica correta
   let total = null;
 
   if(areaTotalExcel){
@@ -63,6 +42,12 @@ function getAreas(obj){
   };
 }
 
+function getPricePerM2(obj){
+  const areas = getAreas(obj);
+  if(!areas.total || !obj.PVP) return null;
+  return obj.PVP / areas.total;
+}
+
 function mapTipologia(t){
   return (t==="T1+1"||t==="T1 Duplex")?"T2":t;
 }
@@ -74,6 +59,7 @@ function media(arr){
 /* ---------- RENDER ---------- */
 
 function render(){
+
   const base = data.filter(d=>d.Empreendimento==="The View");
   const comp = data.filter(d=>d.Empreendimento!=="The View");
 
@@ -83,6 +69,7 @@ function render(){
   base.forEach(ap=>{
 
     const areas = getAreas(ap);
+    const priceM2 = getPricePerM2(ap);
     const tip=mapTipologia(ap.Tipologia);
 
     const direto=comp.filter(c=>mapTipologia(c.Tipologia)===tip && c.Piso===ap.Piso && c.Vista===ap.Vista);
@@ -107,6 +94,10 @@ function render(){
 
       <div class="price">${ap.PVP.toLocaleString()}€</div>
 
+      <div class="small">
+        ${priceM2 ? priceM2.toFixed(0) + " €/m²" : "-"}
+      </div>
+
       ${dDir!==null ? `<div class="${dDir>0?'up':'down'}">${dDir.toFixed(1)}% vs Diretos</div>`:""}
       ${dInd!==null ? `<div class="${dInd>0?'up':'down'}">${dInd.toFixed(1)}% vs Indiretos</div>`:""}
     `;
@@ -121,6 +112,8 @@ function render(){
 function abrirModal(ap){
 
   const areas = getAreas(ap);
+  const priceM2 = getPricePerM2(ap);
+
   const comp = data.filter(d=>d.Empreendimento!=="The View");
   const tip=mapTipologia(ap.Tipologia);
 
@@ -140,7 +133,10 @@ function abrirModal(ap){
       Total: ${areas.total ? areas.total.toFixed(1) : "-"} m²
     </p>
 
-    <p><b>${ap.PVP.toLocaleString()}€</b></p>
+    <p>
+      <b>${ap.PVP.toLocaleString()}€</b><br>
+      ${priceM2 ? priceM2.toFixed(0) + " €/m²" : "-"}
+    </p>
 
     ${sec("Diretos", direto, ap.PVP, "d")}
     ${sec("Indiretos", indireto, ap.PVP, "i")}
@@ -179,6 +175,7 @@ function toggle(id){
 function abrirConc(c){
 
   const areas = getAreas(c);
+  const priceM2 = getPricePerM2(c);
 
   document.getElementById("modalConc").style.display="block";
   document.getElementById("concTitulo").innerText=c["Fração"];
@@ -196,7 +193,10 @@ function abrirConc(c){
       Total: ${areas.total ? areas.total.toFixed(1) : "-"} m²
     </p>
 
-    <p><b>${c.PVP.toLocaleString()}€</b></p>
+    <p>
+      <b>${c.PVP.toLocaleString()}€</b><br>
+      ${priceM2 ? priceM2.toFixed(0) + " €/m²" : "-"}
+    </p>
   `;
 }
 
