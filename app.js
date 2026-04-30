@@ -1,4 +1,5 @@
 let data = [];
+let modo = null;
 
 fetch('data.xlsx')
 .then(res=>res.arrayBuffer())
@@ -7,7 +8,7 @@ fetch('data.xlsx')
   const sheet = wb.Sheets[wb.SheetNames[0]];
   data = XLSX.utils.sheet_to_json(sheet);
 
-  render();
+  render(data.filter(d=>d.Empreendimento==="The View"));
 });
 
 function getVal(obj, keys){
@@ -21,18 +22,97 @@ function mapTipologia(t){
   return (t==="T1+1"||t==="T1 Duplex")?"T2":t;
 }
 
-function render(){
-  const grid=document.getElementById("grid");
-  const base=data.filter(d=>d.Empreendimento==="The View");
+function setMode(m){
+  modo=m;
+  document.getElementById("selectBox").innerHTML="";
+  document.getElementById("grid").innerHTML="";
 
-  base.forEach(ap=>{
+  const base = data.filter(d=>d.Empreendimento==="The View");
+
+  if(m==="todos") render(base);
+
+  if(m==="piso"){
+    const pisos=[...new Set(base.map(d=>d.Piso))];
+    criarSelect(pisos,"Piso");
+  }
+
+  if(m==="vista"){
+    const vistas=[...new Set(base.map(d=>d.Vista))];
+    criarSelect(vistas,"Vista");
+  }
+
+  if(m==="um"){
+    criarCheckbox(base);
+  }
+}
+
+function criarCheckbox(lista){
+  const div=document.createElement("div");
+  div.className="checkbox-group";
+
+  lista.forEach(d=>{
+    const item=document.createElement("div");
+    item.className="checkbox-item";
+
+    item.innerHTML=`
+      <label>
+        <input type="checkbox" value="${d["Fração"]}">
+        ${d["Fração"]}
+      </label>
+    `;
+
+    div.appendChild(item);
+  });
+
+  div.onchange=()=>{
+    const checked=[...div.querySelectorAll("input:checked")].map(i=>i.value);
+    const filtered=data.filter(d=>checked.includes(d["Fração"]));
+    render(filtered);
+  };
+
+  document.getElementById("selectBox").appendChild(div);
+}
+
+function criarSelect(lista,label){
+  const select=document.createElement("select");
+  select.innerHTML=`<option>${label}</option>`;
+
+  lista.forEach(v=>{
+    const o=document.createElement("option");
+    o.value=v;
+    o.innerText=v;
+    select.appendChild(o);
+  });
+
+  select.onchange=(e)=>{
+    aplicarFiltro(e.target.value);
+  };
+
+  document.getElementById("selectBox").appendChild(select);
+}
+
+function aplicarFiltro(val){
+  let base=data.filter(d=>d.Empreendimento==="The View");
+
+  if(modo==="piso") base=base.filter(d=>d.Piso==val);
+  if(modo==="vista") base=base.filter(d=>d.Vista==val);
+
+  render(base);
+}
+
+function render(lista){
+  const grid=document.getElementById("grid");
+  grid.innerHTML="";
+
+  lista.forEach(ap=>{
     const card=document.createElement("div");
     card.className="card";
 
     card.innerHTML=`
+      <div class="badge">${ap.Tipologia}</div>
       <b>${ap["Fração"]}</b><br>
       Piso ${ap.Piso} • Vista ${ap.Vista}
-      <div><b>${ap.PVP.toLocaleString()}€</b></div>
+      <div class="price">${ap.PVP.toLocaleString()}€</div>
     `;
 
     card.onclick=()=>abrirModal(ap);
@@ -75,10 +155,7 @@ function sec(titulo, arr, base, id){
           return `
             <div class="comp" onclick='abrirConc(${JSON.stringify(d)})'>
               <span>${d.Empreendimento} - ${d["Fração"]}</span>
-              <span>
-                ${d.PVP.toLocaleString()}€ 
-                (${dif.toFixed(1)}%)
-              </span>
+              <span>${d.PVP.toLocaleString()}€ (${dif.toFixed(1)}%)</span>
             </div>
           `;
         }).join("")}
@@ -91,7 +168,6 @@ function toggle(id){
   document.getElementById(id).classList.toggle("hidden");
 }
 
-/* NOVO — DETALHE CONCORRENTE */
 function abrirConc(c){
   document.getElementById("modalConc").style.display="block";
   document.getElementById("concTitulo").innerText=c["Fração"];
