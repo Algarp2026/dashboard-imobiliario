@@ -11,6 +11,7 @@ body {
   font-family: Inter, Arial;
   margin: 0;
   background: #f8f9fb;
+  color: #2d3748;
 }
 
 /* HEADER */
@@ -40,11 +41,6 @@ body {
   cursor:pointer;
 }
 
-.price {
-  font-size:22px;
-  font-weight:bold;
-}
-
 /* MODAL */
 #modal, #modalConc {
   display:none;
@@ -61,21 +57,37 @@ body {
   padding:20px;
   border-radius:12px;
   max-height:80vh;
-  overflow:auto;
+  overflow-y:auto;
 }
 
+/* SECTIONS */
 .section {
-  margin-top:10px;
+  margin-top:15px;
   background:#f7f8fa;
   padding:10px;
   border-radius:8px;
 }
 
-.comp {
+.section-header {
   display:flex;
   justify-content:space-between;
   cursor:pointer;
-  padding:5px 0;
+  font-weight:600;
+}
+
+.section-content {
+  margin-top:8px;
+}
+
+.hidden {
+  display:none;
+}
+
+.comp {
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  cursor:pointer;
 }
 </style>
 </head>
