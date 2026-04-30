@@ -52,10 +52,29 @@ function initFiltros(){
   vista.innerHTML=`<option value="">Todas</option>`+
     [...new Set(base.map(d=>d.Vista))].map(v=>`<option>${v}</option>`);
 
-  manual.innerHTML=base.map(d=>`<option value="${d["Fração"]}">${d["Fração"]}</option>`);
+  fractionsBox.innerHTML=base.map(d=>
+    `<label><input type="checkbox" value="${d["Fração"]}" onchange="render()"> ${d["Fração"]}</label>`
+  ).join("");
 
-  empre.innerHTML=[...new Set(comps.map(d=>d.Empreendimento))]
-    .map(e=>`<option selected>${e}</option>`);
+  empreBox.innerHTML=[...new Set(comps.map(d=>d.Empreendimento))]
+    .map(e=>`<label><input type="checkbox" checked value="${e}" onchange="render()"> ${e}</label>`)
+    .join("");
+}
+
+function getChecked(containerId){
+  return [...document.querySelectorAll(`#${containerId} input:checked`)]
+    .map(i=>i.value);
+}
+
+function resetFiltros(){
+
+  piso.value="";
+  vista.value="";
+
+  document.querySelectorAll("#fractionsBox input").forEach(i=>i.checked=false);
+  document.querySelectorAll("#empreBox input").forEach(i=>i.checked=true);
+
+  render();
 }
 
 /* ---------- RENDER ---------- */
@@ -66,8 +85,8 @@ function render(){
 
   const p=piso.value;
   const v=vista.value;
-  const m=[...manual.selectedOptions].map(o=>o.value);
-  const e=[...empre.selectedOptions].map(o=>o.value);
+  const m=getChecked("fractionsBox");
+  const e=getChecked("empreBox");
 
   if(p) base=base.filter(d=>d.Piso==p);
   if(v) base=base.filter(d=>d.Vista==v);
@@ -109,7 +128,6 @@ function render(){
     `;
 
     card.onclick=()=>abrirModal(ap,comp);
-
     grid.appendChild(card);
   });
 }
@@ -178,10 +196,7 @@ function toggle(id){
   document.getElementById(id).classList.toggle("hidden");
 }
 
-/* ---------- CONCORRENTE ---------- */
-
 function abrirConc(c){
-
   const areas=getAreas(c);
   const m2=getPricePerM2(c);
 
@@ -191,14 +206,10 @@ function abrirConc(c){
   concConteudo.innerHTML=`
     <p><b>${c.Empreendimento}</b></p>
     <p>${c.Tipologia} • Piso ${c.Piso} • Vista ${c.Vista}</p>
-
     <p>${areas.total} m²</p>
-
     <p><b>${c.PVP.toLocaleString()}€</b> (${m2?m2.toFixed(0):"-"} €/m²)</p>
   `;
 }
-
-/* ---------- CLOSE ---------- */
 
 function fecharModal(){ modal.style.display="none"; }
 function fecharConc(){ modalConc.style.display="none"; }
