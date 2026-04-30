@@ -35,34 +35,51 @@ function media(arr){
   return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
 }
 
+function mediaM2(arr){
+  return arr.reduce((a,b)=>{
+    const ar = getAreas(b);
+    return a + (b.PVP/(ar.total||1));
+  },0)/arr.length;
+}
+
 /* ================= PRICING ================= */
 
 function precoFallback(d,i,p){
-  if(d.length) return media(d);
-  if(i.length) return media(i);
-  if(p.length) return media(p);
+  if(d.length) return {valor:media(d), origem:"Diretos"};
+  if(i.length) return {valor:media(i), origem:"Indiretos"};
+  if(p.length) return {valor:media(p), origem:"Pouco concorrente"};
   return null;
 }
 
 function precoRigoroso(d,i,p){
   let soma=0,total=0;
 
-  if(d.length){
-    soma+=media(d)*0.6;
-    total+=0.6;
-  }
+  if(d.length){ soma+=media(d)*0.6; total+=0.6; }
+  if(i.length){ soma+=media(i)*0.3; total+=0.3; }
+  if(p.length){ soma+=media(p)*0.1; total+=0.1; }
 
-  if(i.length){
-    soma+=media(i)*0.3;
-    total+=0.3;
-  }
+  if(!total) return null;
 
-  if(p.length){
-    soma+=media(p)*0.1;
-    total+=0.1;
-  }
+  return {
+    valor:soma/total,
+    explicacao:"60% Diretos, 30% Indiretos, 10% Pouco concorrente"
+  };
+}
 
-  return total? soma/total : null;
+function precoIdeal(ap,d,i,p){
+
+  const areas=getAreas(ap);
+
+  let base = d.length ? d : (i.length ? i : p);
+  if(!base.length) return null;
+
+  const m2 = mediaM2(base);
+  const preco = m2 * (areas.total||1);
+
+  return {
+    valor:preco,
+    explicacao:`Baseado em €/m² médio (${m2.toFixed(0)}€/m²) ajustado à área da fração`
+  };
 }
 
 /* ================= FILTROS ================= */
@@ -72,17 +89,14 @@ function initFiltros(){
   const base = data.filter(d=>d.Empreendimento==="The View");
   const comps = data.filter(d=>d.Empreendimento!=="The View");
 
-  // Piso
   piso.innerHTML=`<option value="">Todos</option>`+
     [...new Set(base.map(d=>d.Piso))]
     .map(p=>`<option>${p}</option>`);
 
-  // Vista
   vista.innerHTML=`<option value="">Todas</option>`+
     [...new Set(base.map(d=>d.Vista))]
     .map(v=>`<option>${v}</option>`);
 
-  // Frações
   fractionsBox.innerHTML = base.map(d=>`
     <label>
       <input type="checkbox" value="${d["Fração"]}" onchange="render()">
@@ -90,7 +104,6 @@ function initFiltros(){
     </label>
   `).join("");
 
-  // Empreendimentos
   empreBox.innerHTML = [...new Set(comps.map(d=>d.Empreendimento))]
     .map(e=>`
       <label>
@@ -126,7 +139,6 @@ function render(){
 
   if(p) base = base.filter(d=>d.Piso==p);
   if(v) base = base.filter(d=>d.Vista==v);
-
   if(selectedFractions.length){
     base = base.filter(d=>selectedFractions.includes(d["Fração"]));
   }
@@ -187,11 +199,9 @@ function abrirModal(ap,d,i,p){
 
   const areas=getAreas(ap);
 
-  const fallback = precoFallback(d,i,p);
-  const rigor = precoRigoroso(d,i,p);
-
-  const diffF = fallback ? ((ap.PVP/fallback)-1)*100 : null;
-  const diffR = rigor ? ((ap.PVP/rigor)-1)*100 : null;
+  const f = precoFallback(d,i,p);
+  const r = precoRigoroso(d,i,p);
+  const ideal = precoIdeal(ap,d,i,p);
 
   modal.style.display="block";
   modalTitulo.innerText=ap["Fração"];
@@ -206,14 +216,14 @@ function abrirModal(ap,d,i,p){
       Total: ${areas.total || "-"} m²
     </p>
 
-    <p style="font-size:18px;">
-      <b>${ap.PVP.toLocaleString()}€</b>
-    </p>
+    <p><b>${ap.PVP.toLocaleString()}€</b></p>
 
     <div style="display:grid;gap:10px;margin:15px 0;">
-      ${cardPreco("🔵 Recomendado", fallback, diffF, "#e6f0ff")}
-      ${cardPreco("🟡 Fallback", fallback, diffF, "#fff7d6")}
-      ${cardPreco("🟣 Rigoroso", rigor, diffR, "#f0e6ff")}
+
+      ${boxPreco("🔵 Recomendado",f)}
+      ${boxPreco("🟣 Rigoroso",r)}
+      ${boxPreco("🟢 Ideal",ideal)}
+
     </div>
 
     ${sec("Diretos",d,ap)}
@@ -224,21 +234,19 @@ function abrirModal(ap,d,i,p){
 
 /* ================= UI ================= */
 
-function cardPreco(titulo,valor,diff,color){
+function boxPreco(titulo,obj){
 
-  if(!valor) return `
+  if(!obj) return `
     <div style="background:#eee;padding:10px;border-radius:10px;">
       ${titulo}<br>Sem dados
     </div>
   `;
 
   return `
-    <div style="background:${color};padding:12px;border-radius:10px;">
+    <div style="background:#f4f6fb;padding:12px;border-radius:10px;">
       <b>${titulo}</b><br>
-      ${valor.toLocaleString()}€<br>
-      <span class="${diff>0?'up':'down'}">
-        ${diff.toFixed(1)}%
-      </span>
+      ${obj.valor.toLocaleString()}€<br>
+      <small>${obj.explicacao || obj.origem}</small>
     </div>
   `;
 }
@@ -247,27 +255,20 @@ function sec(nome,arr,base){
 
   return `
     <div style="margin-top:10px;">
-
       <div style="font-weight:bold;cursor:pointer;" onclick="toggle(this)">
         ${nome} (${arr.length})
       </div>
-
       <div>
         ${arr.map(c=>{
           const diff=((base.PVP/c.PVP)-1)*100;
-
           return `
-            <div style="display:flex;justify-content:space-between;font-size:13px;margin:3px 0;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
               ${c.Empreendimento} - ${c["Fração"]}
-              <span>
-                ${c.PVP.toLocaleString()}€
-                (${diff.toFixed(1)}%)
-              </span>
+              <span>${c.PVP.toLocaleString()}€ (${diff.toFixed(1)}%)</span>
             </div>
           `;
         }).join("")}
       </div>
-
     </div>
   `;
 }
