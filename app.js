@@ -3,15 +3,15 @@ let data = [];
 fetch('data.xlsx')
   .then(res => res.arrayBuffer())
   .then(buffer => {
-    const workbook = XLSX.read(buffer, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const wb = XLSX.read(buffer, { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
     data = XLSX.utils.sheet_to_json(sheet);
 
-    cleanData();
+    clean();
     render();
   });
 
-function cleanData() {
+function clean() {
   data.forEach(d => {
     if (d.Piso === "R/C") d.Piso = 0;
     d.Piso = Number(d.Piso);
@@ -20,8 +20,7 @@ function cleanData() {
 }
 
 function mapTipologia(t) {
-  if (t === "T1+1" || t === "T1 Duplex") return "T2";
-  return t;
+  return (t === "T1+1" || t === "T1 Duplex") ? "T2" : t;
 }
 
 function media(arr) {
@@ -29,18 +28,18 @@ function media(arr) {
   return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
 }
 
-function diff(preco, media) {
-  if (!media) return "-";
-  return ((preco/media -1)*100).toFixed(1) + "%";
+function diff(p, m) {
+  if (!m) return "-";
+  return ((p/m -1)*100).toFixed(1);
 }
 
-function corClasse(valor) {
-  if (valor === "-" || valor === null) return "";
-  return parseFloat(valor) > 0 ? "red" : "green";
+function cor(v) {
+  if (v === "-") return "";
+  return v > 0 ? "red" : "green";
 }
 
 function render() {
-  const tbody = document.getElementById("tabela");
+  const grid = document.getElementById("grid");
 
   const base = data.filter(d => d.Empreendimento === "The View");
   const comp = data.filter(d => d.Empreendimento !== "The View");
@@ -59,30 +58,30 @@ function render() {
       c.Piso === ap.Piso
     );
 
-    const mDir = media(direto);
-    const mInd = media(indireto);
+    const dDir = diff(ap.PVP, media(direto));
+    const dInd = diff(ap.PVP, media(indireto));
 
-    const dDir = diff(ap.PVP, mDir);
-    const dInd = diff(ap.PVP, mInd);
+    const card = document.createElement("div");
+    card.className = "card";
 
-    const tr = document.createElement("tr");
+    card.innerHTML = `
+      <b>${ap["Fração"]}</b><br>
+      ${ap.Tipologia} • Piso ${ap.Piso} • Vista ${ap.Vista}
 
-    tr.innerHTML = `
-      <td>${ap["Fração"]}</td>
-      <td>${ap.Piso}</td>
-      <td>${ap.Tipologia}</td>
-      <td>Vista ${ap.Vista}</td>
-      <td>${ap.PVP.toLocaleString()}€</td>
-      <td>${mDir ? mDir.toLocaleString()+"€" : "-"}</td>
-      <td class="${corClasse(dDir)}">${dDir}</td>
-      <td>${mInd ? mInd.toLocaleString()+"€" : "-"}</td>
-      <td class="${corClasse(dInd)}">${dInd}</td>
-      <td><button class="btn" onclick='abrirModal(${JSON.stringify(ap)})'>Ver</button></td>
+      <div class="price">${ap.PVP.toLocaleString()}€</div>
+
+      <div>Direto: ${dDir==="-"?"-":`<span class="${cor(dDir)}">${dDir}%</span>`}</div>
+      <div>Indireto: ${dInd==="-"?"-":`<span class="${cor(dInd)}">${dInd}%</span>`}</div>
+
+      <button class="btn">Ver análise</button>
     `;
 
-    tbody.appendChild(tr);
+    card.onclick = () => abrirModal(ap);
+
+    grid.appendChild(card);
   });
 }
+
 function abrirModal(ap) {
 
   const comp = data.filter(d => d.Empreendimento !== "The View");
@@ -108,33 +107,29 @@ function abrirModal(ap) {
   document.getElementById("modalTitulo").innerText = ap["Fração"];
 
   document.getElementById("modalConteudo").innerHTML = `
-    
-    <p><b>Piso:</b> ${ap.Piso}</p>
-    <p><b>Tipologia:</b> ${ap.Tipologia}</p>
-    <p><b>Vista:</b> ${ap.Vista}</p>
+    <p><b>${ap.Tipologia}</b> • Piso ${ap.Piso} • Vista ${ap.Vista}</p>
     <p><b>Preço:</b> ${ap.PVP.toLocaleString()}€</p>
 
-    <hr>
-
-    <h4>🔴 Diretos (${direto.length})</h4>
-    ${listaDetalhada(direto)}
-
-    <h4>🟠 Indiretos (${indireto.length})</h4>
-    ${listaDetalhada(indireto)}
-
-    <h4>🟡 Pouco concorrente (${pouco.length})</h4>
-    ${listaDetalhada(pouco)}
+    ${sec("🔴 Diretos", direto)}
+    ${sec("🟠 Indiretos", indireto)}
+    ${sec("🟡 Pouco concorrente", pouco)}
   `;
 }
 
-function listaDetalhada(arr) {
-  if (!arr.length) return "<p>Nenhum encontrado</p>";
+function sec(titulo, arr) {
+  if (!arr.length) return `<div class="section"><b>${titulo}</b><p>Nenhum encontrado</p></div>`;
 
-  return arr.map(d => `
-    <div style="margin-bottom:5px;">
-      ${d.Empreendimento} - ${d["Fração"]} — ${d.PVP.toLocaleString()}€
+  return `
+    <div class="section">
+      <b>${titulo} (${arr.length})</b>
+      ${arr.map(d => `
+        <div class="comp">
+          <span>${d.Empreendimento} - ${d["Fração"]}</span>
+          <span>${d.PVP.toLocaleString()}€</span>
+        </div>
+      `).join("")}
     </div>
-  `).join("");
+  `;
 }
 
 function fecharModal() {
