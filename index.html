@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt">
 <head>
 <meta charset="UTF-8">
 <title>The View Dashboard</title>
@@ -7,102 +7,55 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body {
+
+body{
+  font-family:Arial;
+  background:#f5f7fb;
   margin:0;
-  font-family: Inter, sans-serif;
-  background:#f4f6f9;
 }
 
-.container { display:flex; }
-
-/* SIDEBAR */
-.sidebar {
-  width:280px;
-  background:#1a2a44;
+header{
+  background:#1e3a5f;
   color:white;
   padding:20px;
-  height:100vh;
-  overflow:auto;
 }
 
-.btn {
-  width:100%;
-  margin:5px 0;
-  padding:8px;
-  border:none;
-  border-radius:6px;
-  background:#2d3e5f;
-  color:white;
-  cursor:pointer;
+.container{
+  padding:20px;
 }
 
-.btn:hover { background:#3f557d; }
-
-.checkbox-group {
-  max-height:150px;
-  overflow:auto;
-  background:#223355;
-  padding:10px;
-  border-radius:8px;
+.filtros{
+  display:flex;
+  gap:15px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
 }
 
-.checkbox-group label {
-  display:block;
-  font-size:13px;
-}
-
-select {
-  width:100%;
-  margin-bottom:10px;
-  padding:6px;
-  border-radius:6px;
-}
-
-/* MAIN */
-.main {
-  flex:1;
-  padding:30px;
-}
-
-.grid {
+.grid{
   display:grid;
-  grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
-  gap:20px;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:15px;
 }
 
-.card {
+.card{
   background:white;
-  padding:18px;
-  border-radius:16px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.06);
+  border-radius:10px;
+  padding:15px;
   cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
-.badge {
-  background:#edf2f7;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:12px;
+.card:hover{
+  transform:scale(1.02);
 }
 
-.price {
-  font-size:22px;
-  font-weight:600;
+.price{
+  font-size:20px;
+  font-weight:bold;
+  margin-top:10px;
 }
 
-.small {
-  font-size:13px;
-  color:#718096;
-}
-
-.up { color:#e53e3e; }
-.down { color:#38a169; }
-
-.view { margin-top:20px; }
-.hidden { display:none; }
-
-/* MODAL */
-.modal {
+.modal{
   display:none;
   position:fixed;
   top:0;left:0;
@@ -110,103 +63,53 @@ select {
   background:rgba(0,0,0,0.5);
 }
 
-.modal-box {
+.modal-content{
   background:white;
-  width:720px;
-  margin:40px auto;
   padding:20px;
-  border-radius:12px;
-  max-height:85vh;
-  overflow-y:auto;
+  width:400px;
+  margin:5% auto;
+  border-radius:10px;
+  max-height:80vh;
+  overflow:auto;
 }
 
-.section {
+.up{color:red;}
+.down{color:green;}
+
+.section{
   margin-top:10px;
-  background:#f7f8fa;
-  padding:10px;
-  border-radius:8px;
 }
 
-.section-header {
-  font-weight:600;
+.section-header{
   cursor:pointer;
+  font-weight:bold;
 }
 
-.comp {
-  display:flex;
-  justify-content:space-between;
-  padding:6px 0;
-  cursor:pointer;
-}
 </style>
 </head>
 
 <body>
 
+<header>
+  <h2>The View Dashboard</h2>
+</header>
+
 <div class="container">
 
-<div class="sidebar">
-
-  <h2>Menu</h2>
-
-  <button class="btn" onclick="trocarView('home')">Home</button>
-  <button class="btn" onclick="trocarView('precos')">Preços Ideais</button>
-  <button class="btn" onclick="trocarView('dashboard')">Dashboard</button>
-  <button class="btn" onclick="trocarView('analise')">Análise</button>
-
-  <hr>
-
-  <h3>Piso</h3>
-  <select id="piso" onchange="render()"></select>
-
-  <h3>Vista</h3>
-  <select id="vista" onchange="render()"></select>
-
-  <h3>Frações</h3>
-  <div id="fractionsBox" class="checkbox-group"></div>
-
-  <h3>Empreendimentos</h3>
-  <div id="empreBox" class="checkbox-group"></div>
-
-  <button class="btn" onclick="resetFiltros()">Limpar filtros</button>
-
-</div>
-
-<div class="main">
-
-  <h1>The View Dashboard</h1>
-
-  <div id="view-home" class="view"></div>
-  <div id="view-precos" class="view hidden"></div>
-  <div id="view-dashboard" class="view hidden"></div>
-
-  <!-- 👇 AQUI FICA O SISTEMA ORIGINAL -->
-  <div id="view-analise" class="view hidden">
-    <div class="grid" id="grid"></div>
+  <div class="filtros">
+    <select id="piso" onchange="render()"></select>
+    <select id="vista" onchange="render()"></select>
+    <button onclick="resetFiltros()">Limpar</button>
   </div>
 
-</div>
+  <div id="grid" class="grid"></div>
 
 </div>
 
-<!-- MODAL ORIGINAL (NÃO MEXER) -->
-<div id="modal" class="modal">
-  <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;">
-      <h3 id="modalTitulo"></h3>
-      <button onclick="fecharModal()">X</button>
-    </div>
+<div id="modal" class="modal" onclick="fecharModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h3 id="modalTitulo"></h3>
     <div id="modalConteudo"></div>
-  </div>
-</div>
-
-<div id="modalConc" class="modal">
-  <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;">
-      <h3 id="concTitulo"></h3>
-      <button onclick="fecharConc()">X</button>
-    </div>
-    <div id="concConteudo"></div>
   </div>
 </div>
 
