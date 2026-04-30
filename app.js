@@ -21,18 +21,13 @@ function initFiltros(){
   const pisos = [...new Set(dados.map(d=>d.Piso))];
   const vistas = [...new Set(dados.map(d=>d.Vista))];
 
-  document.getElementById("piso").innerHTML =
-    `<option value="">Todos</option>` +
-    pisos.map(p=>`<option>${p}</option>`).join("");
+  piso.innerHTML = `<option value="">Todos</option>` + pisos.map(p=>`<option>${p}</option>`).join("");
+  vista.innerHTML = `<option value="">Todas</option>` + vistas.map(v=>`<option>${v}</option>`).join("");
 
-  document.getElementById("vista").innerHTML =
-    `<option value="">Todas</option>` +
-    vistas.map(v=>`<option>${v}</option>`).join("");
-
-  document.getElementById("fractionsBox").innerHTML =
-    dados.filter(d=>d.Empreendimento === "The View")
+  fractionsBox.innerHTML =
+    dados.filter(d=>d.Empreendimento==="The View")
       .map(d=>`
-        <label class="checkItem">
+        <label>
           <input type="checkbox" value="${d.Fração}" checked onchange="render()">
           ${d.Fração}
         </label>
@@ -40,10 +35,10 @@ function initFiltros(){
 
   const emp = [...new Set(dados.map(d=>d.Empreendimento))];
 
-  document.getElementById("empreBox").innerHTML =
-    emp.filter(e=>e !== "The View")
+  empreBox.innerHTML =
+    emp.filter(e=>e!=="The View")
       .map(e=>`
-        <label class="checkItem">
+        <label>
           <input type="checkbox" value="${e}" checked onchange="render()">
           ${e}
         </label>
@@ -51,44 +46,32 @@ function initFiltros(){
 }
 
 function getSelecionados(id){
-  return [...document.querySelectorAll(`#${id} input:checked`)]
-    .map(i=>i.value);
-}
-
-function resetFiltros(){
-  document.getElementById("piso").value = "";
-  document.getElementById("vista").value = "";
-  document.querySelectorAll("input[type=checkbox]").forEach(i=>i.checked = true);
-  render();
+  return [...document.querySelectorAll(`#${id} input:checked`)].map(i=>i.value);
 }
 
 /* ================= RENDER ================= */
 
 function render(){
 
-  const piso = document.getElementById("piso").value;
-  const vista = document.getElementById("vista").value;
+  const pisoVal = piso.value;
+  const vistaVal = vista.value;
   const fracs = getSelecionados("fractionsBox");
 
-  let base = dados.filter(d => d.Empreendimento === "The View");
+  let base = dados.filter(d=>d.Empreendimento==="The View");
 
-  if(piso) base = base.filter(d => d.Piso == piso);
-  if(vista) base = base.filter(d => d.Vista == vista);
-  if(fracs.length > 0) base = base.filter(d => fracs.includes(d.Fração));
+  if(pisoVal) base = base.filter(d=>d.Piso==pisoVal);
+  if(vistaVal) base = base.filter(d=>d.Vista==vistaVal);
+  if(fracs.length) base = base.filter(d=>fracs.includes(d.Fração));
 
-  const grid = document.getElementById("grid");
-
-  grid.innerHTML = base.map(f => {
+  grid.innerHTML = base.map(f=>{
 
     const abp = f["Área Bruta"] || f["ABP"] || "-";
-    const varanda = f["Varanda"] || f["Varanda/Terraço"] || "-";
+    const varan = f["Varanda"] || f["Varanda/Terraço"] || "-";
 
     return `
       <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
-        <div class="badge">${f.Tipologia}</div>
         <div class="title">${f.Fração}</div>
-        <div class="meta">Piso ${f.Piso} • ${f.Vista}</div>
-        <div class="area">${abp} m² • Var ${varanda}</div>
+        <div>${abp} m² • Var ${varan}</div>
         <div class="price">${f.PVP.toLocaleString()}€</div>
       </div>
     `;
@@ -103,8 +86,8 @@ function abrir(encoded){
   fracaoAtual = f;
 
   const abp = f["Área Bruta"] || f["ABP"] || "-";
-  const varanda = f["Varanda"] || f["Varanda/Terraço"] || "-";
-  const total = f["Área Total"] || f["Total"] || "-";
+  const varan = f["Varanda"] || f["Varanda/Terraço"] || "-";
+  const total = f["Área Total"] || "-";
 
   const emps = getSelecionados("empreBox");
 
@@ -113,71 +96,61 @@ function abrir(encoded){
     emps.includes(d.Empreendimento)
   );
 
-  const grupos = classificarConcorrentes(f, comps);
+  const g = classificarConcorrentes(f, comps);
 
-  function renderLista(lista){
-    if(!lista.length) return "<p>Nenhum</p>";
+  const fallback = precoFallback(f,g);
+  const rigoroso = precoRigoroso(g);
+  const ia = precoIA(f,g);
 
-    return lista.map(c => {
+  function lista(arr){
+    return arr.map(c=>{
 
-      const cabp = c["Área Bruta"] || c["ABP"] || "-";
-      const cvar = c["Varanda"] || c["Varanda/Terraço"] || "-";
       const ctot = c["Área Total"] || "-";
 
       return `
-        <div class="compRow"
-             onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
-
-          <div>
-            <strong>${c.Empreendimento} - ${c.Fração}</strong><br>
-            <small>${cabp} m² • Var ${cvar} • Total ${ctot}</small>
-          </div>
-
+        <div class="compRow" onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
+          <div>${c.Empreendimento} - ${c.Fração}<br><small>Total ${ctot}</small></div>
           <div>${c.PVP.toLocaleString()}€</div>
-
         </div>
       `;
     }).join("");
   }
 
-  document.getElementById("modalConteudo").innerHTML = `
-    <div class="modalHeader">
-      <h2>${f.Fração}</h2>
-      <span class="closeBtn" onclick="fecharModal()">✕</span>
-    </div>
+  modalConteudo.innerHTML = `
+    <h2>${f.Fração}</h2>
 
     <div class="bigPrice">${f.PVP.toLocaleString()}€</div>
 
-    <div class="areas">
-      ABP ${abp} • Var ${varanda} • Total ${total}
+    <div>ABP ${abp} • Var ${varan} • Total ${total}</div>
+
+    <div class="priceBox">
+      <b>Fallback:</b> ${Math.round(fallback).toLocaleString()}€
     </div>
 
-    <h3>Concorrência</h3>
-
-    <div class="section">
-      <b>Diretos (${grupos.diretos.length})</b>
-      ${renderLista(grupos.diretos)}
+    <div class="priceBox">
+      <b>Rigoroso:</b> ${Math.round(rigoroso).toLocaleString()}€
     </div>
 
-    <div class="section">
-      <b>Indiretos (${grupos.indiretos.length})</b>
-      ${renderLista(grupos.indiretos)}
+    <div class="priceBox">
+      <b>IA:</b> ${ia.valor.toLocaleString()}€
+      <small>${ia.exp}</small>
     </div>
 
-    <div class="section">
-      <b>Pouco (${grupos.poucos.length})</b>
-      ${renderLista(grupos.poucos)}
-    </div>
+    <h3>Diretos (${g.diretos.length})</h3>
+    ${lista(g.diretos)}
+
+    <h3>Indiretos (${g.indiretos.length})</h3>
+    ${lista(g.indiretos)}
+
+    <h3>Pouco (${g.poucos.length})</h3>
+    ${lista(g.poucos)}
   `;
 
-  const modal = document.getElementById("modal");
-  modal.style.display = "flex";
+  modal.style.display = "block";
 }
 
-/* ================= FECHAR ================= */
-
 function fecharModal(){
-  document.getElementById("modal").style.display = "none";
+  modal.style.display = "none";
 }
 
 /* ================= POPUP ================= */
@@ -185,49 +158,13 @@ function fecharModal(){
 function abrirConcorrente(encoded){
 
   const c = JSON.parse(decodeURIComponent(encoded));
-  const f = fracaoAtual;
-
-  const m2F = f.PVP / (f["Área Total"] || 1);
-  const m2C = c.PVP / (c["Área Total"] || 1);
-
-  let status = "similar";
-  if(m2C < m2F) status = "melhor";
-  if(m2C > m2F) status = "pior";
-
-  const popup = document.getElementById("popup");
 
   popup.innerHTML = `
     <div class="popupCard">
-
-      <div class="popupHeader">
-        <b>${c.Empreendimento} - ${c.Fração}</b>
-        <span onclick="fecharPopup()">✕</span>
-      </div>
-
-      <div class="compareGrid">
-
-        <div>
-          <small>The View</small><br>
-          ${f.PVP.toLocaleString()}€<br>
-          ${Math.round(m2F)} €/m²
-        </div>
-
-        <div>
-          <small>Concorrente</small><br>
-          ${c.PVP.toLocaleString()}€<br>
-          ${Math.round(m2C)} €/m²
-        </div>
-
-      </div>
-
-      <div class="highlight ${status}">
-        ${
-          status === "melhor" ? "🟢 Melhor oportunidade" :
-          status === "pior" ? "🔴 Mais caro" :
-          "⚪ Similar"
-        }
-      </div>
-
+      <h3>${c.Empreendimento} - ${c.Fração}</h3>
+      <p>${c.PVP.toLocaleString()}€</p>
+      <p>Total ${c["Área Total"]}</p>
+      <button onclick="fecharPopup()">Fechar</button>
     </div>
   `;
 
@@ -235,28 +172,53 @@ function abrirConcorrente(encoded){
 }
 
 function fecharPopup(){
-  document.getElementById("popup").style.display = "none";
+  popup.style.display = "none";
 }
 
 /* ================= LÓGICA ================= */
 
 function classificarConcorrentes(f, comps){
 
-  const diretos = comps.filter(c =>
-    c.Tipologia === f.Tipologia &&
-    Number(c.Piso) === Number(f.Piso) &&
-    c.Vista === f.Vista
-  );
+  return {
+    diretos: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso && c.Vista===f.Vista),
+    indiretos: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso),
+    poucos: comps.filter(c=>c.Tipologia===f.Tipologia && Math.abs(c.Piso-f.Piso)==1)
+  };
+}
 
-  const indiretos = comps.filter(c =>
-    c.Tipologia === f.Tipologia &&
-    Number(c.Piso) === Number(f.Piso)
-  );
+function media(arr){
+  if(!arr.length) return 0;
+  return arr.reduce((a,b)=>a+b.PVP,0)/arr.length;
+}
 
-  const poucos = comps.filter(c =>
-    c.Tipologia === f.Tipologia &&
-    Math.abs(Number(c.Piso) - Number(f.Piso)) === 1
-  );
+function precoFallback(f,g){
+  if(g.diretos.length) return media(g.diretos);
+  if(g.indiretos.length) return media(g.indiretos);
+  if(g.poucos.length) return media(g.poucos);
+  return f.PVP;
+}
 
-  return {diretos, indiretos, poucos};
+function precoRigoroso(g){
+  return media(g.diretos)*0.6 + media(g.indiretos)*0.3 + media(g.poucos)*0.1;
+}
+
+function precoIA(f,g){
+
+  const area = f["Área Total"];
+  if(!area) return {valor:f.PVP,exp:"sem área"};
+
+  let lista = [];
+
+  g.diretos.forEach(c=>lista.push(c.PVP/c["Área Total"]));
+  g.indiretos.forEach(c=>lista.push(c.PVP/c["Área Total"]));
+  g.poucos.forEach(c=>lista.push(c.PVP/c["Área Total"]));
+
+  if(!lista.length) return {valor:f.PVP,exp:"sem comps"};
+
+  const m2 = lista.reduce((a,b)=>a+b,0)/lista.length;
+
+  return {
+    valor: Math.round(m2*area),
+    exp: "média €/m²"
+  };
 }
