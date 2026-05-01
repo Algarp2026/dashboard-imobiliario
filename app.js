@@ -1,5 +1,4 @@
 let dados = [];
-let fracaoAtual = null;
 let renderTimer;
 
 /* ================= HELPERS ================= */
@@ -23,7 +22,7 @@ function fmt(v){
 
 fetch("data.xlsx")
   .then(res => {
-    if (!res.ok) throw new Error("Erro ao carregar Excel");
+    if (!res.ok) throw new Error();
     return res.arrayBuffer();
   })
   .then(ab => {
@@ -34,8 +33,8 @@ fetch("data.xlsx")
     initFiltros();
     render();
   })
-  .catch(() => {
-    grid.innerHTML = `<div class="erroBox">⚠️ Erro ao carregar dados</div>`;
+  .catch(()=>{
+    grid.innerHTML = `<div class="erroBox">Erro ao carregar dados</div>`;
   });
 
 /* ================= FILTROS ================= */
@@ -103,7 +102,6 @@ function render(){
       <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
 
         <div class="badge">${safe(f.Tipologia)}</div>
-
         <div class="title">${safe(f.Fração)}</div>
 
         <div class="meta">
@@ -111,7 +109,8 @@ function render(){
         </div>
 
         <div class="area">
-          ${abp ? abp.toFixed(2)+" m²" : "-"} • Var ${varan ? varan.toFixed(2) : "-"}
+          ${abp ? abp.toFixed(2)+" m²" : "-"} • 
+          Var ${varan ? varan.toFixed(2) : "-"}
         </div>
 
         <div class="price">${fmt(num(f.PVP))}€</div>
@@ -126,32 +125,41 @@ function render(){
 function abrir(encoded){
 
   const f = JSON.parse(decodeURIComponent(encoded));
-  fracaoAtual = f;
 
   const comps = dados.filter(d=>d.Empreendimento!=="The View");
 
-  const g = classificarConcorrentes(f, comps);
+  const g = classificar(f, comps);
 
-  const fallback = precoFallback(f,g);
-  const rigoroso = precoRigoroso(g);
-  const ia = precoIA(f,g);
+  function bloco(titulo, lista){
 
-  function lista(arr){
-    if(!arr.length) return "<p>Nenhum</p>";
+    return `
+      <div class="section">
 
-    return arr.map(c=>`
-      <div class="compRow"
-           onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
-
-        <div>
-          <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong><br>
-          <small>${num(c["Área Total"]).toFixed(2)} m²</small>
+        <div class="section-header" onclick="toggle(this)">
+          ${titulo} (${lista.length})
         </div>
 
-        <div>${fmt(num(c.PVP))}€</div>
+        <div class="section-body">
+
+          ${lista.map(c=>`
+            <div class="compRow"
+              onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
+
+              <div>
+                <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong>
+                <br>
+                <small>${num(c["Área Total"]).toFixed(2)} m²</small>
+              </div>
+
+              <div>${fmt(num(c.PVP))}€</div>
+
+            </div>
+          `).join("")}
+
+        </div>
 
       </div>
-    `).join("");
+    `;
   }
 
   modalConteudo.innerHTML = `
@@ -159,34 +167,9 @@ function abrir(encoded){
 
     <div class="bigPrice">${fmt(num(f.PVP))}€</div>
 
-    <div class="pricingGrid">
-
-      <div class="priceBox blue">
-        <div>Fallback</div>
-        <div>${fmt(Math.round(fallback))}€</div>
-      </div>
-
-      <div class="priceBox purple">
-        <div>Rigoroso</div>
-        <div>${fmt(Math.round(rigoroso))}€</div>
-      </div>
-
-      <div class="priceBox green">
-        <div>Preço IA</div>
-        <div>${fmt(ia.valor)}€</div>
-        <small>${safe(ia.exp)}</small>
-      </div>
-
-    </div>
-
-    <h3>Diretos (${g.diretos.length})</h3>
-    ${lista(g.diretos)}
-
-    <h3>Indiretos (${g.indiretos.length})</h3>
-    ${lista(g.indiretos)}
-
-    <h3>Pouco (${g.poucos.length})</h3>
-    ${lista(g.poucos)}
+    ${bloco("🔴 Diretos", g.d)}
+    ${bloco("🟠 Indiretos", g.i)}
+    ${bloco("🟡 Pouco", g.p)}
   `;
 
   modal.style.display = "flex";
@@ -196,13 +179,22 @@ function fecharModal(){
   modal.style.display = "none";
 }
 
+/* ================= TOGGLE ================= */
+
+function toggle(el){
+  const body = el.nextElementSibling;
+  body.style.display = body.style.display === "none" ? "block" : "none";
+}
+
 /* ================= POPUP ================= */
 
 function abrirConcorrente(encoded){
 
   const c = JSON.parse(decodeURIComponent(encoded));
 
-  popup.innerHTML = `
+  const overlay = document.getElementById("popup");
+
+  overlay.innerHTML = `
     <div class="popupOverlay" onclick="fecharPopup()">
 
       <div class="popupCard" onclick="event.stopPropagation()">
@@ -220,7 +212,7 @@ function abrirConcorrente(encoded){
     </div>
   `;
 
-  popup.style.display = "block";
+  overlay.style.display = "flex";
 }
 
 function fecharPopup(){
@@ -229,52 +221,10 @@ function fecharPopup(){
 
 /* ================= LÓGICA ================= */
 
-function classificarConcorrentes(f, comps){
+function classificar(f, comps){
   return {
-    diretos: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso && c.Vista===f.Vista),
-    indiretos: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso),
-    poucos: comps.filter(c=>c.Tipologia===f.Tipologia && Math.abs(c.Piso-f.Piso)==1)
-  };
-}
-
-/* ================= PREÇOS ================= */
-
-function media(arr){
-  if(!arr.length) return 0;
-  return arr.reduce((a,b)=>a+num(b.PVP),0)/arr.length;
-}
-
-function precoFallback(f,g){
-  if(g.diretos.length) return media(g.diretos);
-  if(g.indiretos.length) return media(g.indiretos);
-  if(g.poucos.length) return media(g.poucos);
-  return num(f.PVP);
-}
-
-function precoRigoroso(g){
-  return media(g.diretos)*0.6 +
-         media(g.indiretos)*0.3 +
-         media(g.poucos)*0.1;
-}
-
-function precoIA(f,g){
-
-  const area = num(f["Área Total"]);
-  if(!area) return {valor:num(f.PVP),exp:"Sem área"};
-
-  let lista = [];
-
-  [...g.diretos,...g.indiretos,...g.poucos].forEach(c=>{
-    const a = num(c["Área Total"]);
-    if(a) lista.push(num(c.PVP)/a);
-  });
-
-  if(!lista.length) return {valor:num(f.PVP),exp:"Sem comps"};
-
-  const m2 = lista.reduce((a,b)=>a+b,0)/lista.length;
-
-  return {
-    valor: Math.round(m2*area),
-    exp: `${Math.round(m2)} €/m²`
+    d: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso && c.Vista===f.Vista),
+    i: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso),
+    p: comps.filter(c=>c.Tipologia===f.Tipologia && Math.abs(c.Piso-f.Piso)==1)
   };
 }
