@@ -34,47 +34,38 @@ fetch("data.xlsx")
     initFiltros();
     render();
   })
-  .catch(err => {
-    console.error(err);
-
-    document.getElementById("grid").innerHTML = `
-      <div class="erroBox">
-        ⚠️ Erro ao carregar dados.<br>
-        Verifique o ficheiro data.xlsx
-      </div>
-    `;
+  .catch(() => {
+    grid.innerHTML = `<div class="erroBox">⚠️ Erro ao carregar dados</div>`;
   });
 
 /* ================= FILTROS ================= */
 
 function initFiltros(){
 
-  const pisos = [...new Set(dados.map(d=>d.Piso))];
-  const vistas = [...new Set(dados.map(d=>d.Vista))];
-
   piso.innerHTML =
     `<option value="">Todos</option>` +
-    pisos.map(p=>`<option>${safe(p)}</option>`).join("");
+    [...new Set(dados.map(d=>d.Piso))]
+      .map(p=>`<option>${safe(p)}</option>`).join("");
 
   vista.innerHTML =
     `<option value="">Todas</option>` +
-    vistas.map(v=>`<option>${safe(v)}</option>`).join("");
+    [...new Set(dados.map(d=>d.Vista))]
+      .map(v=>`<option>${safe(v)}</option>`).join("");
 
   fractionsBox.innerHTML =
     dados.filter(d=>d.Empreendimento==="The View")
       .map(d=>`
-        <label>
+        <label class="checkItem">
           <input type="checkbox" value="${safe(d.Fração)}" checked onchange="renderDebounced()">
           ${safe(d.Fração)}
         </label>
       `).join("");
 
-  const emp = [...new Set(dados.map(d=>d.Empreendimento))];
-
   empreBox.innerHTML =
-    emp.filter(e=>e!=="The View")
+    [...new Set(dados.map(d=>d.Empreendimento))]
+      .filter(e=>e!=="The View")
       .map(e=>`
-        <label>
+        <label class="checkItem">
           <input type="checkbox" value="${safe(e)}" checked onchange="renderDebounced()">
           ${safe(e)}
         </label>
@@ -95,14 +86,12 @@ function renderDebounced(){
 
 function render(){
 
-  const pisoVal = piso.value;
-  const vistaVal = vista.value;
-  const fracs = getSelecionados("fractionsBox");
-
   let base = dados.filter(d=>d.Empreendimento==="The View");
 
-  if(pisoVal) base = base.filter(d=>d.Piso==pisoVal);
-  if(vistaVal) base = base.filter(d=>d.Vista==vistaVal);
+  if(piso.value) base = base.filter(d=>d.Piso==piso.value);
+  if(vista.value) base = base.filter(d=>d.Vista==vista.value);
+
+  const fracs = getSelecionados("fractionsBox");
   if(fracs.length) base = base.filter(d=>fracs.includes(d.Fração));
 
   grid.innerHTML = base.map(f=>{
@@ -113,11 +102,16 @@ function render(){
     return `
       <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
 
+        <div class="badge">${safe(f.Tipologia)}</div>
+
         <div class="title">${safe(f.Fração)}</div>
 
         <div class="meta">
-          ${abp ? abp.toFixed(2)+" m²" : "-"} • 
-          Var ${varan ? varan.toFixed(2) : "-"}
+          Piso ${safe(f.Piso)} • ${safe(f.Vista)}
+        </div>
+
+        <div class="area">
+          ${abp ? abp.toFixed(2)+" m²" : "-"} • Var ${varan ? varan.toFixed(2) : "-"}
         </div>
 
         <div class="price">${fmt(num(f.PVP))}€</div>
@@ -134,16 +128,7 @@ function abrir(encoded){
   const f = JSON.parse(decodeURIComponent(encoded));
   fracaoAtual = f;
 
-  const abp = num(f["Área Bruta"] || f["ABP"]);
-  const varan = num(f["Varanda"] || f["Varanda/Terraço"]);
-  const total = num(f["Área Total"]);
-
-  const emps = getSelecionados("empreBox");
-
-  const comps = dados.filter(d =>
-    d.Empreendimento !== "The View" &&
-    emps.includes(d.Empreendimento)
-  );
+  const comps = dados.filter(d=>d.Empreendimento!=="The View");
 
   const g = classificarConcorrentes(f, comps);
 
@@ -154,24 +139,19 @@ function abrir(encoded){
   function lista(arr){
     if(!arr.length) return "<p>Nenhum</p>";
 
-    return arr.map(c=>{
+    return arr.map(c=>`
+      <div class="compRow"
+           onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
 
-      const ctot = num(c["Área Total"]);
-
-      return `
-        <div class="compRow"
-             onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
-
-          <div>
-            <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong><br>
-            <small>Total ${ctot ? ctot.toFixed(2) : "-"}</small>
-          </div>
-
-          <div>${fmt(num(c.PVP))}€</div>
-
+        <div>
+          <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong><br>
+          <small>${num(c["Área Total"]).toFixed(2)} m²</small>
         </div>
-      `;
-    }).join("");
+
+        <div>${fmt(num(c.PVP))}€</div>
+
+      </div>
+    `).join("");
   }
 
   modalConteudo.innerHTML = `
@@ -179,23 +159,24 @@ function abrir(encoded){
 
     <div class="bigPrice">${fmt(num(f.PVP))}€</div>
 
-    <div class="areas">
-      ABP ${abp ? abp.toFixed(2) : "-"} • 
-      Var ${varan ? varan.toFixed(2) : "-"} • 
-      Total ${total ? total.toFixed(2) : "-"}
-    </div>
+    <div class="pricingGrid">
 
-    <div class="priceBox">
-      <b>Fallback:</b> ${fmt(Math.round(fallback))}€
-    </div>
+      <div class="priceBox blue">
+        <div>Fallback</div>
+        <div>${fmt(Math.round(fallback))}€</div>
+      </div>
 
-    <div class="priceBox">
-      <b>Rigoroso:</b> ${fmt(Math.round(rigoroso))}€
-    </div>
+      <div class="priceBox purple">
+        <div>Rigoroso</div>
+        <div>${fmt(Math.round(rigoroso))}€</div>
+      </div>
 
-    <div class="priceBox highlight">
-      <b>Preço IA:</b> ${fmt(ia.valor)}€
-      <small>${safe(ia.exp)}</small>
+      <div class="priceBox green">
+        <div>Preço IA</div>
+        <div>${fmt(ia.valor)}€</div>
+        <small>${safe(ia.exp)}</small>
+      </div>
+
     </div>
 
     <h3>Diretos (${g.diretos.length})</h3>
@@ -222,20 +203,24 @@ function abrirConcorrente(encoded){
   const c = JSON.parse(decodeURIComponent(encoded));
 
   popup.innerHTML = `
-    <div class="popupCard" onclick="event.stopPropagation()">
+    <div class="popupOverlay" onclick="fecharPopup()">
 
-      <h3>${safe(c.Empreendimento)} - ${safe(c.Fração)}</h3>
+      <div class="popupCard" onclick="event.stopPropagation()">
 
-      <p>${fmt(num(c.PVP))}€</p>
+        <h3>${safe(c.Empreendimento)} - ${safe(c.Fração)}</h3>
 
-      <p>Total ${num(c["Área Total"]).toFixed(2)}</p>
+        <div class="price">${fmt(num(c.PVP))}€</div>
 
-      <button onclick="fecharPopup()">Fechar</button>
+        <div>${num(c["Área Total"]).toFixed(2)} m²</div>
+
+        <button onclick="fecharPopup()">Fechar</button>
+
+      </div>
 
     </div>
   `;
 
-  popup.style.display = "flex";
+  popup.style.display = "block";
 }
 
 function fecharPopup(){
@@ -245,23 +230,10 @@ function fecharPopup(){
 /* ================= LÓGICA ================= */
 
 function classificarConcorrentes(f, comps){
-
   return {
-    diretos: comps.filter(c =>
-      c.Tipologia === f.Tipologia &&
-      Number(c.Piso) === Number(f.Piso) &&
-      c.Vista === f.Vista
-    ),
-
-    indiretos: comps.filter(c =>
-      c.Tipologia === f.Tipologia &&
-      Number(c.Piso) === Number(f.Piso)
-    ),
-
-    poucos: comps.filter(c =>
-      c.Tipologia === f.Tipologia &&
-      Math.abs(Number(c.Piso) - Number(f.Piso)) === 1
-    )
+    diretos: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso && c.Vista===f.Vista),
+    indiretos: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso),
+    poucos: comps.filter(c=>c.Tipologia===f.Tipologia && Math.abs(c.Piso-f.Piso)==1)
   };
 }
 
@@ -292,18 +264,17 @@ function precoIA(f,g){
 
   let lista = [];
 
-  [...g.diretos, ...g.indiretos, ...g.poucos]
-    .forEach(c=>{
-      const a = num(c["Área Total"]);
-      if(a) lista.push(num(c.PVP)/a);
-    });
+  [...g.diretos,...g.indiretos,...g.poucos].forEach(c=>{
+    const a = num(c["Área Total"]);
+    if(a) lista.push(num(c.PVP)/a);
+  });
 
-  if(!lista.length) return {valor:num(f.PVP),exp:"Sem comparáveis"};
+  if(!lista.length) return {valor:num(f.PVP),exp:"Sem comps"};
 
   const m2 = lista.reduce((a,b)=>a+b,0)/lista.length;
 
   return {
     valor: Math.round(m2*area),
-    exp: `Baseado em ${lista.length} comps (${Math.round(m2)}€/m²)`
+    exp: `${Math.round(m2)} €/m²`
   };
 }
