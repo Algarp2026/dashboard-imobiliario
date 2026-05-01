@@ -1,31 +1,168 @@
-.hidden { display:none; }
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <title>The View</title>
 
-#modal{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.5);
-  z-index:1000;
-}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-.modal-content{
-  background:#fff;
-  margin:auto;
-  padding:20px;
-  max-height:80vh;
-  overflow:auto;
-}
+  <style>
 
-#popup{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.6);
-  z-index:2000;
-}
+    body{
+      margin:0;
+      font-family: Arial;
+      background:#f5f7fb;
+    }
 
-.popupBox{
-  background:#fff;
-  margin:auto;
-  padding:20px;
-}
+    header{
+      background:url("Olhao_Cam_Suite_Web.jpg") center/cover;
+      height:220px;
+      color:white;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+    }
+
+    header h1{
+      margin:0;
+      font-size:42px;
+    }
+
+    .filters{
+      background:white;
+      margin:-60px auto 20px;
+      width:90%;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+      gap:20px;
+      padding:20px;
+    }
+
+    .card{
+      background:white;
+      padding:16px;
+      border-radius:12px;
+      cursor:pointer;
+      transition:.2s;
+      box-shadow:0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    .card:hover{
+      transform:translateY(-5px);
+    }
+
+    .price{
+      font-size:22px;
+      font-weight:bold;
+      color:#2b6cb0;
+    }
+
+    .modal{
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .modalContent{
+      background:white;
+      padding:25px;
+      border-radius:12px;
+      width:700px;
+      max-height:90%;
+      overflow:auto;
+    }
+
+    .popupOverlay{
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.5);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .popupCard{
+      background:white;
+      padding:20px;
+      border-radius:10px;
+    }
+
+    .compRow{
+      display:flex;
+      justify-content:space-between;
+      padding:10px;
+      border-bottom:1px solid #eee;
+      cursor:pointer;
+    }
+
+    .compRow:hover{
+      background:#f0f4ff;
+    }
+
+    .priceBox{
+      margin:10px 0;
+      padding:12px;
+      border-radius:8px;
+      background:#eef2ff;
+    }
+
+    .highlight{
+      background:#d1fae5;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>The View</h1>
+  <p>Dashboard competitivo imobiliário</p>
+</header>
+
+<div class="filters">
+
+  Piso:
+  <select id="piso" onchange="render()"></select>
+
+  Vista:
+  <select id="vista" onchange="render()"></select>
+
+  <h4>Frações</h4>
+  <div id="fractionsBox"></div>
+
+  <h4>Concorrentes</h4>
+  <div id="empreBox"></div>
+
+  <button onclick="resetFiltros()">Limpar Filtros</button>
+
+</div>
+
+<div id="grid" class="grid"></div>
+
+<div id="modal" class="modal" onclick="fecharModal()">
+  <div class="modalContent" id="modalConteudo" onclick="event.stopPropagation()"></div>
+</div>
+
+<div id="popup"></div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
