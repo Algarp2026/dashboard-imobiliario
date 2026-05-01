@@ -1,10 +1,10 @@
 let dados = [];
 let renderTimer;
 
-/* ================= HELPERS ================= */
+/* ================= SEGURANÇA ================= */
 
-function safe(text){
-  return String(text ?? "")
+function safe(t){
+  return String(t ?? "")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
     .replaceAll(">","&gt;");
@@ -21,11 +21,11 @@ function fmt(v){
 /* ================= LOAD ================= */
 
 fetch("data.xlsx")
-  .then(res => {
-    if (!res.ok) throw new Error();
+  .then(res=>{
+    if(!res.ok) throw new Error("Erro Excel");
     return res.arrayBuffer();
   })
-  .then(ab => {
+  .then(ab=>{
     const wb = XLSX.read(ab);
     const ws = wb.Sheets[wb.SheetNames[0]];
     dados = XLSX.utils.sheet_to_json(ws);
@@ -54,7 +54,7 @@ function initFiltros(){
   fractionsBox.innerHTML =
     dados.filter(d=>d.Empreendimento==="The View")
       .map(d=>`
-        <label class="checkItem">
+        <label>
           <input type="checkbox" value="${safe(d.Fração)}" checked onchange="renderDebounced()">
           ${safe(d.Fração)}
         </label>
@@ -64,7 +64,7 @@ function initFiltros(){
     [...new Set(dados.map(d=>d.Empreendimento))]
       .filter(e=>e!=="The View")
       .map(e=>`
-        <label class="checkItem">
+        <label>
           <input type="checkbox" value="${safe(e)}" checked onchange="renderDebounced()">
           ${safe(e)}
         </label>
@@ -93,31 +93,19 @@ function render(){
   const fracs = getSelecionados("fractionsBox");
   if(fracs.length) base = base.filter(d=>fracs.includes(d.Fração));
 
-  grid.innerHTML = base.map(f=>{
+  grid.innerHTML = base.map(f=>`
 
-    const abp = num(f["Área Bruta"] || f["ABP"]);
-    const varan = num(f["Varanda"] || f["Varanda/Terraço"]);
+    <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
 
-    return `
-      <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
+      <div class="title">${safe(f.Fração)}</div>
 
-        <div class="badge">${safe(f.Tipologia)}</div>
-        <div class="title">${safe(f.Fração)}</div>
+      <div>${num(f["Área Total"]).toFixed(2)} m²</div>
 
-        <div class="meta">
-          Piso ${safe(f.Piso)} • ${safe(f.Vista)}
-        </div>
+      <div class="price">${fmt(num(f.PVP))}€</div>
 
-        <div class="area">
-          ${abp ? abp.toFixed(2)+" m²" : "-"} • 
-          Var ${varan ? varan.toFixed(2) : "-"}
-        </div>
+    </div>
 
-        <div class="price">${fmt(num(f.PVP))}€</div>
-
-      </div>
-    `;
-  }).join("");
+  `).join("");
 }
 
 /* ================= MODAL ================= */
@@ -127,112 +115,84 @@ function abrir(encoded){
   const f = JSON.parse(decodeURIComponent(encoded));
 
   const comps = dados.filter(d=>d.Empreendimento!=="The View");
+
   const g = classificar(f, comps);
 
   const fallback = precoFallback(f,g);
   const rigoroso = precoRigoroso(g);
   const ia = precoIA(f,g);
 
-  function bloco(nome, lista, tipo){
+  function linha(c){
 
     return `
-      <div class="section">
+      <div class="compRow"
+           onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
 
-        <div class="section-header" onclick="toggle(this)">
-          ${nome} (${lista.length})
-        </div>
+        <div>
+          <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong><br>
 
-        <div class="section-body">
-
-          ${lista.map((c,i)=>`
-            <div class="compRow" data-tipo="${tipo}" data-index="${i}">
-
-              <div>
-                <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong>
-                <br>
-                <small>${num(c["Área Total"]).toFixed(2)} m²</small>
-              </div>
-
-              <div>${fmt(num(c.PVP))}€</div>
-
-            </div>
-          `).join("")}
+          ABP ${num(c["Área Bruta"]).toFixed(2)} • 
+          Var ${num(c["Varanda"]).toFixed(2)} • 
+          Total ${num(c["Área Total"]).toFixed(2)}
 
         </div>
+
+        <div>${fmt(num(c.PVP))}€</div>
 
       </div>
     `;
   }
 
   modalConteudo.innerHTML = `
+
     <h2>${safe(f.Fração)}</h2>
 
     <div class="bigPrice">${fmt(num(f.PVP))}€</div>
 
-    <div class="pricingGrid">
-
-      <div class="priceBox blue">
-        <div>Fallback</div>
-        <div>${fmt(Math.round(fallback))}€</div>
-      </div>
-
-      <div class="priceBox purple">
-        <div>Rigoroso</div>
-        <div>${fmt(Math.round(rigoroso))}€</div>
-      </div>
-
-      <div class="priceBox green">
-        <div>Preço IA</div>
-        <div>${fmt(ia.valor)}€</div>
-        <small>${safe(ia.exp)}</small>
-      </div>
-
+    <div>
+      ABP ${num(f["Área Bruta"]).toFixed(2)} • 
+      Var ${num(f["Varanda"]).toFixed(2)} • 
+      Total ${num(f["Área Total"]).toFixed(2)}
     </div>
 
-    ${bloco("🔴 Diretos", g.d, "d")}
-    ${bloco("🟠 Indiretos", g.i, "i")}
-    ${bloco("🟡 Pouco", g.p, "p")}
+    <div class="priceBox">
+      Fallback: ${fmt(Math.round(fallback))}€
+      <small>Média simples dos concorrentes disponíveis</small>
+    </div>
+
+    <div class="priceBox">
+      Rigoroso: ${fmt(Math.round(rigoroso))}€
+      <small>Peso: Diretos 60% • Indiretos 30% • Pouco 10%</small>
+    </div>
+
+    <div class="priceBox highlight">
+      IA: ${fmt(ia.valor)}€
+      <small>${safe(ia.exp)}</small>
+    </div>
+
+    <h3 onclick="toggle(this)">Diretos (${g.d.length})</h3>
+    <div>${g.d.map(linha).join("")}</div>
+
+    <h3 onclick="toggle(this)">Indiretos (${g.i.length})</h3>
+    <div>${g.i.map(linha).join("")}</div>
+
+    <h3 onclick="toggle(this)">Pouco (${g.p.length})</h3>
+    <div>${g.p.map(linha).join("")}</div>
+
   `;
 
   modal.style.display = "flex";
-
-  /* ===== EVENT LISTENERS (CORREÇÃO REAL) ===== */
-
-  setTimeout(()=>{
-
-    document.querySelectorAll(".compRow").forEach(el=>{
-
-      el.addEventListener("click",(e)=>{
-        e.stopPropagation();
-
-        const tipo = el.dataset.tipo;
-        const index = el.dataset.index;
-
-        const lista = tipo==="d" ? g.d :
-                      tipo==="i" ? g.i : g.p;
-
-        abrirConcorrente(lista[index]);
-      });
-
-    });
-
-  },0);
 }
 
 function fecharModal(){
   modal.style.display = "none";
 }
 
-/* ================= TOGGLE ================= */
-
-function toggle(el){
-  const body = el.nextElementSibling;
-  body.style.display = body.style.display === "none" ? "block" : "none";
-}
-
 /* ================= POPUP ================= */
 
-function abrirConcorrente(c){
+function abrirConcorrente(encoded){
+
+  const c = JSON.parse(decodeURIComponent(encoded));
 
   popup.innerHTML = `
     <div class="popupOverlay" onclick="fecharPopup()">
@@ -241,9 +201,13 @@ function abrirConcorrente(c){
 
         <h3>${safe(c.Empreendimento)} - ${safe(c.Fração)}</h3>
 
-        <div class="price">${fmt(num(c.PVP))}€</div>
+        <p>${fmt(num(c.PVP))}€</p>
 
-        <div>${num(c["Área Total"]).toFixed(2)} m²</div>
+        <p>
+          ABP ${num(c["Área Bruta"]).toFixed(2)} • 
+          Var ${num(c["Varanda"]).toFixed(2)} • 
+          Total ${num(c["Área Total"]).toFixed(2)}
+        </p>
 
         <button onclick="fecharPopup()">Fechar</button>
 
@@ -257,6 +221,13 @@ function abrirConcorrente(c){
 
 function fecharPopup(){
   popup.style.display = "none";
+}
+
+/* ================= TOGGLE ================= */
+
+function toggle(el){
+  const next = el.nextElementSibling;
+  next.style.display = next.style.display === "none" ? "block" : "none";
 }
 
 /* ================= LÓGICA ================= */
@@ -305,6 +276,6 @@ function precoIA(f,g){
 
   return {
     valor: Math.round(m2*area),
-    exp: `${Math.round(m2)} €/m²`
+    exp: `Baseado em ${lista.length} comps (${Math.round(m2)}€/m²)`
   };
 }
