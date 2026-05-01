@@ -127,23 +127,25 @@ function abrir(encoded){
   const f = JSON.parse(decodeURIComponent(encoded));
 
   const comps = dados.filter(d=>d.Empreendimento!=="The View");
-
   const g = classificar(f, comps);
 
-  function bloco(titulo, lista){
+  const fallback = precoFallback(f,g);
+  const rigoroso = precoRigoroso(g);
+  const ia = precoIA(f,g);
+
+  function bloco(nome, lista, tipo){
 
     return `
       <div class="section">
 
         <div class="section-header" onclick="toggle(this)">
-          ${titulo} (${lista.length})
+          ${nome} (${lista.length})
         </div>
 
         <div class="section-body">
 
-          ${lista.map(c=>`
-            <div class="compRow"
-              onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
+          ${lista.map((c,i)=>`
+            <div class="compRow" data-tipo="${tipo}" data-index="${i}">
 
               <div>
                 <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong>
@@ -167,12 +169,54 @@ function abrir(encoded){
 
     <div class="bigPrice">${fmt(num(f.PVP))}€</div>
 
-    ${bloco("🔴 Diretos", g.d)}
-    ${bloco("🟠 Indiretos", g.i)}
-    ${bloco("🟡 Pouco", g.p)}
+    <div class="pricingGrid">
+
+      <div class="priceBox blue">
+        <div>Fallback</div>
+        <div>${fmt(Math.round(fallback))}€</div>
+      </div>
+
+      <div class="priceBox purple">
+        <div>Rigoroso</div>
+        <div>${fmt(Math.round(rigoroso))}€</div>
+      </div>
+
+      <div class="priceBox green">
+        <div>Preço IA</div>
+        <div>${fmt(ia.valor)}€</div>
+        <small>${safe(ia.exp)}</small>
+      </div>
+
+    </div>
+
+    ${bloco("🔴 Diretos", g.d, "d")}
+    ${bloco("🟠 Indiretos", g.i, "i")}
+    ${bloco("🟡 Pouco", g.p, "p")}
   `;
 
   modal.style.display = "flex";
+
+  /* ===== EVENT LISTENERS (CORREÇÃO REAL) ===== */
+
+  setTimeout(()=>{
+
+    document.querySelectorAll(".compRow").forEach(el=>{
+
+      el.addEventListener("click",(e)=>{
+        e.stopPropagation();
+
+        const tipo = el.dataset.tipo;
+        const index = el.dataset.index;
+
+        const lista = tipo==="d" ? g.d :
+                      tipo==="i" ? g.i : g.p;
+
+        abrirConcorrente(lista[index]);
+      });
+
+    });
+
+  },0);
 }
 
 function fecharModal(){
@@ -188,13 +232,9 @@ function toggle(el){
 
 /* ================= POPUP ================= */
 
-function abrirConcorrente(encoded){
+function abrirConcorrente(c){
 
-  const c = JSON.parse(decodeURIComponent(encoded));
-
-  const overlay = document.getElementById("popup");
-
-  overlay.innerHTML = `
+  popup.innerHTML = `
     <div class="popupOverlay" onclick="fecharPopup()">
 
       <div class="popupCard" onclick="event.stopPropagation()">
@@ -212,7 +252,7 @@ function abrirConcorrente(encoded){
     </div>
   `;
 
-  overlay.style.display = "flex";
+  popup.style.display = "flex";
 }
 
 function fecharPopup(){
@@ -226,5 +266,45 @@ function classificar(f, comps){
     d: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso && c.Vista===f.Vista),
     i: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso),
     p: comps.filter(c=>c.Tipologia===f.Tipologia && Math.abs(c.Piso-f.Piso)==1)
+  };
+}
+
+/* ================= PREÇOS ================= */
+
+function media(arr){
+  if(!arr.length) return 0;
+  return arr.reduce((a,b)=>a+num(b.PVP),0)/arr.length;
+}
+
+function precoFallback(f,g){
+  if(g.d.length) return media(g.d);
+  if(g.i.length) return media(g.i);
+  if(g.p.length) return media(g.p);
+  return num(f.PVP);
+}
+
+function precoRigoroso(g){
+  return media(g.d)*0.6 + media(g.i)*0.3 + media(g.p)*0.1;
+}
+
+function precoIA(f,g){
+
+  const area = num(f["Área Total"]);
+  if(!area) return {valor:num(f.PVP),exp:"Sem área"};
+
+  let lista = [];
+
+  [...g.d,...g.i,...g.p].forEach(c=>{
+    const a = num(c["Área Total"]);
+    if(a) lista.push(num(c.PVP)/a);
+  });
+
+  if(!lista.length) return {valor:num(f.PVP),exp:"Sem comps"};
+
+  const m2 = lista.reduce((a,b)=>a+b,0)/lista.length;
+
+  return {
+    valor: Math.round(m2*area),
+    exp: `${Math.round(m2)} €/m²`
   };
 }
