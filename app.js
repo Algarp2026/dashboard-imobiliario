@@ -15,21 +15,60 @@ function num(v){
 }
 
 function fmt(v){
-  return v ? v.toLocaleString() : "-";
+  return v ? Math.round(v).toLocaleString() : "-";
+}
+
+/* ================= LEITURA ROBUSTA ================= */
+
+function getField(row, names){
+  for(let n of names){
+    if(row[n] !== undefined && row[n] !== ""){
+      return Number(row[n]) || 0;
+    }
+  }
+  return 0;
+}
+
+function getText(row, names){
+  for(let n of names){
+    if(row[n] !== undefined && row[n] !== ""){
+      return String(row[n]);
+    }
+  }
+  return "";
 }
 
 /* ================= LOAD ================= */
 
 fetch("data.xlsx")
-  .then(res => res.arrayBuffer())
-  .then(ab => {
-    const wb = XLSX.read(ab);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    dados = XLSX.utils.sheet_to_json(ws);
+.then(res => res.arrayBuffer())
+.then(ab => {
 
-    initFiltros();
-    render();
-  });
+  const wb = XLSX.read(ab);
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws);
+
+  dados = raw.map(r => ({
+
+    empreendimento: getText(r, ["Empreendimento"]),
+    fracao: getText(r, ["Fração", "Fracao"]),
+    tipologia: getText(r, ["Tipologia"]),
+    vista: getText(r, ["Vista"]),
+
+    piso: parseInt(getText(r, ["Piso"])) || 0,
+
+    abp: getField(r, ["ABP", "ABP m2", "Área Bruta"]),
+    varanda: getField(r, ["Varanda", "Varanda m2"]),
+    total: getField(r, ["Área Total", "Total m2", "Total"]),
+
+    preco: getField(r, ["PVP", "Preço", "Preco"])
+
+  }));
+
+  initFiltros();
+  render();
+
+});
 
 /* ================= FILTROS ================= */
 
@@ -37,25 +76,25 @@ function initFiltros(){
 
   piso.innerHTML =
     `<option value="">Todos</option>` +
-    [...new Set(dados.map(d=>d.Piso))]
-      .map(p=>`<option>${safe(p)}</option>`).join("");
+    [...new Set(dados.map(d=>d.piso))]
+      .map(p=>`<option>${p}</option>`).join("");
 
   vista.innerHTML =
     `<option value="">Todas</option>` +
-    [...new Set(dados.map(d=>d.Vista))]
+    [...new Set(dados.map(d=>d.vista))]
       .map(v=>`<option>${safe(v)}</option>`).join("");
 
   fractionsBox.innerHTML =
-    dados.filter(d=>d.Empreendimento==="The View")
+    dados.filter(d=>d.empreendimento==="The View")
       .map(d=>`
         <label>
-          <input type="checkbox" value="${safe(d.Fração)}" checked onchange="renderDebounced()">
-          ${safe(d.Fração)}
+          <input type="checkbox" value="${safe(d.fracao)}" checked onchange="renderDebounced()">
+          ${safe(d.fracao)}
         </label>
       `).join("");
 
   empreBox.innerHTML =
-    [...new Set(dados.map(d=>d.Empreendimento))]
+    [...new Set(dados.map(d=>d.empreendimento))]
       .filter(e=>e!=="The View")
       .map(e=>`
         <label>
@@ -65,14 +104,14 @@ function initFiltros(){
       `).join("");
 }
 
-function getSelecionados(id){
-  return [...document.querySelectorAll(`#${id} input:checked`)]
-    .map(i=>i.value);
-}
-
 function renderDebounced(){
   clearTimeout(renderTimer);
   renderTimer = setTimeout(render, 120);
+}
+
+function getSelecionados(id){
+  return [...document.querySelectorAll(`#${id} input:checked`)]
+    .map(i=>i.value);
 }
 
 function resetFiltros(){
@@ -86,26 +125,26 @@ function resetFiltros(){
 
 function render(){
 
-  let base = dados.filter(d=>d.Empreendimento==="The View");
+  let base = dados.filter(d=>d.empreendimento==="The View");
 
-  if(piso.value) base = base.filter(d=>d.Piso==piso.value);
-  if(vista.value) base = base.filter(d=>d.Vista==vista.value);
+  if(piso.value) base = base.filter(d=>d.piso == piso.value);
+  if(vista.value) base = base.filter(d=>d.vista == vista.value);
 
   grid.innerHTML = base.map(f=>`
 
     <div class="card" onclick='abrir("${encodeURIComponent(JSON.stringify(f))}")'>
 
-      <div class="title">${safe(f.Fração)}</div>
+      <div class="title">${safe(f.fracao)}</div>
 
       <div class="meta">
-        Piso ${safe(f.Piso)} • ${safe(f.Vista)}
+        Piso ${f.piso} • ${safe(f.vista)}
       </div>
 
       <div class="area">
-        ${num(f["Área Bruta"]).toFixed(2)} • Var ${num(f["Varanda"]).toFixed(2)}
+        ABP ${f.abp.toFixed(2)} • Var ${f.varanda.toFixed(2)}
       </div>
 
-      <div class="price">${fmt(num(f.PVP))}€</div>
+      <div class="price">${fmt(f.preco)}€</div>
 
     </div>
 
@@ -117,7 +156,8 @@ function render(){
 function abrir(encoded){
 
   const f = JSON.parse(decodeURIComponent(encoded));
-  const comps = dados.filter(d=>d.Empreendimento!=="The View");
+
+  const comps = dados.filter(d=>d.empreendimento!=="The View");
 
   const g = classificar(f, comps);
 
@@ -125,23 +165,24 @@ function abrir(encoded){
     return `
       <div class="compRow" onclick='event.stopPropagation(); abrirConcorrente("${encodeURIComponent(JSON.stringify(c))}")'>
         <div>
-          <strong>${safe(c.Empreendimento)} - ${safe(c.Fração)}</strong><br>
-          ${num(c["Área Total"]).toFixed(2)} m²
+          <strong>${safe(c.empreendimento)} - ${safe(c.fracao)}</strong><br>
+          ${c.total.toFixed(2)} m²
         </div>
-        <div>${fmt(num(c.PVP))}€</div>
+        <div>${fmt(c.preco)}€</div>
       </div>
     `;
   }
 
   modalConteudo.innerHTML = `
-    <h2>${safe(f.Fração)}</h2>
 
-    <div class="bigPrice">${fmt(num(f.PVP))}€</div>
+    <h2>${safe(f.fracao)}</h2>
+
+    <div class="bigPrice">${fmt(f.preco)}€</div>
 
     <div>
-      ABP ${num(f["Área Bruta"]).toFixed(2)} • 
-      Var ${num(f["Varanda"]).toFixed(2)} • 
-      Total ${num(f["Área Total"]).toFixed(2)}
+      ABP ${f.abp.toFixed(2)} • 
+      Var ${f.varanda.toFixed(2)} • 
+      Total ${f.total.toFixed(2)}
     </div>
 
     <div class="priceBox blue">
@@ -153,7 +194,7 @@ function abrir(encoded){
     </div>
 
     <div class="priceBox green">
-      IA: ${fmt(precoIA(f,g).valor)}€
+      IA: ${fmt(precoIA(f,g))}€
     </div>
 
     <div class="section-header" onclick="toggle(this)">Diretos (${g.d.length})</div>
@@ -164,6 +205,7 @@ function abrir(encoded){
 
     <div class="section-header" onclick="toggle(this)">Pouco (${g.p.length})</div>
     <div class="section-body">${g.p.map(linha).join("")}</div>
+
   `;
 
   modal.style.display = "flex";
@@ -182,9 +224,9 @@ function abrirConcorrente(encoded){
   popup.innerHTML = `
     <div class="popupOverlay" onclick="fecharPopup()">
       <div class="popupCard" onclick="event.stopPropagation()">
-        <h3>${safe(c.Empreendimento)}</h3>
-        <p>${fmt(num(c.PVP))}€</p>
-        <p>${num(c["Área Total"]).toFixed(2)} m²</p>
+        <h3>${safe(c.empreendimento)}</h3>
+        <p>${fmt(c.preco)}€</p>
+        <p>${c.total.toFixed(2)} m²</p>
         <button onclick="fecharPopup()">Fechar</button>
       </div>
     </div>
@@ -201,22 +243,24 @@ function fecharPopup(){
 
 function classificar(f, comps){
   return {
-    d: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso && c.Vista===f.Vista),
-    i: comps.filter(c=>c.Tipologia===f.Tipologia && c.Piso==f.Piso),
-    p: comps.filter(c=>c.Tipologia===f.Tipologia && Math.abs(c.Piso-f.Piso)==1)
+    d: comps.filter(c=>c.tipologia===f.tipologia && c.piso==f.piso && c.vista===f.vista),
+    i: comps.filter(c=>c.tipologia===f.tipologia && c.piso==f.piso),
+    p: comps.filter(c=>c.tipologia===f.tipologia && Math.abs(c.piso-f.piso)==1)
   };
 }
 
+/* ================= PREÇOS ================= */
+
 function media(arr){
   if(!arr.length) return 0;
-  return arr.reduce((a,b)=>a+num(b.PVP),0)/arr.length;
+  return arr.reduce((a,b)=>a+b.preco,0)/arr.length;
 }
 
 function precoFallback(f,g){
   if(g.d.length) return media(g.d);
   if(g.i.length) return media(g.i);
   if(g.p.length) return media(g.p);
-  return num(f.PVP);
+  return f.preco;
 }
 
 function precoRigoroso(g){
@@ -224,14 +268,21 @@ function precoRigoroso(g){
 }
 
 function precoIA(f,g){
-  const area = num(f["Área Total"]);
-  let lista = [...g.d,...g.i,...g.p]
-    .map(c=>num(c.PVP)/num(c["Área Total"]))
-    .filter(v=>v>0);
 
-  if(!lista.length) return {valor:num(f.PVP)};
+  let lista = [...g.d,...g.i,...g.p]
+    .map(c => c.total ? c.preco / c.total : 0)
+    .filter(v => v > 1000 && v < 20000);
+
+  if(!lista.length) return f.preco;
 
   const m2 = lista.reduce((a,b)=>a+b,0)/lista.length;
 
-  return {valor: Math.round(m2*area)};
+  return m2 * f.total;
+}
+
+/* ================= UI ================= */
+
+function toggle(el){
+  const next = el.nextElementSibling;
+  next.style.display = next.style.display==="none" ? "block" : "none";
 }
