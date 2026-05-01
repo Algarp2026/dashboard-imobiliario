@@ -1,168 +1,83 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <title>The View</title>
+  <meta charset="UTF-8">
+  <title>The View Dashboard</title>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
 
-  <style>
-
-    body{
-      margin:0;
-      font-family: Arial;
-      background:#f5f7fb;
-    }
-
-    header{
-      background:url("Olhao_Cam_Suite_Web.jpg") center/cover;
-      height:220px;
-      color:white;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      align-items:center;
-    }
-
-    header h1{
-      margin:0;
-      font-size:42px;
-    }
-
-    .filters{
-      background:white;
-      margin:-60px auto 20px;
-      width:90%;
-      padding:20px;
-      border-radius:12px;
-      box-shadow:0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-      gap:20px;
-      padding:20px;
-    }
-
-    .card{
-      background:white;
-      padding:16px;
-      border-radius:12px;
-      cursor:pointer;
-      transition:.2s;
-      box-shadow:0 5px 15px rgba(0,0,0,0.05);
-    }
-
-    .card:hover{
-      transform:translateY(-5px);
-    }
-
-    .price{
-      font-size:22px;
-      font-weight:bold;
-      color:#2b6cb0;
-    }
-
-    .modal{
-      position:fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      background:rgba(0,0,0,0.6);
-      display:none;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .modalContent{
-      background:white;
-      padding:25px;
-      border-radius:12px;
-      width:700px;
-      max-height:90%;
-      overflow:auto;
-    }
-
-    .popupOverlay{
-      position:fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      background:rgba(0,0,0,0.5);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .popupCard{
-      background:white;
-      padding:20px;
-      border-radius:10px;
-    }
-
-    .compRow{
-      display:flex;
-      justify-content:space-between;
-      padding:10px;
-      border-bottom:1px solid #eee;
-      cursor:pointer;
-    }
-
-    .compRow:hover{
-      background:#f0f4ff;
-    }
-
-    .priceBox{
-      margin:10px 0;
-      padding:12px;
-      border-radius:8px;
-      background:#eef2ff;
-    }
-
-    .highlight{
-      background:#d1fae5;
-    }
-
-  </style>
+  <!-- XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
 
-<header>
-  <h1>The View</h1>
-  <p>Dashboard competitivo imobiliário</p>
-</header>
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-overlay">
+      <h1>The View</h1>
+      <p>Dashboard competitivo imobiliário</p>
+    </div>
+  </header>
 
-<div class="filters">
+  <!-- CONTAINER -->
+  <div class="container">
 
-  Piso:
-  <select id="piso" onchange="render()"></select>
+    <!-- FILTROS -->
+    <div class="filtros">
 
-  Vista:
-  <select id="vista" onchange="render()"></select>
+      <div class="filtro">
+        <label>Piso</label>
+        <select id="piso" onchange="render()"></select>
+      </div>
 
-  <h4>Frações</h4>
-  <div id="fractionsBox"></div>
+      <div class="filtro">
+        <label>Vista</label>
+        <select id="vista" onchange="render()"></select>
+      </div>
 
-  <h4>Concorrentes</h4>
-  <div id="empreBox"></div>
+      <div class="filtro">
+        <label>Frações</label>
+        <div id="fractionsBox" class="checkboxGroup"></div>
+      </div>
 
-  <button onclick="resetFiltros()">Limpar Filtros</button>
+      <div class="filtro">
+        <label>Concorrentes</label>
+        <div id="empreBox" class="checkboxGroup"></div>
+      </div>
 
-</div>
+      <div class="filtro">
+        <button onclick="resetFiltros()" class="btnReset">
+          Limpar Filtros
+        </button>
+      </div>
 
-<div id="grid" class="grid"></div>
+    </div>
 
-<div id="modal" class="modal" onclick="fecharModal()">
-  <div class="modalContent" id="modalConteudo" onclick="event.stopPropagation()"></div>
-</div>
+    <!-- GRID -->
+    <div id="grid" class="grid"></div>
 
-<div id="popup"></div>
+  </div>
 
-<script src="app.js"></script>
+  <!-- MODAL -->
+  <div id="modal" class="modal" onclick="fecharModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+
+      <div class="modalHeader">
+        <h2 id="modalTitulo"></h2>
+        <button onclick="fecharModal()" style="border:none;background:none;font-size:18px;cursor:pointer;">
+          ✕
+        </button>
+      </div>
+
+      <div id="modalConteudo"></div>
+
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script src="app.js"></script>
 
 </body>
 </html>
