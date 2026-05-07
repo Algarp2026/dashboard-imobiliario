@@ -502,3 +502,17 @@ select:focus { border-color: rgba(159,122,54,.55); box-shadow: 0 0 0 4px rgba(21
 }
 
 @media (max-width: 640px) { .badge-stack { justify-items: start; } .confidence-pill { border-radius: 18px; } }
+
+/* Atualização compset inteligente */
+.source-card {
+  margin-top: 1rem;
+  padding: .9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.72);
+  word-break: break-word;
+}
+.source-card p { margin: .25rem 0; font-size: .86rem; }
+.competitor-row small + small { color: rgba(217,184,121,.72); }
+.summary-grid { align-items: stretch; }

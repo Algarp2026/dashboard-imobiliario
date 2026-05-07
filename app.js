@@ -135,11 +135,30 @@
     const price = parseNumber(getFirst(getter, ['preco', 'preço', 'pvp', 'valor', 'price', 'asking price']));
     const eurosPerSqmRaw = parseNumber(getFirst(getter, ['€/m2', '€/m²', 'eur/m2', 'euro/m2', 'preco m2', 'preço m2', 'price/m2']));
     const typeFlag = normalizeText(getFirst(getter, ['categoria', 'tipo dado', 'tipo de dado', 'dataset', 'origem', 'classe']));
+    const status = normalizeText(getFirst(getter, ['status', 'estado', 'disponibilidade', 'available', 'availability']));
+    const source = normalizeText(getFirst(getter, ['fonte', 'source', 'portal', 'origem dados', 'origem dos dados']));
+    const url = normalizeText(getFirst(getter, ['url', 'link', 'fonte url', 'source url']));
+    const updatedAt = normalizeText(getFirst(getter, ['data de atualização', 'data atualização', 'data atualizacao', 'atualizado em', 'updated at', 'data']));
+    const referenceYear = parseNumber(getFirst(getter, ['ano referência', 'ano referencia', 'ano', 'reference year', 'ano dados']));
+    const distance = parseNumber(getFirst(getter, ['distância ao the view', 'distancia ao the view', 'distância', 'distancia', 'distance']));
+    const segment = normalizeText(getFirst(getter, ['segmento', 'segment', 'classe comercial', 'categoria comercial']));
+    const comparableWeightRaw = parseNumber(getFirst(getter, ['peso comparável', 'peso comparavel', 'peso', 'weight', 'comparable weight']));
+    const condition = normalizeText(getFirst(getter, ['condição', 'condicao', 'estado do imóvel', 'estado do imovel', 'condition']));
+    const deliveryYear = parseNumber(getFirst(getter, ['ano de entrega', 'entrega', 'delivery year', 'conclusão', 'conclusao']));
+    const parking = normalizeText(getFirst(getter, ['garagem', 'parking', 'estacionamento']));
+    const pool = normalizeText(getFirst(getter, ['piscina', 'pool']));
+    const realView = normalizeText(getFirst(getter, ['vista real', 'real view', 'vista validada']));
+    const equivalentFloorRaw = getFirst(getter, ['andar equivalente', 'piso equivalente', 'equivalent floor']);
+    const notes = normalizeText(getFirst(getter, ['observações comerciais', 'observacoes comerciais', 'observações', 'observacoes', 'notas', 'notes']));
     const floorNumber = parseFloor(floorRaw);
+    const equivalentFloor = parseFloor(equivalentFloorRaw);
+    const computedFloor = Number.isFinite(equivalentFloor) ? equivalentFloor : floorNumber;
     const computedTotalArea = Number.isFinite(totalArea) && totalArea > 0 ? totalArea : sumAreas(abp, balcony);
     const eurosPerSqm = Number.isFinite(eurosPerSqmRaw) && eurosPerSqmRaw > 0
       ? eurosPerSqmRaw
       : safeDivide(price, computedTotalArea);
+    const layer = classifyCompsetLayer({ development, status, source, segment, referenceYear, updatedAt, condition });
+    const comparableWeight = resolveComparableWeight({ rawWeight: comparableWeightRaw, layer, status, segment, referenceYear, updatedAt, condition, development, view, realView });
 
     return {
       id: `row-${index}-${slugify(name || 'item')}`,
@@ -156,6 +175,23 @@
       price: positiveOrNull(price),
       eurosPerSqm: positiveOrNull(eurosPerSqm),
       typeFlag,
+      status: safeString(status || ''),
+      source: safeString(source || ''),
+      url: safeString(url || ''),
+      updatedAt: safeString(updatedAt || ''),
+      referenceYear: positiveOrNull(referenceYear),
+      distance: positiveOrNull(distance),
+      segment: safeString(segment || ''),
+      comparableWeight,
+      layer,
+      condition: safeString(condition || ''),
+      deliveryYear: positiveOrNull(deliveryYear),
+      parking: safeString(parking || ''),
+      pool: safeString(pool || ''),
+      realView: safeString(realView || ''),
+      equivalentFloor: Number.isFinite(equivalentFloor) ? equivalentFloor : null,
+      competitorFloorNumber: computedFloor,
+      notes: safeString(notes || ''),
       isProject: isProjectRow({ development, typeFlag, name })
     };
   }
@@ -341,11 +377,16 @@
       if (fraction.eurosPerSqm < ai.eurosPerSqm) below += 1;
     });
 
+    const layerCounts = getLayerCounts(state.filteredCompetitors);
+    const weightedCompetitorMedian = weightedMedianFromItems(state.filteredCompetitors, 'eurosPerSqm');
+
     el.executiveSummary.append(
       createSummaryCard('Preço médio The View', formatCurrency(projectMedian, 0) + ' /m²', 'Mediana das frações visíveis.'),
-      createSummaryCard('Mediana concorrência', formatCurrency(competitorMedian, 0) + ' /m²', 'Respeita os filtros de concorrentes.'),
+      createSummaryCard('Mediana concorrência', formatCurrency(competitorMedian, 0) + ' /m²', 'Mediana simples dos concorrentes filtrados.'),
+      createSummaryCard('Mediana ponderada', formatCurrency(weightedCompetitorMedian, 0) + ' /m²', 'Aplica camada A/B/C, frescura, status e peso comparável.'),
       createSummaryCard('Posicionamento', marketPosition, 'Comparação entre The View e benchmark filtrado.'),
-      createSummaryCard('Acima / abaixo do mercado', `${above} / ${below}`, 'Comparado contra o preço IA heurístico de cada fração.')
+      createSummaryCard('Acima / abaixo do mercado', `${above} / ${below}`, 'Comparado contra o preço IA heurístico de cada fração.'),
+      createSummaryCard('Compset A/B/C', `${layerCounts.a}/${layerCounts.b}/${layerCounts.c}`, 'A = premium ativo, B = benchmark local, C = histórico/secundário.')
     );
   }
 
@@ -494,10 +535,12 @@
     section.className = 'accordion';
     section.setAttribute('aria-label', 'Concorrentes por categoria');
 
+    const strategic = getStrategicExpandedSet(fraction, state.filteredCompetitors, sets);
     section.append(
       createAccordionItem('Diretos', 'Mesma tipologia, piso e vista', sets.direct, fraction, true),
       createAccordionItem('Indiretos', 'Mesma tipologia e piso', sets.indirect, fraction, false),
-      createAccordionItem('Pouco concorrente', 'Mesma tipologia e piso ±1', sets.weak, fraction, false)
+      createAccordionItem('Pouco concorrente', 'Mesma tipologia e piso ±1', sets.weak, fraction, false),
+      createAccordionItem('Compset expandido', 'Equivalência comercial; não altera a lógica oficial', strategic, fraction, false)
     );
     return section;
   }
@@ -547,7 +590,8 @@
 
     const left = document.createElement('div');
     left.append(createTextElement('strong', '', competitor.name));
-    left.append(createTextElement('small', '', `${competitor.development || 'Sem empreendimento'} · ${competitor.typology} · Piso ${formatPlain(competitor.floorNumber)} · ${competitor.view}`));
+    left.append(createTextElement('small', '', `${competitor.development || 'Sem empreendimento'} · ${competitor.typology} · Piso ${formatPlain(getComparableFloor(competitor))} · ${competitor.realView || competitor.view}`));
+    left.append(createTextElement('small', '', `${competitor.layer || 'Benchmark'} · peso ${formatNumber(getComparableWeight(competitor), 2)}${competitor.status ? ` · ${competitor.status}` : ''}`));
 
     const right = document.createElement('div');
     right.append(createTextElement('strong', '', formatCurrency(competitor.price, 0)));
@@ -574,8 +618,15 @@
         ['Varanda', formatArea(competitor.balcony)],
         ['Área total', formatArea(competitor.totalArea)],
         ['€/m²', `${formatCurrency(competitor.eurosPerSqm, 0)} /m²`],
-        ['Piso', formatPlain(competitor.floorNumber)]
+        ['Piso', formatPlain(getComparableFloor(competitor))],
+        ['Camada compset', competitor.layer || 'Benchmark'],
+        ['Peso comparável', formatNumber(getComparableWeight(competitor), 2)],
+        ['Status', competitor.status || 'Não indicado'],
+        ['Fonte', competitor.source || 'Não indicada'],
+        ['Atualização', competitor.updatedAt || competitor.referenceYear || 'Não indicada'],
+        ['Segmento', competitor.segment || 'Não indicado']
       ]),
+      renderCompetitorSource(competitor),
       createComparisonGrid(comparison)
     );
 
@@ -626,9 +677,9 @@
 
   function getCompetitorSets(fraction, competitors) {
     const sameTypology = (competitor) => normalizeKey(competitor.typology) === normalizeKey(fraction.typology);
-    const sameFloor = (competitor) => competitor.floorNumber === fraction.floorNumber;
-    const sameView = (competitor) => normalizeKey(competitor.view) === normalizeKey(fraction.view);
-    const floorPlusMinusOne = (competitor) => Math.abs(competitor.floorNumber - fraction.floorNumber) <= 1;
+    const sameFloor = (competitor) => getComparableFloor(competitor) === fraction.floorNumber;
+    const sameView = (competitor) => normalizeKey(competitor.realView || competitor.view) === normalizeKey(fraction.view);
+    const floorPlusMinusOne = (competitor) => Math.abs(getComparableFloor(competitor) - fraction.floorNumber) <= 1;
 
     const direct = competitors.filter((competitor) => sameTypology(competitor) && sameFloor(competitor) && sameView(competitor));
     const directIds = new Set(direct.map((item) => item.id));
@@ -677,17 +728,13 @@
 
   function calculateRigorousPrice(fraction, sets) {
     const weighted = [
-      ...sets.direct.map((item) => ({ ...item, _weight: 3, _origin: 'Diretos' })),
-      ...sets.indirect.map((item) => ({ ...item, _weight: 2, _origin: 'Indiretos' })),
-      ...sets.weak.map((item) => ({ ...item, _weight: 1, _origin: 'Pouco concorrente' }))
-    ].filter((item) => Number.isFinite(item.eurosPerSqm));
+      ...sets.direct.map((item) => ({ ...item, _weight: 3 * getComparableWeight(item), _origin: 'Diretos' })),
+      ...sets.indirect.map((item) => ({ ...item, _weight: 2 * getComparableWeight(item), _origin: 'Indiretos' })),
+      ...sets.weak.map((item) => ({ ...item, _weight: 1 * getComparableWeight(item), _origin: 'Pouco concorrente' }))
+    ].filter((item) => Number.isFinite(item.eurosPerSqm) && item._weight > 0);
 
     const trimmed = removeExtremes(weighted, 'eurosPerSqm');
-    const expanded = [];
-    trimmed.forEach((item) => {
-      for (let i = 0; i < item._weight; i += 1) expanded.push(item.eurosPerSqm);
-    });
-    const usedSqm = median(expanded);
+    const usedSqm = weightedMedian(trimmed.map((item) => ({ value: item.eurosPerSqm, weight: item._weight })));
     const price = usedSqm ? usedSqm * fraction.totalArea : null;
     const removedCount = weighted.length - trimmed.length;
 
@@ -701,20 +748,23 @@
         `Concorrentes usados após limpeza: ${trimmed.length}.`,
         `€/m² usado: mediana ponderada de ${formatCurrency(usedSqm, 0)} /m².`,
         `Remoção de extremos: ${removedCount} outlier${removedCount === 1 ? '' : 's'} removido${removedCount === 1 ? '' : 's'}.`,
-        'Ajustes aplicados: peso 3 para diretos, 2 para indiretos e 1 para pouco concorrente.'
+        'Ajustes aplicados: peso 3 para diretos, 2 para indiretos e 1 para pouco concorrente, multiplicado pela qualidade A/B/C, frescura e status.'
       ] : ['Sem amostra suficiente para o modelo rigoroso.', 'Remoção de extremos e ponderação não aplicadas.']
     };
   }
 
   function calculateAIPrice(fraction, sets, fallback, rigorous) {
-    const directMedian = median(sets.direct.map((item) => item.eurosPerSqm).filter(Number.isFinite));
-    const indirectMedian = median(sets.indirect.map((item) => item.eurosPerSqm).filter(Number.isFinite));
-    const weakMedian = median(sets.weak.map((item) => item.eurosPerSqm).filter(Number.isFinite));
+    const directMedian = weightedMedianFromItems(sets.direct, 'eurosPerSqm');
+    const indirectMedian = weightedMedianFromItems(sets.indirect, 'eurosPerSqm');
+    const weakMedian = weightedMedianFromItems(sets.weak, 'eurosPerSqm');
+    const strategic = getStrategicExpandedSet(fraction, state.filteredCompetitors, sets);
+    const strategicMedian = weightedMedianFromItems(strategic, 'eurosPerSqm');
 
     const components = [];
-    if (directMedian) components.push({ value: directMedian, weight: 0.50, label: 'Diretos' });
-    if (indirectMedian) components.push({ value: indirectMedian, weight: 0.30, label: 'Indiretos' });
-    if (weakMedian) components.push({ value: weakMedian, weight: 0.20, label: 'Pouco concorrente' });
+    if (directMedian) components.push({ value: directMedian, weight: 0.50, label: 'Diretos ponderados' });
+    if (indirectMedian) components.push({ value: indirectMedian, weight: 0.30, label: 'Indiretos ponderados' });
+    if (weakMedian) components.push({ value: weakMedian, weight: 0.20, label: 'Pouco concorrente ponderado' });
+    if (strategicMedian && components.length < 2) components.push({ value: strategicMedian, weight: 0.15, label: 'Compset expandido estratégico' });
     if (!components.length && rigorous.eurosPerSqm) components.push({ value: rigorous.eurosPerSqm, weight: 1, label: 'Rigoroso' });
     if (!components.length && fallback.eurosPerSqm) components.push({ value: fallback.eurosPerSqm, weight: 1, label: 'Fallback' });
 
@@ -734,11 +784,11 @@
       category: components.length ? components.map((c) => c.label).join(' + ') : 'Sem dados',
       explanation: price ? [
         `Origem dos dados: ${components.map((c) => c.label).join(', ')}.`,
-        `Concorrentes usados: ${sets.direct.length + sets.indirect.length + sets.weak.length}.`,
+        `Concorrentes oficiais usados: ${sets.direct.length + sets.indirect.length + sets.weak.length}; expandido estratégico: ${strategic.length}.`,
         `€/m² base ponderado: ${formatCurrency(baseSqm, 0)} /m²; final: ${formatCurrency(finalSqm, 0)} /m².`,
         `Ajustes aplicados: vista ${formatPercent(viewAdjustment)}, piso ${formatPercent(floorAdjustment)}, robustez da amostra ${formatPercent(sampleAdjustment)}.`,
         `Premium/desconto face ao preço atual: ${Number.isFinite(premiumDiscount) ? signed(`${formatNumber(Math.abs(premiumDiscount), 1)}%`, premiumDiscount) : '—'}.`,
-        'Modelo IA: heurístico inteligente, recalculado automaticamente pelos filtros; não é machine learning real.'
+        'Modelo IA: heurístico inteligente, recalculado automaticamente pelos filtros; não é machine learning real. O compset expandido só entra com peso baixo quando a amostra oficial é limitada.'
       ] : ['Sem dados suficientes para calcular o preço IA.', 'O modelo IA precisa de pelo menos uma categoria elegível com €/m² válido.']
     };
   }
@@ -760,6 +810,124 @@
     const min = q1 - 1.5 * iqr;
     const max = q3 + 1.5 * iqr;
     return items.filter((item) => item[field] >= min && item[field] <= max);
+  }
+
+  function renderCompetitorSource(competitor) {
+    const box = document.createElement('div');
+    box.className = 'source-card';
+    const items = [];
+    if (competitor.url) items.push(['URL', competitor.url]);
+    if (competitor.notes) items.push(['Observações', competitor.notes]);
+    if (competitor.parking) items.push(['Garagem', competitor.parking]);
+    if (competitor.pool) items.push(['Piscina', competitor.pool]);
+    if (!items.length) return document.createDocumentFragment();
+    items.forEach(([label, value]) => box.append(createTextElement('p', '', `${label}: ${value}`)));
+    return box;
+  }
+
+  function getComparableFloor(item) {
+    return Number.isFinite(item.competitorFloorNumber) ? item.competitorFloorNumber : item.floorNumber;
+  }
+
+  function getComparableWeight(item) {
+    return Number.isFinite(item.comparableWeight) && item.comparableWeight > 0 ? item.comparableWeight : 0.8;
+  }
+
+  function getStrategicExpandedSet(fraction, competitors, officialSets) {
+    const officialIds = new Set([...officialSets.direct, ...officialSets.indirect, ...officialSets.weak].map((item) => item.id));
+    return competitors
+      .filter((competitor) => !officialIds.has(competitor.id))
+      .filter((competitor) => areCommercialTypologiesCompatible(fraction.typology, competitor.typology))
+      .filter((competitor) => Math.abs(getComparableFloor(competitor) - fraction.floorNumber) <= 1)
+      .sort((a, b) => getComparableWeight(b) - getComparableWeight(a) || Math.abs(a.eurosPerSqm - fraction.eurosPerSqm) - Math.abs(b.eurosPerSqm - fraction.eurosPerSqm))
+      .slice(0, 12);
+  }
+
+  function areCommercialTypologiesCompatible(subject, candidate) {
+    const s = normalizeKey(subject);
+    const c = normalizeKey(candidate);
+    if (!s || !c || s === c) return false;
+    const subjectBase = getTypologyNumber(s);
+    const candidateBase = getTypologyNumber(c);
+    if (!Number.isFinite(subjectBase) || !Number.isFinite(candidateBase)) return false;
+    if (s.includes('duplex')) return Math.abs(subjectBase - candidateBase) <= 1;
+    if (s.includes('1') && s.includes('t1') && s.includes('1')) return candidateBase === subjectBase || candidateBase === subjectBase + 1;
+    if (s.includes('mais1') || s.includes('+1') || /t\d+1/.test(s)) return candidateBase === subjectBase || candidateBase === subjectBase + 1;
+    return Math.abs(subjectBase - candidateBase) <= 1 && (s.includes('duplex') || c.includes('duplex'));
+  }
+
+  function getTypologyNumber(value) {
+    const match = String(value).match(/t(\d+)/i);
+    return match ? Number(match[1]) : NaN;
+  }
+
+  function classifyCompsetLayer({ development, status, source, segment, referenceYear, updatedAt, condition }) {
+    const haystack = normalizeKey(`${development || ''} ${status || ''} ${source || ''} ${segment || ''} ${condition || ''}`);
+    const year = Number(referenceYear) || extractYear(updatedAt);
+    const isHistorical = year && year <= 2024;
+    const isPremium = /premium|luxo|luxury|waterfront|marina|ria|frente|vista|novo|new|prime/.test(haystack);
+    const isUnavailable = /vendido|reservado|sold|reserved|indisponivel|indisponível/.test(haystack);
+    const isActive = /disponivel|disponível|available|ativo|active|online/.test(haystack);
+
+    if (isHistorical || isUnavailable) return 'C · Histórico/secundário';
+    if (isPremium || isActive || year >= 2025) return 'A · Premium ativo';
+    return 'B · Benchmark local';
+  }
+
+  function resolveComparableWeight({ rawWeight, layer, status, segment, referenceYear, updatedAt, condition, development, view, realView }) {
+    if (Number.isFinite(rawWeight) && rawWeight > 0) return clamp(rawWeight, 0.1, 1.2);
+
+    let weight = 0.8;
+    if (String(layer).startsWith('A')) weight = 1.0;
+    if (String(layer).startsWith('B')) weight = 0.8;
+    if (String(layer).startsWith('C')) weight = 0.4;
+
+    const haystack = normalizeKey(`${status || ''} ${segment || ''} ${condition || ''} ${development || ''} ${view || ''} ${realView || ''}`);
+    const year = Number(referenceYear) || extractYear(updatedAt);
+
+    if (/vendido|reservado|sold|reserved|indisponivel|indisponível/.test(haystack)) weight *= 0.75;
+    if (/waterfront|marina|ria|vista|frente|premium|luxo|luxury/.test(haystack)) weight *= 1.05;
+    if (/usado|resale|revenda|antigo/.test(haystack)) weight *= 0.85;
+    if (year && year <= 2024) weight *= 0.70;
+    if (year && year >= 2025) weight *= 1.03;
+
+    return clamp(weight, 0.25, 1.1);
+  }
+
+  function getLayerCounts(items) {
+    return items.reduce((acc, item) => {
+      if (String(item.layer).startsWith('A')) acc.a += 1;
+      else if (String(item.layer).startsWith('B')) acc.b += 1;
+      else acc.c += 1;
+      return acc;
+    }, { a: 0, b: 0, c: 0 });
+  }
+
+  function weightedMedianFromItems(items, field) {
+    return weightedMedian(items
+      .filter((item) => Number.isFinite(item[field]))
+      .map((item) => ({ value: item[field], weight: getComparableWeight(item) })));
+  }
+
+  function weightedMedian(items) {
+    const valid = items.filter((item) => Number.isFinite(item.value) && Number.isFinite(item.weight) && item.weight > 0).sort((a, b) => a.value - b.value);
+    if (!valid.length) return null;
+    const total = valid.reduce((acc, item) => acc + item.weight, 0);
+    let cumulative = 0;
+    for (const item of valid) {
+      cumulative += item.weight;
+      if (cumulative >= total / 2) return item.value;
+    }
+    return valid[valid.length - 1].value;
+  }
+
+  function extractYear(value) {
+    const match = String(value ?? '').match(/20\d{2}/);
+    return match ? Number(match[0]) : null;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
   }
 
   function createMetricsGrid(items) {
@@ -830,8 +998,13 @@
 
   function normalizeTypology(value) {
     const text = normalizeText(value).toUpperCase();
-    const match = text.match(/T\s*\d+/i);
-    return match ? match[0].replace(/\s+/g, '') : text;
+    if (!text) return '';
+    const compact = text
+      .replace(/\s+/g, '')
+      .replace(/–|—/g, '-')
+      .replace(/DÚPLEX/g, 'DUPLEX');
+    const match = compact.match(/T\d+(?:\+\d+)?(?:-?DUPLEX)?/i);
+    return match ? match[0].toUpperCase() : compact;
   }
 
   function parseNumber(value) {
