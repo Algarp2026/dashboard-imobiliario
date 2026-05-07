@@ -12,7 +12,7 @@
     filteredCompetitors: [],
     selectedFraction: null,
     activeTab: 'dashboard',
-    filters: { floor: 'all', view: 'all', fraction: 'all', development: 'all' },
+    filters: { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' },
     sort: 'name-asc'
   };
 
@@ -29,7 +29,7 @@
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
       'marketSummary','marketTable','marketCount','idealSummary','idealTable','idealCount',
-      'floorFilter','viewFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
+      'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
     el.tabButtons = Array.from(document.querySelectorAll('.tab-button'));
@@ -40,6 +40,7 @@
     el.tabButtons.forEach((button) => button.addEventListener('click', () => setActiveTab(button.dataset.tab)));
     el.floorFilter.addEventListener('change', () => updateFilter('floor', el.floorFilter.value));
     el.viewFilter.addEventListener('change', () => updateFilter('view', el.viewFilter.value));
+    el.typologyFilter.addEventListener('change', () => updateFilter('typology', el.typologyFilter.value));
     el.fractionFilter.addEventListener('change', () => updateFilter('fraction', el.fractionFilter.value));
     el.developmentFilter.addEventListener('change', () => updateFilter('development', el.developmentFilter.value));
     el.sortFilter.addEventListener('change', () => updateSort(el.sortFilter.value));
@@ -179,6 +180,7 @@
   function populateFilters() {
     setSelectOptions(el.floorFilter, uniqueSorted(state.fractions.map((f) => f.floorNumber)), 'Todos', String);
     setSelectOptions(el.viewFilter, uniqueSorted(state.fractions.map((f) => f.view)), 'Todas', String);
+    setSelectOptions(el.typologyFilter, uniqueSorted(state.fractions.map((f) => f.typology)), 'Todas', String);
     setSelectOptions(el.fractionFilter, uniqueSorted(state.fractions.map((f) => f.name)), 'Todas', String);
     setSelectOptions(el.developmentFilter, uniqueSorted(state.competitors.map((c) => c.development || 'Sem empreendimento')), 'Todos', String);
   }
@@ -197,9 +199,9 @@
   function updateFilter(key, value) { state.filters[key] = value; applyFilters(); }
   function updateSort(value) { state.sort = value || 'name-asc'; applyFilters(); }
   function resetFilters() {
-    state.filters = { floor: 'all', view: 'all', fraction: 'all', development: 'all' };
+    state.filters = { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' };
     state.sort = 'name-asc';
-    el.floorFilter.value = 'all'; el.viewFilter.value = 'all'; el.fractionFilter.value = 'all'; el.developmentFilter.value = 'all'; el.sortFilter.value = 'name-asc';
+    el.floorFilter.value = 'all'; el.viewFilter.value = 'all'; el.typologyFilter.value = 'all'; el.fractionFilter.value = 'all'; el.developmentFilter.value = 'all'; el.sortFilter.value = 'name-asc';
     applyFilters();
   }
 
@@ -207,10 +209,15 @@
     state.filteredFractions = state.fractions.filter((fraction) => {
       const floorMatch = state.filters.floor === 'all' || String(fraction.floorNumber) === state.filters.floor;
       const viewMatch = state.filters.view === 'all' || fraction.view === state.filters.view;
+      const typologyMatch = state.filters.typology === 'all' || normalizeKey(fraction.typology) === normalizeKey(state.filters.typology);
       const fractionMatch = state.filters.fraction === 'all' || fraction.name === state.filters.fraction;
-      return floorMatch && viewMatch && fractionMatch;
+      return floorMatch && viewMatch && typologyMatch && fractionMatch;
     });
-    state.filteredCompetitors = state.competitors.filter((competitor) => state.filters.development === 'all' || (competitor.development || 'Sem empreendimento') === state.filters.development);
+    state.filteredCompetitors = state.competitors.filter((competitor) => {
+      const developmentMatch = state.filters.development === 'all' || (competitor.development || 'Sem empreendimento') === state.filters.development;
+      const typologyMatch = state.filters.typology === 'all' || normalizeKey(competitor.typology) === normalizeKey(state.filters.typology);
+      return developmentMatch && typologyMatch;
+    });
     state.filteredFractions = sortFractions(state.filteredFractions, state.sort);
     renderAll();
   }
@@ -288,7 +295,7 @@
   }
 
   function renderIdealPage() {
-    const analyses = state.filteredFractions.map((fraction) => analyzeFractionIdeal(fraction));
+    const analyses = buildIdealAnalyses(state.filteredFractions);
     const avgGap = average(analyses.map((a) => a.gapPct).filter(Number.isFinite));
     const incoherent = analyses.filter((a) => a.alertLevel === 'danger' || a.alertLevel === 'warn').length;
     const upside = analyses.filter((a) => Number.isFinite(a.gapPct) && a.gapPct < -2).length;
@@ -440,7 +447,81 @@
     let alert = 'Coerente'; let alertLevel = 'ok';
     if (issues.length >= 2 || (Number.isFinite(gapPct) && Math.abs(gapPct) > 7)) { alert = issues[0] || (gapPct > 0 ? 'Possível sobrepreço' : 'Possível subpreço'); alertLevel = 'danger'; }
     else if (issues.length || (Number.isFinite(gapPct) && Math.abs(gapPct) > 3)) { alert = issues[0] || 'Ajuste ligeiro'; alertLevel = 'warn'; }
-    return { fraction, marketPrice: market.price, coherentPrice, score, gapPct, alert, alertLevel };
+    return { fraction, marketPrice: market.price, coherentPrice, coherentSqm, score, gapPct, alert, alertLevel, hierarchyAdjusted: false };
+  }
+
+
+  function buildIdealAnalyses(fractions) {
+    const analyses = sortFractions(fractions, 'name-asc').map((fraction) => analyzeFractionIdeal(fraction));
+    enforcePriceHierarchy(analyses);
+    analyses.forEach((analysis) => {
+      analysis.gapPct = analysis.coherentPrice && analysis.fraction.price
+        ? ((analysis.fraction.price - analysis.coherentPrice) / analysis.coherentPrice) * 100
+        : null;
+      const issues = getInternalIssues(analysis.fraction);
+      if (analysis.hierarchyAdjusted) issues.unshift('Ajustado por hierarquia interna');
+      analysis.alert = 'Coerente';
+      analysis.alertLevel = 'ok';
+      if (issues.length >= 2 || (Number.isFinite(analysis.gapPct) && Math.abs(analysis.gapPct) > 7)) {
+        analysis.alert = issues[0] || (analysis.gapPct > 0 ? 'Possível sobrepreço' : 'Possível subpreço');
+        analysis.alertLevel = 'danger';
+      } else if (issues.length || (Number.isFinite(analysis.gapPct) && Math.abs(analysis.gapPct) > 3)) {
+        analysis.alert = issues[0] || 'Ajuste ligeiro';
+        analysis.alertLevel = 'warn';
+      }
+    });
+    return analyses;
+  }
+
+  function enforcePriceHierarchy(analyses) {
+    const valid = analyses.filter((a) => Number.isFinite(a.coherentPrice) && a.coherentPrice > 0);
+    if (valid.length < 2) return;
+
+    for (let pass = 0; pass < valid.length; pass += 1) {
+      let changed = false;
+      valid.forEach((superior) => {
+        valid.forEach((inferior) => {
+          if (superior === inferior) return;
+          if (!isCommerciallySuperior(superior.fraction, inferior.fraction)) return;
+
+          const minimumPremium = getHierarchyPremium(superior.fraction, inferior.fraction);
+          const minimumPrice = inferior.coherentPrice * (1 + minimumPremium);
+
+          if (superior.coherentPrice < minimumPrice) {
+            superior.coherentPrice = minimumPrice;
+            superior.coherentSqm = superior.fraction.totalArea ? superior.coherentPrice / superior.fraction.totalArea : superior.coherentSqm;
+            superior.hierarchyAdjusted = true;
+            changed = true;
+          }
+        });
+      });
+      if (!changed) break;
+    }
+  }
+
+  function isCommerciallySuperior(a, b) {
+    const aType = getTypologyRank(a.typology);
+    const bType = getTypologyRank(b.typology);
+    const aFloor = Number(a.floorNumber);
+    const bFloor = Number(b.floorNumber);
+    const aView = getViewScore(a.view);
+    const bView = getViewScore(b.view);
+    const aArea = Number(a.totalArea) || 0;
+    const bArea = Number(b.totalArea) || 0;
+
+    const clearlyHigherTypology = aType >= bType + 0.75;
+    const sameOrHigherFloor = Number.isFinite(aFloor) && Number.isFinite(bFloor) ? aFloor >= bFloor : true;
+    const sameOrBetterView = aView >= bView;
+    const similarOrLargerArea = aArea >= bArea * 0.92;
+
+    return clearlyHigherTypology && sameOrHigherFloor && sameOrBetterView && similarOrLargerArea;
+  }
+
+  function getHierarchyPremium(a, b) {
+    const typeGap = Math.max(0, getTypologyRank(a.typology) - getTypologyRank(b.typology));
+    const floorGap = Math.max(0, (Number(a.floorNumber) || 0) - (Number(b.floorNumber) || 0));
+    const viewGap = Math.max(0, getViewScore(a.view) - getViewScore(b.view));
+    return clamp(0.012 + typeGap * 0.008 + floorGap * 0.003 + viewGap * 0.0008, 0.015, 0.055);
   }
 
   function getInternalIssues(fraction) {
@@ -449,8 +530,10 @@
     const fScore = getInternalScore(fraction);
     state.fractions.forEach((other) => {
       if (other.id === fraction.id) return;
-      if (normalizeKey(other.typology) !== normalizeKey(fraction.typology)) return;
       const oScore = getInternalScore(other);
+      const sameType = normalizeKey(other.typology) === normalizeKey(fraction.typology);
+      const comparableHierarchy = sameType || isCommerciallySuperior(fraction, other) || isCommerciallySuperior(other, fraction);
+      if (!comparableHierarchy) return;
       if (fScore > oScore + 8 && fraction.eurosPerSqm < other.eurosPerSqm * (1 - tolerance)) issues.push('Superior mas €/m² inferior');
       if (fScore < oScore - 8 && fraction.eurosPerSqm > other.eurosPerSqm * (1 + tolerance)) issues.push('Inferior mas €/m² superior');
     });
@@ -466,6 +549,18 @@
     return typologyScore + floorScore + viewScore + areaScore + balconyScore;
   }
 
+
+  function getTypologyRank(t) {
+    const raw = safeString(t).toLowerCase();
+    const simple = normalizeKey(t);
+    const match = raw.match(/t\s*(\d+)/i);
+    const base = match ? Number(match[1]) : 1;
+    let rank = base;
+    if (/\+\s*1/.test(raw) || simple.includes('mais1')) rank += 0.45;
+    if (simple.includes('duplex')) rank += 0.25;
+    return rank;
+  }
+
   function getTypologyScore(t) {
     const raw = safeString(t).toLowerCase();
     const simple = normalizeKey(t);
@@ -478,6 +573,15 @@
   }
 
   function getViewScore(view) {
+    const numericView = parseNumber(view);
+
+    if (Number.isFinite(numericView)) {
+      // No The View, a escala correta é inversa:
+      // Vista 1 = melhor | Vista 4 = pior.
+      // Quanto melhor a vista, maior o score.
+      return clamp((5 - numericView) * 12, 6, 60);
+    }
+
     const s = normalizeKey(view);
     if (/ria|mar|frente|waterfront|sea/.test(s)) return 42;
     if (/lateral|parcial/.test(s)) return 24;
