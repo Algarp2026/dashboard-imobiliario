@@ -330,3 +330,55 @@ table td {
     flex-direction: column;
   }
 }
+
+
+/* Correção crítica: popup de racional sempre por cima, sem empilhar */
+.final-popup-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+  background: rgba(8, 15, 30, .72) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  overflow-y: auto !important;
+}
+
+body.modal-open {
+  overflow: hidden !important;
+}
+
+.final-popup-card {
+  position: relative !important;
+  z-index: 1000000 !important;
+  margin: auto !important;
+  max-width: min(960px, calc(100vw - 32px)) !important;
+  width: 960px !important;
+  max-height: calc(100vh - 48px) !important;
+  overflow-y: auto !important;
+  transform: none !important;
+}
+
+.final-popup-card .modal-close,
+.final-popup-card button.modal-close {
+  position: absolute !important;
+  top: 22px !important;
+  right: 22px !important;
+  z-index: 2 !important;
+}
+
+@media(max-width: 560px) {
+  .final-popup-overlay {
+    padding: 12px !important;
+    align-items: flex-start !important;
+  }
+
+  .final-popup-card {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+  }
+}

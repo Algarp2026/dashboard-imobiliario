@@ -801,7 +801,21 @@
   }
 
 
+
+  function closeFinalRecommendationPopup() {
+    const existing = document.getElementById('finalRecommendationPopup');
+    if (existing) existing.remove();
+
+    const anyModalStillOpen = document.querySelector('.modal-overlay.active, .final-popup-overlay');
+    if (!anyModalStillOpen) {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+
   function openFinalRecommendationPopup(analysis) {
+    closeFinalRecommendationPopup();
+
     const fraction = analysis.fraction;
     const rec = getFinalRecommendation(fraction);
     const finalPrice = rec?.price ?? analysis.coherentPrice;
@@ -819,13 +833,13 @@
       ? analysis.coherentPrice - fraction.price
       : null;
 
-    const overlay = h('div', { className: 'modal-overlay active final-popup-overlay' });
+    const overlay = h('div', { className: 'final-popup-overlay', attrs: { id: 'finalRecommendationPopup' } });
     const modal = h('section', { className: 'modal-card final-popup-card', attrs: { role: 'dialog', 'aria-modal': 'true' } });
 
     const close = h('button', { className: 'modal-close', text: '×', attrs: { type: 'button', 'aria-label': 'Fechar' } });
-    close.addEventListener('click', () => overlay.remove());
+    close.addEventListener('click', closeFinalRecommendationPopup);
     overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) overlay.remove();
+      if (event.target === overlay) closeFinalRecommendationPopup();
     });
 
     const title = div('modal-title-block', [
@@ -863,14 +877,17 @@
     modal.append(close, title, summaryGrid, rationale, technical);
     overlay.append(modal);
     document.body.append(overlay);
+    document.body.classList.add('modal-open');
 
     const escHandler = (event) => {
       if (event.key === 'Escape') {
-        overlay.remove();
+        closeFinalRecommendationPopup();
         document.removeEventListener('keydown', escHandler);
       }
     };
-    document.addEventListener('keydown', escHandler);
+
+    overlay.dataset.escHandlerAttached = 'true';
+    document.addEventListener('keydown', escHandler, { once: false });
   }
 
   function getFinalRationaleItems(analysis, rec, adjustment, adjustmentPct) {
