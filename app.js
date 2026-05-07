@@ -1,7 +1,7 @@
 'use strict';
 
 (() => {
-  const DATA_FILE = 'data.xlsx';
+  const DATA_FILES = ['data.xlsx', 'data.xls'];
   const PROJECT_NAME = 'The View';
 
   const state = {
@@ -59,10 +59,8 @@
     try {
       setStatus('A carregar Excel…');
       if (!window.XLSX) throw new Error('Biblioteca SheetJS não carregada.');
-      const response = await fetch(DATA_FILE, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Não foi possível carregar ${DATA_FILE}.`);
-      const buffer = await response.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
+      const loaded = await fetchWorkbookFile();
+      const workbook = XLSX.read(loaded.buffer, { type: 'array' });
       const parsed = parseWorkbook(workbook);
       if (!parsed.length) throw new Error('Excel não contém linhas válidas.');
       state.rows = parsed;
@@ -80,12 +78,37 @@
     }
   }
 
+  async function fetchWorkbookFile() {
+    let lastError = null;
+    for (const file of DATA_FILES) {
+      try {
+        const response = await fetch(file, { cache: 'no-store' });
+        if (!response.ok) {
+          lastError = new Error(`${file}: HTTP ${response.status}`);
+          continue;
+        }
+        const buffer = await response.arrayBuffer();
+        if (!buffer || buffer.byteLength < 100) {
+          lastError = new Error(`${file}: ficheiro vazio ou inválido`);
+          continue;
+        }
+        return { file, buffer };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw new Error(`Não foi possível carregar data.xlsx ou data.xls. ${lastError ? lastError.message : ''}`);
+  }
+
   function parseWorkbook(workbook) {
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) return [];
-    const sheet = workbook.Sheets[sheetName];
+    if (!workbook || !Array.isArray(workbook.SheetNames) || !workbook.SheetNames.length) return [];
+    const preferredSheet = workbook.SheetNames.find((name) => normalizeKey(name) === 'dados') || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[preferredSheet];
+    if (!sheet) return [];
     const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-    return rawRows.map(normalizeRow).filter((row) => row.name && Number.isFinite(row.price) && Number.isFinite(row.floorNumber));
+    return rawRows
+      .map(normalizeRow)
+      .filter((row) => row.name && Number.isFinite(row.price) && row.price > 0);
   }
 
   function normalizeRow(raw, index) {
@@ -550,7 +573,17 @@
     else if (lastDot >= 0) { const decimals = text.length - lastDot - 1; text = decimals === 3 ? text.replace(/\./g,'') : text; }
     const n = Number(text); return Number.isFinite(n) ? n : null;
   }
-  function parseFloor(value) { const n = parseNumber(value); if (Number.isFinite(n)) return Math.round(n); const match = String(value ?? '').match(/-?\d+/); return match ? Number(match[0]) : NaN; }
+  function parseFloor(value) {
+    const raw = safeString(value).trim();
+    const key = normalizeKey(raw);
+    if (!raw) return NaN;
+    if (['rc','rcc','rezdochao','resdochao','terreo','groundfloor','ground'].includes(key)) return 0;
+    if (key.includes('rc')) return 0;
+    const n = parseNumber(raw);
+    if (Number.isFinite(n)) return Math.round(n);
+    const match = raw.match(/-?\d+/);
+    return match ? Number(match[0]) : NaN;
+  }
   function normalizeTypology(value) { return safeString(value).toUpperCase().replace(/\s+/g,'').replace('T0+1','T0+1'); }
   function normalizeText(value) { return safeString(value).replace(/\s+/g, ' ').trim(); }
   function normalizeKey(value) { return safeString(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
