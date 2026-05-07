@@ -133,3 +133,56 @@ table td {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Preço recomendado final */
+.strategy-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.08);
+  white-space: nowrap;
+}
+
+.strategy-badge.keep,
+.strategy-badge.manter {
+  background: rgba(255,255,255,.08);
+}
+
+.strategy-badge.fine {
+  background: rgba(185, 151, 92, .16);
+}
+
+.strategy-badge.moderate {
+  background: rgba(84, 160, 255, .14);
+}
+
+.strategy-badge.phase {
+  background: rgba(124, 93, 255, .16);
+}
+
+.final-price-cell {
+  font-weight: 800;
+  color: var(--text, #fff);
+}
+
+.final-adjust-positive {
+  color: #b6f2cd;
+  font-weight: 700;
+}
+
+.final-adjust-neutral {
+  color: rgba(255,255,255,.72);
+  font-weight: 600;
+}
+
+.strategy-badge.ajustefino { background: rgba(185, 151, 92, .16); }
+.strategy-badge.subidamoderada { background: rgba(84, 160, 255, .14); }
+.strategy-badge.subidafaseada { background: rgba(124, 93, 255, .16); }
+.strategy-badge.modelotecnico { background: rgba(255,255,255,.08); }

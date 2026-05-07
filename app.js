@@ -16,6 +16,59 @@
     sort: 'name-asc'
   };
 
+
+  const FINAL_RECOMMENDED_PRICES = {
+    1: { price: 545000, strategy: 'Manter', note: 'Tabela atual defensável; fração com boa vista e preço comercialmente coerente.' },
+    2: { price: 615000, strategy: 'Subida moderada', note: 'Ajuste controlado para reforçar coerência interna sem depender excessivamente do mercado.' },
+    3: { price: 380000, strategy: 'Manter', note: 'Preço atual adequado para piso/vista/tipologia.' },
+    4: { price: 475000, strategy: 'Manter', note: 'Tipologia com baixa comparabilidade externa; manter preço atual como referência comercial.' },
+    5: { price: 450000, strategy: 'Manter', note: 'Preço atual defensável dentro da família T1+1.' },
+    6: { price: 600000, strategy: 'Manter', note: 'Manter por prudência, dado o compset limitado para T2+1.' },
+    7: { price: 535000, strategy: 'Subida moderada', note: 'Frações T2 de entrada parecem ter margem para reforço, mas com ajuste conservador.' },
+    8: { price: 385000, strategy: 'Ajuste fino', note: 'Pequena correção de coerência interna.' },
+    9: { price: 950000, strategy: 'Subida faseada', note: 'Preço-alvo para fase comercial seguinte; T3 com vista forte.' },
+    10: { price: 660000, strategy: 'Subida faseada', note: 'Ajuste para melhor refletir piso, vista e escassez relativa.' },
+    11: { price: 387000, strategy: 'Manter', note: 'Preço atual adequado.' },
+    12: { price: 430000, strategy: 'Ajuste fino', note: 'Correção marginal para arredondamento e coerência.' },
+    13: { price: 415000, strategy: 'Ajuste fino', note: 'Correção marginal para arredondamento e coerência.' },
+    14: { price: 582000, strategy: 'Manter', note: 'Preço atual defensável.' },
+    15: { price: 580000, strategy: 'Ajuste fino', note: 'Ajuste moderado para reduzir desalinhamento face a unidades semelhantes.' },
+    16: { price: 1025000, strategy: 'Subida faseada', note: 'T3 em piso superior; preço-alvo para capturar maior valor comercial.' },
+    17: { price: 670000, strategy: 'Subida faseada', note: 'Ajuste para refletir melhor piso e vista face aos T2 inferiores.' },
+    18: { price: 410000, strategy: 'Subida moderada', note: 'Correção de coerência interna em piso superior.' },
+    19: { price: 435000, strategy: 'Ajuste fino', note: 'Pequeno ajuste comercial.' },
+    20: { price: 422000, strategy: 'Manter', note: 'Preço atual defensável.' },
+    21: { price: 630000, strategy: 'Subida moderada', note: 'T2 em piso intermédio com margem para reforço.' },
+    22: { price: 615000, strategy: 'Subida faseada', note: 'Ajuste faseado para melhorar coerência com restantes T2.' },
+    23: { price: 900000, strategy: 'Manter', note: 'Preço atual já defende bem vista/piso.' },
+    24: { price: 680000, strategy: 'Subida faseada', note: 'Ajuste para refletir melhor piso e vista.' },
+    25: { price: 435000, strategy: 'Subida faseada', note: 'Preço-alvo para fase seguinte, preservando coerência por piso.' },
+    26: { price: 620000, strategy: 'Subida faseada', note: 'Ajuste para T2 em piso superior.' },
+    27: { price: 400000, strategy: 'Subida faseada', note: 'Correção de piso alto face a frações semelhantes.' },
+    28: { price: 470000, strategy: 'Subida faseada', note: 'Ajuste para vista/piso e coerência interna.' },
+    29: { price: 490000, strategy: 'Subida faseada', note: 'Ajuste para vista/piso e coerência interna.' },
+    30: { price: 1050000, strategy: 'Manter', note: 'Preço atual já incorpora escassez/premium.' },
+    31: { price: 690000, strategy: 'Subida faseada', note: 'Ajuste para T2 de piso alto.' },
+    32: { price: 440000, strategy: 'Subida faseada', note: 'Correção de piso alto, mantendo prudência pela vista.' },
+    33: { price: 630000, strategy: 'Subida faseada', note: 'Ajuste para T2 em piso alto.' },
+    34: { price: 685000, strategy: 'Subida faseada', note: 'Ajuste para coerência com restantes T2.' },
+    35: { price: 551000, strategy: 'Manter', note: 'Produto específico; manter até validação comercial adicional.' },
+    36: { price: 1450000, strategy: 'Manter', note: 'Preço atual já defende posição premium e último piso.' },
+    37: { price: 1100000, strategy: 'Manter', note: 'Preço atual já reflete escassez/piso.' },
+    38: { price: 520000, strategy: 'Manter', note: 'Preço atual defensável para piso alto.' },
+    39: { price: 1100000, strategy: 'Manter', note: 'Preço atual defensável para T3 premium.' }
+  };
+
+  function getFractionNumber(fraction) {
+    return naturalFractionNumber(fraction?.name);
+  }
+
+  function getFinalRecommendation(fraction) {
+    const n = getFractionNumber(fraction);
+    return FINAL_RECOMMENDED_PRICES[n] || null;
+  }
+
+
   const el = {};
   document.addEventListener('DOMContentLoaded', init);
 
@@ -447,7 +500,11 @@
     let alert = 'Coerente'; let alertLevel = 'ok';
     if (issues.length >= 2 || (Number.isFinite(gapPct) && Math.abs(gapPct) > 7)) { alert = issues[0] || (gapPct > 0 ? 'Possível sobrepreço' : 'Possível subpreço'); alertLevel = 'danger'; }
     else if (issues.length || (Number.isFinite(gapPct) && Math.abs(gapPct) > 3)) { alert = issues[0] || 'Ajuste ligeiro'; alertLevel = 'warn'; }
-    return { fraction, marketPrice: market.price, coherentPrice, coherentSqm, score, gapPct, alert, alertLevel, hierarchyAdjusted: false };
+    const finalRecommendation = getFinalRecommendation(fraction);
+    const finalPrice = finalRecommendation?.price ?? coherentPrice;
+    const finalGap = finalPrice && fraction.price ? finalPrice - fraction.price : null;
+    const finalGapPct = finalPrice && fraction.price ? (finalGap / fraction.price) * 100 : null;
+    return { fraction, marketPrice: market.price, coherentPrice, coherentSqm, score, gapPct, alert, alertLevel, hierarchyAdjusted: false, finalRecommendation, finalPrice, finalGap, finalGapPct };
   }
 
 
@@ -458,6 +515,10 @@
       analysis.gapPct = analysis.coherentPrice && analysis.fraction.price
         ? ((analysis.fraction.price - analysis.coherentPrice) / analysis.coherentPrice) * 100
         : null;
+      analysis.finalRecommendation = getFinalRecommendation(analysis.fraction);
+      analysis.finalPrice = analysis.finalRecommendation?.price ?? analysis.coherentPrice;
+      analysis.finalGap = analysis.finalPrice && analysis.fraction.price ? analysis.finalPrice - analysis.fraction.price : null;
+      analysis.finalGapPct = analysis.finalPrice && analysis.fraction.price ? (analysis.finalGap / analysis.fraction.price) * 100 : null;
       const issues = getInternalIssues(analysis.fraction);
       if (analysis.hierarchyAdjusted) issues.unshift('Ajustado por hierarquia interna');
       analysis.alert = 'Coerente';
@@ -638,7 +699,27 @@
     const thead = h('thead'); const trh = h('tr'); headers.forEach((x) => trh.append(h('th', { text: x }))); thead.append(trh);
     const tbody = h('tbody');
     if (!rows.length) { const tr = h('tr'); const td = h('td', { text: 'Sem dados com os filtros atuais.', attrs: { colspan: headers.length } }); tr.append(td); tbody.append(tr); }
-    rows.forEach((row) => { const tr = h('tr'); row.forEach((cell) => { const td = h('td'); if (typeof cell === 'string' && (cell.startsWith('+') || cell.startsWith('-'))) td.className = cell.startsWith('+') ? 'positive' : 'negative'; td.textContent = safeString(cell); tr.append(td); }); tbody.append(tr); });
+    rows.forEach((row) => {
+      const tr = h('tr');
+      row.forEach((cell, index) => {
+        const td = h('td');
+        const text = safeString(cell);
+
+        if (typeof cell === 'string' && (cell.startsWith('+') || cell.startsWith('-'))) {
+          td.className = cell.startsWith('+') ? 'positive final-adjust-positive' : 'negative';
+        }
+
+        if (['Manter','Ajuste fino','Subida moderada','Subida faseada','Modelo técnico'].includes(text)) {
+          const span = h('span', { className: 'strategy-badge ' + normalizeKey(text), text });
+          td.append(span);
+        } else {
+          td.textContent = text;
+        }
+
+        tr.append(td);
+      });
+      tbody.append(tr);
+    });
     table.append(thead, tbody);
   }
 
