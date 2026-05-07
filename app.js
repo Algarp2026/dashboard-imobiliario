@@ -544,19 +544,34 @@
     el.tabPanels.forEach((p) => p.classList.toggle('active', p.id === `tab-${tab}`));
   }
 
+
+  function naturalFractionNumber(value) {
+    const text = safeString(value);
+    const matches = [...text.matchAll(/\d+/g)];
+    if (!matches.length) return Number.MAX_SAFE_INTEGER;
+    return Number(matches[matches.length - 1][0]);
+  }
+
+  function naturalNameCompare(a, b) {
+    const na = naturalFractionNumber(a.name);
+    const nb = naturalFractionNumber(b.name);
+    if (na !== nb) return na - nb;
+    return safeString(a.name).localeCompare(safeString(b.name), 'pt', { numeric: true, sensitivity: 'base' });
+  }
+
   function sortFractions(items, sort) {
     const arr = [...items];
     const cmp = {
-      'name-asc': (a,b) => a.name.localeCompare(b.name, 'pt'),
-      'price-asc': (a,b) => a.price - b.price,
-      'price-desc': (a,b) => b.price - a.price,
-      'sqm-asc': (a,b) => a.eurosPerSqm - b.eurosPerSqm,
-      'sqm-desc': (a,b) => b.eurosPerSqm - a.eurosPerSqm,
-      'area-asc': (a,b) => a.totalArea - b.totalArea,
-      'area-desc': (a,b) => b.totalArea - a.totalArea,
-      'floor-asc': (a,b) => a.floorNumber - b.floorNumber,
-      'floor-desc': (a,b) => b.floorNumber - a.floorNumber
-    }[sort] || ((a,b) => a.name.localeCompare(b.name, 'pt'));
+      'name-asc': naturalNameCompare,
+      'price-asc': (a,b) => a.price - b.price || naturalNameCompare(a,b),
+      'price-desc': (a,b) => b.price - a.price || naturalNameCompare(a,b),
+      'sqm-asc': (a,b) => a.eurosPerSqm - b.eurosPerSqm || naturalNameCompare(a,b),
+      'sqm-desc': (a,b) => b.eurosPerSqm - a.eurosPerSqm || naturalNameCompare(a,b),
+      'area-asc': (a,b) => a.totalArea - b.totalArea || naturalNameCompare(a,b),
+      'area-desc': (a,b) => b.totalArea - a.totalArea || naturalNameCompare(a,b),
+      'floor-asc': (a,b) => a.floorNumber - b.floorNumber || naturalNameCompare(a,b),
+      'floor-desc': (a,b) => b.floorNumber - a.floorNumber || naturalNameCompare(a,b)
+    }[sort] || naturalNameCompare;
     return arr.sort(cmp);
   }
   function sortCompetitors(items) { return items.sort((a,b) => getBaseMarketWeight(b) - getBaseMarketWeight(a) || (b.eurosPerSqm || 0) - (a.eurosPerSqm || 0)); }
