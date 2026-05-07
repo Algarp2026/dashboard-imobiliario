@@ -603,7 +603,17 @@
   function weightedAverage(items) { const valid = items.filter((i) => Number.isFinite(i.value) && Number.isFinite(i.weight) && i.weight > 0); const denom = valid.reduce((s,i)=>s+i.weight,0); return denom ? valid.reduce((s,i)=>s+i.value*i.weight,0)/denom : null; }
 
   function h(tag, opts = {}) { const node = document.createElement(tag); if (opts.className) node.className = opts.className; if (opts.text !== undefined) node.textContent = safeString(opts.text); if (opts.attrs) Object.entries(opts.attrs).forEach(([k,v]) => node.setAttribute(k, v)); return node; }
-  function div(className, children = []) { const node = h('div', { className }); children.forEach((c) => node.append(c)); return node; }
+  function div(className, children = []) {
+    const node = h('div', { className });
+    const list = Array.isArray(children) ? children : [children];
+    list
+      .filter((child) => child !== null && child !== undefined && child !== false)
+      .forEach((child) => {
+        if (child instanceof Node) node.append(child);
+        else node.append(document.createTextNode(safeString(child)));
+      });
+    return node;
+  }
   function replace(parent, ...children) { parent.replaceChildren(...children); }
   function metric(label, value) { return div('metric', [h('strong', { text: label }), h('span', { text: value ?? '—' })]); }
   function kpi(label, value, helper) { return div('kpi-card', [h('span', { text: label }), h('strong', { text: value ?? '—' }), h('small', { text: helper ?? '' })]); }
