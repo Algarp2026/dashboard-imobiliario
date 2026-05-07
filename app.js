@@ -390,7 +390,7 @@
         : null;
 
       return [
-        fraction.name,
+        { type: 'final-details', label: fraction.name, analysis },
         fraction.typology,
         fraction.floorLabel,
         fraction.view,
@@ -742,13 +742,42 @@
 
   function renderTable(table, headers, rows) {
     table.replaceChildren();
-    const thead = h('thead'); const trh = h('tr'); headers.forEach((x) => trh.append(h('th', { text: x }))); thead.append(trh);
+
+    const thead = h('thead');
+    const trh = h('tr');
+    headers.forEach((x) => trh.append(h('th', { text: x })));
+    thead.append(trh);
+
     const tbody = h('tbody');
-    if (!rows.length) { const tr = h('tr'); const td = h('td', { text: 'Sem dados com os filtros atuais.', attrs: { colspan: headers.length } }); tr.append(td); tbody.append(tr); }
+
+    if (!rows.length) {
+      const tr = h('tr');
+      const td = h('td', { text: 'Sem dados com os filtros atuais.', attrs: { colspan: headers.length } });
+      tr.append(td);
+      tbody.append(tr);
+    }
+
     rows.forEach((row) => {
       const tr = h('tr');
-      row.forEach((cell, index) => {
+
+      row.forEach((cell) => {
         const td = h('td');
+
+        if (cell && typeof cell === 'object' && cell.type === 'final-details') {
+          const button = h('button', {
+            className: 'table-link-button',
+            text: cell.label,
+            attrs: {
+              type: 'button',
+              'aria-label': `Ver racional do preço recomendado para ${cell.label}`
+            }
+          });
+          button.addEventListener('click', () => openFinalRecommendationPopup(cell.analysis));
+          td.append(button);
+          tr.append(td);
+          return;
+        }
+
         const text = safeString(cell);
 
         if (typeof cell === 'string' && (cell.startsWith('+') || cell.startsWith('-'))) {
@@ -764,10 +793,138 @@
 
         tr.append(td);
       });
+
       tbody.append(tr);
     });
+
     table.append(thead, tbody);
   }
+
+
+  function openFinalRecommendationPopup(analysis) {
+    const fraction = analysis.fraction;
+    const rec = getFinalRecommendation(fraction);
+    const finalPrice = rec?.price ?? analysis.coherentPrice;
+    const adjustment = Number.isFinite(finalPrice) && Number.isFinite(fraction.price)
+      ? finalPrice - fraction.price
+      : null;
+    const adjustmentPct = Number.isFinite(adjustment) && Number.isFinite(fraction.price) && fraction.price > 0
+      ? (adjustment / fraction.price) * 100
+      : null;
+
+    const marketDelta = Number.isFinite(analysis.marketPrice) && Number.isFinite(fraction.price)
+      ? analysis.marketPrice - fraction.price
+      : null;
+    const internalDelta = Number.isFinite(analysis.coherentPrice) && Number.isFinite(fraction.price)
+      ? analysis.coherentPrice - fraction.price
+      : null;
+
+    const overlay = h('div', { className: 'modal-overlay active final-popup-overlay' });
+    const modal = h('section', { className: 'modal-card final-popup-card', attrs: { role: 'dialog', 'aria-modal': 'true' } });
+
+    const close = h('button', { className: 'modal-close', text: '×', attrs: { type: 'button', 'aria-label': 'Fechar' } });
+    close.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) overlay.remove();
+    });
+
+    const title = div('modal-title-block', [
+      h('span', { className: 'eyebrow', text: 'Preço recomendado final' }),
+      h('h2', { text: fraction.name }),
+      h('p', { text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` })
+    ]);
+
+    const summaryGrid = div('final-popup-grid', [
+      kpi('Preço atual', formatMoney(fraction.price), `${formatNumber(fraction.eurosPerSqm)} €/m² atual`),
+      kpi('Preço mercado', formatMoney(analysis.marketPrice), Number.isFinite(marketDelta) ? `${formatSignedMoney(marketDelta)} vs atual` : 'Sem base suficiente'),
+      kpi('Interno técnico', formatMoney(analysis.coherentPrice), Number.isFinite(internalDelta) ? `${formatSignedMoney(internalDelta)} vs atual` : 'Âncora interna'),
+      kpi('Recomendado final', formatMoney(finalPrice), Number.isFinite(adjustmentPct) ? `${formatSignedMoney(adjustment)} · ${formatPercent(adjustmentPct)}` : 'Recomendação comercial')
+    ]);
+
+    const strategy = rec?.strategy || 'Modelo técnico';
+    const rationaleItems = getFinalRationaleItems(analysis, rec, adjustment, adjustmentPct);
+
+    const rationaleList = h('ul', { className: 'rationale-list' });
+    rationaleItems.forEach((item) => rationaleList.append(h('li', { text: item })));
+
+    const rationale = div('final-rationale-card', [
+      div('rationale-header', [
+        h('span', { className: `strategy-badge ${normalizeKey(strategy)}`, text: strategy }),
+        h('strong', { text: 'Porque este preço?' })
+      ]),
+      rationaleList
+    ]);
+
+    const technical = div('final-technical-note', [
+      h('strong', { text: 'Leitura técnica' }),
+      h('p', { text: buildTechnicalExplanation(analysis, rec) })
+    ]);
+
+    modal.append(close, title, summaryGrid, rationale, technical);
+    overlay.append(modal);
+    document.body.append(overlay);
+
+    const escHandler = (event) => {
+      if (event.key === 'Escape') {
+        overlay.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+  }
+
+  function getFinalRationaleItems(analysis, rec, adjustment, adjustmentPct) {
+    const items = [];
+
+    if (rec?.note) items.push(rec.note);
+
+    if (!rec) {
+      items.push('Sem recomendação comercial fixa; usa-se o modelo técnico como referência.');
+    } else if (rec.strategy === 'Manter') {
+      items.push('Mantém a tabela atual recomendada, evitando alterar preços já comercialmente defensáveis.');
+    } else if (rec.strategy === 'Ajuste fino') {
+      items.push('Ajuste pequeno para melhorar arredondamento e coerência interna, sem alterar o posicionamento comercial.');
+    } else if (rec.strategy === 'Subida moderada') {
+      items.push('Subida controlada onde há margem de preço, mas sem seguir cegamente o compset externo.');
+    } else if (rec.strategy === 'Subida faseada') {
+      items.push('Preço-alvo indicado para próxima fase comercial ou após validação por procura/vendas.');
+    }
+
+    if (Number.isFinite(adjustment) && Math.abs(adjustment) > 0) {
+      items.push(`Ajuste face ao preço atual: ${formatSignedMoney(adjustment)}${Number.isFinite(adjustmentPct) ? ` (${formatPercent(adjustmentPct)})` : ''}.`);
+    } else {
+      items.push('Sem alteração face ao preço atual.');
+    }
+
+    if (Number.isFinite(analysis.marketPrice)) {
+      items.push(`O mercado ponderado aponta para ${formatMoney(analysis.marketPrice)}, mas serve como referência, não como decisão automática.`);
+    } else {
+      items.push('A base de mercado é insuficiente para esta fração/tipologia; por isso, a recomendação privilegia prudência comercial.');
+    }
+
+    if (Number.isFinite(analysis.coherentPrice)) {
+      items.push(`A âncora interna The View aponta para ${formatMoney(analysis.coherentPrice)}, ajudando a manter coerência entre piso, vista, tipologia e área.`);
+    }
+
+    if (analysis.hierarchyAdjusted) {
+      items.push('O modelo técnico aplicou ajuste de hierarquia interna para evitar incoerências entre frações superiores e inferiores.');
+    }
+
+    return items;
+  }
+
+  function buildTechnicalExplanation(analysis, rec) {
+    const strategy = rec?.strategy || 'modelo técnico';
+    const fraction = analysis.fraction;
+
+    return `Para ${fraction.name}, a recomendação final segue a estratégia "${strategy}". O preço de mercado foi calculado com concorrentes ponderados por categoria, ano e empreendimento; o preço interno técnico verifica a coerência entre frações The View. A recomendação final usa a tabela atual como base e aplica apenas ajustes comerciais prudentes.`;
+  }
+
+  function formatNumber(value) {
+    if (!Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 }).format(value);
+  }
+
 
   function setActiveTab(tab) {
     state.activeTab = tab;
