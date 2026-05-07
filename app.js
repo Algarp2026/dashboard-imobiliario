@@ -16,7 +16,8 @@
       view: 'all',
       fraction: 'all',
       development: 'all'
-    }
+    },
+    sort: 'name-asc'
   };
 
   const el = {};
@@ -35,6 +36,8 @@
     el.cardsGrid = document.getElementById('cardsGrid');
     el.resultCount = document.getElementById('resultCount');
     el.errorBox = document.getElementById('errorBox');
+    el.executiveSummary = document.getElementById('executiveSummary');
+    el.sortFilter = document.getElementById('sortFilter');
     el.floorFilter = document.getElementById('floorFilter');
     el.viewFilter = document.getElementById('viewFilter');
     el.fractionFilter = document.getElementById('fractionFilter');
@@ -53,6 +56,7 @@
     el.viewFilter.addEventListener('change', () => updateFilter('view', el.viewFilter.value));
     el.fractionFilter.addEventListener('change', () => updateFilter('fraction', el.fractionFilter.value));
     el.developmentFilter.addEventListener('change', () => updateFilter('development', el.developmentFilter.value));
+    if (el.sortFilter) el.sortFilter.addEventListener('change', () => updateSort(el.sortFilter.value));
     el.resetFilters.addEventListener('click', resetFilters);
 
     el.closeFractionModal.addEventListener('click', closeFractionModal);
@@ -237,10 +241,17 @@
 
   function resetFilters() {
     state.filters = { floor: 'all', view: 'all', fraction: 'all', development: 'all' };
+    state.sort = 'name-asc';
     el.floorFilter.value = 'all';
     el.viewFilter.value = 'all';
     el.fractionFilter.value = 'all';
     el.developmentFilter.value = 'all';
+    if (el.sortFilter) el.sortFilter.value = state.sort;
+    applyFilters();
+  }
+
+  function updateSort(value) {
+    state.sort = value || 'name-asc';
     applyFilters();
   }
 
@@ -257,8 +268,28 @@
       return state.filters.development === 'all' || development === state.filters.development;
     });
 
+    state.filteredFractions = sortFractions(state.filteredFractions, state.sort);
+
     renderKpis();
+    renderExecutiveSummary();
     renderCards();
+  }
+
+  function sortFractions(items, sortKey) {
+    const sorted = [...items];
+    const byNumber = (getter, direction = 1) => sorted.sort((a, b) => ((getter(a) ?? -Infinity) - (getter(b) ?? -Infinity)) * direction);
+    const byText = (getter, direction = 1) => sorted.sort((a, b) => String(getter(a) || '').localeCompare(String(getter(b) || ''), 'pt', { numeric: true, sensitivity: 'base' }) * direction);
+
+    if (sortKey === 'price-asc') return byNumber((item) => item.price, 1);
+    if (sortKey === 'price-desc') return byNumber((item) => item.price, -1);
+    if (sortKey === 'sqm-asc') return byNumber((item) => item.eurosPerSqm, 1);
+    if (sortKey === 'sqm-desc') return byNumber((item) => item.eurosPerSqm, -1);
+    if (sortKey === 'area-asc') return byNumber((item) => item.totalArea, 1);
+    if (sortKey === 'area-desc') return byNumber((item) => item.totalArea, -1);
+    if (sortKey === 'floor-asc') return byNumber((item) => item.floorNumber, 1);
+    if (sortKey === 'floor-desc') return byNumber((item) => item.floorNumber, -1);
+    if (sortKey === 'typology-asc') return byText((item) => item.typology, 1);
+    return byText((item) => item.name, 1);
   }
 
   function renderKpis() {
@@ -266,7 +297,8 @@
     el.kpiGrid.replaceChildren(
       createKpi('Frações', state.filteredFractions.length),
       createKpi('Concorrentes', state.filteredCompetitors.length),
-      createKpi('Mediana €/m²', formatCurrency(medianSqm, 0))
+      createKpi('Mediana €/m²', formatCurrency(medianSqm, 0)),
+      createKpi('Confiança média', getAverageConfidenceLabel())
     );
   }
 
@@ -278,6 +310,49 @@
     const strong = document.createElement('strong');
     strong.textContent = String(value ?? '—');
     card.append(span, strong);
+    return card;
+  }
+
+  function getAverageConfidenceLabel() {
+    if (!state.filteredFractions.length) return '—';
+    const scores = state.filteredFractions.map((fraction) => getConfidence(getCompetitorSets(fraction, state.filteredCompetitors)).score);
+    const avg = scores.reduce((acc, value) => acc + value, 0) / scores.length;
+    if (avg >= 3) return 'Alta';
+    if (avg >= 2) return 'Média';
+    if (avg >= 1) return 'Baixa';
+    return 'Sem dados';
+  }
+
+  function renderExecutiveSummary() {
+    if (!el.executiveSummary) return;
+    el.executiveSummary.replaceChildren();
+
+    const projectMedian = median(state.filteredFractions.map((item) => item.eurosPerSqm).filter(Number.isFinite));
+    const competitorMedian = median(state.filteredCompetitors.map((item) => item.eurosPerSqm).filter(Number.isFinite));
+    const premium = projectMedian && competitorMedian ? ((projectMedian - competitorMedian) / competitorMedian) * 100 : null;
+    const marketPosition = Number.isFinite(premium) ? (premium >= 0 ? `Premium médio de ${formatNumber(Math.abs(premium), 1)}%` : `Desconto médio de ${formatNumber(Math.abs(premium), 1)}%`) : 'Sem benchmark suficiente';
+
+    let above = 0;
+    let below = 0;
+    state.filteredFractions.forEach((fraction) => {
+      const ai = calculateAIPrice(fraction, getCompetitorSets(fraction, state.filteredCompetitors), { eurosPerSqm: null }, { eurosPerSqm: null });
+      if (!Number.isFinite(ai.eurosPerSqm) || !Number.isFinite(fraction.eurosPerSqm)) return;
+      if (fraction.eurosPerSqm > ai.eurosPerSqm) above += 1;
+      if (fraction.eurosPerSqm < ai.eurosPerSqm) below += 1;
+    });
+
+    el.executiveSummary.append(
+      createSummaryCard('Preço médio The View', formatCurrency(projectMedian, 0) + ' /m²', 'Mediana das frações visíveis.'),
+      createSummaryCard('Mediana concorrência', formatCurrency(competitorMedian, 0) + ' /m²', 'Respeita os filtros de concorrentes.'),
+      createSummaryCard('Posicionamento', marketPosition, 'Comparação entre The View e benchmark filtrado.'),
+      createSummaryCard('Acima / abaixo do mercado', `${above} / ${below}`, 'Comparado contra o preço IA heurístico de cada fração.')
+    );
+  }
+
+  function createSummaryCard(label, value, helper) {
+    const card = document.createElement('article');
+    card.className = 'summary-card';
+    card.append(createTextElement('span', '', label), createTextElement('strong', '', value), createTextElement('small', '', helper));
     return card;
   }
 
@@ -304,7 +379,13 @@
       const titleWrap = document.createElement('div');
       titleWrap.append(createTextElement('h3', 'card-title', fraction.name));
       titleWrap.append(createTextElement('p', 'card-subtitle', `${fraction.typology} · Piso ${formatPlain(fraction.floorNumber)} · ${fraction.view}`));
-      top.append(titleWrap, createTextElement('span', 'badge', fraction.development || PROJECT_NAME));
+      const sets = getCompetitorSets(fraction, state.filteredCompetitors);
+      const confidence = getConfidence(sets);
+      const badgeWrap = document.createElement('div');
+      badgeWrap.className = 'badge-stack';
+      badgeWrap.append(createTextElement('span', 'badge', fraction.development || PROJECT_NAME));
+      badgeWrap.append(createTextElement('span', `badge badge--confidence ${confidence.className}`, confidence.label));
+      top.append(titleWrap, badgeWrap);
 
       const price = document.createElement('div');
       price.className = 'price-line';
@@ -331,10 +412,12 @@
     const fallback = calculateFallbackPrice(fraction, competitorSets);
     const rigorous = calculateRigorousPrice(fraction, competitorSets);
     const ai = calculateAIPrice(fraction, competitorSets, fallback, rigorous);
+    const confidence = getConfidence(competitorSets);
 
     el.fractionModalContent.replaceChildren();
     el.fractionModalContent.append(
-      renderFractionHeader(fraction),
+      renderFractionHeader(fraction, confidence),
+      renderSampleAlert(competitorSets),
       renderPricingSection(fallback, rigorous, ai),
       renderAccordionSection(fraction, competitorSets)
     );
@@ -343,13 +426,14 @@
     document.body.classList.add('modal-open');
   }
 
-  function renderFractionHeader(fraction) {
+  function renderFractionHeader(fraction, confidence) {
     const fragment = document.createDocumentFragment();
     fragment.append(createTextElement('p', 'eyebrow', 'Fração selecionada'));
     const title = createTextElement('h2', 'modal-title', fraction.name);
     title.id = 'modalTitle';
     fragment.append(title);
     fragment.append(createTextElement('div', 'modal-price', formatCurrency(fraction.price, 0)));
+    fragment.append(createTextElement('div', `confidence-pill ${confidence.className}`, `Confiança do preço recomendado: ${confidence.label} — ${confidence.reason}`));
     fragment.append(createModalMetrics([
       ['Piso', formatPlain(fraction.floorNumber)],
       ['Vista', fraction.view],
@@ -361,6 +445,17 @@
       ['Empreendimento', fraction.development || PROJECT_NAME]
     ]));
     return fragment;
+  }
+
+  function renderSampleAlert(sets) {
+    const total = sets.direct.length + sets.indirect.length + sets.weak.length;
+    const box = document.createElement('div');
+    box.className = total < 3 ? 'sample-alert sample-alert--warning' : 'sample-alert';
+    const message = total < 3
+      ? `Amostra limitada: apenas ${total} concorrente${total === 1 ? '' : 's'} usado${total === 1 ? '' : 's'} com os filtros atuais.`
+      : `Amostra competitiva: ${total} concorrentes elegíveis com os filtros atuais.`;
+    box.textContent = message;
+    return box;
   }
 
   function renderPricingSection(fallback, rigorous, ai) {
@@ -383,6 +478,7 @@
     const card = document.createElement('article');
     card.className = `pricing-card${hero ? ' pricing-card--hero' : ''}`;
     card.append(createTextElement('span', '', title));
+    if (result.category) card.append(createTextElement('em', 'pricing-origin', `Base: ${result.category}`));
     card.append(createTextElement('strong', '', result.price ? formatCurrency(result.price, 0) : 'Sem dados'));
     card.append(createTextElement('span', '', result.eurosPerSqm ? `${formatCurrency(result.eurosPerSqm, 0)} /m²` : '€/m² indisponível'));
 
@@ -491,10 +587,10 @@
     const grid = document.createElement('div');
     grid.className = 'comparison-grid';
     grid.append(
-      createDelta('Diferença de preço', comparison.priceDiff, 'currency'),
-      createDelta('Diferença €/m²', comparison.sqmDiff, 'currencySqm'),
-      createDelta('Diferença de área', comparison.areaDiff, 'area'),
-      createDelta('Premium / desconto', comparison.premiumDiscount, 'percent')
+      createDelta(comparison.priceDiff > 0 ? 'Mais caro' : comparison.priceDiff < 0 ? 'Mais barato' : 'Mesmo preço', comparison.priceDiff, 'currency'),
+      createDelta(comparison.sqmDiff > 0 ? '€/m² superior' : comparison.sqmDiff < 0 ? '€/m² inferior' : 'Mesmo €/m²', comparison.sqmDiff, 'currencySqm'),
+      createDelta(comparison.areaDiff > 0 ? 'Maior área' : comparison.areaDiff < 0 ? 'Menor área' : 'Mesma área', comparison.areaDiff, 'area'),
+      createDelta(comparison.premiumDiscount > 0 ? 'Premium' : comparison.premiumDiscount < 0 ? 'Desconto' : 'Neutro', comparison.premiumDiscount, 'percent')
     );
     return grid;
   }
@@ -549,6 +645,14 @@
     return { direct, indirect, weak };
   }
 
+  function getConfidence(sets) {
+    const total = sets.direct.length + sets.indirect.length + sets.weak.length;
+    if (sets.direct.length >= 3) return { label: 'Alta', score: 3, className: 'is-high', reason: 'há 3 ou mais concorrentes diretos.' };
+    if (sets.direct.length >= 1 || sets.indirect.length >= 3) return { label: 'Média', score: 2, className: 'is-medium', reason: 'há diretos limitados ou indiretos suficientes.' };
+    if (total >= 1) return { label: 'Baixa', score: 1, className: 'is-low', reason: 'usa amostra reduzida ou pouco concorrente.' };
+    return { label: 'Sem dados', score: 0, className: 'is-none', reason: 'não há concorrentes elegíveis.' };
+  }
+
   function calculateFallbackPrice(fraction, sets) {
     const chosen = sets.direct.length ? sets.direct : sets.indirect.length ? sets.indirect : sets.weak;
     const category = sets.direct.length ? 'Diretos' : sets.indirect.length ? 'Indiretos' : sets.weak.length ? 'Pouco concorrente' : 'Sem dados';
@@ -560,6 +664,7 @@
       price,
       eurosPerSqm: usedSqm,
       competitors: chosen,
+      category,
       explanation: price ? [
         `Origem dos dados: ${category}.`,
         `Concorrentes usados: ${chosen.length}.`,
@@ -590,6 +695,7 @@
       price,
       eurosPerSqm: usedSqm,
       competitors: trimmed,
+      category: weighted.length ? 'Ponderado rigoroso' : 'Sem dados',
       explanation: price ? [
         'Origem dos dados: concorrência elegível por tipologia/piso/vista conforme categorias originais.',
         `Concorrentes usados após limpeza: ${trimmed.length}.`,
@@ -625,6 +731,7 @@
       price,
       eurosPerSqm: finalSqm,
       competitors: [...sets.direct, ...sets.indirect, ...sets.weak],
+      category: components.length ? components.map((c) => c.label).join(' + ') : 'Sem dados',
       explanation: price ? [
         `Origem dos dados: ${components.map((c) => c.label).join(', ')}.`,
         `Concorrentes usados: ${sets.direct.length + sets.indirect.length + sets.weak.length}.`,

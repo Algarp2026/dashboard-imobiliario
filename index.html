@@ -45,6 +45,21 @@
         </div>
       </section>
 
+      <section class="panel executive-panel" aria-labelledby="summaryTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark">Resumo executivo</p>
+            <h2 id="summaryTitle">Leitura de mercado</h2>
+          </div>
+        </div>
+        <div class="summary-grid" id="executiveSummary" aria-label="Resumo executivo do mercado">
+          <article class="summary-card skeleton"><span>Preço médio The View</span><strong>—</strong><small>—</small></article>
+          <article class="summary-card skeleton"><span>Mediana concorrência</span><strong>—</strong><small>—</small></article>
+          <article class="summary-card skeleton"><span>Posicionamento</span><strong>—</strong><small>—</small></article>
+          <article class="summary-card skeleton"><span>Acima / abaixo</span><strong>—</strong><small>—</small></article>
+        </div>
+      </section>
+
       <section class="panel filters-panel" aria-labelledby="filtersTitle">
         <div class="section-heading">
           <div>
@@ -80,6 +95,22 @@
             <span>Empreendimentos concorrentes</span>
             <select id="developmentFilter" aria-label="Filtrar por empreendimento concorrente">
               <option value="all">Todos</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Ordenar cards</span>
+            <select id="sortFilter" aria-label="Ordenar frações">
+              <option value="name-asc">Nome</option>
+              <option value="price-asc">Preço crescente</option>
+              <option value="price-desc">Preço decrescente</option>
+              <option value="sqm-asc">€/m² crescente</option>
+              <option value="sqm-desc">€/m² decrescente</option>
+              <option value="area-asc">Área crescente</option>
+              <option value="area-desc">Área decrescente</option>
+              <option value="floor-asc">Piso crescente</option>
+              <option value="floor-desc">Piso decrescente</option>
+              <option value="typology-asc">Tipologia</option>
             </select>
           </label>
         </div>
