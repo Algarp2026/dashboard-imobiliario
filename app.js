@@ -729,15 +729,36 @@
 
   function parseNumber(value) {
     if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-    const cleaned = String(value ?? '')
+
+    let text = String(value ?? '')
+      .trim()
       .replace(/\s/g, '')
       .replace(/€/g, '')
       .replace(/m²|m2/gi, '')
-      .replace(/\./g, '')
-      .replace(',', '.')
-      .replace(/[^0-9.-]/g, '');
-    if (!cleaned || cleaned === '-' || cleaned === '.') return null;
-    const number = Number(cleaned);
+      .replace(/[^0-9,.-]/g, '');
+
+    if (!text || text === '-' || text === '.' || text === ',') return null;
+
+    const lastComma = text.lastIndexOf(',');
+    const lastDot = text.lastIndexOf('.');
+
+    if (lastComma >= 0 && lastDot >= 0) {
+      // Ex.: 1.250.000,50 ou 1,250,000.50
+      const decimalSeparator = lastComma > lastDot ? ',' : '.';
+      const thousandSeparator = decimalSeparator === ',' ? '.' : ',';
+      text = text.split(thousandSeparator).join('');
+      text = text.replace(decimalSeparator, '.');
+    } else if (lastComma >= 0) {
+      // Ex.: 99,74 deve ser 99.74; 1,250 deve ser 1250
+      const decimals = text.length - lastComma - 1;
+      text = decimals === 3 ? text.replace(/,/g, '') : text.replace(',', '.');
+    } else if (lastDot >= 0) {
+      // Ex.: 99.74 deve ser 99.74; 1.250 deve ser 1250
+      const decimals = text.length - lastDot - 1;
+      text = decimals === 3 ? text.replace(/\./g, '') : text;
+    }
+
+    const number = Number(text);
     return Number.isFinite(number) ? number : null;
   }
 
