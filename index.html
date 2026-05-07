@@ -9,19 +9,14 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <noscript>
-    <div class="noscript">Este dashboard requer JavaScript ativo para ler o Excel e apresentar os dados.</div>
-  </noscript>
+  <noscript><div class="noscript">Este dashboard requer JavaScript ativo para ler o Excel e apresentar os dados.</div></noscript>
 
-  <div id="appShell" class="app-shell">
-    <header class="hero" role="banner" aria-label="The View">
+  <div class="app-shell">
+    <header class="hero" role="banner">
       <img class="hero__image" src="Olhao_Cam_Suite_Web.jpg" alt="Vista premium do empreendimento The View" />
       <div class="hero__overlay"></div>
-      <nav class="topbar" aria-label="Resumo do dashboard">
-        <div class="brand-pill">
-          <span class="brand-dot" aria-hidden="true"></span>
-          <span>The View</span>
-        </div>
+      <nav class="topbar" aria-label="Estado do dashboard">
+        <div class="brand-pill"><span class="brand-dot"></span><span>The View</span></div>
         <div class="status-pill" id="dataStatus">A carregar Excel…</div>
       </nav>
       <div class="hero__content">
@@ -32,112 +27,89 @@
     </header>
 
     <main class="main" id="mainContent">
-      <section class="panel intro-panel" aria-labelledby="dashboardTitle">
-        <div>
-          <p class="eyebrow eyebrow--dark">Pricing · Competição · Benchmark</p>
-          <h2 id="dashboardTitle">Frações e concorrência</h2>
-          <p class="muted">Análise automática por tipologia, piso e vista, com modelos de preço fallback, rigoroso e IA heurística.</p>
-        </div>
-        <div class="kpi-grid" id="kpiGrid" aria-label="Indicadores principais">
-          <article class="kpi-card skeleton"><span>Frações</span><strong>—</strong></article>
-          <article class="kpi-card skeleton"><span>Concorrentes</span><strong>—</strong></article>
-          <article class="kpi-card skeleton"><span>Mediana €/m²</span><strong>—</strong></article>
-        </div>
-      </section>
-
-      <section class="panel executive-panel" aria-labelledby="summaryTitle">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow eyebrow--dark">Resumo executivo</p>
-            <h2 id="summaryTitle">Leitura de mercado</h2>
-          </div>
-        </div>
-        <div class="summary-grid" id="executiveSummary" aria-label="Resumo executivo do mercado">
-          <article class="summary-card skeleton"><span>Preço médio The View</span><strong>—</strong><small>—</small></article>
-          <article class="summary-card skeleton"><span>Mediana concorrência</span><strong>—</strong><small>—</small></article>
-          <article class="summary-card skeleton"><span>Posicionamento</span><strong>—</strong><small>—</small></article>
-          <article class="summary-card skeleton"><span>Acima / abaixo</span><strong>—</strong><small>—</small></article>
-        </div>
+      <section class="tabs-shell" aria-label="Navegação do dashboard">
+        <button class="tab-button active" type="button" data-tab="dashboard">Dashboard</button>
+        <button class="tab-button" type="button" data-tab="market">Inteligência de mercado</button>
+        <button class="tab-button" type="button" data-tab="ideal">Preço ideal</button>
       </section>
 
       <section class="panel filters-panel" aria-labelledby="filtersTitle">
         <div class="section-heading">
           <div>
-            <p class="eyebrow eyebrow--dark">Filtros</p>
+            <p class="eyebrow eyebrow--dark">Filtros globais</p>
             <h2 id="filtersTitle">Refinar análise</h2>
           </div>
           <button class="ghost-button" id="resetFilters" type="button">Limpar filtros</button>
         </div>
-
         <div class="filters-grid">
-          <label class="field">
-            <span>Piso</span>
-            <select id="floorFilter" aria-label="Filtrar por piso">
-              <option value="all">Todos</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Vista</span>
-            <select id="viewFilter" aria-label="Filtrar por vista">
-              <option value="all">Todas</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Frações</span>
-            <select id="fractionFilter" aria-label="Filtrar por fração">
-              <option value="all">Todas</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Empreendimentos concorrentes</span>
-            <select id="developmentFilter" aria-label="Filtrar por empreendimento concorrente">
-              <option value="all">Todos</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Ordenar cards</span>
-            <select id="sortFilter" aria-label="Ordenar frações">
-              <option value="name-asc">Nome</option>
-              <option value="price-asc">Preço crescente</option>
-              <option value="price-desc">Preço decrescente</option>
-              <option value="sqm-asc">€/m² crescente</option>
-              <option value="sqm-desc">€/m² decrescente</option>
-              <option value="area-asc">Área crescente</option>
-              <option value="area-desc">Área decrescente</option>
-              <option value="floor-asc">Piso crescente</option>
-              <option value="floor-desc">Piso decrescente</option>
-              <option value="typology-asc">Tipologia</option>
-            </select>
-          </label>
+          <label class="field"><span>Piso</span><select id="floorFilter"><option value="all">Todos</option></select></label>
+          <label class="field"><span>Vista</span><select id="viewFilter"><option value="all">Todas</option></select></label>
+          <label class="field"><span>Frações</span><select id="fractionFilter"><option value="all">Todas</option></select></label>
+          <label class="field"><span>Empreendimentos concorrentes</span><select id="developmentFilter"><option value="all">Todos</option></select></label>
+          <label class="field"><span>Ordenar cards</span><select id="sortFilter">
+            <option value="name-asc">Nome</option><option value="price-asc">Preço crescente</option><option value="price-desc">Preço decrescente</option>
+            <option value="sqm-asc">€/m² crescente</option><option value="sqm-desc">€/m² decrescente</option><option value="area-asc">Área crescente</option><option value="area-desc">Área decrescente</option><option value="floor-asc">Piso crescente</option><option value="floor-desc">Piso decrescente</option>
+          </select></label>
         </div>
       </section>
 
-      <section class="panel" aria-labelledby="fractionsTitle">
-        <div class="section-heading">
+      <div id="errorBox" class="error-box hidden" role="alert"></div>
+
+      <section id="tab-dashboard" class="tab-panel active">
+        <section class="panel intro-panel">
           <div>
-            <p class="eyebrow eyebrow--dark">Inventário</p>
-            <h2 id="fractionsTitle">Cards das frações</h2>
+            <p class="eyebrow eyebrow--dark">Pricing · Competição · Benchmark</p>
+            <h2>Frações e concorrência</h2>
+            <p class="muted">Página comercial simples: concorrentes oficiais, pesos por ano, penalização Le Parc e preço recomendado.</p>
           </div>
-          <p class="muted small" id="resultCount">—</p>
-        </div>
-        <div id="errorBox" class="error-box hidden" role="alert"></div>
-        <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+          <div class="kpi-grid" id="kpiGrid"></div>
+        </section>
+
+        <section class="panel executive-panel">
+          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Resumo executivo</p><h2>Leitura rápida</h2></div></div>
+          <div class="summary-grid" id="executiveSummary"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Inventário</p><h2>Cards das frações</h2></div><p class="muted small" id="resultCount">—</p></div>
+          <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section id="tab-market" class="tab-panel">
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Inteligência de mercado</p><h2>Pesos simples do compset</h2></div></div>
+          <p class="muted">Esta página mostra a penalização objetiva aplicada aos dados antigos e ao Le Parc. A fórmula é: peso base de mercado = peso do ano × peso do empreendimento.</p>
+          <div class="summary-grid" id="marketSummary"></div>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Compset atual</p><h2>Concorrentes ponderados</h2></div><p class="muted small" id="marketCount">—</p></div>
+          <div class="table-wrap"><table class="data-table" id="marketTable"></table></div>
+        </section>
+      </section>
+
+      <section id="tab-ideal" class="tab-panel">
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Preço ideal</p><h2>Mercado + coerência interna</h2></div></div>
+          <p class="muted">Esta página calcula um preço ideal por fração e verifica se a hierarquia interna faz sentido: piso, vista, área e varanda devem refletir-se no €/m² relativo.</p>
+          <div class="summary-grid" id="idealSummary"></div>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">The View</p><h2>Matriz de preço ideal</h2></div><p class="muted small" id="idealCount">—</p></div>
+          <div class="table-wrap"><table class="data-table" id="idealTable"></table></div>
+        </section>
       </section>
     </main>
   </div>
 
-  <div id="fractionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div id="fractionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="modal modal--large" role="document">
       <button class="modal-close" id="closeFractionModal" type="button" aria-label="Fechar modal">×</button>
       <div id="fractionModalContent"></div>
     </div>
   </div>
 
-  <div id="competitorModal" class="modal-backdrop modal-backdrop--top hidden" role="dialog" aria-modal="true" aria-labelledby="competitorModalTitle">
+  <div id="competitorModal" class="modal-backdrop modal-backdrop--top hidden" role="dialog" aria-modal="true">
     <div class="modal modal--small" role="document">
       <button class="modal-close" id="closeCompetitorModal" type="button" aria-label="Fechar popup do concorrente">×</button>
       <div id="competitorModalContent"></div>

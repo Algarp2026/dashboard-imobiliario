@@ -11,64 +11,43 @@
     filteredFractions: [],
     filteredCompetitors: [],
     selectedFraction: null,
-    filters: {
-      floor: 'all',
-      view: 'all',
-      fraction: 'all',
-      development: 'all'
-    },
+    activeTab: 'dashboard',
+    filters: { floor: 'all', view: 'all', fraction: 'all', development: 'all' },
     sort: 'name-asc'
   };
 
   const el = {};
-
   document.addEventListener('DOMContentLoaded', init);
 
   async function init() {
     cacheElements();
-    bindGlobalEvents();
+    bindEvents();
     await loadExcelData();
   }
 
   function cacheElements() {
-    el.dataStatus = document.getElementById('dataStatus');
-    el.kpiGrid = document.getElementById('kpiGrid');
-    el.cardsGrid = document.getElementById('cardsGrid');
-    el.resultCount = document.getElementById('resultCount');
-    el.errorBox = document.getElementById('errorBox');
-    el.executiveSummary = document.getElementById('executiveSummary');
-    el.sortFilter = document.getElementById('sortFilter');
-    el.floorFilter = document.getElementById('floorFilter');
-    el.viewFilter = document.getElementById('viewFilter');
-    el.fractionFilter = document.getElementById('fractionFilter');
-    el.developmentFilter = document.getElementById('developmentFilter');
-    el.resetFilters = document.getElementById('resetFilters');
-    el.fractionModal = document.getElementById('fractionModal');
-    el.fractionModalContent = document.getElementById('fractionModalContent');
-    el.closeFractionModal = document.getElementById('closeFractionModal');
-    el.competitorModal = document.getElementById('competitorModal');
-    el.competitorModalContent = document.getElementById('competitorModalContent');
-    el.closeCompetitorModal = document.getElementById('closeCompetitorModal');
+    [
+      'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealTable','idealCount',
+      'floorFilter','viewFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
+      'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
+    ].forEach((id) => { el[id] = document.getElementById(id); });
+    el.tabButtons = Array.from(document.querySelectorAll('.tab-button'));
+    el.tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
   }
 
-  function bindGlobalEvents() {
+  function bindEvents() {
+    el.tabButtons.forEach((button) => button.addEventListener('click', () => setActiveTab(button.dataset.tab)));
     el.floorFilter.addEventListener('change', () => updateFilter('floor', el.floorFilter.value));
     el.viewFilter.addEventListener('change', () => updateFilter('view', el.viewFilter.value));
     el.fractionFilter.addEventListener('change', () => updateFilter('fraction', el.fractionFilter.value));
     el.developmentFilter.addEventListener('change', () => updateFilter('development', el.developmentFilter.value));
-    if (el.sortFilter) el.sortFilter.addEventListener('change', () => updateSort(el.sortFilter.value));
+    el.sortFilter.addEventListener('change', () => updateSort(el.sortFilter.value));
     el.resetFilters.addEventListener('click', resetFilters);
-
     el.closeFractionModal.addEventListener('click', closeFractionModal);
     el.closeCompetitorModal.addEventListener('click', closeCompetitorModal);
-
-    el.fractionModal.addEventListener('click', (event) => {
-      if (event.target === el.fractionModal) closeFractionModal();
-    });
-    el.competitorModal.addEventListener('click', (event) => {
-      if (event.target === el.competitorModal) closeCompetitorModal();
-    });
-
+    el.fractionModal.addEventListener('click', (event) => { if (event.target === el.fractionModal) closeFractionModal(); });
+    el.competitorModal.addEventListener('click', (event) => { if (event.target === el.competitorModal) closeCompetitorModal(); });
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
       if (!el.competitorModal.classList.contains('hidden')) closeCompetitorModal();
@@ -79,87 +58,58 @@
   async function loadExcelData() {
     try {
       setStatus('A carregar Excel…');
-      if (!window.XLSX) throw new Error('A biblioteca SheetJS não foi carregada. Confirme a ligação CDN ou use uma cópia local de xlsx.full.min.js.');
-
+      if (!window.XLSX) throw new Error('Biblioteca SheetJS não carregada.');
       const response = await fetch(DATA_FILE, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`Não foi possível carregar ${DATA_FILE}. Código HTTP ${response.status}.`);
-
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false, cellNF: false, cellText: true });
+      if (!response.ok) throw new Error(`Não foi possível carregar ${DATA_FILE}.`);
+      const buffer = await response.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
       const parsed = parseWorkbook(workbook);
-
-      if (!parsed.length) throw new Error('O Excel não contém linhas válidas para apresentação.');
-
+      if (!parsed.length) throw new Error('Excel não contém linhas válidas.');
       state.rows = parsed;
       splitDataset(parsed);
-
-      if (!state.fractions.length) throw new Error('Não foram encontradas frações do The View. Verifique se o Excel identifica o empreendimento/projeto como “The View” ou se existe uma coluna de tipo/categoria.');
-
-      state.filteredFractions = [...state.fractions];
-      state.filteredCompetitors = [...state.competitors];
-
+      if (!state.fractions.length) throw new Error('Não foram encontradas frações The View.');
       populateFilters();
       applyFilters();
-      setStatus('Excel carregado', 'ok');
       hideError();
+      setStatus('Excel carregado', 'ok');
     } catch (error) {
       console.error(error);
       setStatus('Erro no Excel', 'error');
-      showError(`Não foi possível carregar o dashboard: ${safeString(error.message)} Use um data.xlsx válido na raiz do projeto e confirme que as colunas de nome, preço, piso, vista, ABP, varanda e área total existem.`);
+      showError(`${safeString(error.message)} Confirme que o ficheiro data.xlsx está na raiz do projeto e mantém as colunas principais.`);
       renderEmptyState();
     }
   }
 
   function parseWorkbook(workbook) {
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) return [];
-
-    const sheet = workbook.Sheets[firstSheetName];
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) return [];
+    const sheet = workbook.Sheets[sheetName];
     const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-
-    return rawRows
-      .map((raw, index) => normalizeRow(raw, index))
-      .filter((row) => row.name && Number.isFinite(row.price) && Number.isFinite(row.floorNumber));
+    return rawRows.map(normalizeRow).filter((row) => row.name && Number.isFinite(row.price) && Number.isFinite(row.floorNumber));
   }
 
   function normalizeRow(raw, index) {
-    const getter = createHeaderGetter(raw);
-    const name = getFirst(getter, ['nome', 'fracao', 'fração', 'unidade', 'apartamento', 'unit', 'name']);
-    const development = getFirst(getter, ['empreendimento', 'projeto', 'project', 'development', 'concorrente', 'edificio', 'edifício']);
-    const typology = normalizeTypology(getFirst(getter, ['tipologia', 'tipo', 'typology', 't']));
-    const floorRaw = getFirst(getter, ['piso', 'floor', 'andar']);
-    const view = normalizeText(getFirst(getter, ['vista', 'view', 'orientacao', 'orientação']));
-    const abp = parseNumber(getFirst(getter, ['abp', 'area bruta privativa', 'área bruta privativa', 'area privativa', 'área privativa']));
-    const balcony = parseNumber(getFirst(getter, ['varanda', 'terraco', 'terraço', 'varanda terraco', 'varanda terraço', 'varanda/terraco', 'varanda/terraço', 'balcony', 'exterior']));
-    const totalArea = parseNumber(getFirst(getter, ['area total', 'área total', 'total', 'area', 'área', 'total area']));
-    const price = parseNumber(getFirst(getter, ['preco', 'preço', 'pvp', 'valor', 'price', 'asking price']));
-    const eurosPerSqmRaw = parseNumber(getFirst(getter, ['€/m2', '€/m²', 'eur/m2', 'euro/m2', 'preco m2', 'preço m2', 'price/m2']));
-    const typeFlag = normalizeText(getFirst(getter, ['categoria', 'tipo dado', 'tipo de dado', 'dataset', 'origem', 'classe']));
-    const status = normalizeText(getFirst(getter, ['status', 'estado', 'disponibilidade', 'available', 'availability']));
-    const source = normalizeText(getFirst(getter, ['fonte', 'source', 'portal', 'origem dados', 'origem dos dados']));
-    const url = normalizeText(getFirst(getter, ['url', 'link', 'fonte url', 'source url']));
-    const updatedAt = normalizeText(getFirst(getter, ['data de atualização', 'data atualização', 'data atualizacao', 'atualizado em', 'updated at', 'data']));
-    const referenceYear = parseNumber(getFirst(getter, ['ano referência', 'ano referencia', 'ano', 'reference year', 'ano dados']));
-    const distance = parseNumber(getFirst(getter, ['distância ao the view', 'distancia ao the view', 'distância', 'distancia', 'distance']));
-    const segment = normalizeText(getFirst(getter, ['segmento', 'segment', 'classe comercial', 'categoria comercial']));
-    const comparableWeightRaw = parseNumber(getFirst(getter, ['peso comparável', 'peso comparavel', 'peso', 'weight', 'comparable weight']));
-    const condition = normalizeText(getFirst(getter, ['condição', 'condicao', 'estado do imóvel', 'estado do imovel', 'condition']));
-    const deliveryYear = parseNumber(getFirst(getter, ['ano de entrega', 'entrega', 'delivery year', 'conclusão', 'conclusao']));
-    const parking = normalizeText(getFirst(getter, ['garagem', 'parking', 'estacionamento']));
-    const pool = normalizeText(getFirst(getter, ['piscina', 'pool']));
-    const realView = normalizeText(getFirst(getter, ['vista real', 'real view', 'vista validada']));
-    const equivalentFloorRaw = getFirst(getter, ['andar equivalente', 'piso equivalente', 'equivalent floor']);
-    const notes = normalizeText(getFirst(getter, ['observações comerciais', 'observacoes comerciais', 'observações', 'observacoes', 'notas', 'notes']));
+    const get = createHeaderGetter(raw);
+    const name = getFirst(get, ['Fração','Fracao','Nome','Unidade','Apartamento','Unit']);
+    const development = getFirst(get, ['Empreendimento','Projeto','Development','Project']);
+    const typology = normalizeTypology(getFirst(get, ['Tipologia','Tipo','Typology']));
+    const floorRaw = getFirst(get, ['Piso','Andar','Floor']);
     const floorNumber = parseFloor(floorRaw);
-    const equivalentFloor = parseFloor(equivalentFloorRaw);
-    const computedFloor = Number.isFinite(equivalentFloor) ? equivalentFloor : floorNumber;
-    const computedTotalArea = Number.isFinite(totalArea) && totalArea > 0 ? totalArea : sumAreas(abp, balcony);
-    const eurosPerSqm = Number.isFinite(eurosPerSqmRaw) && eurosPerSqmRaw > 0
-      ? eurosPerSqmRaw
-      : safeDivide(price, computedTotalArea);
-    const layer = classifyCompsetLayer({ development, status, source, segment, referenceYear, updatedAt, condition });
-    const comparableWeight = resolveComparableWeight({ rawWeight: comparableWeightRaw, layer, status, segment, referenceYear, updatedAt, condition, development, view, realView });
-
+    const view = normalizeText(getFirst(get, ['Vista','View','Orientação','Orientacao']));
+    const abp = parseNumber(getFirst(get, ['ABP','Área Bruta Privativa','Area Bruta Privativa','Área Privativa','Area Privativa']));
+    const balcony = parseNumber(getFirst(get, ['Varanda/Terraço','Varanda/Terraco','Varanda','Terraço','Terraco','Balcony']));
+    const totalAreaRaw = parseNumber(getFirst(get, ['Área Total','Area Total','Total','Área','Area']));
+    const price = parseNumber(getFirst(get, ['PVP','Preço','Preco','Valor','Price']));
+    const eurosPerSqmRaw = parseNumber(getFirst(get, ['€/m²','€/m2','EUR/m2','Preço m2','Preco m2']));
+    const referenceYear = parseNumber(getFirst(get, ['Ano Referência','Ano Referencia','Ano','Reference Year']));
+    const status = normalizeText(getFirst(get, ['Status','Estado','Disponibilidade']));
+    const source = normalizeText(getFirst(get, ['Fonte','Source','Portal']));
+    const url = normalizeText(getFirst(get, ['URL','Link']));
+    const updatedAt = normalizeText(getFirst(get, ['Data de atualização','Data de atualizacao','Data atualização','Data atualizacao','Atualizado em']));
+    const notes = normalizeText(getFirst(get, ['Observações comerciais','Observacoes comerciais','Observações','Observacoes','Notas']));
+    const typeFlag = normalizeText(getFirst(get, ['Categoria','Tipo dado','Tipo de dado','Origem','Classe']));
+    const totalArea = Number.isFinite(totalAreaRaw) && totalAreaRaw > 0 ? totalAreaRaw : sumAreas(abp, balcony);
+    const eurosPerSqm = Number.isFinite(eurosPerSqmRaw) && eurosPerSqmRaw > 0 ? eurosPerSqmRaw : safeDivide(price, totalArea);
     return {
       id: `row-${index}-${slugify(name || 'item')}`,
       raw,
@@ -171,123 +121,62 @@
       view: safeString(view || 'N/D'),
       abp: positiveOrNull(abp),
       balcony: positiveOrNull(balcony),
-      totalArea: positiveOrNull(computedTotalArea),
+      totalArea: positiveOrNull(totalArea),
       price: positiveOrNull(price),
       eurosPerSqm: positiveOrNull(eurosPerSqm),
-      typeFlag,
-      status: safeString(status || ''),
-      source: safeString(source || ''),
-      url: safeString(url || ''),
-      updatedAt: safeString(updatedAt || ''),
       referenceYear: positiveOrNull(referenceYear),
-      distance: positiveOrNull(distance),
-      segment: safeString(segment || ''),
-      comparableWeight,
-      layer,
-      condition: safeString(condition || ''),
-      deliveryYear: positiveOrNull(deliveryYear),
-      parking: safeString(parking || ''),
-      pool: safeString(pool || ''),
-      realView: safeString(realView || ''),
-      equivalentFloor: Number.isFinite(equivalentFloor) ? equivalentFloor : null,
-      competitorFloorNumber: computedFloor,
-      notes: safeString(notes || ''),
+      status, source, url, updatedAt, notes, typeFlag,
       isProject: isProjectRow({ development, typeFlag, name })
     };
   }
 
-  function createHeaderGetter(row) {
-    const normalizedMap = new Map();
-    Object.keys(row).forEach((key) => {
-      normalizedMap.set(normalizeKey(key), row[key]);
-    });
-    return (candidate) => normalizedMap.get(normalizeKey(candidate));
-  }
-
-  function getFirst(getter, candidates) {
-    for (const candidate of candidates) {
-      const value = getter(candidate);
-      if (value !== undefined && value !== null && String(value).trim() !== '') return value;
-    }
-    return '';
-  }
-
   function splitDataset(rows) {
-    const explicitProjectRows = rows.filter((row) => row.isProject);
-    const explicitCompetitors = rows.filter((row) => !row.isProject);
-
-    if (explicitProjectRows.length) {
-      state.fractions = explicitProjectRows;
-      state.competitors = explicitCompetitors;
+    const projectRows = rows.filter((row) => row.isProject || normalizeKey(row.development).includes(normalizeKey(PROJECT_NAME)));
+    if (projectRows.length) {
+      const projectIds = new Set(projectRows.map((row) => row.id));
+      state.fractions = projectRows;
+      state.competitors = rows.filter((row) => !projectIds.has(row.id));
       return;
     }
-
-    const groupedByDevelopment = groupBy(rows, (row) => normalizeKey(row.development || 'sem empreendimento'));
-    let projectKey = '';
-    let maxCount = -1;
-    groupedByDevelopment.forEach((items, key) => {
-      if (items.length > maxCount && key !== 'semempreendimento') {
-        projectKey = key;
-        maxCount = items.length;
-      }
-    });
-
-    state.fractions = rows.filter((row) => normalizeKey(row.development || 'sem empreendimento') === projectKey);
-    state.competitors = rows.filter((row) => normalizeKey(row.development || 'sem empreendimento') !== projectKey);
+    const grouped = groupBy(rows, (row) => normalizeKey(row.development || 'sem empreendimento'));
+    let projectKey = '', max = -1;
+    grouped.forEach((items, key) => { if (key !== 'semempreendimento' && items.length > max) { max = items.length; projectKey = key; } });
+    state.fractions = rows.filter((row) => normalizeKey(row.development || '') === projectKey);
+    state.competitors = rows.filter((row) => normalizeKey(row.development || '') !== projectKey);
   }
 
   function isProjectRow({ development, typeFlag, name }) {
     const haystack = normalizeKey(`${development || ''} ${typeFlag || ''} ${name || ''}`);
     if (haystack.includes(normalizeKey(PROJECT_NAME))) return true;
-    if (haystack.includes('fracao') || haystack.includes('fração') || haystack.includes('subject') || haystack.includes('projeto')) return true;
     if (haystack.includes('concorrente') || haystack.includes('competitor') || haystack.includes('benchmark')) return false;
+    if (haystack.includes('fracao') || haystack.includes('projeto')) return true;
     return false;
   }
 
   function populateFilters() {
-    setSelectOptions(el.floorFilter, uniqueSorted(state.fractions.map((f) => f.floorNumber)), 'Todos', (value) => String(value));
-    setSelectOptions(el.viewFilter, uniqueSorted(state.fractions.map((f) => f.view)), 'Todas', (value) => value);
-    setSelectOptions(el.fractionFilter, uniqueSorted(state.fractions.map((f) => f.name)), 'Todas', (value) => value);
-    setSelectOptions(el.developmentFilter, uniqueSorted(state.competitors.map((c) => c.development || 'Sem empreendimento')), 'Todos', (value) => value);
+    setSelectOptions(el.floorFilter, uniqueSorted(state.fractions.map((f) => f.floorNumber)), 'Todos', String);
+    setSelectOptions(el.viewFilter, uniqueSorted(state.fractions.map((f) => f.view)), 'Todas', String);
+    setSelectOptions(el.fractionFilter, uniqueSorted(state.fractions.map((f) => f.name)), 'Todas', String);
+    setSelectOptions(el.developmentFilter, uniqueSorted(state.competitors.map((c) => c.development || 'Sem empreendimento')), 'Todos', String);
   }
 
   function setSelectOptions(select, values, allLabel, labelMapper) {
-    select.replaceChildren();
-    const all = document.createElement('option');
-    all.value = 'all';
-    all.textContent = allLabel;
-    select.appendChild(all);
-
-    values.forEach((value) => {
-      const option = document.createElement('option');
-      option.value = String(value);
-      option.textContent = labelMapper(value);
-      select.appendChild(option);
-    });
+    select.replaceChildren(createOption('all', allLabel));
+    values.filter((v) => v !== null && v !== undefined && String(v).trim() !== '').forEach((value) => select.append(createOption(String(value), labelMapper(value))));
   }
 
-  function updateFilter(key, value) {
-    state.filters[key] = value;
-    applyFilters();
-    if (state.selectedFraction) {
-      const stillVisible = state.filteredFractions.find((fraction) => fraction.id === state.selectedFraction.id);
-      if (stillVisible && !el.fractionModal.classList.contains('hidden')) openFractionModal(stillVisible.id);
-    }
+  function createOption(value, label) {
+    const option = document.createElement('option');
+    option.value = value; option.textContent = label;
+    return option;
   }
 
+  function updateFilter(key, value) { state.filters[key] = value; applyFilters(); }
+  function updateSort(value) { state.sort = value || 'name-asc'; applyFilters(); }
   function resetFilters() {
     state.filters = { floor: 'all', view: 'all', fraction: 'all', development: 'all' };
     state.sort = 'name-asc';
-    el.floorFilter.value = 'all';
-    el.viewFilter.value = 'all';
-    el.fractionFilter.value = 'all';
-    el.developmentFilter.value = 'all';
-    if (el.sortFilter) el.sortFilter.value = state.sort;
-    applyFilters();
-  }
-
-  function updateSort(value) {
-    state.sort = value || 'name-asc';
+    el.floorFilter.value = 'all'; el.viewFilter.value = 'all'; el.fractionFilter.value = 'all'; el.developmentFilter.value = 'all'; el.sortFilter.value = 'name-asc';
     applyFilters();
   }
 
@@ -298,503 +187,307 @@
       const fractionMatch = state.filters.fraction === 'all' || fraction.name === state.filters.fraction;
       return floorMatch && viewMatch && fractionMatch;
     });
-
-    state.filteredCompetitors = state.competitors.filter((competitor) => {
-      const development = competitor.development || 'Sem empreendimento';
-      return state.filters.development === 'all' || development === state.filters.development;
-    });
-
+    state.filteredCompetitors = state.competitors.filter((competitor) => state.filters.development === 'all' || (competitor.development || 'Sem empreendimento') === state.filters.development);
     state.filteredFractions = sortFractions(state.filteredFractions, state.sort);
-
-    renderKpis();
-    renderExecutiveSummary();
-    renderCards();
+    renderAll();
   }
 
-  function sortFractions(items, sortKey) {
-    const sorted = [...items];
-    const byNumber = (getter, direction = 1) => sorted.sort((a, b) => ((getter(a) ?? -Infinity) - (getter(b) ?? -Infinity)) * direction);
-    const byText = (getter, direction = 1) => sorted.sort((a, b) => String(getter(a) || '').localeCompare(String(getter(b) || ''), 'pt', { numeric: true, sensitivity: 'base' }) * direction);
-
-    if (sortKey === 'price-asc') return byNumber((item) => item.price, 1);
-    if (sortKey === 'price-desc') return byNumber((item) => item.price, -1);
-    if (sortKey === 'sqm-asc') return byNumber((item) => item.eurosPerSqm, 1);
-    if (sortKey === 'sqm-desc') return byNumber((item) => item.eurosPerSqm, -1);
-    if (sortKey === 'area-asc') return byNumber((item) => item.totalArea, 1);
-    if (sortKey === 'area-desc') return byNumber((item) => item.totalArea, -1);
-    if (sortKey === 'floor-asc') return byNumber((item) => item.floorNumber, 1);
-    if (sortKey === 'floor-desc') return byNumber((item) => item.floorNumber, -1);
-    if (sortKey === 'typology-asc') return byText((item) => item.typology, 1);
-    return byText((item) => item.name, 1);
+  function renderAll() {
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage();
   }
 
   function renderKpis() {
-    const medianSqm = median(state.filteredCompetitors.map((item) => item.eurosPerSqm).filter(Number.isFinite));
-    el.kpiGrid.replaceChildren(
-      createKpi('Frações', state.filteredFractions.length),
-      createKpi('Concorrentes', state.filteredCompetitors.length),
-      createKpi('Mediana €/m²', formatCurrency(medianSqm, 0)),
-      createKpi('Confiança média', getAverageConfidenceLabel())
+    const competitorMedian = median(state.filteredCompetitors.map((c) => c.eurosPerSqm).filter(Number.isFinite));
+    const weightedCompetitorMedian = weightedMedian(state.filteredCompetitors.map((c) => ({ value: c.eurosPerSqm, weight: getBaseMarketWeight(c) })));
+    replace(el.kpiGrid,
+      kpi('Frações', state.filteredFractions.length, 'The View filtrado'),
+      kpi('Concorrentes', state.filteredCompetitors.length, 'Compset filtrado'),
+      kpi('Mediana ponderada', formatCurrency(weightedCompetitorMedian, 0) + '/m²', `Simples: ${formatCurrency(competitorMedian, 0)}/m²`)
     );
-  }
-
-  function createKpi(label, value) {
-    const card = document.createElement('article');
-    card.className = 'kpi-card';
-    const span = document.createElement('span');
-    span.textContent = label;
-    const strong = document.createElement('strong');
-    strong.textContent = String(value ?? '—');
-    card.append(span, strong);
-    return card;
-  }
-
-  function getAverageConfidenceLabel() {
-    if (!state.filteredFractions.length) return '—';
-    const scores = state.filteredFractions.map((fraction) => getConfidence(getCompetitorSets(fraction, state.filteredCompetitors)).score);
-    const avg = scores.reduce((acc, value) => acc + value, 0) / scores.length;
-    if (avg >= 3) return 'Alta';
-    if (avg >= 2) return 'Média';
-    if (avg >= 1) return 'Baixa';
-    return 'Sem dados';
   }
 
   function renderExecutiveSummary() {
-    if (!el.executiveSummary) return;
-    el.executiveSummary.replaceChildren();
-
-    const projectMedian = median(state.filteredFractions.map((item) => item.eurosPerSqm).filter(Number.isFinite));
-    const competitorMedian = median(state.filteredCompetitors.map((item) => item.eurosPerSqm).filter(Number.isFinite));
-    const premium = projectMedian && competitorMedian ? ((projectMedian - competitorMedian) / competitorMedian) * 100 : null;
-    const marketPosition = Number.isFinite(premium) ? (premium >= 0 ? `Premium médio de ${formatNumber(Math.abs(premium), 1)}%` : `Desconto médio de ${formatNumber(Math.abs(premium), 1)}%`) : 'Sem benchmark suficiente';
-
-    let above = 0;
-    let below = 0;
-    state.filteredFractions.forEach((fraction) => {
-      const ai = calculateAIPrice(fraction, getCompetitorSets(fraction, state.filteredCompetitors), { eurosPerSqm: null }, { eurosPerSqm: null });
-      if (!Number.isFinite(ai.eurosPerSqm) || !Number.isFinite(fraction.eurosPerSqm)) return;
-      if (fraction.eurosPerSqm > ai.eurosPerSqm) above += 1;
-      if (fraction.eurosPerSqm < ai.eurosPerSqm) below += 1;
-    });
-
-    const layerCounts = getLayerCounts(state.filteredCompetitors);
-    const weightedCompetitorMedian = weightedMedianFromItems(state.filteredCompetitors, 'eurosPerSqm');
-
-    el.executiveSummary.append(
-      createSummaryCard('Preço médio The View', formatCurrency(projectMedian, 0) + ' /m²', 'Mediana das frações visíveis.'),
-      createSummaryCard('Mediana concorrência', formatCurrency(competitorMedian, 0) + ' /m²', 'Mediana simples dos concorrentes filtrados.'),
-      createSummaryCard('Mediana ponderada', formatCurrency(weightedCompetitorMedian, 0) + ' /m²', 'Aplica camada A/B/C, frescura, status e peso comparável.'),
-      createSummaryCard('Posicionamento', marketPosition, 'Comparação entre The View e benchmark filtrado.'),
-      createSummaryCard('Acima / abaixo do mercado', `${above} / ${below}`, 'Comparado contra o preço IA heurístico de cada fração.'),
-      createSummaryCard('Compset A/B/C', `${layerCounts.a}/${layerCounts.b}/${layerCounts.c}`, 'A = premium ativo, B = benchmark local, C = histórico/secundário.')
+    const tvMedian = median(state.filteredFractions.map((f) => f.eurosPerSqm).filter(Number.isFinite));
+    const compWeighted = weightedMedian(state.filteredCompetitors.map((c) => ({ value: c.eurosPerSqm, weight: getBaseMarketWeight(c) })));
+    const gaps = state.filteredFractions.map((f) => {
+      const ideal = calculateIdealMarketPrice(f, state.filteredCompetitors);
+      return ideal.price && f.price ? ((f.price - ideal.price) / ideal.price) * 100 : null;
+    }).filter(Number.isFinite);
+    const avgGap = average(gaps);
+    const above = gaps.filter((g) => g > 2).length;
+    const below = gaps.filter((g) => g < -2).length;
+    replace(el.executiveSummary,
+      summary('€/m² The View', formatCurrency(tvMedian, 0), 'Mediana das frações filtradas'),
+      summary('€/m² mercado ponderado', formatCurrency(compWeighted, 0), 'Ano + penalização Le Parc'),
+      summary('Gap médio atual', Number.isFinite(avgGap) ? signed(formatNumber(Math.abs(avgGap), 1) + '%', avgGap) : '—', 'Vs preço ideal de mercado'),
+      summary('Acima / abaixo', `${above} / ${below}`, 'Fora de uma banda de ±2%')
     );
-  }
-
-  function createSummaryCard(label, value, helper) {
-    const card = document.createElement('article');
-    card.className = 'summary-card';
-    card.append(createTextElement('span', '', label), createTextElement('strong', '', value), createTextElement('small', '', helper));
-    return card;
   }
 
   function renderCards() {
-    el.cardsGrid.replaceChildren();
     el.resultCount.textContent = `${state.filteredFractions.length} fração${state.filteredFractions.length === 1 ? '' : 'ões'} visível${state.filteredFractions.length === 1 ? '' : 'eis'}`;
-
-    if (!state.filteredFractions.length) {
-      const empty = document.createElement('div');
-      empty.className = 'empty-state';
-      empty.textContent = 'Nenhuma fração corresponde aos filtros atuais.';
-      el.cardsGrid.appendChild(empty);
-      return;
-    }
-
-    state.filteredFractions.forEach((fraction) => {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'fraction-card';
-      card.addEventListener('click', () => openFractionModal(fraction.id));
-
-      const top = document.createElement('div');
-      top.className = 'card-top';
-      const titleWrap = document.createElement('div');
-      titleWrap.append(createTextElement('h3', 'card-title', fraction.name));
-      titleWrap.append(createTextElement('p', 'card-subtitle', `${fraction.typology} · Piso ${formatPlain(fraction.floorNumber)} · ${fraction.view}`));
+    if (!state.filteredFractions.length) return replace(el.cardsGrid, empty('Sem frações com os filtros atuais.'));
+    const cards = state.filteredFractions.map((fraction) => {
       const sets = getCompetitorSets(fraction, state.filteredCompetitors);
-      const confidence = getConfidence(sets);
-      const badgeWrap = document.createElement('div');
-      badgeWrap.className = 'badge-stack';
-      badgeWrap.append(createTextElement('span', 'badge', fraction.development || PROJECT_NAME));
-      badgeWrap.append(createTextElement('span', `badge badge--confidence ${confidence.className}`, confidence.label));
-      top.append(titleWrap, badgeWrap);
-
-      const price = document.createElement('div');
-      price.className = 'price-line';
-      price.append(createTextElement('strong', '', formatCurrency(fraction.price, 0)));
-      price.append(createTextElement('span', '', `${formatCurrency(fraction.eurosPerSqm, 0)} /m²`));
-
-      card.append(top, price, createMetricsGrid([
-        ['ABP', formatArea(fraction.abp)],
-        ['Varanda', formatArea(fraction.balcony)],
-        ['Área total', formatArea(fraction.totalArea)],
-        ['Vista', fraction.view]
-      ]));
-
-      el.cardsGrid.appendChild(card);
+      const ideal = calculateIdealMarketPrice(fraction, state.filteredCompetitors);
+      const gap = ideal.price ? ((fraction.price - ideal.price) / ideal.price) * 100 : null;
+      const card = h('article', { className: 'fraction-card', attrs: { tabindex: '0', role: 'button' } });
+      card.addEventListener('click', () => openFractionModal(fraction.id));
+      card.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') openFractionModal(fraction.id); });
+      card.append(
+        div('card-top', [div('card-name', fraction.name), div('card-price', formatCurrency(fraction.price, 0))]),
+        div('card-grid', [
+          metric('Piso', fraction.floorLabel), metric('Vista', fraction.view), metric('ABP', formatArea(fraction.abp)), metric('Varanda', formatArea(fraction.balcony)), metric('Área Total', formatArea(fraction.totalArea)), metric('€/m²', formatCurrency(fraction.eurosPerSqm, 0))
+        ]),
+        div('badge-row', [badge(`Diretos ${sets.direct.length}`, 'ok'), badge(`Indiretos ${sets.indirect.length}`, 'warn'), badge(Number.isFinite(gap) ? `Gap ${signed(formatNumber(Math.abs(gap),1)+'%', gap)}` : 'Sem preço ideal', Number.isFinite(gap) && gap > 3 ? 'danger' : 'ok')])
+      );
+      return card;
     });
+    replace(el.cardsGrid, ...cards);
+  }
+
+  function renderMarketPage() {
+    const byDev = groupBy(state.filteredCompetitors, (c) => c.development || 'Sem empreendimento');
+    const leParcCount = state.filteredCompetitors.filter(isLeParc).length;
+    const oldCount = state.filteredCompetitors.filter((c) => getYear(c) <= 2024).length;
+    const avgBaseWeight = average(state.filteredCompetitors.map(getBaseMarketWeight).filter(Number.isFinite));
+    replace(el.marketSummary,
+      summary('Empreendimentos', byDev.size, 'Concorrentes únicos'),
+      summary('Dados 2024 ou anteriores', oldCount, 'Peso reduzido por ano'),
+      summary('Le Parc', leParcCount, 'Multiplicador específico 0,60'),
+      summary('Peso médio base', formatNumber(avgBaseWeight, 2), 'Ano × empreendimento')
+    );
+    el.marketCount.textContent = `${state.filteredCompetitors.length} concorrente${state.filteredCompetitors.length === 1 ? '' : 's'}`;
+    const rows = sortCompetitors([...state.filteredCompetitors]);
+    renderTable(el.marketTable, ['Empreendimento','Fração','Tipologia','Piso','Vista','Ano','€/m²','Peso ano','Peso emp.','Peso base','Motivo'], rows.map((c) => [
+      c.development || '—', c.name, c.typology, c.floorLabel, c.view, getYear(c) || '—', formatCurrency(c.eurosPerSqm,0), formatNumber(getYearWeight(c),2), formatNumber(getDevelopmentWeight(c),2), formatNumber(getBaseMarketWeight(c),2), getWeightReason(c)
+    ]));
+  }
+
+  function renderIdealPage() {
+    const analyses = state.filteredFractions.map((fraction) => analyzeFractionIdeal(fraction));
+    const avgGap = average(analyses.map((a) => a.gapPct).filter(Number.isFinite));
+    const incoherent = analyses.filter((a) => a.alertLevel === 'danger' || a.alertLevel === 'warn').length;
+    const upside = analyses.filter((a) => Number.isFinite(a.gapPct) && a.gapPct < -2).length;
+    const downside = analyses.filter((a) => Number.isFinite(a.gapPct) && a.gapPct > 2).length;
+    replace(el.idealSummary,
+      summary('Gap médio', Number.isFinite(avgGap) ? signed(formatNumber(Math.abs(avgGap),1)+'%', avgGap) : '—', 'Preço atual vs ideal coerente'),
+      summary('Potencial subida', upside, 'Frações abaixo do ideal'),
+      summary('Risco sobrepreço', downside, 'Frações acima do ideal'),
+      summary('Alertas internos', incoherent, 'Hierarquia preço/qualidade')
+    );
+    el.idealCount.textContent = `${analyses.length} fração${analyses.length === 1 ? '' : 'ões'} analisada${analyses.length === 1 ? '' : 's'}`;
+    renderTable(el.idealTable, ['Fração','Tipologia','Piso','Vista','Score','Preço atual','Ideal mercado','Ideal coerente','Gap','Alerta'], analyses.map((a) => [
+      a.fraction.name, a.fraction.typology, a.fraction.floorLabel, a.fraction.view, formatNumber(a.score,0), formatCurrency(a.fraction.price,0), formatCurrency(a.marketPrice,0), formatCurrency(a.coherentPrice,0), Number.isFinite(a.gapPct) ? signed(formatNumber(Math.abs(a.gapPct),1)+'%', a.gapPct) : '—', a.alert
+    ]));
   }
 
   function openFractionModal(fractionId) {
-    const fraction = state.fractions.find((item) => item.id === fractionId);
+    const fraction = state.fractions.find((f) => f.id === fractionId);
     if (!fraction) return;
     state.selectedFraction = fraction;
-
-    const competitorSets = getCompetitorSets(fraction, state.filteredCompetitors);
-    const fallback = calculateFallbackPrice(fraction, competitorSets);
-    const rigorous = calculateRigorousPrice(fraction, competitorSets);
-    const ai = calculateAIPrice(fraction, competitorSets, fallback, rigorous);
-    const confidence = getConfidence(competitorSets);
-
-    el.fractionModalContent.replaceChildren();
-    el.fractionModalContent.append(
-      renderFractionHeader(fraction, confidence),
-      renderSampleAlert(competitorSets),
-      renderPricingSection(fallback, rigorous, ai),
-      renderAccordionSection(fraction, competitorSets)
+    const sets = getCompetitorSets(fraction, state.filteredCompetitors);
+    const fallback = calculateFallbackPrice(fraction, sets);
+    const rigorous = calculateRigorousPrice(fraction, sets);
+    const ai = calculateAIPrice(fraction, sets);
+    replace(el.fractionModalContent,
+      h('h2', { className: 'modal-title', text: fraction.name }),
+      h('p', { className: 'modal-subtitle', text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` }),
+      div('summary-grid', [summary('Preço atual', formatCurrency(fraction.price,0), `${formatCurrency(fraction.eurosPerSqm,0)}/m²`), summary('ABP', formatArea(fraction.abp), `Varanda ${formatArea(fraction.balcony)}`), summary('Área total', formatArea(fraction.totalArea), 'Base para €/m²'), summary('Confiança', getConfidence(sets).label, getConfidence(sets).reason)]),
+      div('price-grid', [priceCard('Preço Fallback', fallback), priceCard('Preço Rigoroso', rigorous), priceCard('Preço IA', ai)]),
+      sampleAlert(sets),
+      accordionSection('Diretos', sets.direct, fraction, 'same'),
+      accordionSection('Indiretos', sets.indirect, fraction, 'same'),
+      accordionSection('Pouco concorrente', sets.weak, fraction, 'same')
     );
-
     el.fractionModal.classList.remove('hidden');
-    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
   }
 
-  function renderFractionHeader(fraction, confidence) {
-    const fragment = document.createDocumentFragment();
-    fragment.append(createTextElement('p', 'eyebrow', 'Fração selecionada'));
-    const title = createTextElement('h2', 'modal-title', fraction.name);
-    title.id = 'modalTitle';
-    fragment.append(title);
-    fragment.append(createTextElement('div', 'modal-price', formatCurrency(fraction.price, 0)));
-    fragment.append(createTextElement('div', `confidence-pill ${confidence.className}`, `Confiança do preço recomendado: ${confidence.label} — ${confidence.reason}`));
-    fragment.append(createModalMetrics([
-      ['Piso', formatPlain(fraction.floorNumber)],
-      ['Vista', fraction.view],
-      ['ABP', formatArea(fraction.abp)],
-      ['Varanda', formatArea(fraction.balcony)],
-      ['Área total', formatArea(fraction.totalArea)],
-      ['€/m²', `${formatCurrency(fraction.eurosPerSqm, 0)} /m²`],
-      ['Tipologia', fraction.typology],
-      ['Empreendimento', fraction.development || PROJECT_NAME]
-    ]));
-    return fragment;
-  }
-
-  function renderSampleAlert(sets) {
-    const total = sets.direct.length + sets.indirect.length + sets.weak.length;
-    const box = document.createElement('div');
-    box.className = total < 3 ? 'sample-alert sample-alert--warning' : 'sample-alert';
-    const message = total < 3
-      ? `Amostra limitada: apenas ${total} concorrente${total === 1 ? '' : 's'} usado${total === 1 ? '' : 's'} com os filtros atuais.`
-      : `Amostra competitiva: ${total} concorrentes elegíveis com os filtros atuais.`;
-    box.textContent = message;
-    return box;
-  }
-
-  function renderPricingSection(fallback, rigorous, ai) {
-    const section = document.createElement('section');
-    section.setAttribute('aria-label', 'Preços recomendados');
-    section.append(createTextElement('p', 'eyebrow', 'Preços recomendados'));
-
-    const grid = document.createElement('div');
-    grid.className = 'pricing-grid';
-    grid.append(
-      createPricingCard('Preço Fallback', fallback, false),
-      createPricingCard('Preço Rigoroso', rigorous, false),
-      createPricingCard('Preço IA', ai, true)
-    );
-    section.appendChild(grid);
-    return section;
-  }
-
-  function createPricingCard(title, result, hero) {
-    const card = document.createElement('article');
-    card.className = `pricing-card${hero ? ' pricing-card--hero' : ''}`;
-    card.append(createTextElement('span', '', title));
-    if (result.category) card.append(createTextElement('em', 'pricing-origin', `Base: ${result.category}`));
-    card.append(createTextElement('strong', '', result.price ? formatCurrency(result.price, 0) : 'Sem dados'));
-    card.append(createTextElement('span', '', result.eurosPerSqm ? `${formatCurrency(result.eurosPerSqm, 0)} /m²` : '€/m² indisponível'));
-
-    const list = document.createElement('ul');
-    list.className = 'explanation';
-    result.explanation.forEach((item) => list.appendChild(createTextElement('li', '', item)));
-    card.appendChild(list);
+  function priceCard(title, model) {
+    const card = div('price-card');
+    card.append(h('span', { text: title }), h('strong', { text: model.price ? formatCurrency(model.price,0) : '—' }), h('small', { text: model.eurosPerSqm ? `${formatCurrency(model.eurosPerSqm,0)}/m² · ${model.category}` : model.category }));
+    const ul = h('ul', { className: 'explanation' });
+    model.explanation.forEach((text) => ul.append(h('li', { text })));
+    card.append(ul);
     return card;
   }
 
-  function renderAccordionSection(fraction, sets) {
-    const section = document.createElement('section');
-    section.className = 'accordion';
-    section.setAttribute('aria-label', 'Concorrentes por categoria');
-
-    const strategic = getStrategicExpandedSet(fraction, state.filteredCompetitors, sets);
-    section.append(
-      createAccordionItem('Diretos', 'Mesma tipologia, piso e vista', sets.direct, fraction, true),
-      createAccordionItem('Indiretos', 'Mesma tipologia e piso', sets.indirect, fraction, false),
-      createAccordionItem('Pouco concorrente', 'Mesma tipologia e piso ±1', sets.weak, fraction, false),
-      createAccordionItem('Compset expandido', 'Equivalência comercial; não altera a lógica oficial', strategic, fraction, false)
-    );
-    return section;
+  function sampleAlert(sets) {
+    const total = sets.direct.length + sets.indirect.length + sets.weak.length;
+    const cls = total < 3 ? 'badge danger' : total < 6 ? 'badge warn' : 'badge ok';
+    return div('badge-row', [h('span', { className: cls, text: total < 3 ? `Amostra limitada: ${total} concorrente(s)` : `Amostra disponível: ${total} concorrente(s)` })]);
   }
 
-  function createAccordionItem(title, subtitle, competitors, fraction, open) {
-    const item = document.createElement('article');
-    item.className = `accordion-item${open ? ' is-open' : ''}`;
-
-    const button = document.createElement('button');
-    button.className = 'accordion-button';
-    button.type = 'button';
-    button.setAttribute('aria-expanded', String(open));
-
-    const label = document.createElement('div');
-    label.append(createTextElement('strong', '', `${title} · ${competitors.length}`));
-    label.append(createTextElement('span', '', subtitle));
-    button.append(label, createTextElement('span', 'chevron', '⌄'));
-    button.addEventListener('click', () => {
-      const isOpen = item.classList.toggle('is-open');
-      button.setAttribute('aria-expanded', String(isOpen));
-    });
-
-    const panel = document.createElement('div');
-    panel.className = 'accordion-panel';
-
-    if (!competitors.length) {
-      panel.append(createTextElement('div', 'empty-state', 'Sem concorrentes nesta categoria com os filtros atuais.'));
-    } else {
-      const list = document.createElement('div');
-      list.className = 'competitor-list';
-      competitors.forEach((competitor) => list.appendChild(createCompetitorRow(competitor, fraction)));
-      panel.appendChild(list);
-    }
-
-    item.append(button, panel);
-    return item;
+  function accordionSection(title, items, fraction) {
+    const wrapper = div('accordion');
+    const button = h('button', { className: 'accordion-button', text: `${title} · ${items.length}` });
+    const panel = div('accordion-panel');
+    button.addEventListener('click', () => wrapper.classList.toggle('open'));
+    if (!items.length) panel.append(empty('Sem concorrentes nesta categoria com os filtros atuais.'));
+    items.forEach((item) => panel.append(competitorButton(item, fraction)));
+    wrapper.append(button, panel);
+    return wrapper;
   }
 
-  function createCompetitorRow(competitor, fraction) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'competitor-row';
-    button.addEventListener('click', (event) => {
-      event.stopPropagation();
-      openCompetitorModal(competitor, fraction);
-    });
-
-    const left = document.createElement('div');
-    left.append(createTextElement('strong', '', competitor.name));
-    left.append(createTextElement('small', '', `${competitor.development || 'Sem empreendimento'} · ${competitor.typology} · Piso ${formatPlain(getComparableFloor(competitor))} · ${competitor.realView || competitor.view}`));
-    const weightLabel = competitor.isStrategicExpanded
-      ? `${competitor.layer || 'Benchmark'} · peso estratégico ${formatNumber(getComparableWeight(competitor), 2)} · base ${formatNumber(getBaseComparableWeight(competitor), 2)}${competitor.status ? ` · ${competitor.status}` : ''}`
-      : `${competitor.layer || 'Benchmark'} · peso ${formatNumber(getComparableWeight(competitor), 2)}${competitor.status ? ` · ${competitor.status}` : ''}`;
-    left.append(createTextElement('small', '', weightLabel));
-
-    const right = document.createElement('div');
-    right.append(createTextElement('strong', '', formatCurrency(competitor.price, 0)));
-    right.append(createTextElement('small', '', `${formatCurrency(competitor.eurosPerSqm, 0)} /m²`));
-
-    button.append(left, right);
-    return button;
+  function competitorButton(competitor, fraction) {
+    const btn = h('button', { className: 'competitor-row' });
+    const base = getBaseMarketWeight(competitor);
+    btn.append(div('', [h('strong', { text: competitor.name }), h('small', { text: `${competitor.development || '—'} · ${competitor.typology} · Piso ${competitor.floorLabel} · ${competitor.view}` })]), div('', [h('strong', { text: formatCurrency(competitor.price,0) }), h('small', { text: `${formatCurrency(competitor.eurosPerSqm,0)}/m² · peso base ${formatNumber(base,2)}` })]));
+    btn.addEventListener('click', () => openCompetitorModal(competitor, fraction));
+    return btn;
   }
 
   function openCompetitorModal(competitor, fraction) {
-    const comparison = compareCompetitor(competitor, fraction);
-    el.competitorModalContent.replaceChildren();
-
-    const title = createTextElement('h3', 'modal-title', competitor.name);
-    title.id = 'competitorModalTitle';
-
-    el.competitorModalContent.append(
-      createTextElement('p', 'eyebrow', 'Concorrente'),
-      title,
-      createTextElement('div', 'modal-price', formatCurrency(competitor.price, 0)),
-      createModalMetrics([
-        ['Empreendimento', competitor.development || 'Sem empreendimento'],
-        ['ABP', formatArea(competitor.abp)],
-        ['Varanda', formatArea(competitor.balcony)],
-        ['Área total', formatArea(competitor.totalArea)],
-        ['€/m²', `${formatCurrency(competitor.eurosPerSqm, 0)} /m²`],
-        ['Piso', formatPlain(getComparableFloor(competitor))],
-        ['Camada compset', competitor.layer || 'Benchmark'],
-        [competitor.isStrategicExpanded ? 'Peso estratégico final' : 'Peso comparável', formatNumber(getComparableWeight(competitor), 2)],
-        ...(competitor.isStrategicExpanded ? [['Peso base', formatNumber(getBaseComparableWeight(competitor), 2)]] : []),
-        ['Status', competitor.status || 'Não indicado'],
-        ['Fonte', competitor.source || 'Não indicada'],
-        ['Atualização', competitor.updatedAt || competitor.referenceYear || 'Não indicada'],
-        ['Segmento', competitor.segment || 'Não indicado']
-      ]),
-      renderCompetitorSource(competitor),
-      createComparisonGrid(comparison)
+    const cmp = compareCompetitor(competitor, fraction);
+    replace(el.competitorModalContent,
+      h('h2', { className: 'modal-title', text: competitor.name }),
+      h('p', { className: 'modal-subtitle', text: competitor.development || 'Concorrente' }),
+      div('summary-grid', [summary('Preço', formatCurrency(competitor.price,0), `${formatCurrency(competitor.eurosPerSqm,0)}/m²`), summary('ABP', formatArea(competitor.abp), `Varanda ${formatArea(competitor.balcony)}`), summary('Área total', formatArea(competitor.totalArea), 'Comparação de área'), summary('Peso base', formatNumber(getBaseMarketWeight(competitor),2), getWeightReason(competitor))]),
+      div('price-grid', [summary('Dif. preço', signedCurrency(cmp.priceDiff), 'Concorrente vs fração'), summary('Dif. €/m²', signedCurrency(cmp.sqmDiff) + '/m²', 'Premium/desconto relativo'), summary('Dif. área', signedArea(cmp.areaDiff), cmp.premiumDiscount ? signed(formatNumber(Math.abs(cmp.premiumDiscount),1)+'%', cmp.premiumDiscount) : '—')]),
+      competitor.url ? h('a', { className: 'source-link', text: 'Abrir fonte', attrs: { href: competitor.url, target: '_blank', rel: 'noopener noreferrer' } }) : h('span', { className: 'muted small', text: 'Sem URL de fonte.' })
     );
-
     el.competitorModal.classList.remove('hidden');
-    document.body.classList.add('modal-open');
   }
 
-  function createComparisonGrid(comparison) {
-    const grid = document.createElement('div');
-    grid.className = 'comparison-grid';
-    grid.append(
-      createDelta(comparison.priceDiff > 0 ? 'Mais caro' : comparison.priceDiff < 0 ? 'Mais barato' : 'Mesmo preço', comparison.priceDiff, 'currency'),
-      createDelta(comparison.sqmDiff > 0 ? '€/m² superior' : comparison.sqmDiff < 0 ? '€/m² inferior' : 'Mesmo €/m²', comparison.sqmDiff, 'currencySqm'),
-      createDelta(comparison.areaDiff > 0 ? 'Maior área' : comparison.areaDiff < 0 ? 'Menor área' : 'Mesma área', comparison.areaDiff, 'area'),
-      createDelta(comparison.premiumDiscount > 0 ? 'Premium' : comparison.premiumDiscount < 0 ? 'Desconto' : 'Neutro', comparison.premiumDiscount, 'percent')
-    );
-    return grid;
-  }
-
-  function createDelta(label, value, type) {
-    const card = document.createElement('article');
-    card.className = `delta ${value >= 0 ? 'is-positive' : 'is-negative'}`;
-    card.append(createTextElement('span', '', label));
-
-    let formatted = '—';
-    if (Number.isFinite(value)) {
-      if (type === 'currency') formatted = signed(formatCurrency(Math.abs(value), 0), value);
-      if (type === 'currencySqm') formatted = signed(`${formatCurrency(Math.abs(value), 0)} /m²`, value);
-      if (type === 'area') formatted = signed(`${formatNumber(Math.abs(value), 1)} m²`, value);
-      if (type === 'percent') formatted = signed(`${formatNumber(Math.abs(value), 1)}%`, value);
-    }
-
-    card.append(createTextElement('strong', '', formatted));
-    return card;
-  }
-
-  function closeFractionModal() {
-    el.fractionModal.classList.add('hidden');
-    closeCompetitorModal();
-    state.selectedFraction = null;
-    document.body.classList.remove('modal-open');
-  }
-
-  function closeCompetitorModal() {
-    el.competitorModal.classList.add('hidden');
-    if (el.fractionModal.classList.contains('hidden')) document.body.classList.remove('modal-open');
-  }
+  function closeFractionModal() { el.fractionModal.classList.add('hidden'); state.selectedFraction = null; document.body.style.overflow = ''; }
+  function closeCompetitorModal() { el.competitorModal.classList.add('hidden'); }
 
   function getCompetitorSets(fraction, competitors) {
-    const sameTypology = (competitor) => normalizeKey(competitor.typology) === normalizeKey(fraction.typology);
-    const sameFloor = (competitor) => getComparableFloor(competitor) === fraction.floorNumber;
-    const sameView = (competitor) => normalizeKey(competitor.realView || competitor.view) === normalizeKey(fraction.view);
-    const floorPlusMinusOne = (competitor) => Math.abs(getComparableFloor(competitor) - fraction.floorNumber) <= 1;
-
-    const direct = competitors.filter((competitor) => sameTypology(competitor) && sameFloor(competitor) && sameView(competitor));
-    const directIds = new Set(direct.map((item) => item.id));
-
-    const indirect = competitors.filter((competitor) =>
-      sameTypology(competitor) && sameFloor(competitor) && !directIds.has(competitor.id)
-    );
-    const indirectIds = new Set(indirect.map((item) => item.id));
-
-    const weak = competitors.filter((competitor) =>
-      sameTypology(competitor) && floorPlusMinusOne(competitor) && !directIds.has(competitor.id) && !indirectIds.has(competitor.id)
-    );
-
+    const sameTypology = (c) => normalizeKey(c.typology) === normalizeKey(fraction.typology);
+    const sameFloor = (c) => c.floorNumber === fraction.floorNumber;
+    const sameView = (c) => normalizeKey(c.view) === normalizeKey(fraction.view);
+    const direct = competitors.filter((c) => sameTypology(c) && sameFloor(c) && sameView(c));
+    const directIds = new Set(direct.map((c) => c.id));
+    const indirect = competitors.filter((c) => !directIds.has(c.id) && sameTypology(c) && sameFloor(c));
+    const used = new Set([...direct, ...indirect].map((c) => c.id));
+    const weak = competitors.filter((c) => !used.has(c.id) && sameTypology(c) && Math.abs(c.floorNumber - fraction.floorNumber) <= 1);
     return { direct, indirect, weak };
+  }
+
+  function calculateFallbackPrice(fraction, sets) {
+    const category = sets.direct.length ? 'Diretos' : sets.indirect.length ? 'Indiretos' : sets.weak.length ? 'Pouco concorrente' : 'Sem dados';
+    const items = sets.direct.length ? sets.direct : sets.indirect.length ? sets.indirect : sets.weak;
+    const categoryKey = category === 'Diretos' ? 'direct' : category === 'Indiretos' ? 'indirect' : 'weak';
+    const sqm = weightedMedian(items.map((item) => ({ value: item.eurosPerSqm, weight: getFinalWeight(item, categoryKey) })));
+    const price = sqm && fraction.totalArea ? sqm * fraction.totalArea : null;
+    return { price, eurosPerSqm: sqm, category, explanation: price ? [`Origem: apenas ${category}; nunca mistura categorias.`, `Concorrentes usados: ${items.length}.`, `€/m² ponderado: ${formatCurrency(sqm,0)}/m².`, 'Pesos: categoria × ano × empreendimento; Le Parc e dados antigos têm menos influência.'] : ['Sem concorrentes elegíveis para fallback.'] };
+  }
+
+  function calculateRigorousPrice(fraction, sets) {
+    const labeled = [...sets.direct.map((i) => ({ item: i, category: 'direct' })), ...sets.indirect.map((i) => ({ item: i, category: 'indirect' })), ...sets.weak.map((i) => ({ item: i, category: 'weak' }))];
+    const valid = labeled.filter(({ item }) => Number.isFinite(item.eurosPerSqm));
+    const clean = removeExtremes(valid, ({ item }) => item.eurosPerSqm);
+    const sqm = weightedMedian(clean.map(({ item, category }) => ({ value: item.eurosPerSqm, weight: getFinalWeight(item, category) })));
+    const price = sqm && fraction.totalArea ? sqm * fraction.totalArea : null;
+    return { price, eurosPerSqm: sqm, category: clean.length ? 'Oficial ponderado' : 'Sem dados', explanation: price ? [`Usa mediana ponderada com maior peso para diretos.`, `Remoção de extremos: ${valid.length - clean.length} removido(s).`, `Amostra final: ${clean.length} concorrente(s).`, `Penalização aplicada por ano e por Le Parc quando relevante.`] : ['Sem dados suficientes para o modelo rigoroso.'] };
+  }
+
+  function calculateAIPrice(fraction, sets) {
+    const rigorous = calculateRigorousPrice(fraction, sets);
+    if (!rigorous.eurosPerSqm) return { price: null, eurosPerSqm: null, category: 'Sem dados', explanation: ['Sem base suficiente para cálculo IA.'] };
+    const viewAdj = getViewAdjustment(fraction.view);
+    const floorAdj = getFloorAdjustment(fraction.floorNumber);
+    const sampleCount = sets.direct.length + sets.indirect.length + sets.weak.length;
+    const sampleAdj = sampleCount < 3 ? -0.03 : sampleCount >= 8 ? 0.015 : 0;
+    const finalSqm = rigorous.eurosPerSqm * (1 + viewAdj + floorAdj + sampleAdj);
+    const price = fraction.totalArea ? finalSqm * fraction.totalArea : null;
+    const gap = price && fraction.price ? ((price - fraction.price) / fraction.price) * 100 : null;
+    return { price, eurosPerSqm: finalSqm, category: 'IA heurística', explanation: [`Base: modelo rigoroso ponderado.`, `Ajustes: vista ${formatPercent(viewAdj)}, piso ${formatPercent(floorAdj)}, amostra ${formatPercent(sampleAdj)}.`, `Recalcula automaticamente com filtros.`, `Premium/desconto sugerido vs preço atual: ${Number.isFinite(gap) ? signed(formatNumber(Math.abs(gap),1)+'%', gap) : '—'}.`] };
+  }
+
+  function calculateIdealMarketPrice(fraction, competitors) {
+    const sets = getCompetitorSets(fraction, competitors);
+    return calculateAIPrice(fraction, sets);
+  }
+
+  function analyzeFractionIdeal(fraction) {
+    const market = calculateIdealMarketPrice(fraction, state.filteredCompetitors);
+    const score = getInternalScore(fraction);
+    const sameType = state.fractions.filter((f) => normalizeKey(f.typology) === normalizeKey(fraction.typology));
+    const medianCurrentSqm = median(sameType.map((f) => f.eurosPerSqm).filter(Number.isFinite)) || fraction.eurosPerSqm;
+    const medianScore = median(sameType.map(getInternalScore).filter(Number.isFinite)) || score;
+    const scoreDelta = medianScore ? (score - medianScore) / medianScore : 0;
+    const internalSqm = medianCurrentSqm * (1 + clamp(scoreDelta * 0.40, -0.16, 0.18));
+    const marketSqm = market.eurosPerSqm || fraction.eurosPerSqm;
+    const coherentSqm = weightedAverage([{ value: marketSqm, weight: 0.70 }, { value: internalSqm, weight: 0.30 }]);
+    const coherentPrice = coherentSqm && fraction.totalArea ? coherentSqm * fraction.totalArea : market.price;
+    const gapPct = coherentPrice && fraction.price ? ((fraction.price - coherentPrice) / coherentPrice) * 100 : null;
+    const issues = getInternalIssues(fraction);
+    let alert = 'Coerente'; let alertLevel = 'ok';
+    if (issues.length >= 2 || (Number.isFinite(gapPct) && Math.abs(gapPct) > 7)) { alert = issues[0] || (gapPct > 0 ? 'Possível sobrepreço' : 'Possível subpreço'); alertLevel = 'danger'; }
+    else if (issues.length || (Number.isFinite(gapPct) && Math.abs(gapPct) > 3)) { alert = issues[0] || 'Ajuste ligeiro'; alertLevel = 'warn'; }
+    return { fraction, marketPrice: market.price, coherentPrice, score, gapPct, alert, alertLevel };
+  }
+
+  function getInternalIssues(fraction) {
+    const issues = [];
+    const tolerance = 0.02;
+    const fScore = getInternalScore(fraction);
+    state.fractions.forEach((other) => {
+      if (other.id === fraction.id) return;
+      if (normalizeKey(other.typology) !== normalizeKey(fraction.typology)) return;
+      const oScore = getInternalScore(other);
+      if (fScore > oScore + 8 && fraction.eurosPerSqm < other.eurosPerSqm * (1 - tolerance)) issues.push('Superior mas €/m² inferior');
+      if (fScore < oScore - 8 && fraction.eurosPerSqm > other.eurosPerSqm * (1 + tolerance)) issues.push('Inferior mas €/m² superior');
+    });
+    return [...new Set(issues)].slice(0, 2);
+  }
+
+  function getInternalScore(fraction) {
+    const typologyScore = getTypologyScore(fraction.typology);
+    const floorScore = (Number(fraction.floorNumber) || 0) * 8;
+    const viewScore = getViewScore(fraction.view);
+    const areaScore = (Number(fraction.totalArea) || 0) * 0.6;
+    const balconyScore = (Number(fraction.balcony) || 0) * 0.8;
+    return typologyScore + floorScore + viewScore + areaScore + balconyScore;
+  }
+
+  function getTypologyScore(t) {
+    const raw = safeString(t).toLowerCase();
+    const simple = normalizeKey(t);
+    const match = raw.match(/t\s*(\d+)/i);
+    const n = match ? Number(match[1]) : 1;
+    let score = n * 100;
+    if (simple.includes('duplex')) score += 30;
+    if (/\+\s*1/.test(raw) || simple.includes('mais1')) score += 25;
+    return score;
+  }
+
+  function getViewScore(view) {
+    const s = normalizeKey(view);
+    if (/ria|mar|frente|waterfront|sea/.test(s)) return 42;
+    if (/lateral|parcial/.test(s)) return 24;
+    if (/jardim|piscina/.test(s)) return 15;
+    if (/cidade|urbana|rua/.test(s)) return 6;
+    return 10;
+  }
+
+  function getViewAdjustment(view) { return getViewScore(view) >= 40 ? 0.035 : getViewScore(view) >= 24 ? 0.015 : getViewScore(view) <= 6 ? -0.015 : 0; }
+  function getFloorAdjustment(floor) { const n = Number(floor) || 0; return clamp(n * 0.006, -0.01, 0.035); }
+
+  function getFinalWeight(item, category) { return getCategoryWeight(category) * getYearWeight(item) * getDevelopmentWeight(item); }
+  function getCategoryWeight(category) { return category === 'direct' ? 1 : category === 'indirect' ? 0.75 : 0.50; }
+  function getBaseMarketWeight(item) { return getYearWeight(item) * getDevelopmentWeight(item); }
+  function getYearWeight(item) { const year = getYear(item); if (!year) return 0.70; if (year >= 2026) return 1.00; if (year === 2025) return 0.85; if (year === 2024) return 0.60; return 0.40; }
+  function getDevelopmentWeight(item) { return isLeParc(item) ? 0.60 : 1.00; }
+  function isLeParc(item) { return normalizeKey(item.development).includes('leparc'); }
+  function getYear(item) { return Number(item.referenceYear) || extractYear(item.updatedAt) || null; }
+  function getWeightReason(item) {
+    const parts = [];
+    const year = getYear(item);
+    parts.push(year ? `ano ${year}: ${formatNumber(getYearWeight(item),2)}` : 'sem ano: 0,70');
+    if (isLeParc(item)) parts.push('Le Parc: 0,60');
+    else parts.push('empreendimento: 1,00');
+    return parts.join(' · ');
   }
 
   function getConfidence(sets) {
     const total = sets.direct.length + sets.indirect.length + sets.weak.length;
-    if (sets.direct.length >= 3) return { label: 'Alta', score: 3, className: 'is-high', reason: 'há 3 ou mais concorrentes diretos.' };
-    if (sets.direct.length >= 1 || sets.indirect.length >= 3) return { label: 'Média', score: 2, className: 'is-medium', reason: 'há diretos limitados ou indiretos suficientes.' };
-    if (total >= 1) return { label: 'Baixa', score: 1, className: 'is-low', reason: 'usa amostra reduzida ou pouco concorrente.' };
-    return { label: 'Sem dados', score: 0, className: 'is-none', reason: 'não há concorrentes elegíveis.' };
-  }
-
-  function calculateFallbackPrice(fraction, sets) {
-    const chosen = sets.direct.length ? sets.direct : sets.indirect.length ? sets.indirect : sets.weak;
-    const category = sets.direct.length ? 'Diretos' : sets.indirect.length ? 'Indiretos' : sets.weak.length ? 'Pouco concorrente' : 'Sem dados';
-    const sqmValues = chosen.map((item) => item.eurosPerSqm).filter(Number.isFinite);
-    const usedSqm = median(sqmValues);
-    const price = usedSqm ? usedSqm * fraction.totalArea : null;
-
-    return {
-      price,
-      eurosPerSqm: usedSqm,
-      competitors: chosen,
-      category,
-      explanation: price ? [
-        `Origem dos dados: ${category}.`,
-        `Concorrentes usados: ${chosen.length}.`,
-        `€/m² usado: mediana de ${formatCurrency(usedSqm, 0)} /m².`,
-        'Hierarquia respeitada: diretos → indiretos → pouco concorrente, sem misturar categorias.',
-        'Ajustes aplicados: sem ajuste extra; cálculo por área total da fração.'
-      ] : ['Sem concorrentes elegíveis com os filtros atuais.', 'Preço fallback indisponível sem €/m² comparável.']
-    };
-  }
-
-  function calculateRigorousPrice(fraction, sets) {
-    const weighted = [
-      ...sets.direct.map((item) => ({ ...item, _weight: 3 * getComparableWeight(item), _origin: 'Diretos' })),
-      ...sets.indirect.map((item) => ({ ...item, _weight: 2 * getComparableWeight(item), _origin: 'Indiretos' })),
-      ...sets.weak.map((item) => ({ ...item, _weight: 1 * getComparableWeight(item), _origin: 'Pouco concorrente' }))
-    ].filter((item) => Number.isFinite(item.eurosPerSqm) && item._weight > 0);
-
-    const trimmed = removeExtremes(weighted, 'eurosPerSqm');
-    const usedSqm = weightedMedian(trimmed.map((item) => ({ value: item.eurosPerSqm, weight: item._weight })));
-    const price = usedSqm ? usedSqm * fraction.totalArea : null;
-    const removedCount = weighted.length - trimmed.length;
-
-    return {
-      price,
-      eurosPerSqm: usedSqm,
-      competitors: trimmed,
-      category: weighted.length ? 'Ponderado rigoroso' : 'Sem dados',
-      explanation: price ? [
-        'Origem dos dados: concorrência elegível por tipologia/piso/vista conforme categorias originais.',
-        `Concorrentes usados após limpeza: ${trimmed.length}.`,
-        `€/m² usado: mediana ponderada de ${formatCurrency(usedSqm, 0)} /m².`,
-        `Remoção de extremos: ${removedCount} outlier${removedCount === 1 ? '' : 's'} removido${removedCount === 1 ? '' : 's'}.`,
-        'Ajustes aplicados: peso 3 para diretos, 2 para indiretos e 1 para pouco concorrente, multiplicado pela qualidade A/B/C, frescura e status.'
-      ] : ['Sem amostra suficiente para o modelo rigoroso.', 'Remoção de extremos e ponderação não aplicadas.']
-    };
-  }
-
-  function calculateAIPrice(fraction, sets, fallback, rigorous) {
-    const directMedian = weightedMedianFromItems(sets.direct, 'eurosPerSqm');
-    const indirectMedian = weightedMedianFromItems(sets.indirect, 'eurosPerSqm');
-    const weakMedian = weightedMedianFromItems(sets.weak, 'eurosPerSqm');
-    const strategic = getStrategicExpandedSet(fraction, state.filteredCompetitors, sets);
-    const strategicMedian = weightedMedianFromItems(strategic, 'eurosPerSqm');
-
-    const components = [];
-    if (directMedian) components.push({ value: directMedian, weight: 0.50, label: 'Diretos ponderados' });
-    if (indirectMedian) components.push({ value: indirectMedian, weight: 0.30, label: 'Indiretos ponderados' });
-    if (weakMedian) components.push({ value: weakMedian, weight: 0.20, label: 'Pouco concorrente ponderado' });
-    if (strategicMedian && components.length < 2) components.push({ value: strategicMedian, weight: 0.15, label: 'Compset expandido estratégico' });
-    if (!components.length && rigorous.eurosPerSqm) components.push({ value: rigorous.eurosPerSqm, weight: 1, label: 'Rigoroso' });
-    if (!components.length && fallback.eurosPerSqm) components.push({ value: fallback.eurosPerSqm, weight: 1, label: 'Fallback' });
-
-    const baseSqm = weightedAverage(components);
-    const viewAdjustment = getViewAdjustment(fraction.view);
-    const floorAdjustment = getFloorAdjustment(fraction.floorNumber);
-    const sampleAdjustment = getSampleAdjustment(sets);
-    const finalSqm = baseSqm ? baseSqm * (1 + viewAdjustment + floorAdjustment + sampleAdjustment) : null;
-    const price = finalSqm ? finalSqm * fraction.totalArea : null;
-
-    const premiumDiscount = fraction.eurosPerSqm && finalSqm ? ((finalSqm - fraction.eurosPerSqm) / fraction.eurosPerSqm) * 100 : null;
-
-    return {
-      price,
-      eurosPerSqm: finalSqm,
-      competitors: [...sets.direct, ...sets.indirect, ...sets.weak],
-      category: components.length ? components.map((c) => c.label).join(' + ') : 'Sem dados',
-      explanation: price ? [
-        `Origem dos dados: ${components.map((c) => c.label).join(', ')}.`,
-        `Concorrentes oficiais usados: ${sets.direct.length + sets.indirect.length + sets.weak.length}; expandido estratégico: ${strategic.length}.`,
-        `€/m² base ponderado: ${formatCurrency(baseSqm, 0)} /m²; final: ${formatCurrency(finalSqm, 0)} /m².`,
-        `Ajustes aplicados: vista ${formatPercent(viewAdjustment)}, piso ${formatPercent(floorAdjustment)}, robustez da amostra ${formatPercent(sampleAdjustment)}.`,
-        `Premium/desconto face ao preço atual: ${Number.isFinite(premiumDiscount) ? signed(`${formatNumber(Math.abs(premiumDiscount), 1)}%`, premiumDiscount) : '—'}.`,
-        'Modelo IA: heurístico inteligente, recalculado automaticamente pelos filtros; não é machine learning real. O compset expandido só entra com peso estratégico reduzido quando a amostra oficial é limitada.'
-      ] : ['Sem dados suficientes para calcular o preço IA.', 'O modelo IA precisa de pelo menos uma categoria elegível com €/m² válido.']
-    };
+    if (sets.direct.length >= 3) return { label: 'Alta', reason: 'há 3 ou mais concorrentes diretos.' };
+    if (sets.direct.length >= 1 || sets.indirect.length >= 3) return { label: 'Média', reason: 'há diretos limitados ou indiretos suficientes.' };
+    if (total >= 1) return { label: 'Baixa', reason: 'amostra limitada.' };
+    return { label: 'Sem dados', reason: 'sem concorrentes elegíveis.' };
   }
 
   function compareCompetitor(competitor, fraction) {
@@ -805,430 +498,94 @@
     return { priceDiff, sqmDiff, areaDiff, premiumDiscount };
   }
 
-  function removeExtremes(items, field) {
+  function removeExtremes(items, valueGetter) {
     if (items.length < 5) return [...items];
-    const values = items.map((item) => item[field]).filter(Number.isFinite).sort((a, b) => a - b);
-    const q1 = percentile(values, 0.25);
-    const q3 = percentile(values, 0.75);
-    const iqr = q3 - q1;
-    const min = q1 - 1.5 * iqr;
-    const max = q3 + 1.5 * iqr;
-    return items.filter((item) => item[field] >= min && item[field] <= max);
+    const values = items.map(valueGetter).filter(Number.isFinite).sort((a,b)=>a-b);
+    const q1 = percentile(values, 0.25); const q3 = percentile(values, 0.75); const iqr = q3 - q1;
+    const min = q1 - 1.5 * iqr; const max = q3 + 1.5 * iqr;
+    return items.filter((item) => valueGetter(item) >= min && valueGetter(item) <= max);
   }
 
-  function renderCompetitorSource(competitor) {
-    const box = document.createElement('div');
-    box.className = 'source-card';
-    const items = [];
-    if (competitor.url) items.push(['URL', competitor.url]);
-    if (competitor.notes) items.push(['Observações', competitor.notes]);
-    if (competitor.parking) items.push(['Garagem', competitor.parking]);
-    if (competitor.pool) items.push(['Piscina', competitor.pool]);
-    if (!items.length) return document.createDocumentFragment();
-    items.forEach(([label, value]) => box.append(createTextElement('p', '', `${label}: ${value}`)));
-    return box;
+  function renderTable(table, headers, rows) {
+    table.replaceChildren();
+    const thead = h('thead'); const trh = h('tr'); headers.forEach((x) => trh.append(h('th', { text: x }))); thead.append(trh);
+    const tbody = h('tbody');
+    if (!rows.length) { const tr = h('tr'); const td = h('td', { text: 'Sem dados com os filtros atuais.', attrs: { colspan: headers.length } }); tr.append(td); tbody.append(tr); }
+    rows.forEach((row) => { const tr = h('tr'); row.forEach((cell) => { const td = h('td'); if (typeof cell === 'string' && (cell.startsWith('+') || cell.startsWith('-'))) td.className = cell.startsWith('+') ? 'positive' : 'negative'; td.textContent = safeString(cell); tr.append(td); }); tbody.append(tr); });
+    table.append(thead, tbody);
   }
 
-  function getComparableFloor(item) {
-    return Number.isFinite(item.competitorFloorNumber) ? item.competitorFloorNumber : item.floorNumber;
+  function setActiveTab(tab) {
+    state.activeTab = tab;
+    el.tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    el.tabPanels.forEach((p) => p.classList.toggle('active', p.id === `tab-${tab}`));
   }
 
-  function getComparableWeight(item) {
-    if (Number.isFinite(item?.effectiveWeight) && item.effectiveWeight > 0) return item.effectiveWeight;
-    if (Number.isFinite(item?.comparableWeight) && item.comparableWeight > 0) return item.comparableWeight;
-    return deriveFallbackComparableWeight(item);
+  function sortFractions(items, sort) {
+    const arr = [...items];
+    const cmp = {
+      'name-asc': (a,b) => a.name.localeCompare(b.name, 'pt'),
+      'price-asc': (a,b) => a.price - b.price,
+      'price-desc': (a,b) => b.price - a.price,
+      'sqm-asc': (a,b) => a.eurosPerSqm - b.eurosPerSqm,
+      'sqm-desc': (a,b) => b.eurosPerSqm - a.eurosPerSqm,
+      'area-asc': (a,b) => a.totalArea - b.totalArea,
+      'area-desc': (a,b) => b.totalArea - a.totalArea,
+      'floor-asc': (a,b) => a.floorNumber - b.floorNumber,
+      'floor-desc': (a,b) => b.floorNumber - a.floorNumber
+    }[sort] || ((a,b) => a.name.localeCompare(b.name, 'pt'));
+    return arr.sort(cmp);
   }
+  function sortCompetitors(items) { return items.sort((a,b) => getBaseMarketWeight(b) - getBaseMarketWeight(a) || (b.eurosPerSqm || 0) - (a.eurosPerSqm || 0)); }
 
-  function getBaseComparableWeight(item) {
-    if (Number.isFinite(item?.baseComparableWeight) && item.baseComparableWeight > 0) return item.baseComparableWeight;
-    if (Number.isFinite(item?.comparableWeight) && item.comparableWeight > 0) return item.comparableWeight;
-    return deriveFallbackComparableWeight(item);
-  }
-
-  function deriveFallbackComparableWeight(item) {
-    if (!item) return 0.55;
-    let weight = 0.55;
-    if (String(item.layer).startsWith('A')) weight = 0.90;
-    else if (String(item.layer).startsWith('B')) weight = 0.70;
-    else if (String(item.layer).startsWith('C')) weight = 0.40;
-
-    const haystack = normalizeKey(`${item.status || ''} ${item.segment || ''} ${item.condition || ''} ${item.development || ''} ${item.view || ''} ${item.realView || ''}`);
-    const year = Number(item.referenceYear) || extractYear(item.updatedAt);
-    if (/vendido|reservado|sold|reserved|indisponivel|indisponível/.test(haystack)) weight *= 0.75;
-    if (/waterfront|marina|ria|vista|frente|premium|luxo|luxury/.test(haystack)) weight *= 1.05;
-    if (/usado|resale|revenda|antigo/.test(haystack)) weight *= 0.85;
-    if (year && year <= 2024) weight *= 0.70;
-    if (year && year >= 2025) weight *= 1.03;
-    return clamp(weight, 0.25, 1.05);
-  }
-
-  function getStrategicExpandedSet(fraction, competitors, officialSets) {
-    const officialIds = new Set([...officialSets.direct, ...officialSets.indirect, ...officialSets.weak].map((item) => item.id));
-    return competitors
-      .filter((competitor) => !officialIds.has(competitor.id))
-      .filter((competitor) => areCommercialTypologiesCompatible(fraction.typology, competitor.typology))
-      .filter((competitor) => Math.abs(getComparableFloor(competitor) - fraction.floorNumber) <= 1)
-      .map((competitor) => applyStrategicExpandedWeight(fraction, competitor))
-      .sort((a, b) => getComparableWeight(b) - getComparableWeight(a) || Math.abs(a.eurosPerSqm - fraction.eurosPerSqm) - Math.abs(b.eurosPerSqm - fraction.eurosPerSqm))
-      .slice(0, 12);
-  }
-
-  function applyStrategicExpandedWeight(fraction, competitor) {
-    const baseWeight = getBaseComparableWeight(competitor);
-    let strategicFactor = 0.55;
-
-    const floorDistance = Math.abs(getComparableFloor(competitor) - fraction.floorNumber);
-    if (floorDistance === 0) strategicFactor += 0.08;
-    if (normalizeKey(competitor.view) && normalizeKey(competitor.view) === normalizeKey(fraction.view)) strategicFactor += 0.07;
-
-    const areaDiffPct = fraction.totalArea && competitor.totalArea
-      ? Math.abs(competitor.totalArea - fraction.totalArea) / fraction.totalArea
-      : 0.30;
-    if (areaDiffPct <= 0.15) strategicFactor += 0.08;
-    else if (areaDiffPct > 0.35) strategicFactor -= 0.08;
-
-    if (String(competitor.layer).startsWith('C')) strategicFactor -= 0.10;
-    if (String(competitor.layer).startsWith('A')) strategicFactor += 0.04;
-
-    const effectiveWeight = clamp(baseWeight * clamp(strategicFactor, 0.35, 0.75), 0.15, 0.80);
-
-    return {
-      ...competitor,
-      baseComparableWeight: baseWeight,
-      effectiveWeight,
-      isStrategicExpanded: true
-    };
-  }
-
-  function areCommercialTypologiesCompatible(subject, candidate) {
-    const s = normalizeKey(subject);
-    const c = normalizeKey(candidate);
-    if (!s || !c || s === c) return false;
-    const subjectBase = getTypologyNumber(s);
-    const candidateBase = getTypologyNumber(c);
-    if (!Number.isFinite(subjectBase) || !Number.isFinite(candidateBase)) return false;
-    if (s.includes('duplex')) return Math.abs(subjectBase - candidateBase) <= 1;
-    if (s.includes('1') && s.includes('t1') && s.includes('1')) return candidateBase === subjectBase || candidateBase === subjectBase + 1;
-    if (s.includes('mais1') || s.includes('+1') || /t\d+1/.test(s)) return candidateBase === subjectBase || candidateBase === subjectBase + 1;
-    return Math.abs(subjectBase - candidateBase) <= 1 && (s.includes('duplex') || c.includes('duplex'));
-  }
-
-  function getTypologyNumber(value) {
-    const match = String(value).match(/t(\d+)/i);
-    return match ? Number(match[1]) : NaN;
-  }
-
-  function classifyCompsetLayer({ development, status, source, segment, referenceYear, updatedAt, condition }) {
-    const haystack = normalizeKey(`${development || ''} ${status || ''} ${source || ''} ${segment || ''} ${condition || ''}`);
-    const year = Number(referenceYear) || extractYear(updatedAt);
-    const isHistorical = year && year <= 2024;
-    const isPremium = /premium|luxo|luxury|waterfront|marina|ria|frente|vista|novo|new|prime/.test(haystack);
-    const isUnavailable = /vendido|reservado|sold|reserved|indisponivel|indisponível/.test(haystack);
-    const isActive = /disponivel|disponível|available|ativo|active|online/.test(haystack);
-
-    if (isHistorical || isUnavailable) return 'C · Histórico/secundário';
-    if (isPremium || isActive || year >= 2025) return 'A · Premium ativo';
-    return 'B · Benchmark local';
-  }
-
-  function resolveComparableWeight({ rawWeight, layer, status, segment, referenceYear, updatedAt, condition, development, view, realView }) {
-    let weight;
-
-    if (Number.isFinite(rawWeight) && rawWeight > 0) {
-      // O peso vindo do Excel é a base, mas ainda recebe ajuste de frescura/status.
-      // Assim, um valor 1,00 não força todos os itens a terem o mesmo peso final.
-      weight = clamp(rawWeight, 0.25, 1.05);
-    } else if (String(layer).startsWith('A')) {
-      weight = 0.90;
-    } else if (String(layer).startsWith('B')) {
-      weight = 0.70;
-    } else if (String(layer).startsWith('C')) {
-      weight = 0.40;
-    } else {
-      weight = 0.55;
-    }
-
-    const haystack = normalizeKey(`${status || ''} ${segment || ''} ${condition || ''} ${development || ''} ${view || ''} ${realView || ''}`);
-    const year = Number(referenceYear) || extractYear(updatedAt);
-
-    if (/vendido|reservado|sold|reserved|indisponivel|indisponível/.test(haystack)) weight *= 0.75;
-    if (/waterfront|marina|ria|vista|frente|premium|luxo|luxury/.test(haystack)) weight *= 1.05;
-    if (/usado|resale|revenda|antigo/.test(haystack)) weight *= 0.85;
-    if (year && year <= 2024) weight *= 0.70;
-    if (year && year >= 2025) weight *= 1.03;
-
-    return clamp(weight, 0.25, 1.05);
-  }
-
-  function getLayerCounts(items) {
-    return items.reduce((acc, item) => {
-      if (String(item.layer).startsWith('A')) acc.a += 1;
-      else if (String(item.layer).startsWith('B')) acc.b += 1;
-      else acc.c += 1;
-      return acc;
-    }, { a: 0, b: 0, c: 0 });
-  }
-
-  function weightedMedianFromItems(items, field) {
-    return weightedMedian(items
-      .filter((item) => Number.isFinite(item[field]))
-      .map((item) => ({ value: item[field], weight: getComparableWeight(item) })));
-  }
-
-  function weightedMedian(items) {
-    const valid = items.filter((item) => Number.isFinite(item.value) && Number.isFinite(item.weight) && item.weight > 0).sort((a, b) => a.value - b.value);
-    if (!valid.length) return null;
-    const total = valid.reduce((acc, item) => acc + item.weight, 0);
-    let cumulative = 0;
-    for (const item of valid) {
-      cumulative += item.weight;
-      if (cumulative >= total / 2) return item.value;
-    }
-    return valid[valid.length - 1].value;
-  }
-
-  function extractYear(value) {
-    const match = String(value ?? '').match(/20\d{2}/);
-    return match ? Number(match[0]) : null;
-  }
-
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function createMetricsGrid(items) {
-    const grid = document.createElement('div');
-    grid.className = 'metrics-grid';
-    items.forEach(([label, value]) => {
-      const metric = document.createElement('div');
-      metric.className = 'metric';
-      metric.append(createTextElement('span', '', label), createTextElement('strong', '', value));
-      grid.appendChild(metric);
-    });
-    return grid;
-  }
-
-  function createModalMetrics(items) {
-    const grid = document.createElement('div');
-    grid.className = 'modal-grid';
-    items.forEach(([label, value]) => {
-      const metric = document.createElement('div');
-      metric.className = 'modal-metric';
-      metric.append(createTextElement('span', '', label), createTextElement('strong', '', value));
-      grid.appendChild(metric);
-    });
-    return grid;
-  }
-
-  function createTextElement(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    node.textContent = safeString(text);
-    return node;
-  }
-
-  function renderEmptyState() {
-    renderKpis();
-    el.cardsGrid.replaceChildren(createTextElement('div', 'empty-state', 'Dashboard sem dados. Confirme o ficheiro data.xlsx e recarregue a página.'));
-    el.resultCount.textContent = '0 frações visíveis';
-  }
-
-  function showError(message) {
-    el.errorBox.textContent = message;
-    el.errorBox.classList.remove('hidden');
-  }
-
-  function hideError() {
-    el.errorBox.textContent = '';
-    el.errorBox.classList.add('hidden');
-  }
-
-  function setStatus(message, variant) {
-    el.dataStatus.textContent = message;
-    el.dataStatus.classList.remove('is-ok', 'is-error');
-    if (variant === 'ok') el.dataStatus.classList.add('is-ok');
-    if (variant === 'error') el.dataStatus.classList.add('is-error');
-  }
-
-  function normalizeKey(value) {
-    return String(value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .toLowerCase();
-  }
-
-  function normalizeText(value) {
-    return String(value ?? '').trim().replace(/\s+/g, ' ');
-  }
-
-  function normalizeTypology(value) {
-    const text = normalizeText(value).toUpperCase();
-    if (!text) return '';
-    const compact = text
-      .replace(/\s+/g, '')
-      .replace(/–|—/g, '-')
-      .replace(/DÚPLEX/g, 'DUPLEX');
-    const match = compact.match(/T\d+(?:\+\d+)?(?:-?DUPLEX)?/i);
-    return match ? match[0].toUpperCase() : compact;
-  }
-
+  function createHeaderGetter(row) { const map = new Map(); Object.keys(row).forEach((key) => map.set(normalizeKey(key), row[key])); return (candidate) => map.get(normalizeKey(candidate)); }
+  function getFirst(getter, candidates) { for (const c of candidates) { const v = getter(c); if (v !== undefined && v !== null && String(v).trim() !== '') return v; } return ''; }
   function parseNumber(value) {
     if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-
-    let text = String(value ?? '')
-      .trim()
-      .replace(/\s/g, '')
-      .replace(/€/g, '')
-      .replace(/m²|m2/gi, '')
-      .replace(/[^0-9,.-]/g, '');
-
+    let text = String(value ?? '').trim().replace(/\s/g,'').replace(/€/g,'').replace(/m²|m2/gi,'').replace(/[^0-9,.-]/g,'');
     if (!text || text === '-' || text === '.' || text === ',') return null;
-
-    const lastComma = text.lastIndexOf(',');
-    const lastDot = text.lastIndexOf('.');
-
-    if (lastComma >= 0 && lastDot >= 0) {
-      // Ex.: 1.250.000,50 ou 1,250,000.50
-      const decimalSeparator = lastComma > lastDot ? ',' : '.';
-      const thousandSeparator = decimalSeparator === ',' ? '.' : ',';
-      text = text.split(thousandSeparator).join('');
-      text = text.replace(decimalSeparator, '.');
-    } else if (lastComma >= 0) {
-      // Ex.: 99,74 deve ser 99.74; 1,250 deve ser 1250
-      const decimals = text.length - lastComma - 1;
-      text = decimals === 3 ? text.replace(/,/g, '') : text.replace(',', '.');
-    } else if (lastDot >= 0) {
-      // Ex.: 99.74 deve ser 99.74; 1.250 deve ser 1250
-      const decimals = text.length - lastDot - 1;
-      text = decimals === 3 ? text.replace(/\./g, '') : text;
-    }
-
-    const number = Number(text);
-    return Number.isFinite(number) ? number : null;
+    const lastComma = text.lastIndexOf(','); const lastDot = text.lastIndexOf('.');
+    if (lastComma >= 0 && lastDot >= 0) { const dec = lastComma > lastDot ? ',' : '.'; const thou = dec === ',' ? '.' : ','; text = text.split(thou).join('').replace(dec,'.'); }
+    else if (lastComma >= 0) { const decimals = text.length - lastComma - 1; text = decimals === 3 ? text.replace(/,/g,'') : text.replace(',', '.'); }
+    else if (lastDot >= 0) { const decimals = text.length - lastDot - 1; text = decimals === 3 ? text.replace(/\./g,'') : text; }
+    const n = Number(text); return Number.isFinite(n) ? n : null;
   }
+  function parseFloor(value) { const n = parseNumber(value); if (Number.isFinite(n)) return Math.round(n); const match = String(value ?? '').match(/-?\d+/); return match ? Number(match[0]) : NaN; }
+  function normalizeTypology(value) { return safeString(value).toUpperCase().replace(/\s+/g,'').replace('T0+1','T0+1'); }
+  function normalizeText(value) { return safeString(value).replace(/\s+/g, ' ').trim(); }
+  function normalizeKey(value) { return safeString(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
+  function safeString(value) { return String(value ?? '').trim(); }
+  function positiveOrNull(value) { return Number.isFinite(value) && value > 0 ? value : null; }
+  function sumAreas(a,b) { const x = Number.isFinite(a) ? a : 0; const y = Number.isFinite(b) ? b : 0; return x + y || null; }
+  function safeDivide(a,b) { return Number.isFinite(a) && Number.isFinite(b) && b > 0 ? a / b : null; }
+  function slugify(v) { return normalizeKey(v).slice(0,50) || Math.random().toString(36).slice(2); }
+  function groupBy(items, getter) { const map = new Map(); items.forEach((item) => { const key = getter(item); if (!map.has(key)) map.set(key, []); map.get(key).push(item); }); return map; }
+  function uniqueSorted(values) { return [...new Set(values.filter((v) => v !== null && v !== undefined && String(v).trim() !== ''))].sort((a,b) => String(a).localeCompare(String(b), 'pt', { numeric: true })); }
+  function extractYear(text) { const match = String(text || '').match(/20\d{2}/); return match ? Number(match[0]) : null; }
+  function clamp(v,min,max) { return Math.min(max, Math.max(min, v)); }
+  function median(values) { const valid = values.filter(Number.isFinite).sort((a,b)=>a-b); if (!valid.length) return null; const mid = Math.floor(valid.length/2); return valid.length % 2 ? valid[mid] : (valid[mid-1]+valid[mid])/2; }
+  function average(values) { const valid = values.filter(Number.isFinite); return valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : null; }
+  function percentile(values,p) { if (!values.length) return null; const idx = (values.length-1)*p; const lo = Math.floor(idx); const hi = Math.ceil(idx); if (lo===hi) return values[lo]; return values[lo] + (values[hi]-values[lo])*(idx-lo); }
+  function weightedMedian(items) { const valid = items.filter((i) => Number.isFinite(i.value) && Number.isFinite(i.weight) && i.weight > 0).sort((a,b)=>a.value-b.value); if (!valid.length) return null; const total = valid.reduce((s,i)=>s+i.weight,0); let acc=0; for (const item of valid) { acc += item.weight; if (acc >= total/2) return item.value; } return valid[valid.length-1].value; }
+  function weightedAverage(items) { const valid = items.filter((i) => Number.isFinite(i.value) && Number.isFinite(i.weight) && i.weight > 0); const denom = valid.reduce((s,i)=>s+i.weight,0); return denom ? valid.reduce((s,i)=>s+i.value*i.weight,0)/denom : null; }
 
-  function parseFloor(value) {
-    const text = String(value ?? '').trim();
-    if (!text) return NaN;
-    if (/r\/c|rc|rés|res|ground/i.test(text)) return 0;
-    const match = text.match(/-?\d+/);
-    return match ? Number(match[0]) : NaN;
-  }
-
-  function sumAreas(...values) {
-    const sum = values.filter((value) => Number.isFinite(value)).reduce((acc, value) => acc + value, 0);
-    return sum > 0 ? sum : null;
-  }
-
-  function safeDivide(a, b) {
-    return Number.isFinite(a) && Number.isFinite(b) && b > 0 ? a / b : null;
-  }
-
-  function positiveOrNull(value) {
-    return Number.isFinite(value) && value >= 0 ? value : null;
-  }
-
-  function median(values) {
-    const clean = values.filter(Number.isFinite).sort((a, b) => a - b);
-    if (!clean.length) return null;
-    const mid = Math.floor(clean.length / 2);
-    return clean.length % 2 ? clean[mid] : (clean[mid - 1] + clean[mid]) / 2;
-  }
-
-  function percentile(values, p) {
-    if (!values.length) return null;
-    const index = (values.length - 1) * p;
-    const lower = Math.floor(index);
-    const upper = Math.ceil(index);
-    if (lower === upper) return values[lower];
-    return values[lower] + (values[upper] - values[lower]) * (index - lower);
-  }
-
-  function weightedAverage(components) {
-    const totalWeight = components.reduce((acc, item) => acc + item.weight, 0);
-    if (!totalWeight) return null;
-    return components.reduce((acc, item) => acc + item.value * item.weight, 0) / totalWeight;
-  }
-
-  function getViewAdjustment(view) {
-    const key = normalizeKey(view);
-    if (key.includes('mar') || key.includes('sea') || key.includes('ria') || key.includes('panoramica')) return 0.035;
-    if (key.includes('jardim') || key.includes('piscina') || key.includes('river') || key.includes('rio')) return 0.018;
-    if (key.includes('interior') || key.includes('rua') || key.includes('cidade')) return -0.010;
-    return 0;
-  }
-
-  function getFloorAdjustment(floor) {
-    if (!Number.isFinite(floor)) return 0;
-    if (floor >= 5) return 0.020;
-    if (floor >= 3) return 0.012;
-    if (floor <= 0) return -0.012;
-    return 0;
-  }
-
-  function getSampleAdjustment(sets) {
-    const total = sets.direct.length + sets.indirect.length + sets.weak.length;
-    if (sets.direct.length >= 3) return 0.008;
-    if (sets.direct.length >= 1) return 0.004;
-    if (total < 3) return -0.012;
-    return 0;
-  }
-
-  function uniqueSorted(values) {
-    const clean = [...new Set(values.filter((value) => value !== null && value !== undefined && String(value).trim() !== '' && String(value) !== 'NaN'))];
-    return clean.sort((a, b) => {
-      const na = Number(a);
-      const nb = Number(b);
-      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
-      return String(a).localeCompare(String(b), 'pt', { numeric: true, sensitivity: 'base' });
-    });
-  }
-
-  function groupBy(items, getter) {
-    const map = new Map();
-    items.forEach((item) => {
-      const key = getter(item);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(item);
-    });
-    return map;
-  }
-
-  function formatCurrency(value, digits = 0) {
-    if (!Number.isFinite(value)) return '—';
-    return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value);
-  }
-
-  function formatNumber(value, digits = 0) {
-    if (!Number.isFinite(value)) return '—';
-    return new Intl.NumberFormat('pt-PT', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value);
-  }
-
-  function formatArea(value) {
-    return Number.isFinite(value) ? `${formatNumber(value, 1)} m²` : '—';
-  }
-
-  function formatPlain(value) {
-    return Number.isFinite(Number(value)) ? formatNumber(Number(value), 0) : safeString(value || '—');
-  }
-
-  function formatPercent(value) {
-    if (!Number.isFinite(value)) return '—';
-    return `${value >= 0 ? '+' : '-'}${formatNumber(Math.abs(value * 100), 1)}%`;
-  }
-
-  function signed(formattedAbsolute, rawValue) {
-    if (!Number.isFinite(rawValue)) return '—';
-    if (rawValue === 0) return formattedAbsolute;
-    return `${rawValue > 0 ? '+' : '-'}${formattedAbsolute}`;
-  }
-
-  function safeString(value) {
-    return String(value ?? '').trim();
-  }
-
-  function slugify(value) {
-    return normalizeKey(value).slice(0, 48) || 'item';
-  }
+  function h(tag, opts = {}) { const node = document.createElement(tag); if (opts.className) node.className = opts.className; if (opts.text !== undefined) node.textContent = safeString(opts.text); if (opts.attrs) Object.entries(opts.attrs).forEach(([k,v]) => node.setAttribute(k, v)); return node; }
+  function div(className, children = []) { const node = h('div', { className }); children.forEach((c) => node.append(c)); return node; }
+  function replace(parent, ...children) { parent.replaceChildren(...children); }
+  function metric(label, value) { return div('metric', [h('strong', { text: label }), h('span', { text: value ?? '—' })]); }
+  function kpi(label, value, helper) { return div('kpi-card', [h('span', { text: label }), h('strong', { text: value ?? '—' }), h('small', { text: helper ?? '' })]); }
+  function summary(label, value, helper) { return div('summary-card', [h('span', { text: label }), h('strong', { text: value ?? '—' }), h('small', { text: helper ?? '' })]); }
+  function badge(text, type='') { return h('span', { className: `badge ${type}`.trim(), text }); }
+  function empty(text) { return h('div', { className: 'empty-state', text }); }
+  function formatCurrency(value, decimals=0) { return Number.isFinite(value) ? new Intl.NumberFormat('pt-PT', { style:'currency', currency:'EUR', maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(value) : '—'; }
+  function formatNumber(value, decimals=0) { return Number.isFinite(value) ? new Intl.NumberFormat('pt-PT', { maximumFractionDigits: decimals, minimumFractionDigits: decimals }).format(value) : '—'; }
+  function formatArea(value) { return Number.isFinite(value) ? `${formatNumber(value, 1)} m²` : '—'; }
+  function signed(text, value) { if (!Number.isFinite(value)) return '—'; return `${value >= 0 ? '+' : '-'}${text}`; }
+  function signedCurrency(value) { if (!Number.isFinite(value)) return '—'; return `${value >= 0 ? '+' : '-'}${formatCurrency(Math.abs(value),0)}`; }
+  function signedArea(value) { if (!Number.isFinite(value)) return '—'; return `${value >= 0 ? '+' : '-'}${formatArea(Math.abs(value))}`; }
+  function formatPercent(value) { return Number.isFinite(value) ? `${value >= 0 ? '+' : ''}${formatNumber(value*100,1)}%` : '—'; }
+  function setStatus(text, className='') { el.dataStatus.textContent = text; el.dataStatus.className = `status-pill ${className}`.trim(); }
+  function showError(message) { el.errorBox.textContent = message; el.errorBox.classList.remove('hidden'); }
+  function hideError() { el.errorBox.textContent = ''; el.errorBox.classList.add('hidden'); }
+  function renderEmptyState() { replace(el.kpiGrid, kpi('Frações','—',''), kpi('Concorrentes','—',''), kpi('Mediana ponderada','—','')); replace(el.cardsGrid, empty('Dashboard sem dados.')); renderTable(el.marketTable, ['Mensagem'], [['Sem dados.']]); renderTable(el.idealTable, ['Mensagem'], [['Sem dados.']]); }
 })();
