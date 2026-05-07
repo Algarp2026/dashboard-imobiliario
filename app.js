@@ -347,6 +347,23 @@
     ]));
   }
 
+
+  function formatMoney(value) {
+    if (!Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('pt-PT', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0
+    }).format(value).replace(/\s€/g, ' €');
+  }
+
+  function formatSignedMoney(value) {
+    if (!Number.isFinite(value) || Math.abs(value) < 1) return '0 €';
+    const sign = value > 0 ? '+' : '-';
+    return `${sign}${formatMoney(Math.abs(value))}`;
+  }
+
+
   function renderIdealPage() {
     const analyses = buildIdealAnalyses(state.filteredFractions);
 
