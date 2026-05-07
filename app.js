@@ -591,7 +591,10 @@
     const left = document.createElement('div');
     left.append(createTextElement('strong', '', competitor.name));
     left.append(createTextElement('small', '', `${competitor.development || 'Sem empreendimento'} · ${competitor.typology} · Piso ${formatPlain(getComparableFloor(competitor))} · ${competitor.realView || competitor.view}`));
-    left.append(createTextElement('small', '', `${competitor.layer || 'Benchmark'} · peso ${formatNumber(getComparableWeight(competitor), 2)}${competitor.status ? ` · ${competitor.status}` : ''}`));
+    const weightLabel = competitor.isStrategicExpanded
+      ? `${competitor.layer || 'Benchmark'} · peso estratégico ${formatNumber(getComparableWeight(competitor), 2)} · base ${formatNumber(getBaseComparableWeight(competitor), 2)}${competitor.status ? ` · ${competitor.status}` : ''}`
+      : `${competitor.layer || 'Benchmark'} · peso ${formatNumber(getComparableWeight(competitor), 2)}${competitor.status ? ` · ${competitor.status}` : ''}`;
+    left.append(createTextElement('small', '', weightLabel));
 
     const right = document.createElement('div');
     right.append(createTextElement('strong', '', formatCurrency(competitor.price, 0)));
@@ -620,7 +623,8 @@
         ['€/m²', `${formatCurrency(competitor.eurosPerSqm, 0)} /m²`],
         ['Piso', formatPlain(getComparableFloor(competitor))],
         ['Camada compset', competitor.layer || 'Benchmark'],
-        ['Peso comparável', formatNumber(getComparableWeight(competitor), 2)],
+        [competitor.isStrategicExpanded ? 'Peso estratégico final' : 'Peso comparável', formatNumber(getComparableWeight(competitor), 2)],
+        ...(competitor.isStrategicExpanded ? [['Peso base', formatNumber(getBaseComparableWeight(competitor), 2)]] : []),
         ['Status', competitor.status || 'Não indicado'],
         ['Fonte', competitor.source || 'Não indicada'],
         ['Atualização', competitor.updatedAt || competitor.referenceYear || 'Não indicada'],
@@ -788,7 +792,7 @@
         `€/m² base ponderado: ${formatCurrency(baseSqm, 0)} /m²; final: ${formatCurrency(finalSqm, 0)} /m².`,
         `Ajustes aplicados: vista ${formatPercent(viewAdjustment)}, piso ${formatPercent(floorAdjustment)}, robustez da amostra ${formatPercent(sampleAdjustment)}.`,
         `Premium/desconto face ao preço atual: ${Number.isFinite(premiumDiscount) ? signed(`${formatNumber(Math.abs(premiumDiscount), 1)}%`, premiumDiscount) : '—'}.`,
-        'Modelo IA: heurístico inteligente, recalculado automaticamente pelos filtros; não é machine learning real. O compset expandido só entra com peso baixo quando a amostra oficial é limitada.'
+        'Modelo IA: heurístico inteligente, recalculado automaticamente pelos filtros; não é machine learning real. O compset expandido só entra com peso estratégico reduzido quando a amostra oficial é limitada.'
       ] : ['Sem dados suficientes para calcular o preço IA.', 'O modelo IA precisa de pelo menos uma categoria elegível com €/m² válido.']
     };
   }
@@ -830,7 +834,32 @@
   }
 
   function getComparableWeight(item) {
-    return Number.isFinite(item.comparableWeight) && item.comparableWeight > 0 ? item.comparableWeight : 0.8;
+    if (Number.isFinite(item?.effectiveWeight) && item.effectiveWeight > 0) return item.effectiveWeight;
+    if (Number.isFinite(item?.comparableWeight) && item.comparableWeight > 0) return item.comparableWeight;
+    return deriveFallbackComparableWeight(item);
+  }
+
+  function getBaseComparableWeight(item) {
+    if (Number.isFinite(item?.baseComparableWeight) && item.baseComparableWeight > 0) return item.baseComparableWeight;
+    if (Number.isFinite(item?.comparableWeight) && item.comparableWeight > 0) return item.comparableWeight;
+    return deriveFallbackComparableWeight(item);
+  }
+
+  function deriveFallbackComparableWeight(item) {
+    if (!item) return 0.55;
+    let weight = 0.55;
+    if (String(item.layer).startsWith('A')) weight = 0.90;
+    else if (String(item.layer).startsWith('B')) weight = 0.70;
+    else if (String(item.layer).startsWith('C')) weight = 0.40;
+
+    const haystack = normalizeKey(`${item.status || ''} ${item.segment || ''} ${item.condition || ''} ${item.development || ''} ${item.view || ''} ${item.realView || ''}`);
+    const year = Number(item.referenceYear) || extractYear(item.updatedAt);
+    if (/vendido|reservado|sold|reserved|indisponivel|indisponível/.test(haystack)) weight *= 0.75;
+    if (/waterfront|marina|ria|vista|frente|premium|luxo|luxury/.test(haystack)) weight *= 1.05;
+    if (/usado|resale|revenda|antigo/.test(haystack)) weight *= 0.85;
+    if (year && year <= 2024) weight *= 0.70;
+    if (year && year >= 2025) weight *= 1.03;
+    return clamp(weight, 0.25, 1.05);
   }
 
   function getStrategicExpandedSet(fraction, competitors, officialSets) {
@@ -839,8 +868,36 @@
       .filter((competitor) => !officialIds.has(competitor.id))
       .filter((competitor) => areCommercialTypologiesCompatible(fraction.typology, competitor.typology))
       .filter((competitor) => Math.abs(getComparableFloor(competitor) - fraction.floorNumber) <= 1)
+      .map((competitor) => applyStrategicExpandedWeight(fraction, competitor))
       .sort((a, b) => getComparableWeight(b) - getComparableWeight(a) || Math.abs(a.eurosPerSqm - fraction.eurosPerSqm) - Math.abs(b.eurosPerSqm - fraction.eurosPerSqm))
       .slice(0, 12);
+  }
+
+  function applyStrategicExpandedWeight(fraction, competitor) {
+    const baseWeight = getBaseComparableWeight(competitor);
+    let strategicFactor = 0.55;
+
+    const floorDistance = Math.abs(getComparableFloor(competitor) - fraction.floorNumber);
+    if (floorDistance === 0) strategicFactor += 0.08;
+    if (normalizeKey(competitor.view) && normalizeKey(competitor.view) === normalizeKey(fraction.view)) strategicFactor += 0.07;
+
+    const areaDiffPct = fraction.totalArea && competitor.totalArea
+      ? Math.abs(competitor.totalArea - fraction.totalArea) / fraction.totalArea
+      : 0.30;
+    if (areaDiffPct <= 0.15) strategicFactor += 0.08;
+    else if (areaDiffPct > 0.35) strategicFactor -= 0.08;
+
+    if (String(competitor.layer).startsWith('C')) strategicFactor -= 0.10;
+    if (String(competitor.layer).startsWith('A')) strategicFactor += 0.04;
+
+    const effectiveWeight = clamp(baseWeight * clamp(strategicFactor, 0.35, 0.75), 0.15, 0.80);
+
+    return {
+      ...competitor,
+      baseComparableWeight: baseWeight,
+      effectiveWeight,
+      isStrategicExpanded: true
+    };
   }
 
   function areCommercialTypologiesCompatible(subject, candidate) {
@@ -875,12 +932,21 @@
   }
 
   function resolveComparableWeight({ rawWeight, layer, status, segment, referenceYear, updatedAt, condition, development, view, realView }) {
-    if (Number.isFinite(rawWeight) && rawWeight > 0) return clamp(rawWeight, 0.1, 1.2);
+    let weight;
 
-    let weight = 0.8;
-    if (String(layer).startsWith('A')) weight = 1.0;
-    if (String(layer).startsWith('B')) weight = 0.8;
-    if (String(layer).startsWith('C')) weight = 0.4;
+    if (Number.isFinite(rawWeight) && rawWeight > 0) {
+      // O peso vindo do Excel é a base, mas ainda recebe ajuste de frescura/status.
+      // Assim, um valor 1,00 não força todos os itens a terem o mesmo peso final.
+      weight = clamp(rawWeight, 0.25, 1.05);
+    } else if (String(layer).startsWith('A')) {
+      weight = 0.90;
+    } else if (String(layer).startsWith('B')) {
+      weight = 0.70;
+    } else if (String(layer).startsWith('C')) {
+      weight = 0.40;
+    } else {
+      weight = 0.55;
+    }
 
     const haystack = normalizeKey(`${status || ''} ${segment || ''} ${condition || ''} ${development || ''} ${view || ''} ${realView || ''}`);
     const year = Number(referenceYear) || extractYear(updatedAt);
@@ -891,7 +957,7 @@
     if (year && year <= 2024) weight *= 0.70;
     if (year && year >= 2025) weight *= 1.03;
 
-    return clamp(weight, 0.25, 1.1);
+    return clamp(weight, 0.25, 1.05);
   }
 
   function getLayerCounts(items) {
