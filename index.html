@@ -1,83 +1,119 @@
-<!DOCTYPE html>
-<html lang="pt">
+<!doctype html>
+<html lang="pt-PT">
 <head>
-  <meta charset="UTF-8">
-  <title>The View Dashboard</title>
-
-  <!-- CSS -->
-  <link rel="stylesheet" href="style.css">
-
-  <!-- XLSX -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="The View — Dashboard competitivo imobiliário" />
+  <title>The View · Dashboard competitivo imobiliário</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
+  <noscript>
+    <div class="noscript">Este dashboard requer JavaScript ativo para ler o Excel e apresentar os dados.</div>
+  </noscript>
 
-  <!-- HERO -->
-  <header class="hero">
-    <div class="hero-overlay">
-      <h1>The View</h1>
-      <p>Dashboard competitivo imobiliário</p>
-    </div>
-  </header>
-
-  <!-- CONTAINER -->
-  <div class="container">
-
-    <!-- FILTROS -->
-    <div class="filtros">
-
-      <div class="filtro">
-        <label>Piso</label>
-        <select id="piso" onchange="render()"></select>
+  <div id="appShell" class="app-shell">
+    <header class="hero" role="banner" aria-label="The View">
+      <img class="hero__image" src="Olhao_Cam_Suite_Web.jpg" alt="Vista premium do empreendimento The View" />
+      <div class="hero__overlay"></div>
+      <nav class="topbar" aria-label="Resumo do dashboard">
+        <div class="brand-pill">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>The View</span>
+        </div>
+        <div class="status-pill" id="dataStatus">A carregar Excel…</div>
+      </nav>
+      <div class="hero__content">
+        <p class="eyebrow">Real Estate Intelligence</p>
+        <h1>The View</h1>
+        <p>Dashboard competitivo imobiliário</p>
       </div>
+    </header>
 
-      <div class="filtro">
-        <label>Vista</label>
-        <select id="vista" onchange="render()"></select>
-      </div>
+    <main class="main" id="mainContent">
+      <section class="panel intro-panel" aria-labelledby="dashboardTitle">
+        <div>
+          <p class="eyebrow eyebrow--dark">Pricing · Competição · Benchmark</p>
+          <h2 id="dashboardTitle">Frações e concorrência</h2>
+          <p class="muted">Análise automática por tipologia, piso e vista, com modelos de preço fallback, rigoroso e IA heurística.</p>
+        </div>
+        <div class="kpi-grid" id="kpiGrid" aria-label="Indicadores principais">
+          <article class="kpi-card skeleton"><span>Frações</span><strong>—</strong></article>
+          <article class="kpi-card skeleton"><span>Concorrentes</span><strong>—</strong></article>
+          <article class="kpi-card skeleton"><span>Mediana €/m²</span><strong>—</strong></article>
+        </div>
+      </section>
 
-      <div class="filtro">
-        <label>Frações</label>
-        <div id="fractionsBox" class="checkboxGroup"></div>
-      </div>
+      <section class="panel filters-panel" aria-labelledby="filtersTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark">Filtros</p>
+            <h2 id="filtersTitle">Refinar análise</h2>
+          </div>
+          <button class="ghost-button" id="resetFilters" type="button">Limpar filtros</button>
+        </div>
 
-      <div class="filtro">
-        <label>Concorrentes</label>
-        <div id="empreBox" class="checkboxGroup"></div>
-      </div>
+        <div class="filters-grid">
+          <label class="field">
+            <span>Piso</span>
+            <select id="floorFilter" aria-label="Filtrar por piso">
+              <option value="all">Todos</option>
+            </select>
+          </label>
 
-      <div class="filtro">
-        <button onclick="resetFiltros()" class="btnReset">
-          Limpar Filtros
-        </button>
-      </div>
+          <label class="field">
+            <span>Vista</span>
+            <select id="viewFilter" aria-label="Filtrar por vista">
+              <option value="all">Todas</option>
+            </select>
+          </label>
 
-    </div>
+          <label class="field">
+            <span>Frações</span>
+            <select id="fractionFilter" aria-label="Filtrar por fração">
+              <option value="all">Todas</option>
+            </select>
+          </label>
 
-    <!-- GRID -->
-    <div id="grid" class="grid"></div>
+          <label class="field">
+            <span>Empreendimentos concorrentes</span>
+            <select id="developmentFilter" aria-label="Filtrar por empreendimento concorrente">
+              <option value="all">Todos</option>
+            </select>
+          </label>
+        </div>
+      </section>
 
+      <section class="panel" aria-labelledby="fractionsTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark">Inventário</p>
+            <h2 id="fractionsTitle">Cards das frações</h2>
+          </div>
+          <p class="muted small" id="resultCount">—</p>
+        </div>
+        <div id="errorBox" class="error-box hidden" role="alert"></div>
+        <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
+      </section>
+    </main>
   </div>
 
-  <!-- MODAL -->
-  <div id="modal" class="modal" onclick="fecharModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-
-      <div class="modalHeader">
-        <h2 id="modalTitulo"></h2>
-        <button onclick="fecharModal()" style="border:none;background:none;font-size:18px;cursor:pointer;">
-          ✕
-        </button>
-      </div>
-
-      <div id="modalConteudo"></div>
-
+  <div id="fractionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal modal--large" role="document">
+      <button class="modal-close" id="closeFractionModal" type="button" aria-label="Fechar modal">×</button>
+      <div id="fractionModalContent"></div>
     </div>
   </div>
 
-  <!-- SCRIPT -->
-  <script src="app.js"></script>
+  <div id="competitorModal" class="modal-backdrop modal-backdrop--top hidden" role="dialog" aria-modal="true" aria-labelledby="competitorModalTitle">
+    <div class="modal modal--small" role="document">
+      <button class="modal-close" id="closeCompetitorModal" type="button" aria-label="Fechar popup do concorrente">×</button>
+      <div id="competitorModalContent"></div>
+    </div>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
