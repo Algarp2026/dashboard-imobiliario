@@ -349,20 +349,49 @@
 
   function renderIdealPage() {
     const analyses = buildIdealAnalyses(state.filteredFractions);
-    const avgGap = average(analyses.map((a) => a.gapPct).filter(Number.isFinite));
-    const incoherent = analyses.filter((a) => a.alertLevel === 'danger' || a.alertLevel === 'warn').length;
-    const upside = analyses.filter((a) => Number.isFinite(a.gapPct) && a.gapPct < -2).length;
-    const downside = analyses.filter((a) => Number.isFinite(a.gapPct) && a.gapPct > 2).length;
-    replace(el.idealSummary,
-      summary('Gap médio', Number.isFinite(avgGap) ? signed(formatNumber(Math.abs(avgGap),1)+'%', avgGap) : '—', 'Preço atual vs ideal coerente'),
-      summary('Potencial subida', upside, 'Frações abaixo do ideal'),
-      summary('Risco sobrepreço', downside, 'Frações acima do ideal'),
-      summary('Alertas internos', incoherent, 'Hierarquia preço/qualidade')
-    );
-    el.idealCount.textContent = `${analyses.length} fração${analyses.length === 1 ? '' : 'ões'} analisada${analyses.length === 1 ? '' : 's'}`;
-    renderTable(el.idealTable, ['Fração','Tipologia','Piso','Vista','Score','Preço atual','Ideal mercado','Ideal coerente','Gap','Alerta'], analyses.map((a) => [
-      a.fraction.name, a.fraction.typology, a.fraction.floorLabel, a.fraction.view, formatNumber(a.score,0), formatCurrency(a.fraction.price,0), formatCurrency(a.marketPrice,0), formatCurrency(a.coherentPrice,0), Number.isFinite(a.gapPct) ? signed(formatNumber(Math.abs(a.gapPct),1)+'%', a.gapPct) : '—', a.alert
-    ]));
+
+    const headers = [
+      'Fração',
+      'Tipologia',
+      'Piso',
+      'Vista',
+      'Preço atual',
+      'Preço mercado',
+      'Interno técnico',
+      'Recomendado final',
+      'Ajuste',
+      'Estratégia',
+      'Alerta'
+    ];
+
+    const rows = analyses.map((analysis) => {
+      const fraction = analysis.fraction;
+      const rec = getFinalRecommendation(fraction);
+      const finalPrice = rec?.price ?? analysis.coherentPrice;
+      const adjustment = Number.isFinite(finalPrice) && Number.isFinite(fraction.price)
+        ? finalPrice - fraction.price
+        : null;
+
+      return [
+        fraction.name,
+        fraction.typology,
+        fraction.floorLabel,
+        fraction.view,
+        formatMoney(fraction.price),
+        formatMoney(analysis.marketPrice),
+        formatMoney(analysis.coherentPrice),
+        formatMoney(finalPrice),
+        formatSignedMoney(adjustment),
+        rec?.strategy || 'Modelo técnico',
+        analysis.alert || 'Coerente'
+      ];
+    });
+
+    renderTable(el.idealTable, headers, rows);
+
+    if (el.idealCount) {
+      el.idealCount.textContent = `${analyses.length} frações analisadas`;
+    }
   }
 
   function openFractionModal(fractionId) {

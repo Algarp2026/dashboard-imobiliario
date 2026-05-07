@@ -186,3 +186,39 @@ table td {
 .strategy-badge.subidamoderada { background: rgba(84, 160, 255, .14); }
 .strategy-badge.subidafaseada { background: rgba(124, 93, 255, .16); }
 .strategy-badge.modelotecnico { background: rgba(255,255,255,.08); }
+
+
+/* Tabela de preço recomendado final */
+.strategy-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  border: 1px solid rgba(15, 23, 42, .10);
+  background: rgba(255,255,255,.55);
+}
+
+.strategy-badge.manter {
+  background: rgba(255,255,255,.70);
+}
+
+.strategy-badge.ajustefino {
+  background: rgba(185, 151, 92, .18);
+}
+
+.strategy-badge.subidamoderada {
+  background: rgba(84, 160, 255, .16);
+}
+
+.strategy-badge.subidafaseada {
+  background: rgba(124, 93, 255, .16);
+}
+
+.strategy-badge.modelotecnico {
+  background: rgba(255,255,255,.45);
+}
