@@ -693,9 +693,9 @@
         </tr>`;
     }).join('');
 
-    const win = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
+    const win = window.open('', '_blank', 'width=1200,height=900');
     if (!win) {
-      alert('O browser bloqueou a janela de exportação. Autorize pop-ups para gerar o PDF.');
+      alert('Não foi possível abrir a janela de exportação. Verifique se pop-ups estão permitidos para este site.');
       return;
     }
 
@@ -734,6 +734,7 @@
 </body>
 </html>`);
     win.document.close();
+    win.focus();
   }
 
   function escapeHtml(value) {
