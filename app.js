@@ -235,7 +235,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -273,6 +273,11 @@
     if (el.commercialFractionChecklist) el.commercialFractionChecklist.addEventListener('change', updateCommercialChecklistFilters);
     if (el.clearCommercialFilters) el.clearCommercialFilters.addEventListener('click', resetCommercialFilters);
     if (el.exportCommercialPdfButton) el.exportCommercialPdfButton.addEventListener('click', exportCommercialPdf);
+
+    ['toggleCommercialSummary','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable'].forEach((id) => {
+      if (el[id]) el[id].addEventListener('change', applyCommercialVisibility);
+    });
+
 
     el.closeFractionModal.addEventListener('click', closeFractionModal);
     el.closeCompetitorModal.addEventListener('click', closeCompetitorModal);
@@ -604,6 +609,22 @@
 
 
 
+
+  function applyCommercialVisibility() {
+    const pairs = [
+      ['toggleCommercialSummary', 'commercialSummarySection'],
+      ['toggleCommercialFilters', 'commercialFiltersSection'],
+      ['toggleCommercialCards', 'commercialCardsSection'],
+      ['toggleCommercialTable', 'commercialTableSection']
+    ];
+
+    pairs.forEach(([toggleId, sectionId]) => {
+      if (!el[toggleId] || !el[sectionId]) return;
+      el[sectionId].classList.toggle('hidden', !el[toggleId].checked);
+    });
+  }
+
+
   function updateCommercialChecklistFilters() {
     state.commercialFilters.floors = getSelectedChecklistValues(el.commercialFloorChecklist);
     state.commercialFilters.fractions = getSelectedChecklistValues(el.commercialFractionChecklist);
@@ -699,6 +720,7 @@
     renderCommercialCards(filtered);
     renderCommercialTable(filtered);
     renderCommercialSelectedChips(filtered);
+    applyCommercialVisibility();
 
     if (el.commercialCount) {
       el.commercialCount.textContent = `${filtered.length} frações na proposta`;

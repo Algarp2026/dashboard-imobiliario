@@ -944,3 +944,50 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Simplificação comercial */
+.commercial-view-panel {
+  background: rgba(255,255,255,.68);
+}
+
+.commercial-view-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.82);
+  border-radius: 999px;
+  padding: 11px 14px;
+  font-weight: 850;
+  color: #253044;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-pill:hover {
+  background: #fff;
+}
+
+.toggle-pill input {
+  accent-color: #111827;
+}
+
+.commercial-hidden-by-default {
+  display: none;
+}
+
+.commercial-hidden-by-default:not(.hidden) {
+  display: block;
+}
+
+.export-panel {
+  border: 1px solid rgba(146,113,58,.20);
+  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+}
