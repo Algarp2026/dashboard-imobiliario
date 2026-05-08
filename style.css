@@ -737,3 +737,210 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Proposta Comercial */
+.commercial-hero-panel {
+  border: 1px solid rgba(146,113,58,.22);
+}
+
+.commercial-summary-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.commercial-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.commercial-checklists {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 16px;
+}
+
+.search-input {
+  border: 1px solid rgba(15,23,42,.12);
+  border-radius: 999px;
+  padding: 7px 12px;
+  min-width: 160px;
+  font-weight: 700;
+  outline: none;
+}
+
+.selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.selected-chip {
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.88);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #334155;
+}
+
+.commercial-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.commercial-card {
+  padding: 22px;
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.66));
+  border: 1px solid rgba(15,23,42,.09);
+  box-shadow: 0 22px 60px rgba(15,23,42,.10);
+}
+
+.commercial-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.commercial-card-title strong {
+  display: block;
+  font-size: 24px;
+  letter-spacing: -.04em;
+}
+
+.commercial-card-title span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+}
+
+.commercial-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.commercial-reading {
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(248,250,252,.72);
+  padding: 14px;
+}
+
+.commercial-reading strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.commercial-reading p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.decision-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(15,23,42,.10);
+  white-space: nowrap;
+}
+
+.decision-keep {
+  background: rgba(248,250,252,.92);
+  color: #334155;
+}
+
+.decision-apply {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.decision-phase {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.decision-review {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.commercial-table th:nth-child(5),
+.commercial-table th:nth-child(6),
+.commercial-table th:nth-child(7),
+.commercial-table th:nth-child(8),
+.commercial-table th:nth-child(9),
+.commercial-table th:nth-child(10),
+.commercial-table td:nth-child(5),
+.commercial-table td:nth-child(6),
+.commercial-table td:nth-child(7),
+.commercial-table td:nth-child(8),
+.commercial-table td:nth-child(9),
+.commercial-table td:nth-child(10) {
+  text-align: right;
+}
+
+.commercial-table td:last-child {
+  white-space: normal;
+  min-width: 300px;
+  line-height: 1.35;
+}
+
+.commercial-table-wrap {
+  max-height: 720px;
+}
+
+.pdf-export-grid--commercial {
+  grid-template-columns: 220px repeat(3, minmax(0, 1fr)) 260px;
+}
+
+@media(max-width: 1280px) {
+  .commercial-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .commercial-filter-grid,
+  .pdf-export-grid--commercial {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commercial-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 900px) {
+  .commercial-checklists,
+  .commercial-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .commercial-filter-grid,
+  .pdf-export-grid--commercial {
+    grid-template-columns: 1fr;
+  }
+
+  .commercial-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 560px) {
+  .commercial-summary-grid,
+  .commercial-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

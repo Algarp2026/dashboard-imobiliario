@@ -14,6 +14,7 @@
     activeTab: 'dashboard',
     filters: { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' },
     sort: 'name-asc',
+    commercialFilters: { state: 'all', impact: 'all', typology: 'all', floors: [], fractions: [], search: '', sort: 'immediate-desc' },
     idealFocusedFraction: ''
   };
 
@@ -123,6 +124,105 @@
   }
 
 
+
+  const COMMERCIAL_DECISIONS = {
+    1: { state: 'Rever gerência', proposedNow: 545000, target: 545000, note: 'T1 piso 1 Sul/Este com preço elevado face aos restantes T1. Manter, mas justificar pela área, vista ou característica especial.' },
+    2: { state: 'Aplicar agora', proposedNow: 615000, target: 615000, note: 'Recomenda-se aplicar já o novo preço, pois o ajuste é moderado e mantém coerência com o posicionamento da tipologia.' },
+    3: { state: 'Manter', proposedNow: 380000, target: 380000, note: 'Preço atual defensável. Não se recomenda alteração imediata.' },
+    4: { state: 'Manter', proposedNow: 475000, target: 475000, note: 'Manter preço atual. Tipologia com comparabilidade externa limitada.' },
+    5: { state: 'Manter', proposedNow: 450000, target: 450000, note: 'Preço atual defensável dentro da família T1+1.' },
+    6: { state: 'Manter', proposedNow: 600000, target: 600000, note: 'Manter por prudência, dado o compset limitado para T2+1.' },
+    7: { state: 'Aplicar agora', proposedNow: 535000, target: 535000, note: 'Recomenda-se aplicar já. O ajuste é controlado e melhora a coerência dos T2 de entrada.' },
+    8: { state: 'Aplicar agora', proposedNow: 385000, target: 385000, note: 'Ajuste fino recomendado para melhorar coerência interna sem alterar significativamente o posicionamento.' },
+    9: { state: 'Subida faseada', proposedNow: 915000, target: 950000, note: 'Modelo aponta margem de subida, mas recomenda-se aplicação faseada para evitar resistência comercial.' },
+    10: { state: 'Subida faseada', proposedNow: 635000, target: 660000, note: 'Subida recomendada em duas fases, refletindo piso e orientação sem aplicar todo o alvo de imediato.' },
+    11: { state: 'Manter', proposedNow: 387000, target: 387000, note: 'Preço atual adequado. Não se recomenda alteração imediata.' },
+    12: { state: 'Aplicar agora', proposedNow: 430000, target: 430000, note: 'Ajuste fino aplicável já, com baixo risco comercial.' },
+    13: { state: 'Aplicar agora', proposedNow: 415000, target: 415000, note: 'Ajuste fino aplicável já, mantendo coerência na família T1+1.' },
+    14: { state: 'Manter', proposedNow: 582000, target: 582000, note: 'Preço atual defensável. Não se recomenda alteração imediata.' },
+    15: { state: 'Aplicar agora', proposedNow: 580000, target: 580000, note: 'Aplicar agora para reduzir desalinhamento face a unidades semelhantes.' },
+    16: { state: 'Subida faseada', proposedNow: 985000, target: 1025000, note: 'T3 em piso superior. Recomenda-se fasear a subida para validar procura antes de atingir o alvo.' },
+    17: { state: 'Subida faseada', proposedNow: 645000, target: 670000, note: 'Subida faseada para refletir melhor piso e orientação, sem absorver todo o ajuste de imediato.' },
+    18: { state: 'Aplicar agora', proposedNow: 410000, target: 410000, note: 'Aplicar agora. O ajuste reforça a coerência de piso superior.' },
+    19: { state: 'Aplicar agora', proposedNow: 435000, target: 435000, note: 'Ajuste pequeno recomendado para aplicação imediata.' },
+    20: { state: 'Manter', proposedNow: 422000, target: 422000, note: 'Preço atual defensável. Não se recomenda alteração imediata.' },
+    21: { state: 'Subida faseada', proposedNow: 620000, target: 630000, note: 'Subida faseada curta. O alvo é próximo, mas recomenda-se aplicar em duas etapas.' },
+    22: { state: 'Subida faseada', proposedNow: 590000, target: 615000, note: 'Modelo aponta margem de subida; aplicação faseada reduz resistência comercial.' },
+    23: { state: 'Rever gerência', proposedNow: 900000, target: 900000, note: 'Rever coerência face ao Apartamento 30 antes de qualquer decisão.' },
+    24: { state: 'Subida faseada', proposedNow: 655000, target: 680000, note: 'Subida faseada recomendada para alinhar com piso e orientação.' },
+    25: { state: 'Subida faseada', proposedNow: 418000, target: 435000, note: 'Preço-alvo superior, mas recomenda-se fasear para manter absorção comercial.' },
+    26: { state: 'Subida faseada', proposedNow: 600000, target: 620000, note: 'Subida faseada para T2 em piso superior.' },
+    27: { state: 'Subida faseada', proposedNow: 395000, target: 400000, note: 'Evitar inicialmente a barreira psicológica dos 400.000 €.' },
+    28: { state: 'Subida faseada', proposedNow: 455000, target: 470000, note: 'Aplicação faseada para ajustar vista/piso e coerência interna.' },
+    29: { state: 'Subida faseada', proposedNow: 475000, target: 490000, note: 'Aplicação faseada para ajustar vista/piso e coerência interna.' },
+    30: { state: 'Rever gerência', proposedNow: 1050000, target: 1050000, note: 'Rever coerência face ao Apartamento 23 antes de qualquer decisão.' },
+    31: { state: 'Subida faseada', proposedNow: 665000, target: 690000, note: 'Subida faseada para T2 em piso alto.' },
+    32: { state: 'Subida faseada', proposedNow: 425000, target: 440000, note: 'Correção de piso alto, mantendo prudência pela orientação.' },
+    33: { state: 'Subida faseada', proposedNow: 610000, target: 630000, note: 'Subida faseada para T2 em piso alto.' },
+    34: { state: 'Subida faseada', proposedNow: 660000, target: 685000, note: 'Subida faseada para reforçar coerência com restantes T2.' },
+    35: { state: 'Manter', proposedNow: 551000, target: 551000, note: 'Produto específico. Manter até validação comercial adicional.' },
+    36: { state: 'Rever gerência', proposedNow: 1450000, target: 1450000, note: 'Fração premium. Manter por enquanto, mas rever com base em vista real, área exterior e procura.' },
+    37: { state: 'Manter', proposedNow: 1100000, target: 1100000, note: 'Preço atual já reflete escassez e piso. Manter.' },
+    38: { state: 'Manter', proposedNow: 520000, target: 520000, note: 'Preço atual defensável para piso alto.' },
+    39: { state: 'Rever gerência', proposedNow: 1100000, target: 1100000, note: 'T3 no piso 6. Rever se a diferença face ao Apartamento 36 está devidamente justificada.' }
+  };
+
+  function getCommercialDecision(fraction, technicalPrice) {
+    const number = getFractionNumber(fraction);
+    const fixed = COMMERCIAL_DECISIONS[number];
+
+    if (fixed) {
+      return {
+        state: fixed.state,
+        proposedNow: fixed.proposedNow,
+        target: fixed.target,
+        note: fixed.note
+      };
+    }
+
+    const recommended = Number.isFinite(technicalPrice) ? technicalPrice : fraction.price;
+    const adjustment = recommended - fraction.price;
+
+    if (Math.abs(adjustment) < 1000) {
+      return { state: 'Manter', proposedNow: fraction.price, target: fraction.price, note: 'Sem diferença material face ao preço atual.' };
+    }
+
+    if (adjustment <= 20000) {
+      return { state: 'Aplicar agora', proposedNow: recommended, target: recommended, note: 'Ajuste pequeno, aplicável de imediato.' };
+    }
+
+    if (adjustment <= 35000) {
+      return { state: 'Aplicar agora', proposedNow: recommended, target: recommended, note: 'Ajuste moderado, aplicável de imediato se não houver sensibilidade comercial.' };
+    }
+
+    return {
+      state: 'Subida faseada',
+      proposedNow: Math.round((fraction.price + recommended * 0.55) / 5000) * 5000,
+      target: recommended,
+      note: 'Ajuste expressivo. Recomenda-se fasear a subida.'
+    };
+  }
+
+  function getCommercialAnalysis(analysis) {
+    const fraction = analysis.fraction;
+    const modelRecommended = analysis.finalPrice || analysis.coherentPrice;
+    const decision = getCommercialDecision(fraction, modelRecommended);
+    const immediateAdjustment = decision.proposedNow - fraction.price;
+    const potentialAdjustment = decision.target - fraction.price;
+
+    return {
+      ...analysis,
+      modelRecommended,
+      commercialState: decision.state,
+      proposedNow: decision.proposedNow,
+      targetPrice: decision.target,
+      immediateAdjustment,
+      potentialAdjustment,
+      commercialNote: decision.note
+    };
+  }
+
+
   const el = {};
   document.addEventListener('DOMContentLoaded', init);
 
@@ -135,7 +235,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -158,6 +258,22 @@
     if (el.clearPdfFloors) el.clearPdfFloors.addEventListener('click', () => setChecklistState(el.pdfFloorChecklist, false));
     if (el.selectAllPdfFractions) el.selectAllPdfFractions.addEventListener('click', () => setChecklistState(el.pdfFractionChecklist, true));
     if (el.clearPdfFractions) el.clearPdfFractions.addEventListener('click', () => setChecklistState(el.pdfFractionChecklist, false));
+
+    if (el.commercialStateFilter) el.commercialStateFilter.addEventListener('change', () => { state.commercialFilters.state = el.commercialStateFilter.value; renderCommercialPage(); });
+    if (el.commercialImpactFilter) el.commercialImpactFilter.addEventListener('change', () => { state.commercialFilters.impact = el.commercialImpactFilter.value; renderCommercialPage(); });
+    if (el.commercialTypologyFilter) el.commercialTypologyFilter.addEventListener('change', () => { state.commercialFilters.typology = el.commercialTypologyFilter.value; renderCommercialPage(); });
+    if (el.commercialSort) el.commercialSort.addEventListener('change', () => { state.commercialFilters.sort = el.commercialSort.value; renderCommercialPage(); });
+    if (el.commercialFractionSearch) el.commercialFractionSearch.addEventListener('input', () => { state.commercialFilters.search = el.commercialFractionSearch.value; renderCommercialPage(); });
+    if (el.commercialSelectAllFloors) el.commercialSelectAllFloors.addEventListener('click', () => { setChecklistState(el.commercialFloorChecklist, true); updateCommercialChecklistFilters(); });
+    if (el.commercialClearFloors) el.commercialClearFloors.addEventListener('click', () => { setChecklistState(el.commercialFloorChecklist, false); updateCommercialChecklistFilters(); });
+    if (el.commercialSelectAllFractions) el.commercialSelectAllFractions.addEventListener('click', () => { setChecklistState(el.commercialFractionChecklist, true); updateCommercialChecklistFilters(); });
+    if (el.commercialSelectVisibleFractions) el.commercialSelectVisibleFractions.addEventListener('click', () => { setChecklistState(el.commercialFractionChecklist, true); updateCommercialChecklistFilters(); });
+    if (el.commercialClearFractions) el.commercialClearFractions.addEventListener('click', () => { setChecklistState(el.commercialFractionChecklist, false); updateCommercialChecklistFilters(); });
+    if (el.commercialFloorChecklist) el.commercialFloorChecklist.addEventListener('change', updateCommercialChecklistFilters);
+    if (el.commercialFractionChecklist) el.commercialFractionChecklist.addEventListener('change', updateCommercialChecklistFilters);
+    if (el.clearCommercialFilters) el.clearCommercialFilters.addEventListener('click', resetCommercialFilters);
+    if (el.exportCommercialPdfButton) el.exportCommercialPdfButton.addEventListener('click', exportCommercialPdf);
+
     el.closeFractionModal.addEventListener('click', closeFractionModal);
     el.closeCompetitorModal.addEventListener('click', closeCompetitorModal);
     el.fractionModal.addEventListener('click', (event) => { if (event.target === el.fractionModal) closeFractionModal(); });
@@ -398,7 +514,7 @@
   }
 
   function renderAll() {
-    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderCalculationPage();
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderCommercialPage(); renderCalculationPage();
   }
 
   function renderKpis() {
@@ -485,6 +601,254 @@
     return `${sign}${formatMoney(Math.abs(value))}`;
   }
 
+
+
+
+  function updateCommercialChecklistFilters() {
+    state.commercialFilters.floors = getSelectedChecklistValues(el.commercialFloorChecklist);
+    state.commercialFilters.fractions = getSelectedChecklistValues(el.commercialFractionChecklist);
+    renderCommercialPage(false);
+  }
+
+  function resetCommercialFilters() {
+    state.commercialFilters = { state: 'all', impact: 'all', typology: 'all', floors: [], fractions: [], search: '', sort: 'immediate-desc' };
+    if (el.commercialStateFilter) el.commercialStateFilter.value = 'all';
+    if (el.commercialImpactFilter) el.commercialImpactFilter.value = 'all';
+    if (el.commercialTypologyFilter) el.commercialTypologyFilter.value = 'all';
+    if (el.commercialSort) el.commercialSort.value = 'immediate-desc';
+    if (el.commercialFractionSearch) el.commercialFractionSearch.value = '';
+    renderCommercialPage(true);
+  }
+
+  function getCommercialAnalyses() {
+    return buildIdealAnalyses(state.filteredFractions).map(getCommercialAnalysis);
+  }
+
+  function syncCommercialControls(allAnalyses, preserveSelections = true) {
+    if (!el.commercialTypologyFilter) return;
+
+    const typologies = uniqueSorted(allAnalyses.map((item) => item.fraction.typology));
+    const previousTypology = state.commercialFilters.typology || 'all';
+    el.commercialTypologyFilter.replaceChildren(createOption('all', 'Todas'));
+    typologies.forEach((typology) => el.commercialTypologyFilter.append(createOption(typology, typology)));
+    el.commercialTypologyFilter.value = typologies.includes(previousTypology) ? previousTypology : 'all';
+    state.commercialFilters.typology = el.commercialTypologyFilter.value;
+
+    const floors = uniqueSorted(allAnalyses.map((item) => item.fraction.floorNumber));
+    renderChecklist(
+      el.commercialFloorChecklist,
+      floors.map((floor) => ({ value: String(floor), label: `Piso ${floor}` })),
+      { defaultAll: true, preserve: preserveSelections }
+    );
+
+    const search = normalizeKey(state.commercialFilters.search || '');
+    const fractionsForChecklist = allAnalyses
+      .filter((item) => !search || normalizeKey(item.fraction.name).includes(search) || String(getFractionNumber(item.fraction)).includes(search))
+      .map((item) => item.fraction.name);
+
+    renderChecklist(
+      el.commercialFractionChecklist,
+      fractionsForChecklist.map((name) => ({ value: name, label: name })),
+      { defaultAll: true, preserve: preserveSelections }
+    );
+
+    state.commercialFilters.floors = getSelectedChecklistValues(el.commercialFloorChecklist);
+    state.commercialFilters.fractions = getSelectedChecklistValues(el.commercialFractionChecklist);
+  }
+
+  function filterCommercialAnalyses(analyses) {
+    const f = state.commercialFilters;
+
+    return analyses.filter((analysis) => {
+      const fraction = analysis.fraction;
+      const stateMatch = f.state === 'all' || analysis.commercialState === f.state;
+      const impactMatch = f.impact === 'all' || getImpactBucket(analysis.immediateAdjustment) === f.impact;
+      const typologyMatch = f.typology === 'all' || normalizeKey(fraction.typology) === normalizeKey(f.typology);
+      const floorMatch = !f.floors.length || f.floors.includes(String(fraction.floorNumber));
+      const fractionMatch = !f.fractions.length || f.fractions.includes(fraction.name);
+      return stateMatch && impactMatch && typologyMatch && floorMatch && fractionMatch;
+    });
+  }
+
+  function sortCommercialAnalyses(analyses) {
+    const order = { 'Aplicar agora': 1, 'Subida faseada': 2, 'Rever gerência': 3, 'Manter': 4 };
+    const sort = state.commercialFilters.sort || 'immediate-desc';
+    const arr = [...analyses];
+
+    const cmp = {
+      'immediate-desc': (a,b) => b.immediateAdjustment - a.immediateAdjustment || naturalNameCompare(a.fraction,b.fraction),
+      'potential-desc': (a,b) => b.potentialAdjustment - a.potentialAdjustment || naturalNameCompare(a.fraction,b.fraction),
+      'floor-asc': (a,b) => a.fraction.floorNumber - b.fraction.floorNumber || naturalNameCompare(a.fraction,b.fraction),
+      'current-desc': (a,b) => b.fraction.price - a.fraction.price || naturalNameCompare(a.fraction,b.fraction),
+      'proposed-desc': (a,b) => b.proposedNow - a.proposedNow || naturalNameCompare(a.fraction,b.fraction),
+      'state-asc': (a,b) => (order[a.commercialState] || 9) - (order[b.commercialState] || 9) || naturalNameCompare(a.fraction,b.fraction),
+      'typology-asc': (a,b) => a.fraction.typology.localeCompare(b.fraction.typology, 'pt', { numeric: true }) || naturalNameCompare(a.fraction,b.fraction)
+    }[sort] || ((a,b) => naturalNameCompare(a.fraction,b.fraction));
+
+    return arr.sort(cmp);
+  }
+
+  function renderCommercialPage(syncControls = true) {
+    if (!el.commercialSummary) return;
+
+    const allAnalyses = getCommercialAnalyses();
+    if (syncControls) syncCommercialControls(allAnalyses, true);
+
+    const filtered = sortCommercialAnalyses(filterCommercialAnalyses(allAnalyses));
+    renderCommercialSummary(filtered);
+    renderCommercialCards(filtered);
+    renderCommercialTable(filtered);
+    renderCommercialSelectedChips(filtered);
+
+    if (el.commercialCount) {
+      el.commercialCount.textContent = `${filtered.length} frações na proposta`;
+    }
+  }
+
+  function renderCommercialSummary(analyses) {
+    const revenueCurrent = sum(analyses.map((a) => a.fraction.price));
+    const revenueProposed = sum(analyses.map((a) => a.proposedNow));
+    const revenueTarget = sum(analyses.map((a) => a.targetPrice));
+    const immediate = revenueProposed - revenueCurrent;
+    const potential = revenueTarget - revenueCurrent;
+    const counts = countByState(analyses);
+
+    replace(el.commercialSummary,
+      summary('Receita atual', formatMoney(revenueCurrent), 'Tabela atual filtrada'),
+      summary('Receita proposta agora', formatMoney(revenueProposed), `${formatSignedMoney(immediate)} vs atual`),
+      summary('Receita-alvo', formatMoney(revenueTarget), `${formatSignedMoney(potential)} vs atual`),
+      summary('Incremento imediato', formatSignedMoney(immediate), 'Aplicação proposta agora'),
+      summary('Incremento potencial', formatSignedMoney(potential), 'Segunda fase / alvo'),
+      summary('Estados', `${counts['Aplicar agora'] || 0} aplicar · ${counts['Subida faseada'] || 0} fasear`, `${counts['Manter'] || 0} manter · ${counts['Rever gerência'] || 0} rever`)
+    );
+  }
+
+  function renderCommercialCards(analyses) {
+    if (!el.commercialCards) return;
+    el.commercialCards.replaceChildren();
+
+    if (!analyses.length) {
+      el.commercialCards.append(empty('Sem frações com os filtros comerciais atuais.'));
+      return;
+    }
+
+    analyses.forEach((analysis) => {
+      const f = analysis.fraction;
+      const card = div('commercial-card', [
+        div('commercial-card-head', [
+          div('commercial-card-title', [
+            h('strong', { text: f.name }),
+            h('span', { text: `${f.typology} · Piso ${f.floorLabel} · ${getOrientation(f)}` })
+          ]),
+          h('span', { className: `decision-badge ${getDecisionClass(analysis.commercialState)}`, text: analysis.commercialState })
+        ]),
+        div('commercial-card-grid', [
+          metric('Preço atual', formatMoney(f.price)),
+          metric('Recomendado modelo', formatMoney(analysis.modelRecommended)),
+          metric('Proposto agora', formatMoney(analysis.proposedNow)),
+          metric('Preço-alvo', formatMoney(analysis.targetPrice)),
+          metric('Ajuste imediato', formatSignedMoney(analysis.immediateAdjustment)),
+          metric('Ajuste potencial', formatSignedMoney(analysis.potentialAdjustment))
+        ]),
+        div('commercial-reading', [
+          h('strong', { text: 'Leitura comercial' }),
+          h('p', { text: analysis.commercialNote })
+        ])
+      ]);
+
+      el.commercialCards.append(card);
+    });
+  }
+
+  function renderCommercialTable(analyses) {
+    if (!el.commercialTable) return;
+
+    const headers = [
+      'Fração',
+      'Tipologia',
+      'Piso',
+      'Orientação',
+      'Preço atual',
+      'Preço recomendado pelo modelo',
+      'Preço proposto agora',
+      'Preço-alvo',
+      'Ajuste imediato',
+      'Ajuste potencial',
+      'Estado da decisão',
+      'Justificação comercial'
+    ];
+
+    const rows = analyses.map((analysis) => [
+      analysis.fraction.name,
+      analysis.fraction.typology,
+      analysis.fraction.floorLabel,
+      getOrientation(analysis.fraction),
+      formatMoney(analysis.fraction.price),
+      formatMoney(analysis.modelRecommended),
+      formatMoney(analysis.proposedNow),
+      formatMoney(analysis.targetPrice),
+      formatSignedMoney(analysis.immediateAdjustment),
+      formatSignedMoney(analysis.potentialAdjustment),
+      { type: 'decision-state', label: analysis.commercialState },
+      analysis.commercialNote
+    ]);
+
+    renderTable(el.commercialTable, headers, rows);
+  }
+
+  function renderCommercialSelectedChips(analyses) {
+    if (!el.commercialSelectedChips) return;
+    const selected = state.commercialFilters.fractions || [];
+    el.commercialSelectedChips.replaceChildren();
+
+    if (!selected.length) {
+      el.commercialSelectedChips.append(h('span', { className: 'muted small', text: 'Nenhuma fração marcada: serão usadas todas as frações disponíveis.' }));
+      return;
+    }
+
+    selected.forEach((name) => {
+      const chip = h('button', { className: 'selected-chip', text: `× ${name}`, attrs: { type: 'button' } });
+      chip.addEventListener('click', () => {
+        const input = el.commercialFractionChecklist?.querySelector(`input[value="${cssEscape(name)}"]`);
+        if (input) input.checked = false;
+        updateCommercialChecklistFilters();
+      });
+      el.commercialSelectedChips.append(chip);
+    });
+  }
+
+  function getImpactBucket(value) {
+    const n = Math.abs(Number(value) || 0);
+    if (n < 1000) return 'none';
+    if (n <= 20000) return 'up-to-20';
+    if (n <= 35000) return '20-35';
+    if (n <= 55000) return '35-55';
+    return 'above-55';
+  }
+
+  function countByState(analyses) {
+    return analyses.reduce((acc, item) => {
+      acc[item.commercialState] = (acc[item.commercialState] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  function sum(values) {
+    return values.filter(Number.isFinite).reduce((acc, value) => acc + value, 0);
+  }
+
+  function getDecisionClass(stateText) {
+    const key = normalizeKey(stateText);
+    if (key.includes('aplicar')) return 'decision-apply';
+    if (key.includes('faseada')) return 'decision-phase';
+    if (key.includes('rever')) return 'decision-review';
+    return 'decision-keep';
+  }
+
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
+    return String(value).replace(/"/g, '\\"');
+  }
 
 
   function renderCalculationPage() {
@@ -755,6 +1119,224 @@
     parts.push(`Como apoio técnico, o mercado aponta para ${formatMoney(analysis.marketPrice)} e o modelo interno puro para ${formatMoney(analysis.internalPurePrice)}.`);
     return parts.join(' ');
   }
+
+
+  function exportCommercialPdf() {
+    const all = sortCommercialAnalyses(filterCommercialAnalyses(getCommercialAnalyses()));
+    if (!all.length) {
+      alert('Não existem frações para exportar com os filtros comerciais atuais.');
+      return;
+    }
+
+    const type = el.commercialPdfType?.value || 'executive';
+
+    if (type === 'technical') return exportTechnicalCommercialPdf(all);
+    if (type === 'sales') return exportSalesCommercialPdf(all);
+    return exportExecutiveCommercialPdf(all);
+  }
+
+  function exportExecutiveCommercialPdf(analyses) {
+    const title = 'The View Olhão · Proposta Comercial de Preços';
+    const totals = getCommercialTotals(analyses);
+    const grouped = groupCommercialByState(analyses);
+    const stateOrder = ['Aplicar agora', 'Subida faseada', 'Rever gerência', 'Manter'];
+    const now = new Date();
+
+    const stateRows = stateOrder.map((stateName) => {
+      const items = grouped[stateName] || [];
+      const total = getCommercialTotals(items);
+      return `<tr>
+        <td>${escapeHtml(stateName)}</td>
+        <td>${items.length}</td>
+        <td>${escapeHtml(formatMoney(total.current))}</td>
+        <td>${escapeHtml(formatMoney(total.proposed))}</td>
+        <td>${escapeHtml(formatMoney(total.target))}</td>
+        <td>${escapeHtml(formatSignedMoney(total.immediate))}</td>
+        <td>${escapeHtml(formatSignedMoney(total.potential))}</td>
+      </tr>`;
+    }).join('');
+
+    const detailSections = stateOrder.map((stateName) => {
+      const items = grouped[stateName] || [];
+      if (!items.length) return '';
+      const rows = items.map((a) => `<tr>
+        <td>${escapeHtml(a.fraction.name)}</td>
+        <td>${escapeHtml(a.fraction.typology)}</td>
+        <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
+        <td>${escapeHtml(getOrientation(a.fraction))}</td>
+        <td>${escapeHtml(formatMoney(a.fraction.price))}</td>
+        <td>${escapeHtml(formatMoney(a.proposedNow))}</td>
+        <td>${escapeHtml(formatMoney(a.targetPrice))}</td>
+        <td>${escapeHtml(formatSignedMoney(a.immediateAdjustment))}</td>
+        <td>${escapeHtml(a.commercialState)}</td>
+        <td>${escapeHtml(a.commercialNote)}</td>
+      </tr>`).join('');
+
+      return `<h2 class="state-title">${escapeHtml(stateName)}</h2>
+      <table>
+        <thead><tr><th>Fração</th><th>Tip.</th><th>Piso</th><th>Orientação</th><th>Atual</th><th>Proposto agora</th><th>Alvo</th><th>Ajuste imediato</th><th>Estado</th><th>Justificação comercial</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }).join('');
+
+    const html = `<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+${pdfStyles()}
+</head>
+<body>
+  <section class="page cover">
+    <div class="brand">The View Olhão</div>
+    <h1>${escapeHtml(title)}</h1>
+    <p class="date">Gerado em ${escapeHtml(now.toLocaleString('pt-PT'))}</p>
+    <p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
+    <p class="executive-text">A análise técnica indica margem de reforço em várias frações. A proposta comercial recomenda aplicar imediatamente os ajustes finos e moderados, fasear as subidas mais expressivas e submeter frações premium ou sensíveis à validação da gerência.</p>
+    <div class="pdf-kpis">
+      ${pdfKpi('Receita atual', formatMoney(totals.current))}
+      ${pdfKpi('Receita proposta agora', formatMoney(totals.proposed))}
+      ${pdfKpi('Receita-alvo', formatMoney(totals.target))}
+      ${pdfKpi('Incremento imediato', formatSignedMoney(totals.immediate))}
+      ${pdfKpi('Incremento potencial', formatSignedMoney(totals.potential))}
+      ${pdfKpi('A manter', String((grouped['Manter'] || []).length))}
+      ${pdfKpi('Aplicar agora', String((grouped['Aplicar agora'] || []).length))}
+      ${pdfKpi('Subida faseada', String((grouped['Subida faseada'] || []).length))}
+      ${pdfKpi('Rever gerência', String((grouped['Rever gerência'] || []).length))}
+    </div>
+  </section>
+
+  <section class="page">
+    <h1>Resumo por estado da decisão</h1>
+    <table>
+      <thead><tr><th>Estado</th><th>N.º frações</th><th>Receita atual</th><th>Receita proposta agora</th><th>Receita-alvo</th><th>Incremento imediato</th><th>Incremento potencial</th></tr></thead>
+      <tbody>${stateRows}</tbody>
+    </table>
+  </section>
+
+  <section class="page">
+    <h1>Detalhe por estado da decisão</h1>
+    ${detailSections}
+  </section>
+</body>
+</html>`;
+
+    openPdfWindow(html);
+  }
+
+  function exportTechnicalCommercialPdf(analyses) {
+    const title = 'The View Olhão · PDF Técnico de Preços';
+    const rows = analyses.map((a) => `<tr>
+      <td>${escapeHtml(a.fraction.name)}</td>
+      <td>${escapeHtml(a.fraction.typology)}</td>
+      <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
+      <td>${escapeHtml(getOrientation(a.fraction))}</td>
+      <td>${escapeHtml(formatMoney(a.fraction.price))}</td>
+      <td>${escapeHtml(formatMoney(a.modelRecommended))}</td>
+      <td>${escapeHtml(formatMoney(a.proposedNow))}</td>
+      <td>${escapeHtml(formatMoney(a.targetPrice))}</td>
+      <td>${escapeHtml(formatSignedMoney(a.immediateAdjustment))}</td>
+      <td>${escapeHtml(formatSignedMoney(a.potentialAdjustment))}</td>
+      <td>${escapeHtml(a.commercialState)}</td>
+      <td>${escapeHtml(formatNumber(a.score))}</td>
+      <td>${escapeHtml(buildCalculationReading(a, a.finalRecommendation))}</td>
+    </tr>`).join('');
+
+    openPdfWindow(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>${pdfStyles()}</head><body>
+      <section class="page"><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
+      <table><thead><tr><th>Fração</th><th>Tip.</th><th>Piso</th><th>Orientação</th><th>Atual</th><th>Modelo</th><th>Proposto agora</th><th>Alvo</th><th>Ajuste imediato</th><th>Ajuste potencial</th><th>Estado</th><th>Score</th><th>Leitura resumida</th></tr></thead><tbody>${rows}</tbody></table>
+      </section></body></html>`);
+  }
+
+  function exportSalesCommercialPdf(analyses) {
+    const title = 'The View Olhão · Tabela Comercial para Vendas';
+    const rows = analyses.map((a) => `<tr>
+      <td>${escapeHtml(a.fraction.name)}</td>
+      <td>${escapeHtml(a.fraction.typology)}</td>
+      <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
+      <td>${escapeHtml(getOrientation(a.fraction))}</td>
+      <td>${escapeHtml(formatMoney(a.proposedNow))}</td>
+      <td>${escapeHtml(getSalesObservation(a))}</td>
+    </tr>`).join('');
+
+    openPdfWindow(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>${pdfStyles()}</head><body>
+      <section class="page"><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
+      <table><thead><tr><th>Fração</th><th>Tipologia</th><th>Piso</th><th>Orientação</th><th>Preço final a comunicar</th><th>Observação comercial curta</th></tr></thead><tbody>${rows}</tbody></table>
+      </section></body></html>`);
+  }
+
+  function getSalesObservation(a) {
+    if (a.commercialState === 'Aplicar agora') return 'Novo preço aplicável na tabela comercial.';
+    if (a.commercialState === 'Subida faseada') return 'Preço atual de comunicação; acompanhar evolução para próxima fase.';
+    if (a.commercialState === 'Rever gerência') return 'Não comunicar alteração sem validação da gerência.';
+    return 'Manter preço atual.';
+  }
+
+  function getCommercialTotals(analyses) {
+    const current = sum(analyses.map((a) => a.fraction.price));
+    const proposed = sum(analyses.map((a) => a.proposedNow));
+    const target = sum(analyses.map((a) => a.targetPrice));
+    return { current, proposed, target, immediate: proposed - current, potential: target - current };
+  }
+
+  function groupCommercialByState(analyses) {
+    return analyses.reduce((acc, item) => {
+      if (!acc[item.commercialState]) acc[item.commercialState] = [];
+      acc[item.commercialState].push(item);
+      return acc;
+    }, {});
+  }
+
+  function getCommercialFiltersText() {
+    const parts = [];
+    if (state.commercialFilters.state !== 'all') parts.push(`Estado: ${state.commercialFilters.state}`);
+    if (state.commercialFilters.impact !== 'all') parts.push(`Impacto: ${state.commercialFilters.impact}`);
+    if (state.commercialFilters.typology !== 'all') parts.push(`Tipologia: ${state.commercialFilters.typology}`);
+    if (state.commercialFilters.floors.length) parts.push(`Pisos: ${state.commercialFilters.floors.join(', ')}`);
+    if (state.commercialFilters.fractions.length) parts.push(`Frações: ${state.commercialFilters.fractions.join(', ')}`);
+    return parts.length ? parts.join(' · ') : 'Sem filtros comerciais adicionais.';
+  }
+
+  function pdfKpi(label, value) {
+    return `<div class="pdf-kpi"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+  }
+
+  function pdfStyles() {
+    return `<style>
+      body{font-family:Inter,Arial,sans-serif;margin:0;color:#111827;background:#fff}
+      .page{page-break-after:always;padding:28px}
+      .page:last-child{page-break-after:auto}
+      .brand{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#92713a;font-weight:800;margin-bottom:10px}
+      h1{margin:0 0 10px;font-size:28px;letter-spacing:-.03em}
+      h2.state-title{margin:24px 0 8px;font-size:18px}
+      .date,.filters,.executive-text{color:#475569;line-height:1.45}
+      .executive-text{font-size:15px;margin:18px 0 20px;max-width:900px}
+      .pdf-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+      .pdf-kpi{border:1px solid #dbe3ef;border-radius:16px;padding:14px;background:#f8fafc}
+      .pdf-kpi span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}
+      .pdf-kpi strong{display:block;margin-top:6px;font-size:20px}
+      table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:10px}
+      th,td{border:1px solid #dbe3ef;padding:7px;text-align:left;vertical-align:top}
+      th{background:#f3f6fb;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
+      td:nth-child(5),td:nth-child(6),td:nth-child(7),td:nth-child(8),td:nth-child(9){text-align:right;white-space:nowrap}
+      td:last-child{min-width:240px;line-height:1.35}
+      @page{size:A4 landscape;margin:10mm}
+    </style>`;
+  }
+
+  function openPdfWindow(html) {
+    const win = window.open('', '_blank', 'width=1200,height=900');
+    if (!win) {
+      alert('Não foi possível abrir a janela de exportação. Verifique se pop-ups estão permitidos para este site.');
+      return;
+    }
+
+    win.document.open();
+    win.document.write(html + `<script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>`);
+    win.document.close();
+    win.focus();
+  }
+
 
   function exportRecommendedPdf() {
     const floorSelections = getSelectedChecklistValues(el.pdfFloorChecklist);
@@ -1224,6 +1806,12 @@
 
       row.forEach((cell) => {
         const td = h('td');
+
+        if (cell && typeof cell === 'object' && cell.type === 'decision-state') {
+          td.append(h('span', { className: `decision-badge ${getDecisionClass(cell.label)}`, text: cell.label }));
+          tr.append(td);
+          return;
+        }
 
         if (cell && typeof cell === 'object' && cell.type === 'final-details') {
           const button = h('button', {

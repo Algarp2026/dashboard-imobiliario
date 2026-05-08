@@ -31,6 +31,7 @@
         <button class="tab-button active" type="button" data-tab="dashboard">Dashboard</button>
         <button class="tab-button" type="button" data-tab="market">Inteligência de mercado</button>
         <button class="tab-button" type="button" data-tab="ideal">Preço recomendado</button>
+        <button class="tab-button" type="button" data-tab="commercial">Proposta Comercial</button>
         <button class="tab-button" data-tab="calculation">Cálculo detalhado</button>
       </section>
 
@@ -163,6 +164,166 @@
         </section>
       </section>
     
+      
+      <section id="tab-commercial" class="tab-panel">
+        <section class="panel commercial-hero-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Decisão comercial</p>
+              <h2>Proposta Comercial de Preços</h2>
+            </div>
+            <p class="muted small" id="commercialCount">—</p>
+          </div>
+          <p class="muted">
+            Esta camada não substitui o cálculo técnico. Ela transforma o preço recomendado pelo modelo numa proposta de decisão para a gerência:
+            aplicar agora, fasear, manter ou rever manualmente.
+          </p>
+          <div class="summary-grid commercial-summary-grid" id="commercialSummary"></div>
+        </section>
+
+        <section class="panel commercial-filters-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Filtros comerciais</p>
+              <h2>Refinar proposta</h2>
+            </div>
+            <button class="ghost-button" id="clearCommercialFilters" type="button">Limpar filtros comerciais</button>
+          </div>
+
+          <div class="commercial-filter-grid">
+            <label class="field">
+              <span>Estado da decisão</span>
+              <select id="commercialStateFilter">
+                <option value="all">Todos</option>
+                <option value="Manter">Manter</option>
+                <option value="Aplicar agora">Aplicar agora</option>
+                <option value="Subida faseada">Subida faseada</option>
+                <option value="Rever gerência">Rever gerência</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Tipo de impacto</span>
+              <select id="commercialImpactFilter">
+                <option value="all">Todos</option>
+                <option value="none">Sem alteração</option>
+                <option value="up-to-20">Até 20.000 €</option>
+                <option value="20-35">20.000 € a 35.000 €</option>
+                <option value="35-55">35.000 € a 55.000 €</option>
+                <option value="above-55">Acima de 55.000 €</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Tipologia</span>
+              <select id="commercialTypologyFilter">
+                <option value="all">Todas</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Ordenar por</span>
+              <select id="commercialSort">
+                <option value="immediate-desc">Maior ajuste imediato</option>
+                <option value="potential-desc">Maior ajuste potencial</option>
+                <option value="floor-asc">Piso</option>
+                <option value="current-desc">Preço atual</option>
+                <option value="proposed-desc">Preço proposto agora</option>
+                <option value="state-asc">Estado da decisão</option>
+                <option value="typology-asc">Tipologia</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="commercial-checklists">
+            <div class="pdf-checklist-field">
+              <div class="checklist-head">
+                <span>Pisos</span>
+                <div>
+                  <button type="button" class="mini-action" id="commercialSelectAllFloors">Todos</button>
+                  <button type="button" class="mini-action" id="commercialClearFloors">Limpar</button>
+                </div>
+              </div>
+              <div id="commercialFloorChecklist" class="pdf-checklist"></div>
+            </div>
+
+            <div class="pdf-checklist-field">
+              <div class="checklist-head">
+                <span>Frações</span>
+                <div>
+                  <input id="commercialFractionSearch" class="search-input" type="search" placeholder="Pesquisar número..." />
+                  <button type="button" class="mini-action" id="commercialSelectVisibleFractions">Selecionar visíveis</button>
+                  <button type="button" class="mini-action" id="commercialSelectAllFractions">Todas</button>
+                  <button type="button" class="mini-action" id="commercialClearFractions">Limpar</button>
+                </div>
+              </div>
+              <div id="commercialFractionChecklist" class="pdf-checklist pdf-checklist--fractions"></div>
+              <div id="commercialSelectedChips" class="selected-chips"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Frações</p>
+              <h2>Cards de decisão comercial</h2>
+            </div>
+          </div>
+          <div id="commercialCards" class="commercial-cards"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Tabela comercial</p>
+              <h2>Proposta por fração</h2>
+            </div>
+          </div>
+          <div class="table-wrap commercial-table-wrap">
+            <table id="commercialTable" class="data-table commercial-table"></table>
+          </div>
+        </section>
+
+        <section class="panel export-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Exportação</p>
+              <h2>Gerar PDF</h2>
+            </div>
+          </div>
+          <p class="muted">
+            Escolha o tipo de relatório e exporte apenas as frações selecionadas nos filtros comerciais.
+          </p>
+          <div class="pdf-export-grid pdf-export-grid--commercial">
+            <label class="field">
+              <span>Tipo de PDF</span>
+              <select id="commercialPdfType">
+                <option value="executive">PDF Executivo</option>
+                <option value="technical">PDF Técnico</option>
+                <option value="sales">PDF Comercial</option>
+              </select>
+            </label>
+            <div class="pdf-export-card">
+              <strong>PDF Executivo</strong>
+              <p>Resumo para gerência, com receita atual, proposta agora, alvo e agrupamento por estado.</p>
+            </div>
+            <div class="pdf-export-card">
+              <strong>PDF Técnico</strong>
+              <p>Inclui preço recomendado pelo modelo, interno técnico, score e leitura resumida.</p>
+            </div>
+            <div class="pdf-export-card">
+              <strong>PDF Comercial</strong>
+              <p>Versão para vendas, mostrando apenas o preço final a comunicar.</p>
+            </div>
+            <div class="pdf-actions-card">
+              <button id="exportCommercialPdfButton" type="button" class="primary-button">Exportar PDF</button>
+              <p class="muted small">O relatório abre numa janela pronta para imprimir ou guardar como PDF.</p>
+            </div>
+          </div>
+        </section>
+      </section>
+
       <section class="tab-panel" id="tab-calculation">
         <section class="glass-section">
           <div class="section-head">
