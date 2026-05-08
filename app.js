@@ -81,7 +81,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealTable','idealCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealTable','idealCount','calculationTable','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -276,7 +276,7 @@
   }
 
   function renderAll() {
-    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage();
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderCalculationPage();
   }
 
   function renderKpis() {
@@ -361,6 +361,80 @@
     if (!Number.isFinite(value) || Math.abs(value) < 1) return '0 €';
     const sign = value > 0 ? '+' : '-';
     return `${sign}${formatMoney(Math.abs(value))}`;
+  }
+
+
+
+  function renderCalculationPage() {
+    if (!el.calculationTable) return;
+
+    const analyses = buildIdealAnalyses(state.filteredFractions);
+
+    const headers = [
+      'Fração',
+      'Atual',
+      'Mercado',
+      'Interno puro',
+      'Técnico misto',
+      'Recomendado final',
+      'Fórmula',
+      'Leitura'
+    ];
+
+    const rows = analyses.map((analysis) => {
+      const fraction = analysis.fraction;
+      const rec = getFinalRecommendation(fraction);
+      const finalPrice = rec?.price ?? analysis.coherentPrice;
+
+      const formula = `Mercado ${formatMoney(analysis.marketPrice)} × 70% + Interno ${formatMoney(analysis.internalPurePrice)} × 30% = Técnico ${formatMoney(analysis.coherentPrice)}`;
+
+      const reading = buildCalculationReading(analysis, rec);
+
+      return [
+        { type: 'final-details', label: fraction.name, analysis },
+        formatMoney(fraction.price),
+        `${formatMoney(analysis.marketPrice)} | ${formatNumber(analysis.marketSqm)} €/m²`,
+        `${formatMoney(analysis.internalPurePrice)} | ${formatNumber(analysis.internalPureSqm)} €/m²`,
+        formatMoney(analysis.coherentPrice),
+        `${formatMoney(finalPrice)} | ${rec?.strategy || 'Modelo técnico'}`,
+        formula,
+        reading
+      ];
+    });
+
+    renderTable(el.calculationTable, headers, rows);
+
+    if (el.calculationCount) {
+      el.calculationCount.textContent = `${analyses.length} frações analisadas`;
+    }
+  }
+
+  function buildCalculationReading(analysis, rec) {
+    const fraction = analysis.fraction;
+    const scorePct = Number.isFinite(analysis.scoreDelta) ? analysis.scoreDelta * 100 : null;
+    const scoreText = Number.isFinite(scorePct)
+      ? `${scorePct >= 0 ? '+' : ''}${scorePct.toFixed(1).replace('.', ',')}% face à mediana da tipologia`
+      : 'sem diferença relevante face à mediana da tipologia';
+
+    const base = `O ${fraction.name} tem score interno ${formatNumber(analysis.score)} (${scoreText}).`;
+
+    if (rec?.strategy === 'Manter') {
+      return `${base} Apesar dos modelos técnicos indicarem outro valor, a recomendação final mantém a tabela atual por prudência comercial.`;
+    }
+
+    if (rec?.strategy === 'Ajuste fino') {
+      return `${base} O ajuste final é pequeno, pensado para corrigir coerência/arredondamento sem alterar o posicionamento.`;
+    }
+
+    if (rec?.strategy === 'Subida moderada') {
+      return `${base} Há margem para reforço de preço, mas a subida é limitada para não depender demasiado do compset.`;
+    }
+
+    if (rec?.strategy === 'Subida faseada') {
+      return `${base} O valor final é tratado como preço-alvo para fase seguinte ou validação por procura.`;
+    }
+
+    return `${base} Sem recomendação comercial fixa, usa-se o valor técnico como referência.`;
   }
 
 
@@ -550,7 +624,27 @@
     const finalPrice = finalRecommendation?.price ?? coherentPrice;
     const finalGap = finalPrice && fraction.price ? finalPrice - fraction.price : null;
     const finalGapPct = finalPrice && fraction.price ? (finalGap / fraction.price) * 100 : null;
-    return { fraction, marketPrice: market.price, coherentPrice, coherentSqm, score, gapPct, alert, alertLevel, hierarchyAdjusted: false, finalRecommendation, finalPrice, finalGap, finalGapPct };
+    return {
+      fraction,
+      marketPrice: market.price,
+      marketSqm,
+      internalPureSqm: internalSqm,
+      internalPurePrice: internalSqm && fraction.totalArea ? internalSqm * fraction.totalArea : null,
+      medianCurrentSqm,
+      medianScore,
+      scoreDelta,
+      coherentPrice,
+      coherentSqm,
+      score,
+      gapPct,
+      alert,
+      alertLevel,
+      hierarchyAdjusted: false,
+      finalRecommendation,
+      finalPrice,
+      finalGap,
+      finalGapPct
+    };
   }
 
 
@@ -851,7 +945,8 @@
     const summaryGrid = div('final-popup-grid', [
       kpi('Preço atual', formatMoney(fraction.price), `${formatNumber(fraction.eurosPerSqm)} €/m² atual`),
       kpi('Preço mercado', formatMoney(analysis.marketPrice), Number.isFinite(marketDelta) ? `${formatSignedMoney(marketDelta)} vs atual` : 'Sem base suficiente'),
-      kpi('Interno técnico', formatMoney(analysis.coherentPrice), Number.isFinite(internalDelta) ? `${formatSignedMoney(internalDelta)} vs atual` : 'Âncora interna'),
+      kpi('Interno puro', formatMoney(analysis.internalPurePrice), 'Só coerência The View'),
+      kpi('Técnico misto', formatMoney(analysis.coherentPrice), Number.isFinite(internalDelta) ? `${formatSignedMoney(internalDelta)} vs atual` : '70% mercado + 30% interno'),
       kpi('Recomendado final', formatMoney(finalPrice), Number.isFinite(adjustmentPct) ? `${formatSignedMoney(adjustment)} · ${formatPercent(adjustmentPct)}` : 'Recomendação comercial')
     ]);
 
