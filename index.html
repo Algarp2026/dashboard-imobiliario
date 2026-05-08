@@ -133,16 +133,28 @@
               <strong>Comparação</strong>
               <p>Preço recomendado x Preço atual</p>
             </div>
-            <label class="field pdf-multiselect-field">
-              <span>Escolher pisos</span>
-              <select id="pdfFloorSelect" multiple size="6"></select>
-              <small class="small muted">Pode escolher um ou vários pisos.</small>
-            </label>
-            <label class="field pdf-multiselect-field pdf-fractions-field">
-              <span>Escolher frações</span>
-              <select id="pdfFractionSelect" multiple size="10"></select>
-              <small class="small muted">Se não escolher nenhuma, o PDF usa todas as frações filtradas.</small>
-            </label>
+            <div class="pdf-checklist-field">
+              <div class="checklist-head">
+                <span>Escolher pisos</span>
+                <div>
+                  <button type="button" class="mini-action" id="selectAllPdfFloors">Todos</button>
+                  <button type="button" class="mini-action" id="clearPdfFloors">Limpar</button>
+                </div>
+              </div>
+              <div id="pdfFloorChecklist" class="pdf-checklist"></div>
+              <small class="small muted">Marque os pisos que pretende exportar.</small>
+            </div>
+            <div class="pdf-checklist-field pdf-fractions-field">
+              <div class="checklist-head">
+                <span>Escolher frações</span>
+                <div>
+                  <button type="button" class="mini-action" id="selectAllPdfFractions">Todas</button>
+                  <button type="button" class="mini-action" id="clearPdfFractions">Limpar</button>
+                </div>
+              </div>
+              <div id="pdfFractionChecklist" class="pdf-checklist pdf-checklist--fractions"></div>
+              <small class="small muted">Se não marcar nenhuma fração, o PDF usa todas as frações disponíveis.</small>
+            </div>
             <div class="pdf-actions-card">
               <button id="exportPdfButton" type="button" class="primary-button">Exportar PDF</button>
               <p class="muted small">Será aberta uma vista pronta para imprimir ou guardar como PDF no browser.</p>

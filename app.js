@@ -70,6 +70,59 @@
   }
 
 
+
+  const THE_VIEW_ORIENTATION_BY_FRACTION = {
+    1: 'Sul/Este',
+    2: 'Sul/Oeste',
+    3: 'Oeste',
+    4: 'Oeste',
+    5: 'Oeste',
+    6: 'Este/Oeste',
+    7: 'Este',
+    8: 'Este',
+    9: 'Sul/Este',
+    10: 'Sul/Oeste',
+    11: 'Oeste',
+    12: 'Oeste',
+    13: 'Oeste',
+    14: 'Este/Oeste',
+    15: 'Este',
+    16: 'Sul/Este',
+    17: 'Sul/Oeste',
+    18: 'Oeste',
+    19: 'Oeste',
+    20: 'Oeste',
+    21: 'Este/Oeste',
+    22: 'Este',
+    23: 'Sul/Este',
+    24: 'Sul/Oeste',
+    25: 'Oeste',
+    26: 'Este/Oeste',
+    27: 'Oeste',
+    28: 'Este/Oeste',
+    29: 'Este',
+    30: 'Sul/Este',
+    31: 'Sul/Oeste',
+    32: 'Oeste',
+    33: 'Este/Oeste',
+    34: 'Este/Oeste',
+    35: 'Este/Oeste',
+    36: 'Sul/Este',
+    37: 'Sul/Oeste',
+    38: 'Oeste',
+    39: 'Este/Oeste'
+  };
+
+  function getOrientation(fraction) {
+    const number = getFractionNumber(fraction);
+    return THE_VIEW_ORIENTATION_BY_FRACTION[number] || safeString(fraction?.orientation) || safeString(fraction?.view) || '—';
+  }
+
+  function getFractionDescriptor(fraction) {
+    return `${fraction.typology} · Piso ${fraction.floorLabel} · Orientação ${getOrientation(fraction)}`;
+  }
+
+
   const el = {};
   document.addEventListener('DOMContentLoaded', init);
 
@@ -82,7 +135,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorSelect','pdfFractionSelect','exportPdfButton','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -101,6 +154,10 @@
     el.resetFilters.addEventListener('click', resetFilters);
     if (el.idealFractionSelect) el.idealFractionSelect.addEventListener('change', () => { state.idealFocusedFraction = el.idealFractionSelect.value || ''; renderIdealPage(); });
     if (el.exportPdfButton) el.exportPdfButton.addEventListener('click', exportRecommendedPdf);
+    if (el.selectAllPdfFloors) el.selectAllPdfFloors.addEventListener('click', () => setChecklistState(el.pdfFloorChecklist, true));
+    if (el.clearPdfFloors) el.clearPdfFloors.addEventListener('click', () => setChecklistState(el.pdfFloorChecklist, false));
+    if (el.selectAllPdfFractions) el.selectAllPdfFractions.addEventListener('click', () => setChecklistState(el.pdfFractionChecklist, true));
+    if (el.clearPdfFractions) el.clearPdfFractions.addEventListener('click', () => setChecklistState(el.pdfFractionChecklist, false));
     el.closeFractionModal.addEventListener('click', closeFractionModal);
     el.closeCompetitorModal.addEventListener('click', closeCompetitorModal);
     el.fractionModal.addEventListener('click', (event) => { if (event.target === el.fractionModal) closeFractionModal(); });
@@ -270,6 +327,48 @@
     return Array.from(select.selectedOptions || []).map((o) => o.value).filter(Boolean);
   }
 
+
+  function renderChecklist(container, items, options = {}) {
+    if (!container) return;
+    const previous = new Set(getSelectedChecklistValues(container));
+    container.replaceChildren();
+
+    items.forEach((item) => {
+      const value = String(item.value);
+      const id = `${container.id}-${slugify(value)}`;
+
+      const input = h('input', {
+        attrs: {
+          type: 'checkbox',
+          id,
+          value,
+          'data-value': value
+        }
+      });
+
+      if (previous.has(value)) input.checked = true;
+
+      const label = h('label', { className: 'check-pill', attrs: { for: id } });
+      label.append(input, h('span', { text: item.label }));
+      container.append(label);
+    });
+
+    if (options.defaultAll && !previous.size) {
+      Array.from(container.querySelectorAll('input[type="checkbox"]')).forEach((input) => { input.checked = true; });
+    }
+  }
+
+  function getSelectedChecklistValues(container) {
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+  }
+
+  function setChecklistState(container, checked) {
+    if (!container) return;
+    Array.from(container.querySelectorAll('input[type="checkbox"]')).forEach((input) => { input.checked = checked; });
+  }
+
+
   function updateFilter(key, value) { state.filters[key] = value; applyFilters(); }
   function updateSort(value) { state.sort = value || 'name-asc'; applyFilters(); }
   function resetFilters() {
@@ -343,7 +442,7 @@
       card.append(
         div('card-top', [div('card-name', fraction.name), div('card-price', formatCurrency(fraction.price, 0))]),
         div('card-grid', [
-          metric('Piso', fraction.floorLabel), metric('Vista', fraction.view), metric('ABP', formatArea(fraction.abp)), metric('Varanda', formatArea(fraction.balcony)), metric('Área Total', formatArea(fraction.totalArea)), metric('€/m²', formatCurrency(fraction.eurosPerSqm, 0))
+          metric('Piso', fraction.floorLabel), metric('Orientação', getOrientation(fraction)), metric('ABP', formatArea(fraction.abp)), metric('Varanda', formatArea(fraction.balcony)), metric('Área Total', formatArea(fraction.totalArea)), metric('€/m²', formatCurrency(fraction.eurosPerSqm, 0))
         ]),
         div('badge-row', [badge(`Diretos ${sets.direct.length}`, 'ok'), badge(`Indiretos ${sets.indirect.length}`, 'warn'), badge(Number.isFinite(gap) ? `Gap ${signed(formatNumber(Math.abs(gap),1)+'%', gap)}` : 'Sem preço ideal', Number.isFinite(gap) && gap > 3 ? 'danger' : 'ok')])
       );
@@ -420,7 +519,7 @@
             text: fraction.name,
             attrs: { type: 'button', 'aria-label': `Ver racional de ${fraction.name}` }
           }),
-          h('p', { text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` })
+          h('p', { text: getFractionDescriptor(fraction) })
         ]),
         h('span', { className: `strategy-badge ${normalizeKey(rec?.strategy || 'Modelo técnico')}`, text: rec?.strategy || 'Modelo técnico' })
       ]);
@@ -556,7 +655,7 @@
       div('ideal-focus-title', [
         h('span', { className: 'eyebrow eyebrow--dark', text: 'Fração selecionada' }),
         h('h3', { text: fraction.name }),
-        h('p', { text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` })
+        h('p', { text: getFractionDescriptor(fraction) })
       ]),
       h('span', { className: `strategy-badge ${normalizeKey(rec?.strategy || 'Modelo técnico')}`, text: rec?.strategy || 'Modelo técnico' })
     ]);
@@ -616,8 +715,16 @@
     }
 
     const floorValues = uniqueSorted(state.filteredFractions.map((f) => f.floorNumber));
-    setMultiSelectOptions(el.pdfFloorSelect, floorValues, (v) => `Piso ${v}`);
-    setMultiSelectOptions(el.pdfFractionSelect, availableFractions, (v) => v);
+    renderChecklist(
+      el.pdfFloorChecklist,
+      floorValues.map((value) => ({ value: String(value), label: `Piso ${value}` })),
+      { defaultAll: true }
+    );
+    renderChecklist(
+      el.pdfFractionChecklist,
+      availableFractions.map((name) => ({ value: name, label: name })),
+      { defaultAll: false }
+    );
   }
 
   function buildRecommendedDecisionText(analysis, rec) {
@@ -650,8 +757,8 @@
   }
 
   function exportRecommendedPdf() {
-    const floorSelections = getSelectedMultiValues(el.pdfFloorSelect);
-    const fractionSelections = getSelectedMultiValues(el.pdfFractionSelect);
+    const floorSelections = getSelectedChecklistValues(el.pdfFloorChecklist);
+    const fractionSelections = getSelectedChecklistValues(el.pdfFractionChecklist);
 
     let items = state.filteredFractions.filter((fraction) => {
       const floorMatch = !floorSelections.length || floorSelections.includes(String(fraction.floorNumber));
@@ -684,12 +791,12 @@
           <td>${escapeHtml(fraction.name)}</td>
           <td>${escapeHtml(fraction.typology)}</td>
           <td>${escapeHtml(String(fraction.floorLabel))}</td>
-          <td>${escapeHtml(String(fraction.view))}</td>
+          <td>${escapeHtml(getOrientation(fraction))}</td>
           <td>${escapeHtml(formatMoney(fraction.price))}</td>
           <td>${escapeHtml(formatMoney(finalPrice))}</td>
           <td>${escapeHtml(formatSignedMoney(adjustment))}</td>
           <td>${escapeHtml(rec?.strategy || 'Modelo técnico')}</td>
-          <td>${escapeHtml(analysis.alert || 'Coerente')}</td>
+          <td>${escapeHtml(buildCalculationReading(analysis, rec))}</td>
         </tr>`;
     }).join('');
 
@@ -708,7 +815,7 @@
 <style>
   body{font-family:Inter,Arial,sans-serif;margin:32px;color:#111827}
   h1{margin:0 0 8px;font-size:28px} p{margin:0 0 8px;color:#475569} .meta{margin-bottom:22px}
-  table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #dbe3ef;padding:10px;text-align:left} th{background:#f3f6fb;text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse;font-size:11px} th,td{border:1px solid #dbe3ef;padding:8px;text-align:left;vertical-align:top} th{background:#f3f6fb;text-transform:uppercase;font-size:10px;letter-spacing:.05em} td:last-child{min-width:300px;line-height:1.35}
   .brand{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#92713a;font-weight:800;margin-bottom:10px}
   .footer{margin-top:18px;font-size:11px;color:#64748b}
   @page{size:A4 landscape;margin:14mm}
@@ -724,7 +831,7 @@
   <table>
     <thead>
       <tr>
-        <th>Fração</th><th>Tipologia</th><th>Piso</th><th>Vista</th><th>Preço atual</th><th>Preço recomendado</th><th>Ajuste</th><th>Estratégia</th><th>Alerta</th>
+        <th>Fração</th><th>Tipologia</th><th>Piso</th><th>Orientação</th><th>Preço atual</th><th>Preço recomendado</th><th>Ajuste</th><th>Estratégia</th><th>Leitura resumida</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -756,7 +863,7 @@
     const ai = calculateAIPrice(fraction, sets);
     replace(el.fractionModalContent,
       h('h2', { className: 'modal-title', text: fraction.name }),
-      h('p', { className: 'modal-subtitle', text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` }),
+      h('p', { className: 'modal-subtitle', text: getFractionDescriptor(fraction) }),
       div('summary-grid', [summary('Preço atual', formatCurrency(fraction.price,0), `${formatCurrency(fraction.eurosPerSqm,0)}/m²`), summary('ABP', formatArea(fraction.abp), `Varanda ${formatArea(fraction.balcony)}`), summary('Área total', formatArea(fraction.totalArea), 'Base para €/m²'), summary('Confiança', getConfidence(sets).label, getConfidence(sets).reason)]),
       div('price-grid', [priceCard('Preço Fallback', fallback), priceCard('Preço Rigoroso', rigorous), priceCard('Preço IA', ai)]),
       sampleAlert(sets),
@@ -1200,7 +1307,7 @@
     const title = div('modal-title-block', [
       h('span', { className: 'eyebrow', text: 'Preço recomendado final' }),
       h('h2', { text: fraction.name }),
-      h('p', { text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` })
+      h('p', { text: getFractionDescriptor(fraction) })
     ]);
 
     const summaryGrid = div('final-popup-grid', [
