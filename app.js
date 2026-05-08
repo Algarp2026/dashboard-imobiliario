@@ -13,7 +13,8 @@
     selectedFraction: null,
     activeTab: 'dashboard',
     filters: { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' },
-    sort: 'name-asc'
+    sort: 'name-asc',
+    idealFocusedFraction: ''
   };
 
 
@@ -81,7 +82,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealTable','idealCount','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorSelect','pdfFractionSelect','exportPdfButton','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -98,6 +99,8 @@
     el.developmentFilter.addEventListener('change', () => updateFilter('development', el.developmentFilter.value));
     el.sortFilter.addEventListener('change', () => updateSort(el.sortFilter.value));
     el.resetFilters.addEventListener('click', resetFilters);
+    if (el.idealFractionSelect) el.idealFractionSelect.addEventListener('change', () => { state.idealFocusedFraction = el.idealFractionSelect.value || ''; renderIdealPage(); });
+    if (el.exportPdfButton) el.exportPdfButton.addEventListener('click', exportRecommendedPdf);
     el.closeFractionModal.addEventListener('click', closeFractionModal);
     el.closeCompetitorModal.addEventListener('click', closeCompetitorModal);
     el.fractionModal.addEventListener('click', (event) => { if (event.target === el.fractionModal) closeFractionModal(); });
@@ -249,12 +252,32 @@
     return option;
   }
 
+  function setMultiSelectOptions(select, values, labelMapper) {
+    if (!select) return;
+    const previous = getSelectedMultiValues(select);
+    select.replaceChildren();
+    values
+      .filter((v) => v !== null && v !== undefined && String(v).trim() !== '')
+      .forEach((value) => {
+        const option = createOption(String(value), labelMapper ? labelMapper(value) : String(value));
+        option.selected = previous.includes(String(value));
+        select.append(option);
+      });
+  }
+
+  function getSelectedMultiValues(select) {
+    if (!select) return [];
+    return Array.from(select.selectedOptions || []).map((o) => o.value).filter(Boolean);
+  }
+
   function updateFilter(key, value) { state.filters[key] = value; applyFilters(); }
   function updateSort(value) { state.sort = value || 'name-asc'; applyFilters(); }
   function resetFilters() {
     state.filters = { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' };
     state.sort = 'name-asc';
+    state.idealFocusedFraction = '';
     el.floorFilter.value = 'all'; el.viewFilter.value = 'all'; el.typologyFilter.value = 'all'; el.fractionFilter.value = 'all'; el.developmentFilter.value = 'all'; el.sortFilter.value = 'name-asc';
+    if (el.idealFractionSelect) el.idealFractionSelect.value = '';
     applyFilters();
   }
 
@@ -491,48 +514,235 @@
   function renderIdealPage() {
     const analyses = buildIdealAnalyses(state.filteredFractions);
 
-    const headers = [
-      'Fração',
-      'Tipologia',
-      'Piso',
-      'Vista',
-      'Preço atual',
-      'Preço mercado',
-      'Interno técnico',
-      'Recomendado final',
-      'Ajuste',
-      'Estratégia',
-      'Alerta'
-    ];
+    renderIdealSummary(analyses);
+    syncIdealSelectionControls(analyses);
+
+    if (el.idealCount) {
+      const selectedText = state.idealFocusedFraction ? ` · a ver ${state.idealFocusedFraction}` : '';
+      el.idealCount.textContent = `${analyses.length} frações disponíveis${selectedText}`;
+    }
+
+    if (!el.idealDetails) return;
+
+    if (!state.idealFocusedFraction) {
+      replace(el.idealDetails,
+        div('ideal-empty-card', [
+          h('strong', { text: 'Escolha uma fração para continuar' }),
+          h('p', { text: 'Assim a página mostra apenas a análise dessa unidade, de forma mais limpa e mais fácil de apresentar.' })
+        ])
+      );
+      return;
+    }
+
+    const analysis = analyses.find((item) => item.fraction.name === state.idealFocusedFraction);
+    if (!analysis) {
+      state.idealFocusedFraction = '';
+      if (el.idealFractionSelect) el.idealFractionSelect.value = '';
+      replace(el.idealDetails,
+        div('ideal-empty-card', [
+          h('strong', { text: 'A fração selecionada já não está disponível com os filtros atuais.' }),
+          h('p', { text: 'Escolha outra fração ou ajuste os filtros globais.' })
+        ])
+      );
+      return;
+    }
+
+    const fraction = analysis.fraction;
+    const rec = getFinalRecommendation(fraction);
+    const finalPrice = rec?.price ?? analysis.coherentPrice;
+    const adjustment = Number.isFinite(finalPrice) && Number.isFinite(fraction.price) ? finalPrice - fraction.price : null;
+
+    const header = div('ideal-focus-header', [
+      div('ideal-focus-title', [
+        h('span', { className: 'eyebrow eyebrow--dark', text: 'Fração selecionada' }),
+        h('h3', { text: fraction.name }),
+        h('p', { text: `${fraction.typology} · Piso ${fraction.floorLabel} · Vista ${fraction.view}` })
+      ]),
+      h('span', { className: `strategy-badge ${normalizeKey(rec?.strategy || 'Modelo técnico')}`, text: rec?.strategy || 'Modelo técnico' })
+    ]);
+
+    const summaryGrid = div('ideal-focus-grid', [
+      summary('Preço atual', formatMoney(fraction.price), `${formatNumber(fraction.eurosPerSqm)} €/m² atual`),
+      summary('Preço mercado', formatMoney(analysis.marketPrice), `${formatNumber(analysis.marketSqm)} €/m²`),
+      summary('Interno puro', formatMoney(analysis.internalPurePrice), `${formatNumber(analysis.internalPureSqm)} €/m²`),
+      summary('Técnico misto', formatMoney(analysis.coherentPrice), '70% mercado + 30% interno puro'),
+      summary('Recomendado final', formatMoney(finalPrice), Number.isFinite(adjustment) ? `${formatSignedMoney(adjustment)} vs atual` : 'Sem ajuste')
+    ]);
+
+    const decisionCard = div('ideal-decision-card', [
+      h('strong', { text: 'Decisão recomendada' }),
+      h('p', { text: buildRecommendedDecisionText(analysis, rec) })
+    ]);
+
+    const formulaCard = div('ideal-formula-card', [
+      h('strong', { text: 'Fórmula técnica de apoio' }),
+      h('p', { text: `Mercado ${formatMoney(analysis.marketPrice)} × 70% + Interno puro ${formatMoney(analysis.internalPurePrice)} × 30% = Técnico misto ${formatMoney(analysis.coherentPrice)}` }),
+      h('p', { text: 'O preço recomendado final é a decisão comercial que resulta desta leitura, mas sem seguir automaticamente os modelos técnicos.' })
+    ]);
+
+    const actions = div('ideal-actions', [
+      h('button', { className: 'primary-button', text: 'Ver racional completo', attrs: { type: 'button' } })
+    ]);
+    actions.querySelector('button')?.addEventListener('click', () => openFinalRecommendationPopup(analysis));
+
+    replace(el.idealDetails, div('ideal-focused-card', [header, summaryGrid, decisionCard, formulaCard, actions]));
+  }
+
+  function renderIdealSummary(analyses) {
+    if (!el.idealSummary) return;
+    const finalPrices = analyses.map((item) => item.finalPrice).filter(Number.isFinite);
+    const keepCount = analyses.filter((item) => (item.finalRecommendation?.strategy || '') === 'Manter').length;
+    const upliftCount = analyses.filter((item) => Number.isFinite(item.finalGap) && item.finalGap > 0).length;
+
+    replace(el.idealSummary,
+      summary('Frações elegíveis', formatNumber(analyses.length), 'Após filtros globais'),
+      summary('A manter', formatNumber(keepCount), 'Sem alteração face ao preço atual'),
+      summary('Com reforço', formatNumber(upliftCount), 'Ajuste positivo recomendado'),
+      summary('Mediana recomendada', formatMoney(median(finalPrices)), 'Preço recomendado final')
+    );
+  }
+
+  function syncIdealSelectionControls(analyses) {
+    const availableFractions = analyses.map((item) => item.fraction.name);
+
+    if (el.idealFractionSelect) {
+      const current = state.idealFocusedFraction && availableFractions.includes(state.idealFocusedFraction)
+        ? state.idealFocusedFraction
+        : '';
+      state.idealFocusedFraction = current;
+      el.idealFractionSelect.replaceChildren(createOption('', 'Escolha uma fração'));
+      availableFractions.forEach((name) => el.idealFractionSelect.append(createOption(name, name)));
+      el.idealFractionSelect.value = current;
+    }
+
+    const floorValues = uniqueSorted(state.filteredFractions.map((f) => f.floorNumber));
+    setMultiSelectOptions(el.pdfFloorSelect, floorValues, (v) => `Piso ${v}`);
+    setMultiSelectOptions(el.pdfFractionSelect, availableFractions, (v) => v);
+  }
+
+  function buildRecommendedDecisionText(analysis, rec) {
+    const fraction = analysis.fraction;
+    const finalPrice = rec?.price ?? analysis.coherentPrice;
+    const adjustment = Number.isFinite(finalPrice) && Number.isFinite(fraction.price) ? finalPrice - fraction.price : null;
+    const strategy = rec?.strategy || 'Modelo técnico';
+
+    const parts = [];
+    parts.push(`${fraction.name} tem preço atual de ${formatMoney(fraction.price)} e preço recomendado final de ${formatMoney(finalPrice)}.`);
+
+    if (strategy === 'Manter') {
+      parts.push('A recomendação é manter o preço atual, porque a tabela comercial já é defensável nesta fase.');
+    } else if (strategy === 'Ajuste fino') {
+      parts.push('A recomendação é um ajuste pequeno, para melhorar a coerência interna sem alterar o posicionamento comercial.');
+    } else if (strategy === 'Subida moderada') {
+      parts.push('A recomendação é uma subida moderada, porque existe margem para reforçar preço, mas com prudência.');
+    } else if (strategy === 'Subida faseada') {
+      parts.push('A recomendação é uma subida faseada, tratada como preço-alvo para uma fase comercial seguinte.');
+    }
+
+    if (Number.isFinite(adjustment) && adjustment !== 0) {
+      parts.push(`Isto representa um ajuste de ${formatSignedMoney(adjustment)} face ao preço atual.`);
+    } else {
+      parts.push('Não existe ajuste face ao preço atual.');
+    }
+
+    parts.push(`Como apoio técnico, o mercado aponta para ${formatMoney(analysis.marketPrice)} e o modelo interno puro para ${formatMoney(analysis.internalPurePrice)}.`);
+    return parts.join(' ');
+  }
+
+  function exportRecommendedPdf() {
+    const floorSelections = getSelectedMultiValues(el.pdfFloorSelect);
+    const fractionSelections = getSelectedMultiValues(el.pdfFractionSelect);
+
+    let items = state.filteredFractions.filter((fraction) => {
+      const floorMatch = !floorSelections.length || floorSelections.includes(String(fraction.floorNumber));
+      const fractionMatch = !fractionSelections.length || fractionSelections.includes(fraction.name);
+      return floorMatch && fractionMatch;
+    });
+
+    items = sortFractions(items, 'name-asc');
+
+    if (!items.length) {
+      alert('Não existem frações para exportar com a seleção atual.');
+      return;
+    }
+
+    const analyses = buildIdealAnalyses(items);
+    const now = new Date();
+    const title = `The View · Preço recomendado x Preço atual`;
+    const filtersText = [
+      floorSelections.length ? `Pisos: ${floorSelections.map((v) => `Piso ${v}`).join(', ')}` : 'Pisos: todos os disponíveis',
+      fractionSelections.length ? `Frações: ${fractionSelections.join(', ')}` : 'Frações: todas as disponíveis'
+    ].join(' · ');
 
     const rows = analyses.map((analysis) => {
       const fraction = analysis.fraction;
       const rec = getFinalRecommendation(fraction);
       const finalPrice = rec?.price ?? analysis.coherentPrice;
-      const adjustment = Number.isFinite(finalPrice) && Number.isFinite(fraction.price)
-        ? finalPrice - fraction.price
-        : null;
+      const adjustment = Number.isFinite(finalPrice) && Number.isFinite(fraction.price) ? finalPrice - fraction.price : null;
+      return `
+        <tr>
+          <td>${escapeHtml(fraction.name)}</td>
+          <td>${escapeHtml(fraction.typology)}</td>
+          <td>${escapeHtml(String(fraction.floorLabel))}</td>
+          <td>${escapeHtml(String(fraction.view))}</td>
+          <td>${escapeHtml(formatMoney(fraction.price))}</td>
+          <td>${escapeHtml(formatMoney(finalPrice))}</td>
+          <td>${escapeHtml(formatSignedMoney(adjustment))}</td>
+          <td>${escapeHtml(rec?.strategy || 'Modelo técnico')}</td>
+          <td>${escapeHtml(analysis.alert || 'Coerente')}</td>
+        </tr>`;
+    }).join('');
 
-      return [
-        { type: 'final-details', label: fraction.name, analysis },
-        fraction.typology,
-        fraction.floorLabel,
-        fraction.view,
-        formatMoney(fraction.price),
-        formatMoney(analysis.marketPrice),
-        formatMoney(analysis.coherentPrice),
-        formatMoney(finalPrice),
-        formatSignedMoney(adjustment),
-        rec?.strategy || 'Modelo técnico',
-        analysis.alert || 'Coerente'
-      ];
-    });
-
-    renderTable(el.idealTable, headers, rows);
-
-    if (el.idealCount) {
-      el.idealCount.textContent = `${analyses.length} frações analisadas`;
+    const win = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
+    if (!win) {
+      alert('O browser bloqueou a janela de exportação. Autorize pop-ups para gerar o PDF.');
+      return;
     }
+
+    win.document.open();
+    win.document.write(`<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+<style>
+  body{font-family:Inter,Arial,sans-serif;margin:32px;color:#111827}
+  h1{margin:0 0 8px;font-size:28px} p{margin:0 0 8px;color:#475569} .meta{margin-bottom:22px}
+  table{width:100%;border-collapse:collapse;font-size:12px} th,td{border:1px solid #dbe3ef;padding:10px;text-align:left} th{background:#f3f6fb;text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+  .brand{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#92713a;font-weight:800;margin-bottom:10px}
+  .footer{margin-top:18px;font-size:11px;color:#64748b}
+  @page{size:A4 landscape;margin:14mm}
+</style>
+</head>
+<body>
+  <div class="brand">The View</div>
+  <h1>${escapeHtml(title)}</h1>
+  <div class="meta">
+    <p>${escapeHtml(filtersText)}</p>
+    <p>Gerado em ${escapeHtml(now.toLocaleString('pt-PT'))}</p>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Fração</th><th>Tipologia</th><th>Piso</th><th>Vista</th><th>Preço atual</th><th>Preço recomendado</th><th>Ajuste</th><th>Estratégia</th><th>Alerta</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p class="footer">Sugestão: no diálogo de impressão do browser, escolha “Guardar como PDF”.</p>
+  <script>window.onload = () => setTimeout(() => window.print(), 250);<\/script>
+</body>
+</html>`);
+    win.document.close();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function openFractionModal(fractionId) {
@@ -1195,5 +1405,5 @@
   function setStatus(text, className='') { el.dataStatus.textContent = text; el.dataStatus.className = `status-pill ${className}`.trim(); }
   function showError(message) { el.errorBox.textContent = message; el.errorBox.classList.remove('hidden'); }
   function hideError() { el.errorBox.textContent = ''; el.errorBox.classList.add('hidden'); }
-  function renderEmptyState() { replace(el.kpiGrid, kpi('Frações','—',''), kpi('Concorrentes','—',''), kpi('Mediana ponderada','—','')); replace(el.cardsGrid, empty('Dashboard sem dados.')); renderTable(el.marketTable, ['Mensagem'], [['Sem dados.']]); renderTable(el.idealTable, ['Mensagem'], [['Sem dados.']]); }
+  function renderEmptyState() { replace(el.kpiGrid, kpi('Frações','—',''), kpi('Concorrentes','—',''), kpi('Mediana ponderada','—','')); replace(el.cardsGrid, empty('Dashboard sem dados.')); if (el.marketTable) renderTable(el.marketTable, ['Mensagem'], [['Sem dados.']]); if (el.idealSummary) replace(el.idealSummary, summary('Frações elegíveis','—',''), summary('A manter','—',''), summary('Com reforço','—',''), summary('Mediana recomendada','—','')); if (el.idealDetails) replace(el.idealDetails, div('ideal-empty-card', [h('strong', { text: 'Sem dados.' }), h('p', { text: 'Não foi possível carregar a análise de preço recomendado.' })])); if (el.calculationCards) replace(el.calculationCards, div('empty-state-card', [h('strong', { text: 'Sem dados.' }), h('p', { text: 'Não foi possível carregar o cálculo detalhado.' })])); }
 })();

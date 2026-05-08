@@ -90,15 +90,64 @@
         </section>
       </section>
 
-      <section id="tab-ideal" class="tab-panel">
+            <section id="tab-ideal" class="tab-panel">
         <section class="panel">
           <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Preço recomendado</p><h2>Mercado + coerência interna</h2></div></div>
-          <p class="muted">Esta página calcula um preço ideal por fração e verifica se a hierarquia interna faz sentido: piso, vista, área e varanda devem refletir-se no €/m² relativo.</p>
+          <p class="muted">Para manter esta página mais limpa, primeiro escolhe-se a fração que se pretende analisar. Depois, o dashboard mostra apenas a recomendação final dessa unidade, com comparação face ao preço atual.</p>
           <div class="summary-grid" id="idealSummary"></div>
         </section>
-        <section class="panel">
-          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">The View</p><h2>Matriz de preço recomendado final</h2></div><p class="muted small" id="idealCount">—</p></div>
-          <div class="table-wrap"><table class="data-table" id="idealTable"></table></div>
+
+        <section class="panel ideal-selector-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Escolha guiada</p>
+              <h2>Selecionar fração</h2>
+            </div>
+            <p class="muted small" id="idealCount">—</p>
+          </div>
+          <div class="recommended-controls">
+            <label class="field field--wide">
+              <span>Fração a visualizar</span>
+              <select id="idealFractionSelect">
+                <option value="">Escolha uma fração</option>
+              </select>
+            </label>
+            <div class="selection-helper-card">
+              <strong>Como funciona?</strong>
+              <p>Escolha uma fração para ver o preço atual, o preço recomendado final e o racional da recomendação.</p>
+            </div>
+          </div>
+          <div id="idealDetails" class="ideal-details"></div>
+        </section>
+
+        <section class="panel export-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Exportação</p>
+              <h2>Exportar para PDF</h2>
+            </div>
+          </div>
+          <p class="muted">Gere uma folha comparativa entre <strong>Preço recomendado</strong> e <strong>Preço atual</strong>, escolhendo os pisos e as frações que pretende incluir.</p>
+          <div class="pdf-export-grid">
+            <div class="pdf-export-card">
+              <strong>Comparação</strong>
+              <p>Preço recomendado x Preço atual</p>
+            </div>
+            <label class="field pdf-multiselect-field">
+              <span>Escolher pisos</span>
+              <select id="pdfFloorSelect" multiple size="6"></select>
+              <small class="small muted">Pode escolher um ou vários pisos.</small>
+            </label>
+            <label class="field pdf-multiselect-field pdf-fractions-field">
+              <span>Escolher frações</span>
+              <select id="pdfFractionSelect" multiple size="10"></select>
+              <small class="small muted">Se não escolher nenhuma, o PDF usa todas as frações filtradas.</small>
+            </label>
+            <div class="pdf-actions-card">
+              <button id="exportPdfButton" type="button" class="primary-button">Exportar PDF</button>
+              <p class="muted small">Será aberta uma vista pronta para imprimir ou guardar como PDF no browser.</p>
+            </div>
+          </div>
         </section>
       </section>
     
