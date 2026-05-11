@@ -318,23 +318,33 @@
             </div>
           </div>
 
-          <div class="client-proposal-toolbar">
-            <label class="field">
+          <div class="client-proposal-toolbar client-proposal-toolbar--multi">
+            <label class="field client-search-field">
               <span>Pesquisar fração</span>
               <input id="clientFractionSearch" class="search-input wide-search" type="search" placeholder="Ex.: 10, 31, T2..." />
             </label>
-            <label class="field">
-              <span>Tipologia</span>
-              <select id="clientTypologyFilter">
-                <option value="all">Todas</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Piso</span>
-              <select id="clientFloorFilter">
-                <option value="all">Todos</option>
-              </select>
-            </label>
+
+            <div class="client-filter-box">
+              <div class="checklist-head">
+                <span>Tipologias</span>
+                <div>
+                  <button type="button" class="mini-action" id="clientSelectAllTypologies">Todas</button>
+                  <button type="button" class="mini-action" id="clientClearTypologies">Limpar</button>
+                </div>
+              </div>
+              <div id="clientTypologyChecklist" class="compact-checklist"></div>
+            </div>
+
+            <div class="client-filter-box">
+              <div class="checklist-head">
+                <span>Pisos</span>
+                <div>
+                  <button type="button" class="mini-action" id="clientSelectAllFloors">Todos</button>
+                  <button type="button" class="mini-action" id="clientClearFloors">Limpar</button>
+                </div>
+              </div>
+              <div id="clientFloorChecklist" class="compact-checklist"></div>
+            </div>
           </div>
 
           <div id="clientProposalCards" class="client-proposal-cards"></div>

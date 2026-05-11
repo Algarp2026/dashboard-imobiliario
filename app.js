@@ -16,7 +16,7 @@
     filters: { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' },
     sort: 'name-asc',
     commercialFilters: { state: 'all', impact: 'all', typology: 'all', floors: [], fractions: [], search: '', sort: 'immediate-desc' },
-    clientFilters: { search: '', typology: 'all', floor: 'all' },
+    clientFilters: { search: '', typologies: [], floors: [] },
     clientSelections: {},
     finalPrices: {},
     idealFocusedFraction: ''
@@ -240,7 +240,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyFilter','clientFloorFilter','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -285,9 +285,13 @@
 
 
 
-    if (el.clientFractionSearch) el.clientFractionSearch.addEventListener('input', () => { state.clientFilters.search = el.clientFractionSearch.value; renderClientProposalPage(); });
-    if (el.clientTypologyFilter) el.clientTypologyFilter.addEventListener('change', () => { state.clientFilters.typology = el.clientTypologyFilter.value; renderClientProposalPage(); });
-    if (el.clientFloorFilter) el.clientFloorFilter.addEventListener('change', () => { state.clientFilters.floor = el.clientFloorFilter.value; renderClientProposalPage(); });
+    if (el.clientFractionSearch) el.clientFractionSearch.addEventListener('input', () => { state.clientFilters.search = el.clientFractionSearch.value; renderClientProposalPage(false); });
+    if (el.clientTypologyChecklist) el.clientTypologyChecklist.addEventListener('change', () => { state.clientFilters.typologies = getSelectedChecklistValues(el.clientTypologyChecklist); renderClientProposalPage(false); });
+    if (el.clientFloorChecklist) el.clientFloorChecklist.addEventListener('change', () => { state.clientFilters.floors = getSelectedChecklistValues(el.clientFloorChecklist); renderClientProposalPage(false); });
+    if (el.clientSelectAllTypologies) el.clientSelectAllTypologies.addEventListener('click', () => { setChecklistState(el.clientTypologyChecklist, true); state.clientFilters.typologies = getSelectedChecklistValues(el.clientTypologyChecklist); renderClientProposalPage(false); });
+    if (el.clientClearTypologies) el.clientClearTypologies.addEventListener('click', () => { setChecklistState(el.clientTypologyChecklist, false); state.clientFilters.typologies = []; renderClientProposalPage(false); });
+    if (el.clientSelectAllFloors) el.clientSelectAllFloors.addEventListener('click', () => { setChecklistState(el.clientFloorChecklist, true); state.clientFilters.floors = getSelectedChecklistValues(el.clientFloorChecklist); renderClientProposalPage(false); });
+    if (el.clientClearFloors) el.clientClearFloors.addEventListener('click', () => { setChecklistState(el.clientFloorChecklist, false); state.clientFilters.floors = []; renderClientProposalPage(false); });
     if (el.clientSelectAll) el.clientSelectAll.addEventListener('click', () => { getVisibleClientAnalyses().forEach((a) => setClientSelected(a.fraction.name, true)); saveClientProposalState(); renderClientProposalPage(); });
     if (el.clientClearAll) el.clientClearAll.addEventListener('click', () => { getVisibleClientAnalyses().forEach((a) => setClientSelected(a.fraction.name, false)); saveClientProposalState(); renderClientProposalPage(); });
     if (el.clientResetPrices) el.clientResetPrices.addEventListener('click', resetClientPricesForVisible);
@@ -1048,16 +1052,18 @@
         || normalizeKey(f.name).includes(search)
         || normalizeKey(f.typology).includes(search)
         || String(getFractionNumber(f)).includes(search);
-      const typologyMatch = state.clientFilters.typology === 'all' || normalizeKey(f.typology) === normalizeKey(state.clientFilters.typology);
-      const floorMatch = state.clientFilters.floor === 'all' || String(f.floorNumber) === String(state.clientFilters.floor);
+      const typologies = state.clientFilters.typologies || [];
+      const floors = state.clientFilters.floors || [];
+      const typologyMatch = !typologies.length || typologies.includes(f.typology);
+      const floorMatch = !floors.length || floors.includes(String(f.floorNumber));
       return searchMatch && typologyMatch && floorMatch;
     }).sort((a, b) => naturalNameCompare(a.fraction, b.fraction));
   }
 
-  function renderClientProposalPage() {
+  function renderClientProposalPage(syncControls = true) {
     if (!el.clientProposalCards) return;
 
-    syncClientProposalControls();
+    if (syncControls) syncClientProposalControls();
 
     const visible = getVisibleClientAnalyses();
     const selected = getClientAnalyses().filter((analysis) => analysis.clientSelected);
@@ -1153,23 +1159,38 @@
   }
 
   function syncClientProposalControls() {
-    if (el.clientTypologyFilter) {
-      const typologies = uniqueSorted(state.filteredFractions.map((f) => f.typology));
-      const current = state.clientFilters.typology;
-      el.clientTypologyFilter.replaceChildren(createOption('all', 'Todas'));
-      typologies.forEach((t) => el.clientTypologyFilter.append(createOption(t, t)));
-      el.clientTypologyFilter.value = typologies.includes(current) ? current : 'all';
-      state.clientFilters.typology = el.clientTypologyFilter.value;
+    const typologies = uniqueSorted(state.filteredFractions.map((f) => f.typology));
+    const floors = uniqueSorted(state.filteredFractions.map((f) => f.floorNumber));
+
+    const prevTypologies = new Set(state.clientFilters.typologies || []);
+    const prevFloors = new Set(state.clientFilters.floors || []);
+
+    renderChecklist(
+      el.clientTypologyChecklist,
+      typologies.map((typology) => ({ value: typology, label: typology })),
+      { defaultAll: false }
+    );
+
+    renderChecklist(
+      el.clientFloorChecklist,
+      floors.map((floor) => ({ value: String(floor), label: `Piso ${floor}` })),
+      { defaultAll: false }
+    );
+
+    if (prevTypologies.size && el.clientTypologyChecklist) {
+      Array.from(el.clientTypologyChecklist.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = prevTypologies.has(input.value);
+      });
     }
 
-    if (el.clientFloorFilter) {
-      const floors = uniqueSorted(state.filteredFractions.map((f) => f.floorNumber));
-      const current = state.clientFilters.floor;
-      el.clientFloorFilter.replaceChildren(createOption('all', 'Todos'));
-      floors.forEach((floor) => el.clientFloorFilter.append(createOption(String(floor), `Piso ${floor}`)));
-      el.clientFloorFilter.value = floors.map(String).includes(String(current)) ? current : 'all';
-      state.clientFilters.floor = el.clientFloorFilter.value;
+    if (prevFloors.size && el.clientFloorChecklist) {
+      Array.from(el.clientFloorChecklist.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = prevFloors.has(input.value);
+      });
     }
+
+    state.clientFilters.typologies = getSelectedChecklistValues(el.clientTypologyChecklist);
+    state.clientFilters.floors = getSelectedChecklistValues(el.clientFloorChecklist);
   }
 
   function labelWrap(label, child) {
