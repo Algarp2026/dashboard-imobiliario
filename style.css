@@ -1414,3 +1414,24 @@ body.modal-open {
   object-fit: contain;
   margin: 0 auto;
 }
+
+
+/* Caixa de erro de diagnóstico */
+.debug-error-box {
+  position: fixed;
+  z-index: 99999;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  background: #fff1f0;
+  border: 1px solid #f0a8a8;
+  color: #7f1d1d;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 20px 50px rgba(127, 29, 29, .18);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  max-height: 45vh;
+  overflow: auto;
+}

@@ -1,5 +1,36 @@
 'use strict';
 
+  function showDebugError(error, context = '') {
+    const box = document.getElementById('debugErrorBox');
+    const message = [
+      context ? `Contexto: ${context}` : '',
+      error?.message ? `Erro: ${error.message}` : String(error),
+      error?.stack ? `Stack:\n${error.stack}` : ''
+    ].filter(Boolean).join('\n\n');
+
+    console.error('[The View Dashboard]', context, error);
+
+    if (box) {
+      box.hidden = false;
+      box.textContent = message;
+    }
+
+    const loading = document.querySelector('[id*="loading"], .loading, .loader, .status-pill');
+    if (loading) {
+      loading.textContent = 'Erro ao carregar. Ver detalhe no topo.';
+    }
+  }
+
+  window.addEventListener('error', (event) => {
+    showDebugError(event.error || event.message, 'Erro global de JavaScript');
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    showDebugError(event.reason || event, 'Promise rejeitada');
+  });
+
+
+
 (() => {
   const DATA_FILES = ['data.xlsx', 'data.xls'];
   const PROJECT_NAME = 'The View';
@@ -410,6 +441,7 @@
       setStatus('Excel carregado', 'ok');
     } catch (error) {
       console.error(error);
+      showDebugError(error, 'loadExcelData');
       setStatus('Erro no Excel', 'error');
       showError(`${safeString(error.message)} Confirme que o ficheiro data.xlsx está na raiz do projeto e mantém as colunas principais.`);
       renderEmptyState();
