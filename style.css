@@ -1,497 +1,1416 @@
-<!doctype html>
-<html lang="pt-PT">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="The View — Dashboard competitivo imobiliário" />
-  <title>The View · Dashboard competitivo imobiliário</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <noscript><div class="noscript">Este dashboard requer JavaScript ativo para ler o Excel e apresentar os dados.</div></noscript>
-
-  <div class="app-shell">
-    <header class="hero" role="banner">
-      <img class="hero__image" src="Olhao_Cam_Suite_Web.jpg" alt="Vista premium do empreendimento The View" />
-      <div class="hero__overlay"></div>
-      <nav class="topbar" aria-label="Estado do dashboard">
-        <div class="brand-pill"><span class="brand-dot"></span><span>The View</span></div>
-        <div class="status-pill" id="dataStatus">A carregar Excel…</div>
-      </nav>
-      <div class="hero__content">
-        <p class="eyebrow">Real Estate Intelligence</p>
-        <h1>The View</h1>
-        <p>Dashboard competitivo imobiliário</p>
-      </div>
-    </header>
-
-    <main class="main" id="mainContent">
-      <section class="tabs-shell" aria-label="Navegação do dashboard">
-        <button class="tab-button active" type="button" data-tab="dashboard">Dashboard</button>
-        <button class="tab-button" type="button" data-tab="market">Inteligência de mercado</button>
-        <button class="tab-button" type="button" data-tab="commercial">Proposta Comercial</button>
-        <button class="tab-button" type="button" data-tab="finalprices">Preços Finais</button>
-        <button class="tab-button" type="button" data-tab="client">Propostas Cliente</button>
-        <button class="tab-button" data-tab="calculation">Cálculo detalhado</button>
-      </section>
-
-      <section class="panel filters-panel" aria-labelledby="filtersTitle">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow eyebrow--dark">Filtros globais</p>
-            <h2 id="filtersTitle">Refinar análise</h2>
-          </div>
-          <button class="ghost-button" id="resetFilters" type="button">Limpar filtros</button>
-        </div>
-        <div class="filters-grid">
-          <label class="field"><span>Piso</span><select id="floorFilter"><option value="all">Todos</option></select></label>
-          <label class="field"><span>Vista</span><select id="viewFilter"><option value="all">Todas</option></select></label>
-          <label class="field"><span>Tipologia</span><select id="typologyFilter"><option value="all">Todas</option></select></label>
-          <label class="field"><span>Frações</span><select id="fractionFilter"><option value="all">Todas</option></select></label>
-          <label class="field"><span>Empreendimentos concorrentes</span><select id="developmentFilter"><option value="all">Todos</option></select></label>
-          <label class="field"><span>Ordenar cards</span><select id="sortFilter">
-            <option value="name-asc">Nome</option><option value="price-asc">Preço crescente</option><option value="price-desc">Preço decrescente</option>
-            <option value="sqm-asc">€/m² crescente</option><option value="sqm-desc">€/m² decrescente</option><option value="area-asc">Área crescente</option><option value="area-desc">Área decrescente</option><option value="floor-asc">Piso crescente</option><option value="floor-desc">Piso decrescente</option>
-          </select></label>
-        </div>
-      </section>
-
-      <div id="errorBox" class="error-box hidden" role="alert"></div>
-
-      <section id="tab-dashboard" class="tab-panel active">
-        <section class="panel intro-panel">
-          <div>
-            <p class="eyebrow eyebrow--dark">Pricing · Competição · Benchmark</p>
-            <h2>Frações e concorrência</h2>
-            <p class="muted">Página comercial simples: concorrentes oficiais, pesos por ano, penalização Le Parc e preço recomendado.</p>
-          </div>
-          <div class="kpi-grid" id="kpiGrid"></div>
-        </section>
-
-        <section class="panel executive-panel">
-          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Resumo executivo</p><h2>Leitura rápida</h2></div></div>
-          <div class="summary-grid" id="executiveSummary"></div>
-        </section>
-
-        <section class="panel">
-          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Inventário</p><h2>Cards das frações</h2></div><p class="muted small" id="resultCount">—</p></div>
-          <div id="cardsGrid" class="cards-grid" aria-live="polite"></div>
-        </section>
-      </section>
-
-      <section id="tab-market" class="tab-panel">
-        <section class="panel">
-          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Inteligência de mercado</p><h2>Pesos simples do compset</h2></div></div>
-          <p class="muted">Esta página mostra a penalização objetiva aplicada aos dados antigos e ao Le Parc. A fórmula é: peso base de mercado = peso do ano × peso do empreendimento.</p>
-          <div class="summary-grid" id="marketSummary"></div>
-        </section>
-        <section class="panel">
-          <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Compset atual</p><h2>Concorrentes ponderados</h2></div><p class="muted small" id="marketCount">—</p></div>
-          <div class="table-wrap"><table class="data-table" id="marketTable"></table></div>
-        </section>
-      </section>
-<section id="tab-commercial" class="tab-panel">
-        <section class="panel commercial-hero-panel" id="commercialSummarySection">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Decisão comercial</p>
-              <h2>Proposta Comercial de Preços</h2>
-            </div>
-            <p class="muted small" id="commercialCount">—</p>
-          </div>
-          <p class="muted">
-            Esta camada não substitui o cálculo técnico. Ela transforma o preço recomendado pelo modelo numa proposta de decisão para a gerência:
-            aplicar agora, fasear, manter ou rever manualmente.
-          </p>
-          <div class="summary-grid commercial-summary-grid" id="commercialSummary"></div>
-        </section>
+:root{
+  --bg:#0d1117;--bg2:#111827;--panel:rgba(255,255,255,.74);--panel-strong:rgba(255,255,255,.88);--text:#142033;--muted:#64748b;--line:rgba(15,23,42,.12);--gold:#c9a35b;--gold2:#f3d38a;--dark:#0b1220;--danger:#b42318;--ok:#027a48;--warn:#b54708;--shadow:0 24px 70px rgba(2,8,23,.18);--radius:28px;--radius-sm:18px;--blur:blur(22px)
+}*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,#253044 0,#101522 35%,#eef1f6 36%,#f6f3ec 100%);color:var(--text);min-height:100vh}.noscript{padding:18px;background:#fee4e2;color:#7a271a;text-align:center}.hero{position:relative;min-height:430px;overflow:hidden;color:#fff}.hero__image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.95) contrast(1.05)}.hero__overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,9,18,.72),rgba(4,9,18,.44) 48%,rgba(4,9,18,.82))}.topbar{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:26px min(5vw,72px)}.brand-pill,.status-pill{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.11);backdrop-filter:var(--blur);box-shadow:0 12px 42px rgba(0,0,0,.18);font-size:14px}.brand-dot{width:10px;height:10px;border-radius:99px;background:linear-gradient(135deg,var(--gold),var(--gold2));box-shadow:0 0 22px rgba(243,211,138,.8)}.status-pill.ok{border-color:rgba(89,214,142,.55)}.status-pill.error{border-color:rgba(255,151,151,.7);color:#ffe4e4}.hero__content{position:relative;z-index:2;padding:80px min(5vw,72px) 88px;max-width:940px}.hero h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(58px,10vw,132px);line-height:.82;margin:8px 0 18px;letter-spacing:-.07em}.hero p{font-size:clamp(18px,2.3vw,28px);margin:0;color:rgba(255,255,255,.86)}.eyebrow{letter-spacing:.22em;text-transform:uppercase;font-weight:800;font-size:12px;color:var(--gold2);margin:0 0 10px}.eyebrow--dark{color:#92713a}.main{width:min(1420px,92vw);margin:-56px auto 80px;position:relative;z-index:5}.tabs-shell{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;padding:10px;border:1px solid rgba(255,255,255,.46);background:rgba(255,255,255,.55);backdrop-filter:var(--blur);border-radius:999px;box-shadow:var(--shadow)}.tab-button{border:0;border-radius:999px;padding:13px 20px;background:transparent;color:#475569;font-weight:850;cursor:pointer;transition:.2s ease}.tab-button:hover{background:rgba(255,255,255,.7);color:#111827}.tab-button.active{background:linear-gradient(135deg,#111827,#334155);color:#fff;box-shadow:0 14px 35px rgba(15,23,42,.22)}.tab-panel{display:none}.tab-panel.active{display:block;animation:rise .28s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.panel{background:var(--panel);backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.62);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px;margin-bottom:22px}.intro-panel{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);gap:22px;align-items:center}.section-heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}h2{margin:0;font-size:clamp(24px,3vw,36px);letter-spacing:-.04em}.muted{color:var(--muted);line-height:1.6}.small{font-size:13px}.kpi-grid,.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi-card,.summary-card,.mini-card{padding:18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.64));border:1px solid rgba(15,23,42,.08);box-shadow:0 18px 45px rgba(15,23,42,.08)}.kpi-card span,.summary-card span,.mini-card span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}.kpi-card strong,.summary-card strong,.mini-card strong{display:block;margin-top:8px;font-size:clamp(20px,2.3vw,32px);letter-spacing:-.04em}.summary-card small,.mini-card small{display:block;margin-top:6px;color:var(--muted);line-height:1.45}.filters-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.field span{display:block;margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:850;color:#526174}.field select{width:100%;appearance:none;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.86);padding:14px 42px 14px 14px;color:var(--text);font-weight:700;outline:none}.ghost-button{border:1px solid rgba(15,23,42,.13);border-radius:999px;background:rgba(255,255,255,.7);padding:12px 18px;font-weight:850;color:#253044;cursor:pointer}.ghost-button:hover{background:#fff}.error-box{padding:16px 18px;border-radius:18px;background:#fff1f0;color:#912018;border:1px solid #ffccc7;margin-bottom:16px}.hidden{display:none!important}.cards-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.fraction-card{position:relative;overflow:hidden;border-radius:26px;padding:22px;background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(255,255,255,.64));border:1px solid rgba(15,23,42,.09);box-shadow:0 22px 60px rgba(15,23,42,.11);cursor:pointer;transition:.22s ease}.fraction-card:hover{transform:translateY(-4px);box-shadow:0 30px 74px rgba(15,23,42,.18)}.fraction-card:before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--gold),var(--gold2),transparent)}.card-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}.card-name{font-size:24px;font-weight:900;letter-spacing:-.04em}.card-price{font-weight:900;color:#111827;text-align:right}.card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{border-radius:16px;background:rgba(248,250,252,.72);border:1px solid rgba(15,23,42,.06);padding:12px}.metric strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b}.metric span{display:block;margin-top:5px;font-weight:850}.badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:850;border:1px solid rgba(15,23,42,.1);background:rgba(255,255,255,.7)}.badge.ok{color:var(--ok);background:#ecfdf3}.badge.warn{color:var(--warn);background:#fffaeb}.badge.danger{color:var(--danger);background:#fff1f0}.modal-backdrop{position:fixed;inset:0;background:rgba(2,8,23,.62);backdrop-filter:blur(12px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}.modal-backdrop--top{z-index:1100}.modal{width:min(1040px,96vw);max-height:88vh;overflow:auto;background:rgba(255,255,255,.94);border:1px solid rgba(255,255,255,.75);border-radius:32px;box-shadow:0 40px 120px rgba(0,0,0,.35);padding:30px;position:relative}.modal--small{width:min(560px,96vw)}.modal-close{position:sticky;top:0;float:right;width:42px;height:42px;border:0;border-radius:999px;background:#111827;color:#fff;font-size:24px;cursor:pointer;z-index:2}.modal-title{font-size:38px;letter-spacing:-.05em;margin:0 0 8px}.modal-subtitle{color:var(--muted);margin:0 0 22px}.price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0}.price-card{padding:18px;border-radius:22px;background:#f8fafc;border:1px solid var(--line)}.price-card strong{display:block;font-size:26px;letter-spacing:-.04em}.explanation{margin:12px 0 0;padding-left:18px;color:#64748b;line-height:1.5;font-size:13px}.accordion{margin-top:18px;border-radius:22px;overflow:hidden;border:1px solid rgba(15,23,42,.08)}.accordion-button{width:100%;border:0;background:#111827;color:#fff;padding:15px 18px;text-align:left;font-weight:900;cursor:pointer;display:flex;justify-content:space-between}.accordion-panel{display:none;padding:16px;background:rgba(248,250,252,.76)}.accordion.open .accordion-panel{display:block}.competitor-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;width:100%;text-align:left;border:1px solid rgba(15,23,42,.08);background:#fff;border-radius:18px;padding:14px;margin:10px 0;cursor:pointer}.competitor-row:hover{border-color:rgba(201,163,91,.55);box-shadow:0 14px 28px rgba(15,23,42,.08)}.table-wrap{overflow:auto;border-radius:22px;border:1px solid rgba(15,23,42,.08)}.data-table{width:100%;border-collapse:collapse;background:rgba(255,255,255,.76)}.data-table th,.data-table td{padding:13px 14px;border-bottom:1px solid rgba(15,23,42,.08);text-align:left;white-space:nowrap}.data-table th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;background:rgba(248,250,252,.9);position:sticky;top:0}.data-table tr:hover td{background:rgba(255,251,235,.6)}.positive{color:var(--ok);font-weight:900}.negative{color:var(--danger);font-weight:900}.neutral{color:#475569;font-weight:900}.empty-state{padding:24px;border-radius:22px;background:rgba(255,255,255,.65);color:#64748b;text-align:center}.source-link{color:#334155;text-decoration:underline;text-underline-offset:3px}.score-bar{height:8px;border-radius:999px;background:#e2e8f0;overflow:hidden;min-width:120px}.score-bar i{display:block;height:100%;background:linear-gradient(90deg,#c9a35b,#f3d38a);border-radius:999px}.mobile-card-list{display:none}@media(max-width:1120px){.intro-panel{grid-template-columns:1fr}.cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.filters-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:720px){.main{width:94vw;margin-top:-34px}.hero{min-height:360px}.topbar{padding:18px;align-items:flex-start}.hero__content{padding:72px 18px}.panel{padding:20px;border-radius:22px}.tabs-shell{border-radius:24px}.tab-button{flex:1 1 100%}.filters-grid,.kpi-grid,.summary-grid,.cards-grid,.price-grid{grid-template-columns:1fr}.section-heading{display:block}.modal{padding:20px;border-radius:24px}.modal-title{font-size:30px}.data-table th,.data-table td{font-size:13px;padding:10px}}
 
 
-        <section class="panel export-panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Exportação</p>
-              <h2>Gerar PDF</h2>
-            </div>
-          </div>
-          <p class="muted">
-            Escolha o tipo de relatório e exporte apenas as frações selecionadas nos filtros comerciais.
-          </p>
-          <div class="pdf-export-grid pdf-export-grid--commercial">
-            <label class="field">
-              <span>Tipo de PDF</span>
-              <select id="commercialPdfType">
-                <option value="executive">PDF Executivo</option>
-                <option value="technical">PDF Técnico</option>
-                <option value="sales">PDF Comercial</option>
-                <option value="client">PDF Proposta Cliente</option>
-              </select>
-            </label>
-            <div class="pdf-export-card">
-              <strong>PDF Executivo</strong>
-              <p>Resumo para gerência, com receita atual, proposta agora, alvo e agrupamento por estado.</p>
-            </div>
-            <div class="pdf-export-card">
-              <strong>PDF Técnico</strong>
-              <p>Inclui preço recomendado pelo modelo, interno técnico, score e leitura resumida.</p>
-            </div>
-            <div class="pdf-export-card">
-              <strong>PDF Comercial</strong>
-              <p>Versão interna para vendas, mostrando apenas o preço final a comunicar.</p>
-            </div>
-            <div class="pdf-export-card">
-              <strong>PDF Proposta Cliente</strong>
-              <p>Documento bonito para enviar/apresentar a clientes interessados, com as frações selecionadas.</p>
-            </div>
-            <div class="pdf-actions-card">
-              <button id="exportCommercialPdfButton" type="button" class="primary-button">Exportar PDF</button>
-              <p class="muted small">O relatório abre numa janela pronta para imprimir ou guardar como PDF.</p>
-            </div>
-          </div>
-        </section>
+/* Ajustes finais: modal concorrente, enquadramento e legibilidade */
+.modal-card,
+.competitor-popup,
+.dialog-card {
+  max-width: min(1040px, calc(100vw - 32px));
+  width: auto;
+}
 
-        <section class="panel market-context-panel" id="marketContextSection">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Contexto de mercado</p>
-              <h2>Olhão · Algarve · Portugal</h2>
-            </div>
-            <p class="muted small" id="marketContextSource">Benchmark informativo</p>
-          </div>
-          <p class="muted">
-            Estes indicadores não substituem o compset direto. Servem para validar o posicionamento do The View face ao mercado local, regional e nacional.
-          </p>
-          <div class="summary-grid market-context-grid" id="marketContextGrid"></div>
-          <div class="market-context-reading" id="marketContextReading"></div>
-        </section>
+.modal-card.compact,
+.competitor-modal .modal-card,
+#competitorModal .modal-card {
+  max-width: min(760px, calc(100vw - 32px));
+}
+
+.modal-grid,
+.kpi-grid,
+.comparison-grid,
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.kpi-card,
+.metric,
+.summary-card,
+.info-card {
+  min-width: 0;
+  overflow: hidden;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.kpi-card strong,
+.metric strong,
+.summary-card strong,
+.info-card strong,
+.card-price,
+.card-name {
+  line-height: 1.06;
+  overflow-wrap: anywhere;
+}
+
+.kpi-card small,
+.metric small,
+.summary-card small,
+.info-card small {
+  line-height: 1.35;
+}
+
+.modal-card .kpi-card strong,
+.competitor-popup .kpi-card strong {
+  font-size: clamp(1.45rem, 4vw, 2rem);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.price-table,
+.market-table,
+.ideal-table,
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.price-table th,
+.price-table td,
+.market-table th,
+.market-table td,
+.ideal-table th,
+.ideal-table td,
+table th,
+table td {
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .modal-card,
+  .modal-card.compact,
+  .competitor-modal .modal-card,
+  #competitorModal .modal-card {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 22px;
+    border-radius: 28px;
+  }
+
+  .modal-grid,
+  .kpi-grid,
+  .comparison-grid,
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .modal-card .kpi-card strong,
+  .competitor-popup .kpi-card strong {
+    font-size: clamp(1.25rem, 7vw, 1.75rem);
+  }
+}
+
+@media (max-width: 460px) {
+  .modal-grid,
+  .kpi-grid,
+  .comparison-grid,
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 
-        <section class="panel commercial-view-panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Visualização</p>
-              <h2>Escolher o que pretende ver</h2>
-            </div>
-          </div>
-          <div class="commercial-view-toggles">
-            <label class="toggle-pill"><input type="checkbox" id="toggleCommercialSummary" checked><span>Resumo financeiro</span></label>
-            <label class="toggle-pill"><input type="checkbox" id="toggleMarketContext" checked><span>Contexto de mercado</span></label>
-            <label class="toggle-pill"><input type="checkbox" id="toggleCommercialFilters" checked><span>Filtros comerciais</span></label>
-            <label class="toggle-pill"><input type="checkbox" id="toggleCommercialCards" checked><span>Cards por fração</span></label>
-            <label class="toggle-pill"><input type="checkbox" id="toggleCommercialTable"><span>Tabela detalhada</span></label>
-          </div>
-        </section>
+/* Ajuste: 6 filtros globais, incluindo tipologia */
+.filters-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
 
-      
+@media(max-width:1280px) {
+  .filters-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 
-        <section class="panel commercial-filters-panel" id="commercialFiltersSection">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Filtros comerciais</p>
-              <h2>Refinar proposta</h2>
-            </div>
-            <button class="ghost-button" id="clearCommercialFilters" type="button">Limpar filtros comerciais</button>
-          </div>
+@media(max-width:720px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
-          <div class="commercial-filter-grid">
-            <label class="field">
-              <span>Estado da decisão</span>
-              <select id="commercialStateFilter">
-                <option value="all">Todos</option>
-                <option value="Manter">Manter</option>
-                <option value="Aplicar agora">Aplicar agora</option>
-                <option value="Subida faseada">Subida faseada</option>
-                <option value="Rever gerência">Rever gerência</option>
-              </select>
-            </label>
 
-            <label class="field">
-              <span>Tipo de impacto</span>
-              <select id="commercialImpactFilter">
-                <option value="all">Todos</option>
-                <option value="none">Sem alteração</option>
-                <option value="up-to-20">Até 20.000 €</option>
-                <option value="20-35">20.000 € a 35.000 €</option>
-                <option value="35-55">35.000 € a 55.000 €</option>
-                <option value="above-55">Acima de 55.000 €</option>
-              </select>
-            </label>
+/* Preço recomendado final */
+.strategy-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.08);
+  white-space: nowrap;
+}
 
-            <label class="field">
-              <span>Tipologia</span>
-              <select id="commercialTypologyFilter">
-                <option value="all">Todas</option>
-              </select>
-            </label>
+.strategy-badge.keep,
+.strategy-badge.manter {
+  background: rgba(255,255,255,.08);
+}
 
-            <label class="field">
-              <span>Ordenar por</span>
-              <select id="commercialSort">
-                <option value="immediate-desc">Maior ajuste imediato</option>
-                <option value="potential-desc">Maior ajuste potencial</option>
-                <option value="floor-asc">Piso</option>
-                <option value="current-desc">Preço atual</option>
-                <option value="proposed-desc">Preço proposto agora</option>
-                <option value="state-asc">Estado da decisão</option>
-                <option value="typology-asc">Tipologia</option>
-              </select>
-            </label>
-          </div>
+.strategy-badge.fine {
+  background: rgba(185, 151, 92, .16);
+}
 
-          <div class="commercial-checklists">
-            <div class="pdf-checklist-field">
-              <div class="checklist-head">
-                <span>Pisos</span>
-                <div>
-                  <button type="button" class="mini-action" id="commercialSelectAllFloors">Todos</button>
-                  <button type="button" class="mini-action" id="commercialClearFloors">Limpar</button>
-                </div>
-              </div>
-              <div id="commercialFloorChecklist" class="pdf-checklist"></div>
-            </div>
+.strategy-badge.moderate {
+  background: rgba(84, 160, 255, .14);
+}
 
-            <div class="pdf-checklist-field">
-              <div class="checklist-head">
-                <span>Frações</span>
-                <div>
-                  <input id="commercialFractionSearch" class="search-input" type="search" placeholder="Pesquisar número..." />
-                  <button type="button" class="mini-action" id="commercialSelectVisibleFractions">Selecionar visíveis</button>
-                  <button type="button" class="mini-action" id="commercialSelectAllFractions">Todas</button>
-                  <button type="button" class="mini-action" id="commercialClearFractions">Limpar</button>
-                </div>
-              </div>
-              <div id="commercialFractionChecklist" class="pdf-checklist pdf-checklist--fractions"></div>
-              <div id="commercialSelectedChips" class="selected-chips"></div>
-            </div>
-          </div>
-        </section>
+.strategy-badge.phase {
+  background: rgba(124, 93, 255, .16);
+}
 
-        <section class="panel" id="commercialCardsSection">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Frações</p>
-              <h2>Cards de decisão comercial</h2>
-            </div>
-          </div>
-          <div id="commercialCards" class="commercial-cards"></div>
-        </section>
+.final-price-cell {
+  font-weight: 800;
+  color: var(--text, #fff);
+}
 
-        <section class="panel commercial-hidden-by-default" id="commercialTableSection">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Tabela comercial</p>
-              <h2>Proposta por fração</h2>
-            </div>
-          </div>
-          <div class="table-wrap commercial-table-wrap">
-            <table id="commercialTable" class="data-table commercial-table"></table>
-          </div>
-        </section></section>
+.final-adjust-positive {
+  color: #b6f2cd;
+  font-weight: 700;
+}
 
-      
-      
-      <section id="tab-finalprices" class="tab-panel">
-        <section class="panel final-prices-hero">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Tabela final</p>
-              <h2>Preços finais a comunicar</h2>
-            </div>
-            <p class="muted small" id="finalPricesCount">—</p>
-          </div>
-          <p class="muted">
-            Esta aba serve para consolidar os preços finais oficiais. Depois de definidos, estes valores passam a ser usados
-            nas propostas para clientes, em vez do preço sugerido automaticamente.
-          </p>
-          <div class="summary-grid" id="finalPricesSummary"></div>
-        </section>
+.final-adjust-neutral {
+  color: rgba(255,255,255,.72);
+  font-weight: 600;
+}
 
-        <section class="panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Gestão</p>
-              <h2>Editar preços finais</h2>
-            </div>
-            <div class="client-actions">
-              <button type="button" class="mini-action" id="finalUseSuggestedVisible">Usar sugeridos visíveis</button>
-              <button type="button" class="mini-action" id="finalClearVisible">Limpar visíveis</button>
-              <button type="button" class="ghost-button" id="finalExportJson">Exportar tabela final</button>
-              <label class="ghost-button file-import-label">
-                Importar tabela final
-                <input type="file" id="finalImportJson" accept="application/json,.json" />
-              </label>
-            </div>
-          </div>
+.strategy-badge.ajustefino { background: rgba(185, 151, 92, .16); }
+.strategy-badge.subidamoderada { background: rgba(84, 160, 255, .14); }
+.strategy-badge.subidafaseada { background: rgba(124, 93, 255, .16); }
+.strategy-badge.modelotecnico { background: rgba(255,255,255,.08); }
 
-          <div class="client-proposal-toolbar client-proposal-toolbar--multi">
-            <label class="field client-search-field">
-              <span>Pesquisar fração</span>
-              <input id="finalPriceSearch" class="search-input wide-search" type="search" placeholder="Ex.: 10, 31, T2..." />
-            </label>
 
-            <div class="client-filter-box">
-              <div class="checklist-head">
-                <span>Tipologias</span>
-                <div>
-                  <button type="button" class="mini-action" id="finalSelectAllTypologies">Todas</button>
-                  <button type="button" class="mini-action" id="finalClearTypologies">Limpar</button>
-                </div>
-              </div>
-              <div id="finalTypologyChecklist" class="compact-checklist"></div>
-            </div>
+/* Tabela de preço recomendado final */
+.strategy-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  border: 1px solid rgba(15, 23, 42, .10);
+  background: rgba(255,255,255,.55);
+}
 
-            <div class="client-filter-box">
-              <div class="checklist-head">
-                <span>Pisos</span>
-                <div>
-                  <button type="button" class="mini-action" id="finalSelectAllFloors">Todos</button>
-                  <button type="button" class="mini-action" id="finalClearFloors">Limpar</button>
-                </div>
-              </div>
-              <div id="finalFloorChecklist" class="compact-checklist"></div>
-            </div>
-          </div>
+.strategy-badge.manter {
+  background: rgba(255,255,255,.70);
+}
 
-          <div id="finalPricesCards" class="final-prices-cards"></div>
-        </section>
-      </section>
+.strategy-badge.ajustefino {
+  background: rgba(185, 151, 92, .18);
+}
 
-      <section id="tab-client" class="tab-panel">
-        <section class="panel client-proposal-hero">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Propostas Cliente</p>
-              <h2>Confirmar preços finais a comunicar</h2>
-            </div>
-            <p class="muted small" id="clientProposalCount">—</p>
-          </div>
-          <p class="muted">
-            Área limpa para preparar propostas para clientes interessados. O preço final começa com o preço proposto agora,
-            mas pode ser ajustado manualmente antes de gerar o PDF. Os valores ficam guardados neste browser.
-          </p>
-          <div class="summary-grid" id="clientProposalSummary"></div>
-        </section>
+.strategy-badge.subidamoderada {
+  background: rgba(84, 160, 255, .16);
+}
 
-        <section class="panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Seleção</p>
-              <h2>Escolher frações para a proposta</h2>
-            </div>
-            <div class="client-actions">
-              <button type="button" class="mini-action" id="clientSelectAll">Selecionar todas</button>
-              <button type="button" class="mini-action" id="clientClearAll">Limpar</button>
-              <button type="button" class="mini-action" id="clientResetPrices">Repor preços sugeridos</button>
-            </div>
-          </div>
+.strategy-badge.subidafaseada {
+  background: rgba(124, 93, 255, .16);
+}
 
-          <div class="client-proposal-toolbar client-proposal-toolbar--multi">
-            <label class="field client-search-field">
-              <span>Pesquisar fração</span>
-              <input id="clientFractionSearch" class="search-input wide-search" type="search" placeholder="Ex.: 10, 31, T2..." />
-            </label>
+.strategy-badge.modelotecnico {
+  background: rgba(255,255,255,.45);
+}
 
-            <div class="client-filter-box">
-              <div class="checklist-head">
-                <span>Tipologias</span>
-                <div>
-                  <button type="button" class="mini-action" id="clientSelectAllTypologies">Todas</button>
-                  <button type="button" class="mini-action" id="clientClearTypologies">Limpar</button>
-                </div>
-              </div>
-              <div id="clientTypologyChecklist" class="compact-checklist"></div>
-            </div>
 
-            <div class="client-filter-box">
-              <div class="checklist-head">
-                <span>Pisos</span>
-                <div>
-                  <button type="button" class="mini-action" id="clientSelectAllFloors">Todos</button>
-                  <button type="button" class="mini-action" id="clientClearFloors">Limpar</button>
-                </div>
-              </div>
-              <div id="clientFloorChecklist" class="compact-checklist"></div>
-            </div>
-          </div>
+/* Popup de racional do preço recomendado */
+.table-link-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
 
-          <div id="clientProposalCards" class="client-proposal-cards"></div>
-        </section>
+.table-link-button:hover {
+  color: var(--accent, #a77833);
+}
 
-        <section class="panel client-export-panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow eyebrow--dark">Exportação</p>
-              <h2>Gerar PDF para cliente</h2>
-            </div>
-          </div>
-          <p class="muted">
-            O PDF usa apenas as frações selecionadas e os preços finais confirmados nesta área. Não mostra preço recomendado,
-            preço-alvo, estado interno, score ou comentários de gestão.
-          </p>
-          <div class="client-export-actions">
-            <button type="button" class="primary-button" id="clientExportPdf">Gerar PDF Proposta Cliente</button>
-            <button type="button" class="ghost-button" id="clientExportJson">Exportar preços finais</button>
-            <label class="ghost-button file-import-label">
-              Importar preços finais
-              <input type="file" id="clientImportJson" accept="application/json,.json" />
-            </label>
-          </div>
-        </section>
-      </section>
+.final-popup-overlay {
+  z-index: 9999;
+}
 
-      <section class="tab-panel" id="tab-calculation">
-        <section class="glass-section">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">TRANSPARÊNCIA DO MODELO</span>
-              <h2>Cálculo detalhado por fração</h2>
-              <p>Separação entre preço de mercado, preço interno puro, preço técnico misto e preço recomendado final.</p>
-            </div>
-            <span id="calculationCount" class="muted-count">0 frações analisadas</span>
-          </div>
+.final-popup-card {
+  max-width: min(960px, calc(100vw - 32px));
+  width: 960px;
+}
 
-          <div class="formula-explainer">
-            <div>
-              <strong>1. Mercado</strong>
-              <span>Concorrentes ponderados por categoria, ano e empreendimento.</span>
-            </div>
-            <div>
-              <strong>2. Interno puro</strong>
-              <span>Só The View: tipologia, piso, vista, área e varanda.</span>
-            </div>
-            <div>
-              <strong>3. Técnico misto</strong>
-              <span>70% mercado + 30% interno puro.</span>
-            </div>
-            <div>
-              <strong>4. Recomendado final</strong>
-              <span>Decisão comercial: manter, ajuste fino, subida moderada ou faseada.</span>
-            </div>
-          </div>
+.modal-title-block h2 {
+  margin: 8px 0 6px;
+}
 
-          <div id="calculationCards" class="calculation-cards"></div>
-        </section>
-      </section>
+.modal-title-block p {
+  margin: 0 0 18px;
+  color: var(--muted, #64748b);
+}
 
-    </main>
-  </div>
+.final-popup-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
 
-  <div id="fractionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="modal modal--large" role="document">
-      <button class="modal-close" id="closeFractionModal" type="button" aria-label="Fechar modal">×</button>
-      <div id="fractionModalContent"></div>
-    </div>
-  </div>
+.final-rationale-card,
+.final-technical-note {
+  border: 1px solid rgba(15, 23, 42, .10);
+  background: rgba(255, 255, 255, .62);
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 18px 55px rgba(15, 23, 42, .08);
+}
 
-  <div id="competitorModal" class="modal-backdrop modal-backdrop--top hidden" role="dialog" aria-modal="true">
-    <div class="modal modal--small" role="document">
-      <button class="modal-close" id="closeCompetitorModal" type="button" aria-label="Fechar popup do concorrente">×</button>
-      <div id="competitorModalContent"></div>
-    </div>
-  </div>
+.rationale-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="app.js" defer></script>
-</body>
-</html>
+.rationale-header strong {
+  font-size: 1.02rem;
+}
+
+.rationale-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 9px;
+  color: var(--muted, #64748b);
+  line-height: 1.45;
+}
+
+.final-technical-note {
+  margin-top: 14px;
+}
+
+.final-technical-note p {
+  margin: 8px 0 0;
+  color: var(--muted, #64748b);
+  line-height: 1.5;
+}
+
+@media(max-width: 900px) {
+  .final-popup-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 560px) {
+  .final-popup-card {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 22px;
+  }
+
+  .final-popup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rationale-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* Correção crítica: popup de racional sempre por cima, sem empilhar */
+.final-popup-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+  background: rgba(8, 15, 30, .72) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  overflow-y: auto !important;
+}
+
+body.modal-open {
+  overflow: hidden !important;
+}
+
+.final-popup-card {
+  position: relative !important;
+  z-index: 1000000 !important;
+  margin: auto !important;
+  max-width: min(960px, calc(100vw - 32px)) !important;
+  width: 960px !important;
+  max-height: calc(100vh - 48px) !important;
+  overflow-y: auto !important;
+  transform: none !important;
+}
+
+.final-popup-card .modal-close,
+.final-popup-card button.modal-close {
+  position: absolute !important;
+  top: 22px !important;
+  right: 22px !important;
+  z-index: 2 !important;
+}
+
+@media(max-width: 560px) {
+  .final-popup-overlay {
+    padding: 12px !important;
+    align-items: flex-start !important;
+  }
+
+  .final-popup-card {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+  }
+}
+
+
+/* Aba Cálculo detalhado */
+.formula-explainer {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0 24px;
+}
+
+.formula-explainer > div {
+  border: 1px solid rgba(15, 23, 42, .10);
+  background: rgba(255, 255, 255, .58);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, .06);
+}
+
+.formula-explainer strong {
+  display: block;
+  color: var(--text, #111827);
+  margin-bottom: 6px;
+  font-size: .92rem;
+}
+
+.formula-explainer span {
+  color: var(--muted, #64748b);
+  font-size: .86rem;
+  line-height: 1.35;
+}
+
+#calculationTable td:nth-child(7),
+#calculationTable td:nth-child(8) {
+  white-space: normal;
+  min-width: 280px;
+  line-height: 1.35;
+}
+
+@media(max-width: 1100px) {
+  .formula-explainer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 640px) {
+  .formula-explainer {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Garantia da aba Cálculo detalhado */
+.tabs,
+.tab-nav,
+.tabs-shell {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.formula-explainer {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0 24px;
+}
+
+.formula-explainer > div {
+  border: 1px solid rgba(15, 23, 42, .10);
+  background: rgba(255, 255, 255, .58);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, .06);
+}
+
+.formula-explainer strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.formula-explainer span {
+  color: var(--muted, #64748b);
+  font-size: .86rem;
+  line-height: 1.35;
+}
+
+#calculationTable td:nth-child(7),
+#calculationTable td:nth-child(8) {
+  white-space: normal;
+  min-width: 280px;
+  line-height: 1.35;
+}
+
+@media(max-width: 1100px) {
+  .formula-explainer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 640px) {
+  .formula-explainer {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Cálculo detalhado por cards */
+.calculation-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.calculation-card,
+.empty-state-card {
+  border: 1px solid rgba(15, 23, 42, .10);
+  background: rgba(255, 255, 255, .62);
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: 0 18px 55px rgba(15, 23, 42, .08);
+  backdrop-filter: blur(12px);
+}
+
+.calculation-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.calculation-card-title {
+  min-width: 0;
+}
+
+.calculation-card-title h3,
+.calculation-card-title p {
+  margin: 0;
+}
+
+.calculation-card-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text, #111827);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.calculation-card-link:hover {
+  color: var(--accent, #a77833);
+}
+
+.calculation-card-title p {
+  margin-top: 6px;
+  color: var(--muted, #64748b);
+}
+
+.calculation-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.calculation-formula-card,
+.calculation-text-card {
+  border: 1px solid rgba(15, 23, 42, .08);
+  background: rgba(255,255,255,.45);
+  border-radius: 22px;
+  padding: 16px 18px;
+}
+
+.calculation-formula-card {
+  margin-bottom: 14px;
+}
+
+.calculation-formula-card strong,
+.calculation-text-card strong,
+.empty-state-card strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text, #111827);
+}
+
+.calculation-formula-card p,
+.calculation-text-card p,
+.empty-state-card p {
+  margin: 0;
+  color: var(--muted, #64748b);
+  line-height: 1.5;
+}
+
+.empty-state-card p {
+  margin-top: 6px;
+}
+
+@media(max-width: 1200px) {
+  .calculation-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 780px) {
+  .calculation-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .calculation-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 560px) {
+  .calculation-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Recommended tab focused selection */
+.primary-button{border:0;border-radius:999px;padding:13px 20px;background:linear-gradient(135deg,#111827,#334155);color:#fff;font-weight:850;cursor:pointer;box-shadow:0 16px 34px rgba(15,23,42,.18)}
+.primary-button:hover{transform:translateY(-1px);box-shadow:0 22px 40px rgba(15,23,42,.22)}
+.field--wide{grid-column:span 1}
+.recommended-controls{display:grid;grid-template-columns:minmax(320px,460px) minmax(0,1fr);gap:16px;align-items:stretch}
+.selection-helper-card,.ideal-empty-card,.ideal-decision-card,.ideal-formula-card,.pdf-export-card,.pdf-actions-card{padding:18px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.64));border:1px solid rgba(15,23,42,.08);box-shadow:0 18px 45px rgba(15,23,42,.08)}
+.selection-helper-card strong,.ideal-empty-card strong,.ideal-decision-card strong,.ideal-formula-card strong,.pdf-export-card strong,.pdf-actions-card strong{display:block;margin-bottom:8px;color:#111827}
+.selection-helper-card p,.ideal-empty-card p,.ideal-decision-card p,.ideal-formula-card p,.pdf-export-card p,.pdf-actions-card p{margin:0;color:#64748b;line-height:1.55}
+.ideal-details{margin-top:18px}
+.ideal-focused-card{padding:22px;border-radius:28px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.66);box-shadow:0 22px 60px rgba(15,23,42,.08)}
+.ideal-focus-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+.ideal-focus-title h3{margin:0;font-size:32px;letter-spacing:-.04em}.ideal-focus-title p{margin:8px 0 0;color:#64748b}
+.ideal-focus-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.ideal-formula-card{margin-top:14px}.ideal-actions{display:flex;justify-content:flex-end;margin-top:16px}
+.pdf-export-grid{display:grid;grid-template-columns:220px minmax(220px,280px) minmax(280px,1fr) 280px;gap:16px;align-items:start}
+.pdf-multiselect-field select{min-height:170px;padding-right:12px;background:rgba(255,255,255,.9)}
+.pdf-actions-card{display:flex;flex-direction:column;gap:12px;justify-content:center;min-height:170px}
+.pdf-actions-card .primary-button{width:100%}
+@media(max-width:1180px){.ideal-focus-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.pdf-export-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:820px){.recommended-controls{grid-template-columns:1fr}.ideal-focus-header{flex-direction:column;align-items:flex-start}.ideal-focus-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pdf-export-grid{grid-template-columns:1fr}.pdf-actions-card{min-height:auto}}
+@media(max-width:560px){.ideal-focus-grid{grid-template-columns:1fr}}
+
+
+/* Checklists de exportação PDF */
+.pdf-checklist-field {
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.58);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 18px 45px rgba(15,23,42,.06);
+}
+
+.checklist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.checklist-head > span {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 850;
+  color: #526174;
+}
+
+.checklist-head > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mini-action {
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.85);
+  color: #253044;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.mini-action:hover {
+  background: #fff;
+}
+
+.pdf-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.pdf-checklist--fractions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-height: 260px;
+}
+
+.check-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.70);
+  border-radius: 14px;
+  padding: 9px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 750;
+  color: #1f2937;
+}
+
+.check-pill:hover {
+  border-color: rgba(146,113,58,.42);
+  background: rgba(255,255,255,.96);
+}
+
+.check-pill input {
+  accent-color: #111827;
+  flex: 0 0 auto;
+}
+
+@media(max-width:1180px) {
+  .pdf-checklist--fractions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width:640px) {
+  .pdf-checklist,
+  .pdf-checklist--fractions {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Proposta Comercial */
+.commercial-hero-panel {
+  border: 1px solid rgba(146,113,58,.22);
+}
+
+.commercial-summary-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.commercial-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.commercial-checklists {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 16px;
+}
+
+.search-input {
+  border: 1px solid rgba(15,23,42,.12);
+  border-radius: 999px;
+  padding: 7px 12px;
+  min-width: 160px;
+  font-weight: 700;
+  outline: none;
+}
+
+.selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.selected-chip {
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.88);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #334155;
+}
+
+.commercial-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.commercial-card {
+  padding: 22px;
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.66));
+  border: 1px solid rgba(15,23,42,.09);
+  box-shadow: 0 22px 60px rgba(15,23,42,.10);
+}
+
+.commercial-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.commercial-card-title strong {
+  display: block;
+  font-size: 24px;
+  letter-spacing: -.04em;
+}
+
+.commercial-card-title span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+}
+
+.commercial-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.commercial-reading {
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 18px;
+  background: rgba(248,250,252,.72);
+  padding: 14px;
+}
+
+.commercial-reading strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.commercial-reading p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.decision-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(15,23,42,.10);
+  white-space: nowrap;
+}
+
+.decision-keep {
+  background: rgba(248,250,252,.92);
+  color: #334155;
+}
+
+.decision-apply {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.decision-phase {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.decision-review {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.commercial-table th:nth-child(5),
+.commercial-table th:nth-child(6),
+.commercial-table th:nth-child(7),
+.commercial-table th:nth-child(8),
+.commercial-table th:nth-child(9),
+.commercial-table th:nth-child(10),
+.commercial-table td:nth-child(5),
+.commercial-table td:nth-child(6),
+.commercial-table td:nth-child(7),
+.commercial-table td:nth-child(8),
+.commercial-table td:nth-child(9),
+.commercial-table td:nth-child(10) {
+  text-align: right;
+}
+
+.commercial-table td:last-child {
+  white-space: normal;
+  min-width: 300px;
+  line-height: 1.35;
+}
+
+.commercial-table-wrap {
+  max-height: 720px;
+}
+
+.pdf-export-grid--commercial {
+  grid-template-columns: 220px repeat(3, minmax(0, 1fr)) 260px;
+}
+
+@media(max-width: 1280px) {
+  .commercial-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .commercial-filter-grid,
+  .pdf-export-grid--commercial {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commercial-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 900px) {
+  .commercial-checklists,
+  .commercial-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .commercial-filter-grid,
+  .pdf-export-grid--commercial {
+    grid-template-columns: 1fr;
+  }
+
+  .commercial-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 560px) {
+  .commercial-summary-grid,
+  .commercial-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Simplificação comercial */
+.commercial-view-panel {
+  background: rgba(255,255,255,.68);
+}
+
+.commercial-view-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.82);
+  border-radius: 999px;
+  padding: 11px 14px;
+  font-weight: 850;
+  color: #253044;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-pill:hover {
+  background: #fff;
+}
+
+.toggle-pill input {
+  accent-color: #111827;
+}
+
+.commercial-hidden-by-default {
+  display: none;
+}
+
+.commercial-hidden-by-default:not(.hidden) {
+  display: block;
+}
+
+.export-panel {
+  border: 1px solid rgba(146,113,58,.20);
+  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+}
+
+
+/* Contexto de mercado */
+.market-context-panel {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+}
+
+.market-context-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.market-context-reading {
+  margin-top: 16px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(248,250,252,.72);
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.market-context-reading p {
+  margin: 0 0 8px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.market-context-reading p:last-child {
+  margin-bottom: 0;
+  font-weight: 750;
+  color: #334155;
+}
+
+@media(max-width: 1280px) {
+  .market-context-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 720px) {
+  .market-context-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Exportação: novo PDF Proposta Cliente */
+.pdf-export-grid--commercial {
+  grid-template-columns: 220px repeat(4, minmax(0, 1fr)) 260px;
+}
+
+@media(max-width: 1280px) {
+  .pdf-export-grid--commercial {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 820px) {
+  .pdf-export-grid--commercial {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Propostas Cliente */
+.client-proposal-hero {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(255,255,255,.68));
+}
+
+.client-actions,
+.client-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.client-proposal-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 220px 180px;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.wide-search {
+  width: 100%;
+  border-radius: 16px;
+  min-height: 44px;
+}
+
+.client-proposal-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.client-proposal-card {
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 28px;
+  padding: 20px;
+  background: rgba(255,255,255,.70);
+  box-shadow: 0 20px 55px rgba(15,23,42,.08);
+}
+
+.client-proposal-card.selected {
+  border-color: rgba(146,113,58,.44);
+  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(247,239,225,.72));
+}
+
+.client-proposal-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.client-select-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.client-select-title input {
+  margin-top: 4px;
+  accent-color: #111827;
+  transform: scale(1.1);
+}
+
+.client-select-title strong {
+  display: block;
+  font-size: 21px;
+  letter-spacing: -.03em;
+}
+
+.client-select-title span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.client-price-pill {
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #111827;
+  color: #fff;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.client-proposal-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.client-edit-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+}
+
+.client-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.client-edit-field span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #64748b;
+  font-weight: 900;
+}
+
+.client-price-input,
+.client-note-input {
+  border: 1px solid rgba(15,23,42,.14);
+  border-radius: 16px;
+  background: rgba(255,255,255,.92);
+  padding: 12px;
+  font: inherit;
+  font-weight: 750;
+  color: #111827;
+}
+
+.client-note-input {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.client-export-panel {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+}
+
+.file-import-label {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-import-label input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@media(max-width: 1180px) {
+  .client-proposal-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .client-proposal-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 780px) {
+  .client-proposal-toolbar,
+  .client-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .client-proposal-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 560px) {
+  .client-proposal-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .client-proposal-card-head {
+    flex-direction: column;
+  }
+}
+
+
+/* Filtros múltiplos em Propostas Cliente */
+.client-proposal-toolbar--multi {
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 360px) minmax(220px, 320px);
+  align-items: start;
+}
+
+.client-search-field {
+  align-self: stretch;
+}
+
+.client-filter-box {
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.68);
+  border-radius: 22px;
+  padding: 14px;
+  box-shadow: 0 16px 42px rgba(15,23,42,.06);
+}
+
+.compact-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 170px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.compact-checklist .check-pill {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+@media(max-width: 1100px) {
+  .client-proposal-toolbar--multi {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Tabela final de preços */
+.final-prices-hero {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(255,255,255,.68));
+}
+
+.final-prices-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.final-price-card {
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 28px;
+  padding: 20px;
+  background: rgba(255,255,255,.70);
+  box-shadow: 0 20px 55px rgba(15,23,42,.08);
+}
+
+.final-price-card.confirmed {
+  border-color: rgba(2,122,72,.24);
+  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(236,253,243,.68));
+}
+
+.final-status {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.final-status.confirmed {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.final-status.pending {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.final-edit-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+}
+
+.final-edit-grid .client-edit-field:last-child {
+  grid-column: 1 / -1;
+}
+
+.final-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.client-plan-block {
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 16px;
+  background: #fff;
+}
+
+.client-plan-block strong {
+  display: block;
+  margin-bottom: 12px;
+  color: #111827;
+}
+
+.client-plan-block img {
+  display: block;
+  max-width: 100%;
+  max-height: 330px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+@media(max-width: 1180px) {
+  .final-prices-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media(max-width: 780px) {
+  .final-edit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Plantas automáticas */
+.plant-auto-card {
+  margin-top: 12px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(248,250,252,.80);
+  border-radius: 18px;
+  padding: 12px 14px;
+}
+
+.plant-auto-card strong {
+  display: block;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.plant-auto-card span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.client-plan-block {
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 16px;
+  background: #fff;
+}
+
+.client-plan-block strong {
+  display: block;
+  margin-bottom: 12px;
+  color: #111827;
+}
+
+.client-plan-block img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  margin: 0 auto;
+}
