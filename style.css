@@ -1053,3 +1053,184 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Propostas Cliente */
+.client-proposal-hero {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(255,255,255,.68));
+}
+
+.client-actions,
+.client-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.client-proposal-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 220px 180px;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.wide-search {
+  width: 100%;
+  border-radius: 16px;
+  min-height: 44px;
+}
+
+.client-proposal-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.client-proposal-card {
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 28px;
+  padding: 20px;
+  background: rgba(255,255,255,.70);
+  box-shadow: 0 20px 55px rgba(15,23,42,.08);
+}
+
+.client-proposal-card.selected {
+  border-color: rgba(146,113,58,.44);
+  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(247,239,225,.72));
+}
+
+.client-proposal-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.client-select-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.client-select-title input {
+  margin-top: 4px;
+  accent-color: #111827;
+  transform: scale(1.1);
+}
+
+.client-select-title strong {
+  display: block;
+  font-size: 21px;
+  letter-spacing: -.03em;
+}
+
+.client-select-title span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.client-price-pill {
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #111827;
+  color: #fff;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.client-proposal-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.client-edit-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+}
+
+.client-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.client-edit-field span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #64748b;
+  font-weight: 900;
+}
+
+.client-price-input,
+.client-note-input {
+  border: 1px solid rgba(15,23,42,.14);
+  border-radius: 16px;
+  background: rgba(255,255,255,.92);
+  padding: 12px;
+  font: inherit;
+  font-weight: 750;
+  color: #111827;
+}
+
+.client-note-input {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.client-export-panel {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+}
+
+.file-import-label {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-import-label input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@media(max-width: 1180px) {
+  .client-proposal-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .client-proposal-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 780px) {
+  .client-proposal-toolbar,
+  .client-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .client-proposal-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 560px) {
+  .client-proposal-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .client-proposal-card-head {
+    flex-direction: column;
+  }
+}

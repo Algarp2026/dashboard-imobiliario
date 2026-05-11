@@ -31,6 +31,7 @@
         <button class="tab-button active" type="button" data-tab="dashboard">Dashboard</button>
         <button class="tab-button" type="button" data-tab="market">Inteligência de mercado</button>
         <button class="tab-button" type="button" data-tab="commercial">Proposta Comercial</button>
+        <button class="tab-button" type="button" data-tab="client">Propostas Cliente</button>
         <button class="tab-button" data-tab="calculation">Cálculo detalhado</button>
       </section>
 
@@ -286,6 +287,80 @@
             <table id="commercialTable" class="data-table commercial-table"></table>
           </div>
         </section></section>
+
+      
+      <section id="tab-client" class="tab-panel">
+        <section class="panel client-proposal-hero">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Propostas Cliente</p>
+              <h2>Confirmar preços finais a comunicar</h2>
+            </div>
+            <p class="muted small" id="clientProposalCount">—</p>
+          </div>
+          <p class="muted">
+            Área limpa para preparar propostas para clientes interessados. O preço final começa com o preço proposto agora,
+            mas pode ser ajustado manualmente antes de gerar o PDF. Os valores ficam guardados neste browser.
+          </p>
+          <div class="summary-grid" id="clientProposalSummary"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Seleção</p>
+              <h2>Escolher frações para a proposta</h2>
+            </div>
+            <div class="client-actions">
+              <button type="button" class="mini-action" id="clientSelectAll">Selecionar todas</button>
+              <button type="button" class="mini-action" id="clientClearAll">Limpar</button>
+              <button type="button" class="mini-action" id="clientResetPrices">Repor preços sugeridos</button>
+            </div>
+          </div>
+
+          <div class="client-proposal-toolbar">
+            <label class="field">
+              <span>Pesquisar fração</span>
+              <input id="clientFractionSearch" class="search-input wide-search" type="search" placeholder="Ex.: 10, 31, T2..." />
+            </label>
+            <label class="field">
+              <span>Tipologia</span>
+              <select id="clientTypologyFilter">
+                <option value="all">Todas</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Piso</span>
+              <select id="clientFloorFilter">
+                <option value="all">Todos</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="clientProposalCards" class="client-proposal-cards"></div>
+        </section>
+
+        <section class="panel client-export-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Exportação</p>
+              <h2>Gerar PDF para cliente</h2>
+            </div>
+          </div>
+          <p class="muted">
+            O PDF usa apenas as frações selecionadas e os preços finais confirmados nesta área. Não mostra preço recomendado,
+            preço-alvo, estado interno, score ou comentários de gestão.
+          </p>
+          <div class="client-export-actions">
+            <button type="button" class="primary-button" id="clientExportPdf">Gerar PDF Proposta Cliente</button>
+            <button type="button" class="ghost-button" id="clientExportJson">Exportar preços finais</button>
+            <label class="ghost-button file-import-label">
+              Importar preços finais
+              <input type="file" id="clientImportJson" accept="application/json,.json" />
+            </label>
+          </div>
+        </section>
+      </section>
 
       <section class="tab-panel" id="tab-calculation">
         <section class="glass-section">

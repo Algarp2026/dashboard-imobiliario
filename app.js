@@ -16,6 +16,9 @@
     filters: { floor: 'all', view: 'all', typology: 'all', fraction: 'all', development: 'all' },
     sort: 'name-asc',
     commercialFilters: { state: 'all', impact: 'all', typology: 'all', floors: [], fractions: [], search: '', sort: 'immediate-desc' },
+    clientFilters: { search: '', typology: 'all', floor: 'all' },
+    clientSelections: {},
+    finalPrices: {},
     idealFocusedFraction: ''
   };
 
@@ -229,6 +232,7 @@
 
   async function init() {
     cacheElements();
+    loadClientProposalState();
     bindEvents();
     await loadExcelData();
   }
@@ -236,7 +240,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyFilter','clientFloorFilter','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -279,6 +283,17 @@
       if (el[id]) el[id].addEventListener('change', applyCommercialVisibility);
     });
 
+
+
+    if (el.clientFractionSearch) el.clientFractionSearch.addEventListener('input', () => { state.clientFilters.search = el.clientFractionSearch.value; renderClientProposalPage(); });
+    if (el.clientTypologyFilter) el.clientTypologyFilter.addEventListener('change', () => { state.clientFilters.typology = el.clientTypologyFilter.value; renderClientProposalPage(); });
+    if (el.clientFloorFilter) el.clientFloorFilter.addEventListener('change', () => { state.clientFilters.floor = el.clientFloorFilter.value; renderClientProposalPage(); });
+    if (el.clientSelectAll) el.clientSelectAll.addEventListener('click', () => { getVisibleClientAnalyses().forEach((a) => setClientSelected(a.fraction.name, true)); saveClientProposalState(); renderClientProposalPage(); });
+    if (el.clientClearAll) el.clientClearAll.addEventListener('click', () => { getVisibleClientAnalyses().forEach((a) => setClientSelected(a.fraction.name, false)); saveClientProposalState(); renderClientProposalPage(); });
+    if (el.clientResetPrices) el.clientResetPrices.addEventListener('click', resetClientPricesForVisible);
+    if (el.clientExportPdf) el.clientExportPdf.addEventListener('click', exportClientProposalFromClientTab);
+    if (el.clientExportJson) el.clientExportJson.addEventListener('click', exportClientProposalJson);
+    if (el.clientImportJson) el.clientImportJson.addEventListener('change', importClientProposalJson);
 
     el.closeFractionModal.addEventListener('click', closeFractionModal);
     el.closeCompetitorModal.addEventListener('click', closeCompetitorModal);
@@ -553,7 +568,7 @@
   }
 
   function renderAll() {
-    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderCalculationPage();
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderClientProposalPage(); renderCalculationPage();
   }
 
   function renderKpis() {
@@ -982,6 +997,265 @@
   function cssEscape(value) {
     if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(value);
     return String(value).replace(/"/g, '\\"');
+  }
+
+
+
+  const CLIENT_STORAGE_KEY = 'theViewClientProposalV1';
+
+  function loadClientProposalState() {
+    try {
+      const raw = localStorage.getItem(CLIENT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      state.clientSelections = parsed.clientSelections || {};
+      state.finalPrices = parsed.finalPrices || {};
+    } catch (error) {
+      console.warn('Não foi possível carregar preços finais do browser.', error);
+    }
+  }
+
+  function saveClientProposalState() {
+    try {
+      localStorage.setItem(CLIENT_STORAGE_KEY, JSON.stringify({
+        clientSelections: state.clientSelections,
+        finalPrices: state.finalPrices
+      }));
+    } catch (error) {
+      console.warn('Não foi possível guardar preços finais no browser.', error);
+    }
+  }
+
+  function getClientAnalyses() {
+    return getCommercialAnalyses().map((analysis) => {
+      const key = analysis.fraction.name;
+      const storedPrice = parseNumber(state.finalPrices[key]?.price);
+      const storedNote = safeString(state.finalPrices[key]?.note || '');
+      return {
+        ...analysis,
+        clientSelected: state.clientSelections[key] === true,
+        clientFinalPrice: Number.isFinite(storedPrice) ? storedPrice : analysis.proposedNow,
+        clientNote: storedNote || getDefaultClientNote(analysis)
+      };
+    });
+  }
+
+  function getVisibleClientAnalyses() {
+    const search = normalizeKey(state.clientFilters.search || '');
+    return getClientAnalyses().filter((analysis) => {
+      const f = analysis.fraction;
+      const searchMatch = !search
+        || normalizeKey(f.name).includes(search)
+        || normalizeKey(f.typology).includes(search)
+        || String(getFractionNumber(f)).includes(search);
+      const typologyMatch = state.clientFilters.typology === 'all' || normalizeKey(f.typology) === normalizeKey(state.clientFilters.typology);
+      const floorMatch = state.clientFilters.floor === 'all' || String(f.floorNumber) === String(state.clientFilters.floor);
+      return searchMatch && typologyMatch && floorMatch;
+    }).sort((a, b) => naturalNameCompare(a.fraction, b.fraction));
+  }
+
+  function renderClientProposalPage() {
+    if (!el.clientProposalCards) return;
+
+    syncClientProposalControls();
+
+    const visible = getVisibleClientAnalyses();
+    const selected = getClientAnalyses().filter((analysis) => analysis.clientSelected);
+    const total = sum(selected.map((a) => a.clientFinalPrice));
+
+    if (el.clientProposalCount) {
+      el.clientProposalCount.textContent = `${selected.length} fração${selected.length === 1 ? '' : 'ões'} selecionada${selected.length === 1 ? '' : 's'}`;
+    }
+
+    if (el.clientProposalSummary) {
+      replace(el.clientProposalSummary,
+        summary('Frações selecionadas', formatNumber(selected.length), `${visible.length} visíveis`),
+        summary('Valor total da proposta', formatMoney(total), 'Soma dos preços finais'),
+        summary('Preço médio', selected.length ? formatMoney(total / selected.length) : '—', 'Frações selecionadas'),
+        summary('Guardado no browser', 'Local', 'Pode exportar/importar JSON')
+      );
+    }
+
+    el.clientProposalCards.replaceChildren();
+
+    if (!visible.length) {
+      el.clientProposalCards.append(empty('Sem frações com os filtros atuais.'));
+      return;
+    }
+
+    visible.forEach((analysis) => {
+      const f = analysis.fraction;
+      const key = f.name;
+      const isSelected = analysis.clientSelected;
+
+      const card = div(`client-proposal-card ${isSelected ? 'selected' : ''}`);
+
+      const checkbox = h('input', { attrs: { type: 'checkbox', checked: isSelected ? 'checked' : null } });
+      checkbox.checked = isSelected;
+      checkbox.addEventListener('change', () => {
+        setClientSelected(key, checkbox.checked);
+        saveClientProposalState();
+        renderClientProposalPage();
+      });
+
+      const priceInput = h('input', {
+        className: 'client-price-input',
+        attrs: {
+          type: 'number',
+          min: '0',
+          step: '5000',
+          value: Math.round(analysis.clientFinalPrice || 0)
+        }
+      });
+      priceInput.addEventListener('change', () => {
+        const value = parseNumber(priceInput.value);
+        setClientFinalPrice(key, Number.isFinite(value) ? value : analysis.proposedNow, analysis.clientNote);
+        saveClientProposalState();
+        renderClientProposalPage();
+      });
+
+      const noteInput = h('textarea', {
+        className: 'client-note-input',
+        text: analysis.clientNote,
+        attrs: { rows: '2', placeholder: 'Observação curta para cliente' }
+      });
+      noteInput.addEventListener('change', () => {
+        setClientFinalPrice(key, analysis.clientFinalPrice, noteInput.value);
+        saveClientProposalState();
+      });
+
+      card.append(
+        div('client-proposal-card-head', [
+          div('client-select-title', [
+            checkbox,
+            div('', [
+              h('strong', { text: f.name }),
+              h('span', { text: `${f.typology} · Piso ${f.floorLabel} · ${getOrientation(f)}` })
+            ])
+          ]),
+          h('span', { className: 'client-price-pill', text: formatMoney(analysis.clientFinalPrice) })
+        ]),
+        div('client-proposal-metrics', [
+          metric('Preço sugerido', formatMoney(analysis.proposedNow)),
+          metric('Preço final', formatMoney(analysis.clientFinalPrice)),
+          metric('ABP', formatArea(f.abp)),
+          metric('Varanda/Terraço', formatArea(f.balcony)),
+          metric('Área total', formatArea(f.totalArea))
+        ]),
+        div('client-edit-grid', [
+          labelWrap('Preço final a comunicar', priceInput),
+          labelWrap('Observação cliente', noteInput)
+        ])
+      );
+
+      el.clientProposalCards.append(card);
+    });
+  }
+
+  function syncClientProposalControls() {
+    if (el.clientTypologyFilter) {
+      const typologies = uniqueSorted(state.filteredFractions.map((f) => f.typology));
+      const current = state.clientFilters.typology;
+      el.clientTypologyFilter.replaceChildren(createOption('all', 'Todas'));
+      typologies.forEach((t) => el.clientTypologyFilter.append(createOption(t, t)));
+      el.clientTypologyFilter.value = typologies.includes(current) ? current : 'all';
+      state.clientFilters.typology = el.clientTypologyFilter.value;
+    }
+
+    if (el.clientFloorFilter) {
+      const floors = uniqueSorted(state.filteredFractions.map((f) => f.floorNumber));
+      const current = state.clientFilters.floor;
+      el.clientFloorFilter.replaceChildren(createOption('all', 'Todos'));
+      floors.forEach((floor) => el.clientFloorFilter.append(createOption(String(floor), `Piso ${floor}`)));
+      el.clientFloorFilter.value = floors.map(String).includes(String(current)) ? current : 'all';
+      state.clientFilters.floor = el.clientFloorFilter.value;
+    }
+  }
+
+  function labelWrap(label, child) {
+    const wrapper = h('label', { className: 'client-edit-field' });
+    wrapper.append(h('span', { text: label }), child);
+    return wrapper;
+  }
+
+  function setClientSelected(fractionName, selected) {
+    state.clientSelections[fractionName] = selected;
+  }
+
+  function setClientFinalPrice(fractionName, price, note = '') {
+    state.finalPrices[fractionName] = {
+      price,
+      note: safeString(note)
+    };
+  }
+
+  function getDefaultClientNote(analysis) {
+    const f = analysis.fraction;
+    return `Fração ${f.typology} no piso ${f.floorLabel}, com orientação ${getOrientation(f)} e área total de ${formatArea(f.totalArea)}.`;
+  }
+
+  function resetClientPricesForVisible() {
+    getVisibleClientAnalyses().forEach((analysis) => {
+      delete state.finalPrices[analysis.fraction.name];
+    });
+    saveClientProposalState();
+    renderClientProposalPage();
+  }
+
+  function getSelectedClientProposalAnalyses() {
+    return getClientAnalyses()
+      .filter((analysis) => analysis.clientSelected)
+      .sort((a, b) => naturalNameCompare(a.fraction, b.fraction));
+  }
+
+  function exportClientProposalFromClientTab() {
+    const selected = getSelectedClientProposalAnalyses();
+    if (!selected.length) {
+      alert('Selecione pelo menos uma fração para gerar a proposta para cliente.');
+      return;
+    }
+
+    exportClientProposalPdf(selected);
+  }
+
+  function exportClientProposalJson() {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      clientSelections: state.clientSelections,
+      finalPrices: state.finalPrices
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'the-view-precos-finais-cliente.json';
+    document.body.append(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importClientProposalJson(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || '{}'));
+        state.clientSelections = parsed.clientSelections || {};
+        state.finalPrices = parsed.finalPrices || {};
+        saveClientProposalState();
+        renderClientProposalPage();
+      } catch (error) {
+        alert('Não foi possível importar o ficheiro JSON.');
+      } finally {
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
   }
 
 
@@ -1429,7 +1703,7 @@ ${pdfStyles()}
 
   function getClientPriceSheetHtml(a) {
     const fraction = a.fraction;
-    const finalPrice = a.proposedNow;
+    const finalPrice = a.clientFinalPrice || a.proposedNow;
     const pricePerSqm = Number.isFinite(finalPrice) && Number.isFinite(fraction.totalArea) && fraction.totalArea > 0
       ? finalPrice / fraction.totalArea
       : null;
@@ -1461,7 +1735,7 @@ ${pdfStyles()}
 
           <div class="client-highlight">
             <strong>Resumo da unidade</strong>
-            <p>Fração ${escapeHtml(fraction.typology)} no piso ${escapeHtml(String(fraction.floorLabel))}, com orientação ${escapeHtml(getOrientation(fraction))} e área total de ${escapeHtml(formatArea(fraction.totalArea))}.</p>
+            <p>${escapeHtml(a.clientNote || `Fração ${fraction.typology} no piso ${fraction.floorLabel}, com orientação ${getOrientation(fraction)} e área total de ${formatArea(fraction.totalArea)}.`)}</p>
           </div>
 
           <div class="client-note">
@@ -1483,7 +1757,7 @@ ${pdfStyles()}
       return;
     }
 
-    const totalPrice = sum(ordered.map((a) => a.proposedNow));
+    const totalPrice = sum(ordered.map((a) => a.clientFinalPrice || a.proposedNow));
 
     const rows = ordered.map((a) => {
       const f = a.fraction;
@@ -1495,7 +1769,7 @@ ${pdfStyles()}
         <td class="num">${escapeHtml(formatArea(f.abp))}</td>
         <td class="num">${escapeHtml(formatArea(f.balcony))}</td>
         <td class="num">${escapeHtml(formatArea(f.totalArea))}</td>
-        <td class="money price-main">${escapeHtml(formatMoney(a.proposedNow))}</td>
+        <td class="money price-main">${escapeHtml(formatMoney(a.clientFinalPrice || a.proposedNow))}</td>
       </tr>`;
     }).join('');
 
@@ -1507,7 +1781,7 @@ ${pdfStyles()}
           <strong>${escapeHtml(f.name)}</strong>
           <small>${escapeHtml(getOrientation(f))} · Área total ${escapeHtml(formatArea(f.totalArea))}</small>
         </div>
-        <b>${escapeHtml(formatMoney(a.proposedNow))}</b>
+        <b>${escapeHtml(formatMoney(a.clientFinalPrice || a.proposedNow))}</b>
       </div>`;
     }).join('');
 
@@ -1591,7 +1865,7 @@ ${pdfStyles()}
       <td>${escapeHtml(a.fraction.typology)}</td>
       <td class="num">${escapeHtml(String(a.fraction.floorLabel))}</td>
       <td>${escapeHtml(getOrientation(a.fraction))}</td>
-      <td class="money price-main">${escapeHtml(formatMoney(a.proposedNow))}</td>
+      <td class="money price-main">${escapeHtml(formatMoney(a.clientFinalPrice || a.proposedNow))}</td>
       <td><span class="state-pill ${getPdfDecisionClass(a.commercialState)}">${escapeHtml(a.commercialState)}</span></td>
     </tr>`).join('');
 
