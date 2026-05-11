@@ -393,7 +393,7 @@
     if (el.finalClearTypologies) el.finalClearTypologies.addEventListener('click', () => { setChecklistState(el.finalTypologyChecklist, false); state.finalPriceFilters.typologies = []; renderFinalPricesPage(false); });
     if (el.finalSelectAllFloors) el.finalSelectAllFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, true); state.finalPriceFilters.floors = getSelectedChecklistValues(el.finalFloorChecklist); renderFinalPricesPage(false); });
     if (el.finalClearFloors) el.finalClearFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, false); state.finalPriceFilters.floors = []; renderFinalPricesPage(false); });
-    if (el.finalUseSuggestedVisible) el.finalUseSuggestedVisible.addEventListener('click', useSuggestedPricesForVisibleFinal);
+    if (el.finalUseSuggestedVisible) el.finalUseSuggestedVisible.addEventListener('click', useSuggestedPricesForVisible);
     if (el.finalClearVisible) el.finalClearVisible.addEventListener('click', clearVisibleFinalPrices);
     if (el.finalExportJson) el.finalExportJson.addEventListener('click', exportFinalPricesJson);
     if (el.finalImportJson) el.finalImportJson.addEventListener('change', importFinalPricesJson);
