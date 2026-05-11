@@ -1352,7 +1352,6 @@ ${pdfStyles()}
     <div class="executive-box">
       <h2>Resumo executivo</h2>
       <p>A análise técnica indica margem de reforço em várias frações. A proposta comercial recomenda aplicar imediatamente os ajustes finos e moderados, fasear as subidas mais expressivas e submeter frações premium ou sensíveis à validação da gerência.</p>
-      <p class="filters"><strong>Filtros aplicados:</strong> ${escapeHtml(getCommercialFiltersText())}</p>
     </div>
 
     <div class="pdf-kpis">
@@ -1407,26 +1406,93 @@ ${pdfStyles()}
     </tr>`).join('');
 
     openPdfWindow(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>${pdfStyles()}</head><body>
-      <section class="page"><div class="brand">The View Olhão</div><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
+      <section class="page"><div class="brand">The View Olhão</div><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1>
       <table><thead><tr><th>Fração</th><th>Tip.</th><th>Piso</th><th>Orientação</th><th>Atual</th><th>Modelo</th><th>Proposto agora</th><th>Alvo</th><th>Ajuste imediato</th><th>Ajuste potencial</th><th>Estado</th><th>Score</th><th>Leitura resumida</th></tr></thead><tbody>${rows}</tbody></table>
       </section></body></html>`);
   }
 
+
+  function sortCommercialForClient(analyses) {
+    return [...analyses].sort((a, b) => naturalNameCompare(a.fraction, b.fraction));
+  }
+
+  function getClientPriceSheetHtml(a) {
+    const fraction = a.fraction;
+    const finalPrice = a.proposedNow;
+
+    return `
+      <section class="page client-price-page">
+        <div class="client-sheet">
+          <div class="client-sheet-top">
+            <div>
+              <div class="brand">The View Olhão</div>
+              <h1>${escapeHtml(fraction.name)}</h1>
+              <p class="client-subtitle">${escapeHtml(fraction.typology)} · Piso ${escapeHtml(String(fraction.floorLabel))} · ${escapeHtml(getOrientation(fraction))}</p>
+            </div>
+            <div class="client-price-box">
+              <span>Preço</span>
+              <strong>${escapeHtml(formatMoney(finalPrice))}</strong>
+            </div>
+          </div>
+
+          <div class="client-detail-grid">
+            <div><span>Tipologia</span><strong>${escapeHtml(fraction.typology)}</strong></div>
+            <div><span>Piso</span><strong>${escapeHtml(String(fraction.floorLabel))}</strong></div>
+            <div><span>Orientação</span><strong>${escapeHtml(getOrientation(fraction))}</strong></div>
+            <div><span>ABP</span><strong>${escapeHtml(formatArea(fraction.abp))}</strong></div>
+            <div><span>Varanda/Terraço</span><strong>${escapeHtml(formatArea(fraction.balcony))}</strong></div>
+            <div><span>Área total</span><strong>${escapeHtml(formatArea(fraction.totalArea))}</strong></div>
+            <div><span>Preço/m²</span><strong>${escapeHtml(formatCurrency(fraction.price && fraction.totalArea ? finalPrice / fraction.totalArea : null, 0))}/m²</strong></div>
+          </div>
+
+          <div class="client-note">
+            <strong>Condições comerciais</strong>
+            <p>Preço sujeito a confirmação de disponibilidade e validação comercial no momento da proposta.</p>
+          </div>
+        </div>
+      </section>`;
+  }
+
+
   function exportSalesCommercialPdf(analyses) {
     const title = 'The View Olhão · Tabela Comercial para Vendas';
-    const rows = analyses.map((a) => `<tr>
-      <td>${escapeHtml(a.fraction.name)}</td>
+    const ordered = sortCommercialForClient(analyses);
+
+    const rows = ordered.map((a) => `<tr>
+      <td class="strong">${escapeHtml(a.fraction.name)}</td>
       <td>${escapeHtml(a.fraction.typology)}</td>
-      <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
+      <td class="num">${escapeHtml(String(a.fraction.floorLabel))}</td>
       <td>${escapeHtml(getOrientation(a.fraction))}</td>
-      <td class="money">${escapeHtml(formatMoney(a.proposedNow))}</td>
-      <td>${escapeHtml(getSalesObservation(a))}</td>
+      <td class="money price-main">${escapeHtml(formatMoney(a.proposedNow))}</td>
+      <td><span class="state-pill ${getPdfDecisionClass(a.commercialState)}">${escapeHtml(a.commercialState)}</span></td>
     </tr>`).join('');
 
+    const totals = getCommercialTotals(ordered);
+    const clientPages = ordered.map(getClientPriceSheetHtml).join('');
+
     openPdfWindow(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>${pdfStyles()}</head><body>
-      <section class="page"><div class="brand">The View Olhão</div><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
-      <table><thead><tr><th>Fração</th><th>Tipologia</th><th>Piso</th><th>Orientação</th><th>Preço final a comunicar</th><th>Observação comercial curta</th></tr></thead><tbody>${rows}</tbody></table>
-      </section></body></html>`);
+      <section class="page">
+        <div class="cover-header sales-cover">
+          <div>
+            <div class="brand">The View Olhão</div>
+            <h1>Tabela Comercial<br/>para Vendas</h1>
+            <p class="cover-subtitle">Preço final a comunicar = preço proposto agora</p>
+          </div>
+          <div class="date-card">
+            <span>Receita proposta</span>
+            <strong>${escapeHtml(formatMoney(totals.proposed))}</strong>
+            <small>${ordered.length} frações</small>
+          </div>
+        </div>
+
+        <table class="sales-table">
+          <thead><tr><th>Fração</th><th>Tipologia</th><th>Piso</th><th>Orientação</th><th>Preço final a comunicar</th><th>Estado</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+
+      ${clientPages}
+    </body></html>`);
   }
 
   function getSalesObservation(a) {
@@ -1690,7 +1756,6 @@ ${pdfStyles()}
       }
 
       td:last-child{
-        min-width:240px;
         line-height:1.35;
         color:#475569;
       }
@@ -1759,6 +1824,117 @@ ${pdfStyles()}
         margin-top:14px;
         color:#64748b;
         font-size:11px;
+      }
+
+
+      .client-price-page{
+        background:#f6f3ec;
+        padding:30px;
+      }
+
+      .client-sheet{
+        min-height:calc(100vh - 60px);
+        border-radius:28px;
+        background:#fff;
+        border:1px solid #e5dccb;
+        box-shadow:0 24px 70px rgba(15,23,42,.08);
+        padding:34px;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+      }
+
+      .client-sheet-top{
+        display:flex;
+        justify-content:space-between;
+        gap:28px;
+        align-items:flex-start;
+        border-bottom:1px solid #e5e7eb;
+        padding-bottom:24px;
+      }
+
+      .client-sheet h1{
+        font-size:48px;
+        margin:0 0 8px;
+        color:#111827;
+      }
+
+      .client-subtitle{
+        margin:0;
+        color:#64748b;
+        font-size:17px;
+      }
+
+      .client-price-box{
+        min-width:260px;
+        border-radius:24px;
+        padding:24px;
+        text-align:right;
+        background:linear-gradient(135deg,#111827,#253044);
+        color:#fff;
+      }
+
+      .client-price-box span{
+        display:block;
+        font-size:12px;
+        letter-spacing:.16em;
+        text-transform:uppercase;
+        color:#f3d38a;
+        font-weight:900;
+      }
+
+      .client-price-box strong{
+        display:block;
+        margin-top:8px;
+        font-size:34px;
+        letter-spacing:-.04em;
+      }
+
+      .client-detail-grid{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:14px;
+        margin:34px 0;
+      }
+
+      .client-detail-grid div{
+        border:1px solid #e5e7eb;
+        border-radius:18px;
+        padding:16px;
+        background:#f8fafc;
+      }
+
+      .client-detail-grid span{
+        display:block;
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:.08em;
+        color:#64748b;
+        font-weight:900;
+      }
+
+      .client-detail-grid strong{
+        display:block;
+        margin-top:8px;
+        font-size:18px;
+        color:#111827;
+      }
+
+      .client-note{
+        border-top:1px solid #e5e7eb;
+        padding-top:18px;
+        color:#64748b;
+        line-height:1.45;
+      }
+
+      .client-note strong{
+        display:block;
+        color:#111827;
+        margin-bottom:6px;
+      }
+
+      .client-note p{
+        margin:0;
       }
 
       @page{
