@@ -1,36 +1,5 @@
 'use strict';
 
-  function showDebugError(error, context = '') {
-    const box = document.getElementById('debugErrorBox');
-    const message = [
-      context ? `Contexto: ${context}` : '',
-      error?.message ? `Erro: ${error.message}` : String(error),
-      error?.stack ? `Stack:\n${error.stack}` : ''
-    ].filter(Boolean).join('\n\n');
-
-    console.error('[The View Dashboard]', context, error);
-
-    if (box) {
-      box.hidden = false;
-      box.textContent = message;
-    }
-
-    const loading = document.querySelector('[id*="loading"], .loading, .loader, .status-pill');
-    if (loading) {
-      loading.textContent = 'Erro ao carregar. Ver detalhe no topo.';
-    }
-  }
-
-  window.addEventListener('error', (event) => {
-    showDebugError(event.error || event.message, 'Erro global de JavaScript');
-  });
-
-  window.addEventListener('unhandledrejection', (event) => {
-    showDebugError(event.reason || event, 'Promise rejeitada');
-  });
-
-
-
 (() => {
   const DATA_FILES = ['data.xlsx', 'data.xls'];
   const PROJECT_NAME = 'The View';
@@ -159,74 +128,6 @@
     return `${fraction.typology} · Piso ${fraction.floorLabel} · Orientação ${getOrientation(fraction)}`;
   }
 
-
-
-  const THE_VIEW_PLANT_MAP = {
-    1: { plantId: 'planta-apartamento-01', image: 'plantas/planta-apartamento-01.jpg', pdf: 'plantas/planta-apartamento-01.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_01.pdf" },
-    2: { plantId: 'planta-apartamento-02-10-17-24-31', image: 'plantas/planta-apartamento-02-10-17-24-31.jpg', pdf: 'plantas/planta-apartamento-02-10-17-24-31.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
-    3: { plantId: 'planta-apartamento-03', image: 'plantas/planta-apartamento-03.jpg', pdf: 'plantas/planta-apartamento-03.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_03.pdf" },
-    4: { plantId: 'planta-apartamento-04', image: 'plantas/planta-apartamento-04.jpg', pdf: 'plantas/planta-apartamento-04.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_04.pdf" },
-    5: { plantId: 'planta-apartamento-05', image: 'plantas/planta-apartamento-05.jpg', pdf: 'plantas/planta-apartamento-05.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_05.pdf" },
-    6: { plantId: 'planta-apartamento-06', image: 'plantas/planta-apartamento-06.jpg', pdf: 'plantas/planta-apartamento-06.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_06.pdf" },
-    7: { plantId: 'planta-apartamento-07-15', image: 'plantas/planta-apartamento-07-15.jpg', pdf: 'plantas/planta-apartamento-07-15.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf" },
-    8: { plantId: 'planta-apartamento-08', image: 'plantas/planta-apartamento-08.jpg', pdf: 'plantas/planta-apartamento-08.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_08.pdf" },
-    9: { plantId: 'planta-apartamento-09-16', image: 'plantas/planta-apartamento-09-16.jpg', pdf: 'plantas/planta-apartamento-09-16.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf" },
-    10: { plantId: 'planta-apartamento-02-10-17-24-31', image: 'plantas/planta-apartamento-02-10-17-24-31.jpg', pdf: 'plantas/planta-apartamento-02-10-17-24-31.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
-    11: { plantId: 'planta-apartamento-11', image: 'plantas/planta-apartamento-11.jpg', pdf: 'plantas/planta-apartamento-11.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_11.pdf" },
-    12: { plantId: 'planta-apartamento-12', image: 'plantas/planta-apartamento-12.jpg', pdf: 'plantas/planta-apartamento-12.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_12.pdf" },
-    13: { plantId: 'planta-apartamento-13', image: 'plantas/planta-apartamento-13.jpg', pdf: 'plantas/planta-apartamento-13.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_13.pdf" },
-    14: { plantId: 'planta-apartamento-14', image: 'plantas/planta-apartamento-14.jpg', pdf: 'plantas/planta-apartamento-14.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_14.pdf" },
-    15: { plantId: 'planta-apartamento-07-15', image: 'plantas/planta-apartamento-07-15.jpg', pdf: 'plantas/planta-apartamento-07-15.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf" },
-    16: { plantId: 'planta-apartamento-09-16', image: 'plantas/planta-apartamento-09-16.jpg', pdf: 'plantas/planta-apartamento-09-16.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf" },
-    17: { plantId: 'planta-apartamento-02-10-17-24-31', image: 'plantas/planta-apartamento-02-10-17-24-31.jpg', pdf: 'plantas/planta-apartamento-02-10-17-24-31.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
-    18: { plantId: 'planta-apartamento-18', image: 'plantas/planta-apartamento-18.jpg', pdf: 'plantas/planta-apartamento-18.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_18.pdf" },
-    19: { plantId: 'planta-apartamento-19', image: 'plantas/planta-apartamento-19.jpg', pdf: 'plantas/planta-apartamento-19.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_19.pdf" },
-    20: { plantId: 'planta-apartamento-20', image: 'plantas/planta-apartamento-20.jpg', pdf: 'plantas/planta-apartamento-20.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_20.pdf" },
-    21: { plantId: 'planta-apartamento-21', image: 'plantas/planta-apartamento-21.jpg', pdf: 'plantas/planta-apartamento-21.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_21.pdf" },
-    22: { plantId: 'planta-apartamento-22', image: 'plantas/planta-apartamento-22.jpg', pdf: 'plantas/planta-apartamento-22.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_22.pdf" },
-    23: { plantId: 'planta-apartamento-23-30', image: 'plantas/planta-apartamento-23-30.jpg', pdf: 'plantas/planta-apartamento-23-30.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf" },
-    24: { plantId: 'planta-apartamento-02-10-17-24-31', image: 'plantas/planta-apartamento-02-10-17-24-31.jpg', pdf: 'plantas/planta-apartamento-02-10-17-24-31.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
-    25: { plantId: 'planta-apartamento-25', image: 'plantas/planta-apartamento-25.jpg', pdf: 'plantas/planta-apartamento-25.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_25.pdf" },
-    26: { plantId: 'planta-apartamento-26', image: 'plantas/planta-apartamento-26.jpg', pdf: 'plantas/planta-apartamento-26.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_26.pdf" },
-    27: { plantId: 'planta-apartamento-27', image: 'plantas/planta-apartamento-27.jpg', pdf: 'plantas/planta-apartamento-27.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_27.pdf" },
-    28: { plantId: 'planta-apartamento-28', image: 'plantas/planta-apartamento-28.jpg', pdf: 'plantas/planta-apartamento-28.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_28.pdf" },
-    29: { plantId: 'planta-apartamento-29', image: 'plantas/planta-apartamento-29.jpg', pdf: 'plantas/planta-apartamento-29.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_29.pdf" },
-    30: { plantId: 'planta-apartamento-23-30', image: 'plantas/planta-apartamento-23-30.jpg', pdf: 'plantas/planta-apartamento-23-30.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf" },
-    31: { plantId: 'planta-apartamento-02-10-17-24-31', image: 'plantas/planta-apartamento-02-10-17-24-31.jpg', pdf: 'plantas/planta-apartamento-02-10-17-24-31.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
-    32: { plantId: 'planta-apartamento-32', image: 'plantas/planta-apartamento-32.jpg', pdf: 'plantas/planta-apartamento-32.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_32.pdf" },
-    33: { plantId: 'planta-apartamento-33', image: 'plantas/planta-apartamento-33.jpg', pdf: 'plantas/planta-apartamento-33.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_33.pdf" },
-    34: { plantId: 'planta-apartamento-34', image: 'plantas/planta-apartamento-34.jpg', pdf: 'plantas/planta-apartamento-34.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_34.pdf" },
-    35: { plantId: 'planta-apartamento-35', image: 'plantas/planta-apartamento-35.jpg', pdf: 'plantas/planta-apartamento-35.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_35.pdf" },
-    36: { plantId: 'planta-apartamento-36', image: 'plantas/planta-apartamento-36.jpg', pdf: 'plantas/planta-apartamento-36.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_36.pdf" },
-    37: { plantId: 'planta-apartamento-37', image: 'plantas/planta-apartamento-37.jpg', pdf: 'plantas/planta-apartamento-37.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_37.pdf" },
-    38: { plantId: 'planta-apartamento-38', image: 'plantas/planta-apartamento-38.jpg', pdf: 'plantas/planta-apartamento-38.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_38.pdf" },
-    39: { plantId: 'planta-apartamento-39', image: 'plantas/planta-apartamento-39.jpg', pdf: 'plantas/planta-apartamento-39.pdf', source: "Planta_THE VIEW OLHAO_Apartamento_39.pdf" }
-  };
-
-
-  function getAutomaticPlant(fraction) {
-    const number = getFractionNumber(fraction);
-    return THE_VIEW_PLANT_MAP[number] || null;
-  }
-
-  function getPlantImageForAnalysis(analysis) {
-    const manual = safeString(analysis?.planUrl || state.finalPrices?.[analysis?.fraction?.name]?.planUrl || '');
-    if (manual) return manual;
-
-    const auto = getAutomaticPlant(analysis?.fraction);
-    return auto?.image || '';
-  }
-
-  function getPlantPdfForAnalysis(analysis) {
-    const auto = getAutomaticPlant(analysis?.fraction);
-    return auto?.pdf || '';
-  }
-
-  function getPlantLabelForAnalysis(analysis) {
-    const auto = getAutomaticPlant(analysis?.fraction);
-    if (!auto) return 'Sem planta associada';
-    return auto.source || auto.plantId || 'Planta automática';
-  }
 
 
   const COMMERCIAL_DECISIONS = {
@@ -393,7 +294,7 @@
     if (el.finalClearTypologies) el.finalClearTypologies.addEventListener('click', () => { setChecklistState(el.finalTypologyChecklist, false); state.finalPriceFilters.typologies = []; renderFinalPricesPage(false); });
     if (el.finalSelectAllFloors) el.finalSelectAllFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, true); state.finalPriceFilters.floors = getSelectedChecklistValues(el.finalFloorChecklist); renderFinalPricesPage(false); });
     if (el.finalClearFloors) el.finalClearFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, false); state.finalPriceFilters.floors = []; renderFinalPricesPage(false); });
-    if (el.finalUseSuggestedVisible) el.finalUseSuggestedVisible.addEventListener('click', useSuggestedPricesForVisible);
+    if (el.finalUseSuggestedVisible) el.finalUseSuggestedVisible.addEventListener('click', useSuggestedPricesForVisibleFinal);
     if (el.finalClearVisible) el.finalClearVisible.addEventListener('click', clearVisibleFinalPrices);
     if (el.finalExportJson) el.finalExportJson.addEventListener('click', exportFinalPricesJson);
     if (el.finalImportJson) el.finalImportJson.addEventListener('change', importFinalPricesJson);
@@ -441,7 +342,6 @@
       setStatus('Excel carregado', 'ok');
     } catch (error) {
       console.error(error);
-      showDebugError(error, 'loadExcelData');
       setStatus('Erro no Excel', 'error');
       showError(`${safeString(error.message)} Confirme que o ficheiro data.xlsx está na raiz do projeto e mantém as colunas principais.`);
       renderEmptyState();
@@ -1172,19 +1072,19 @@
 
     const visible = getVisibleFinalPriceAnalyses();
     const all = getFinalPriceAnalyses();
-    const confirmed = all.filter((a) => Number.isFinite(a.officialFinalPrice));
-    const totalConfirmed = sum(confirmed.map((a) => a.officialFinalPrice));
+    const altered = all.filter((a) => Number.isFinite(a.officialFinalPrice) && Math.round(a.officialFinalPrice) !== Math.round(a.proposedNow));
+    const totalVisible = sum(visible.map((a) => a.officialPriceToUse));
 
     if (el.finalPricesCount) {
-      el.finalPricesCount.textContent = `${confirmed.length} preço${confirmed.length === 1 ? '' : 's'} final${confirmed.length === 1 ? '' : 'is'} definido${confirmed.length === 1 ? '' : 's'}`;
+      el.finalPricesCount.textContent = `${altered.length} alteração${altered.length === 1 ? '' : 'ões'} manual${altered.length === 1 ? '' : 'is'}`;
     }
 
     if (el.finalPricesSummary) {
       replace(el.finalPricesSummary,
-        summary('Preços finais definidos', formatNumber(confirmed.length), `${all.length} frações totais`),
-        summary('Valor confirmado', formatMoney(totalConfirmed), 'Soma dos preços finais definidos'),
         summary('Frações visíveis', formatNumber(visible.length), 'Após filtros desta aba'),
-        summary('Uso no PDF Cliente', 'Automático', 'Substitui preço sugerido quando definido')
+        summary('Alterações manuais', formatNumber(altered.length), 'Preço final diferente do sugerido'),
+        summary('Valor visível', formatMoney(totalVisible), 'Soma dos preços finais visíveis'),
+        summary('Regra padrão', 'Sugerido', 'Se não editar, usa preço sugerido')
       );
     }
 
@@ -1195,100 +1095,67 @@
       return;
     }
 
+    const table = h('table', { className: 'final-simple-table' });
+    const thead = h('thead');
+    const headerRow = h('tr');
+    ['Fração', 'Preço inicial', 'Preço sugerido', 'Preço final'].forEach((label) => {
+      headerRow.append(h('th', { text: label }));
+    });
+    thead.append(headerRow);
+
+    const tbody = h('tbody');
+
     visible.forEach((analysis) => {
       const f = analysis.fraction;
-      const official = analysis.officialFinalPrice;
-      const hasOfficial = Number.isFinite(official);
+      const hasManual = Number.isFinite(analysis.officialFinalPrice);
+      const finalValue = hasManual ? analysis.officialFinalPrice : analysis.proposedNow;
 
       const priceInput = h('input', {
-        className: 'client-price-input',
+        className: 'final-simple-price-input',
         attrs: {
           type: 'number',
           min: '0',
           step: '5000',
-          value: Math.round(hasOfficial ? official : analysis.proposedNow)
-        }
-      });
-
-      const noteInput = h('textarea', {
-        className: 'client-note-input',
-        text: analysis.officialNote,
-        attrs: { rows: '2', placeholder: 'Observação curta para cliente' }
-      });
-
-      const planInput = h('input', {
-        className: 'client-price-input',
-        attrs: {
-          type: 'text',
-          value: analysis.planUrl,
-          placeholder: 'Opcional: substitui a planta automática. Ex.: plantas/apto-10.jpg'
+          value: Math.round(finalValue || 0),
+          'aria-label': `Preço final ${f.name}`
         }
       });
 
       priceInput.addEventListener('change', () => {
-        setOfficialFinalPrice(f.name, parseNumber(priceInput.value), noteInput.value, planInput.value);
+        const value = parseNumber(priceInput.value);
+        if (!Number.isFinite(value) || Math.round(value) === Math.round(analysis.proposedNow)) {
+          delete state.finalPrices[f.name];
+        } else {
+          setOfficialFinalPrice(f.name, value, getDefaultClientNote(analysis), analysis.planUrl || '');
+        }
         saveClientProposalState();
         renderFinalPricesPage(false);
         renderClientProposalPage();
       });
 
-      noteInput.addEventListener('change', () => {
-        setOfficialFinalPrice(f.name, parseNumber(priceInput.value), noteInput.value, planInput.value);
-        saveClientProposalState();
-      });
-
-      planInput.addEventListener('change', () => {
-        setOfficialFinalPrice(f.name, parseNumber(priceInput.value), noteInput.value, planInput.value);
-        saveClientProposalState();
-      });
-
-      const useSuggested = h('button', { className: 'mini-action', text: 'Usar sugerido', attrs: { type: 'button' } });
-      useSuggested.addEventListener('click', () => {
-        setOfficialFinalPrice(f.name, analysis.proposedNow, noteInput.value, planInput.value);
-        saveClientProposalState();
-        renderFinalPricesPage(false);
-        renderClientProposalPage();
-      });
-
-      const clear = h('button', { className: 'mini-action', text: 'Limpar', attrs: { type: 'button' } });
-      clear.addEventListener('click', () => {
+      const resetButton = h('button', { className: 'mini-action final-row-reset', text: 'Repor', attrs: { type: 'button' } });
+      resetButton.addEventListener('click', () => {
         delete state.finalPrices[f.name];
         saveClientProposalState();
         renderFinalPricesPage(false);
         renderClientProposalPage();
       });
 
-      const card = div(`final-price-card ${hasOfficial ? 'confirmed' : ''}`, [
-        div('client-proposal-card-head', [
-          div('client-select-title', [
-            div('', [
-              h('strong', { text: f.name }),
-              h('span', { text: `${f.typology} · Piso ${f.floorLabel} · ${getOrientation(f)}` })
-            ])
-          ]),
-          h('span', { className: hasOfficial ? 'final-status confirmed' : 'final-status pending', text: hasOfficial ? 'Preço final definido' : 'A usar sugerido' })
-        ]),
-        div('client-proposal-metrics', [
-          metric('Preço sugerido', formatMoney(analysis.proposedNow)),
-          metric('Preço final', formatMoney(hasOfficial ? official : analysis.proposedNow)),
-          metric('ABP', formatArea(f.abp)),
-          metric('Área total', formatArea(f.totalArea)),
-          metric('Preço/m² final', formatCurrency((hasOfficial ? official : analysis.proposedNow) / f.totalArea, 0) + '/m²')
-        ]),
-        div('final-edit-grid', [
-          labelWrap('Preço final a comunicar', priceInput),
-          labelWrap('Observação cliente', noteInput),
-          labelWrap('Planta manual opcional', planInput)
-        ]),
-        div('plant-auto-card', [
-          h('strong', { text: 'Planta automática' }),
-          h('span', { text: getPlantLabelForAnalysis(analysis) })
-        ]),
-        div('final-card-actions', [useSuggested, clear])
-      ]);
+      const finalCell = h('td', { className: hasManual ? 'final-cell manual' : 'final-cell default' });
+      finalCell.append(priceInput, h('span', { text: hasManual ? 'Alterado' : 'Sugerido' }), resetButton);
 
-      el.finalPricesCards.append(card);
+      const tr = h('tr');
+      tr.append(
+        h('td', { className: 'final-fraction-cell', text: f.name }),
+        h('td', { className: 'money', text: formatMoney(f.price) }),
+        h('td', { className: 'money', text: formatMoney(analysis.proposedNow) }),
+        finalCell
+      );
+      tbody.append(tr);
     });
+
+    table.append(thead, tbody);
+    el.finalPricesCards.append(table);
   }
 
   function syncFinalPriceControls() {
@@ -1340,12 +1207,13 @@
   }
 
   function useSuggestedPricesForVisible() {
+    if (typeof getVisibleFinalPriceAnalyses !== 'function') return;
     getVisibleFinalPriceAnalyses().forEach((analysis) => {
-      setOfficialFinalPrice(analysis.fraction.name, analysis.proposedNow, analysis.officialNote, analysis.planUrl);
+      delete state.finalPrices[analysis.fraction.name];
     });
-    saveClientProposalState();
-    renderFinalPricesPage(false);
-    renderClientProposalPage();
+    if (typeof saveClientProposalState === 'function') saveClientProposalState();
+    if (typeof renderFinalPricesPage === 'function') renderFinalPricesPage(false);
+    if (typeof renderClientProposalPage === 'function') renderClientProposalPage();
   }
 
   function clearVisibleFinalPrices() {
@@ -2145,7 +2013,7 @@ ${pdfStyles()}
             <div><span>Preço/m²</span><strong>${escapeHtml(formatCurrency(pricePerSqm, 0))}/m²</strong></div>
           </div>
 
-          ${getPlantImageForAnalysis(a) ? `<div class="client-plan-block"><strong>Planta da fração</strong><img src="${escapeHtml(getPlantImageForAnalysis(a))}" alt="Planta ${escapeHtml(fraction.name)}" /></div>` : ''}
+          ${a.planUrl ? `<div class="client-plan-block"><strong>Planta da fração</strong><img src="${escapeHtml(a.planUrl)}" alt="Planta ${escapeHtml(fraction.name)}" /></div>` : ''}
 
           <div class="client-highlight">
             <strong>Resumo da unidade</strong>

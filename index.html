@@ -26,7 +26,6 @@
       </div>
     </header>
 
-    <div id="debugErrorBox" class="debug-error-box" hidden></div>
     <main class="main" id="mainContent">
       <section class="tabs-shell" aria-label="Navegação do dashboard">
         <button class="tab-button active" type="button" data-tab="dashboard">Dashboard</button>
@@ -302,8 +301,7 @@
             <p class="muted small" id="finalPricesCount">—</p>
           </div>
           <p class="muted">
-            Esta aba serve para consolidar os preços finais oficiais. Depois de definidos, estes valores passam a ser usados
-            nas propostas para clientes, em vez do preço sugerido automaticamente.
+            Confirme aqui o preço final a comunicar ao cliente. Por defeito, o preço final é igual ao preço sugerido, salvo se for alterado manualmente.
           </p>
           <div class="summary-grid" id="finalPricesSummary"></div>
         </section>
@@ -315,8 +313,8 @@
               <h2>Editar preços finais</h2>
             </div>
             <div class="client-actions">
-              <button type="button" class="mini-action" id="finalUseSuggestedVisible">Usar sugeridos visíveis</button>
-              <button type="button" class="mini-action" id="finalClearVisible">Limpar visíveis</button>
+              <button type="button" class="mini-action" id="finalUseSuggestedVisible">Repor sugeridos visíveis</button>
+              <button type="button" class="mini-action" id="finalClearVisible">Limpar alterações visíveis</button>
               <button type="button" class="ghost-button" id="finalExportJson">Exportar tabela final</button>
               <label class="ghost-button file-import-label">
                 Importar tabela final
