@@ -1266,6 +1266,7 @@
 
     if (type === 'technical') return exportTechnicalCommercialPdf(all);
     if (type === 'sales') return exportSalesCommercialPdf(all);
+    if (type === 'client') return exportClientProposalPdf(all);
     return exportExecutiveCommercialPdf(all);
   }
 
@@ -1419,6 +1420,9 @@ ${pdfStyles()}
   function getClientPriceSheetHtml(a) {
     const fraction = a.fraction;
     const finalPrice = a.proposedNow;
+    const pricePerSqm = Number.isFinite(finalPrice) && Number.isFinite(fraction.totalArea) && fraction.totalArea > 0
+      ? finalPrice / fraction.totalArea
+      : null;
 
     return `
       <section class="page client-price-page">
@@ -1430,7 +1434,7 @@ ${pdfStyles()}
               <p class="client-subtitle">${escapeHtml(fraction.typology)} · Piso ${escapeHtml(String(fraction.floorLabel))} · ${escapeHtml(getOrientation(fraction))}</p>
             </div>
             <div class="client-price-box">
-              <span>Preço</span>
+              <span>Preço de apresentação</span>
               <strong>${escapeHtml(formatMoney(finalPrice))}</strong>
             </div>
           </div>
@@ -1442,17 +1446,21 @@ ${pdfStyles()}
             <div><span>ABP</span><strong>${escapeHtml(formatArea(fraction.abp))}</strong></div>
             <div><span>Varanda/Terraço</span><strong>${escapeHtml(formatArea(fraction.balcony))}</strong></div>
             <div><span>Área total</span><strong>${escapeHtml(formatArea(fraction.totalArea))}</strong></div>
-            <div><span>Preço/m²</span><strong>${escapeHtml(formatCurrency(fraction.price && fraction.totalArea ? finalPrice / fraction.totalArea : null, 0))}/m²</strong></div>
+            <div><span>Preço/m²</span><strong>${escapeHtml(formatCurrency(pricePerSqm, 0))}/m²</strong></div>
+          </div>
+
+          <div class="client-highlight">
+            <strong>Resumo da unidade</strong>
+            <p>Fração ${escapeHtml(fraction.typology)} no piso ${escapeHtml(String(fraction.floorLabel))}, com orientação ${escapeHtml(getOrientation(fraction))} e área total de ${escapeHtml(formatArea(fraction.totalArea))}.</p>
           </div>
 
           <div class="client-note">
-            <strong>Condições comerciais</strong>
+            <strong>Nota</strong>
             <p>Preço sujeito a confirmação de disponibilidade e validação comercial no momento da proposta.</p>
           </div>
         </div>
       </section>`;
   }
-
 
   function exportSalesCommercialPdf(analyses) {
     const title = 'The View Olhão · Tabela Comercial para Vendas';
@@ -1826,6 +1834,148 @@ ${pdfStyles()}
         font-size:11px;
       }
 
+
+
+      .client-cover-page{
+        padding:0;
+        background:#111827;
+      }
+
+      .client-cover{
+        min-height:100vh;
+        padding:58px;
+        color:#fff;
+        background:
+          linear-gradient(135deg, rgba(17,24,39,.96), rgba(37,48,68,.90) 58%, rgba(146,113,58,.88)),
+          radial-gradient(circle at top right, rgba(243,211,138,.45), transparent 34%);
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+      }
+
+      .client-cover-brand{
+        font-size:13px;
+        letter-spacing:.28em;
+        text-transform:uppercase;
+        color:#f3d38a;
+        font-weight:900;
+      }
+
+      .client-cover h1{
+        font-size:58px;
+        max-width:720px;
+        margin:24px 0 12px;
+        color:#fff;
+      }
+
+      .client-cover p{
+        max-width:640px;
+        color:rgba(255,255,255,.76);
+        font-size:18px;
+        line-height:1.45;
+      }
+
+      .client-cover-meta{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:14px;
+        margin-top:40px;
+      }
+
+      .client-cover-meta div{
+        border:1px solid rgba(255,255,255,.20);
+        background:rgba(255,255,255,.10);
+        border-radius:20px;
+        padding:18px;
+      }
+
+      .client-cover-meta span{
+        display:block;
+        font-size:11px;
+        letter-spacing:.12em;
+        text-transform:uppercase;
+        color:rgba(255,255,255,.62);
+        font-weight:900;
+      }
+
+      .client-cover-meta strong{
+        display:block;
+        margin-top:8px;
+        font-size:24px;
+        color:#fff;
+      }
+
+      .client-options-page{
+        background:#fff;
+      }
+
+      .client-options-grid{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:12px;
+        margin:20px 0;
+      }
+
+      .client-option-card{
+        border:1px solid #e5e7eb;
+        border-radius:18px;
+        padding:14px;
+        background:#f8fafc;
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        align-items:flex-start;
+      }
+
+      .client-option-card span,
+      .client-option-card small{
+        display:block;
+        color:#64748b;
+        font-size:11px;
+        line-height:1.35;
+      }
+
+      .client-option-card strong{
+        display:block;
+        margin:5px 0;
+        font-size:17px;
+      }
+
+      .client-option-card b{
+        white-space:nowrap;
+        font-size:15px;
+      }
+
+      .client-options-table th,
+      .client-options-table td{
+        font-size:10.5px;
+      }
+
+      .client-disclaimer{
+        margin-top:14px;
+        color:#64748b;
+        font-size:11px;
+      }
+
+      .client-highlight{
+        border:1px solid #e5e7eb;
+        background:#f8fafc;
+        border-radius:20px;
+        padding:18px;
+        margin-top:auto;
+      }
+
+      .client-highlight strong{
+        display:block;
+        color:#111827;
+        margin-bottom:6px;
+      }
+
+      .client-highlight p{
+        margin:0;
+        color:#475569;
+        line-height:1.45;
+      }
 
       .client-price-page{
         background:#f6f3ec;

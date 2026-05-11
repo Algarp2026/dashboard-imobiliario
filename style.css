@@ -1035,3 +1035,21 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Exportação: novo PDF Proposta Cliente */
+.pdf-export-grid--commercial {
+  grid-template-columns: 220px repeat(4, minmax(0, 1fr)) 260px;
+}
+
+@media(max-width: 1280px) {
+  .pdf-export-grid--commercial {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 820px) {
+  .pdf-export-grid--commercial {
+    grid-template-columns: 1fr;
+  }
+}
