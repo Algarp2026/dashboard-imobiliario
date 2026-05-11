@@ -198,6 +198,74 @@
 
 
 
+  const THE_VIEW_PLANT_MAP = {
+    1: { plantId: "planta-apartamento-01", image: "plantas/planta-apartamento-01.jpg", pdf: "plantas/planta-apartamento-01.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_01.pdf" },
+    2: { plantId: "planta-apartamento-02-10-17-24-31", image: "plantas/planta-apartamento-02-10-17-24-31.jpg", pdf: "plantas/planta-apartamento-02-10-17-24-31.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
+    3: { plantId: "planta-apartamento-03", image: "plantas/planta-apartamento-03.jpg", pdf: "plantas/planta-apartamento-03.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_03.pdf" },
+    4: { plantId: "planta-apartamento-04", image: "plantas/planta-apartamento-04.jpg", pdf: "plantas/planta-apartamento-04.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_04.pdf" },
+    5: { plantId: "planta-apartamento-05", image: "plantas/planta-apartamento-05.jpg", pdf: "plantas/planta-apartamento-05.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_05.pdf" },
+    6: { plantId: "planta-apartamento-06", image: "plantas/planta-apartamento-06.jpg", pdf: "plantas/planta-apartamento-06.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_06.pdf" },
+    7: { plantId: "planta-apartamento-07-15", image: "plantas/planta-apartamento-07-15.jpg", pdf: "plantas/planta-apartamento-07-15.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf" },
+    8: { plantId: "planta-apartamento-08", image: "plantas/planta-apartamento-08.jpg", pdf: "plantas/planta-apartamento-08.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_08.pdf" },
+    9: { plantId: "planta-apartamento-09-16", image: "plantas/planta-apartamento-09-16.jpg", pdf: "plantas/planta-apartamento-09-16.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf" },
+    10: { plantId: "planta-apartamento-02-10-17-24-31", image: "plantas/planta-apartamento-02-10-17-24-31.jpg", pdf: "plantas/planta-apartamento-02-10-17-24-31.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
+    11: { plantId: "planta-apartamento-11", image: "plantas/planta-apartamento-11.jpg", pdf: "plantas/planta-apartamento-11.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_11.pdf" },
+    12: { plantId: "planta-apartamento-12", image: "plantas/planta-apartamento-12.jpg", pdf: "plantas/planta-apartamento-12.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_12.pdf" },
+    13: { plantId: "planta-apartamento-13", image: "plantas/planta-apartamento-13.jpg", pdf: "plantas/planta-apartamento-13.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_13.pdf" },
+    14: { plantId: "planta-apartamento-14", image: "plantas/planta-apartamento-14.jpg", pdf: "plantas/planta-apartamento-14.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_14.pdf" },
+    15: { plantId: "planta-apartamento-07-15", image: "plantas/planta-apartamento-07-15.jpg", pdf: "plantas/planta-apartamento-07-15.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf" },
+    16: { plantId: "planta-apartamento-09-16", image: "plantas/planta-apartamento-09-16.jpg", pdf: "plantas/planta-apartamento-09-16.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf" },
+    17: { plantId: "planta-apartamento-02-10-17-24-31", image: "plantas/planta-apartamento-02-10-17-24-31.jpg", pdf: "plantas/planta-apartamento-02-10-17-24-31.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
+    18: { plantId: "planta-apartamento-18", image: "plantas/planta-apartamento-18.jpg", pdf: "plantas/planta-apartamento-18.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_18.pdf" },
+    19: { plantId: "planta-apartamento-19", image: "plantas/planta-apartamento-19.jpg", pdf: "plantas/planta-apartamento-19.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_19.pdf" },
+    20: { plantId: "planta-apartamento-20", image: "plantas/planta-apartamento-20.jpg", pdf: "plantas/planta-apartamento-20.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_20.pdf" },
+    21: { plantId: "planta-apartamento-21", image: "plantas/planta-apartamento-21.jpg", pdf: "plantas/planta-apartamento-21.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_21.pdf" },
+    22: { plantId: "planta-apartamento-22", image: "plantas/planta-apartamento-22.jpg", pdf: "plantas/planta-apartamento-22.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_22.pdf" },
+    23: { plantId: "planta-apartamento-23-30", image: "plantas/planta-apartamento-23-30.jpg", pdf: "plantas/planta-apartamento-23-30.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf" },
+    24: { plantId: "planta-apartamento-02-10-17-24-31", image: "plantas/planta-apartamento-02-10-17-24-31.jpg", pdf: "plantas/planta-apartamento-02-10-17-24-31.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
+    25: { plantId: "planta-apartamento-25", image: "plantas/planta-apartamento-25.jpg", pdf: "plantas/planta-apartamento-25.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_25.pdf" },
+    26: { plantId: "planta-apartamento-26", image: "plantas/planta-apartamento-26.jpg", pdf: "plantas/planta-apartamento-26.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_26.pdf" },
+    27: { plantId: "planta-apartamento-27", image: "plantas/planta-apartamento-27.jpg", pdf: "plantas/planta-apartamento-27.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_27.pdf" },
+    28: { plantId: "planta-apartamento-28", image: "plantas/planta-apartamento-28.jpg", pdf: "plantas/planta-apartamento-28.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_28.pdf" },
+    29: { plantId: "planta-apartamento-29", image: "plantas/planta-apartamento-29.jpg", pdf: "plantas/planta-apartamento-29.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_29.pdf" },
+    30: { plantId: "planta-apartamento-23-30", image: "plantas/planta-apartamento-23-30.jpg", pdf: "plantas/planta-apartamento-23-30.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf" },
+    31: { plantId: "planta-apartamento-02-10-17-24-31", image: "plantas/planta-apartamento-02-10-17-24-31.jpg", pdf: "plantas/planta-apartamento-02-10-17-24-31.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf" },
+    32: { plantId: "planta-apartamento-32", image: "plantas/planta-apartamento-32.jpg", pdf: "plantas/planta-apartamento-32.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_32.pdf" },
+    33: { plantId: "planta-apartamento-33", image: "plantas/planta-apartamento-33.jpg", pdf: "plantas/planta-apartamento-33.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_33.pdf" },
+    34: { plantId: "planta-apartamento-34", image: "plantas/planta-apartamento-34.jpg", pdf: "plantas/planta-apartamento-34.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_34.pdf" },
+    35: { plantId: "planta-apartamento-35", image: "plantas/planta-apartamento-35.jpg", pdf: "plantas/planta-apartamento-35.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_35.pdf" },
+    36: { plantId: "planta-apartamento-36", image: "plantas/planta-apartamento-36.jpg", pdf: "plantas/planta-apartamento-36.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_36.pdf" },
+    37: { plantId: "planta-apartamento-37", image: "plantas/planta-apartamento-37.jpg", pdf: "plantas/planta-apartamento-37.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_37.pdf" },
+    38: { plantId: "planta-apartamento-38", image: "plantas/planta-apartamento-38.jpg", pdf: "plantas/planta-apartamento-38.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_38.pdf" },
+    39: { plantId: "planta-apartamento-39", image: "plantas/planta-apartamento-39.jpg", pdf: "plantas/planta-apartamento-39.pdf", source: "Planta_THE VIEW OLHAO_Apartamento_39.pdf" }
+  };
+
+
+  function getAutomaticPlant(fraction) {
+    const number = getFractionNumber(fraction);
+    return THE_VIEW_PLANT_MAP[number] || null;
+  }
+
+  function getPlantImageForAnalysis(analysis) {
+    const manual = safeString(analysis?.planUrl || state.finalPrices?.[analysis?.fraction?.name]?.planUrl || '');
+    if (manual) return manual;
+
+    const auto = getAutomaticPlant(analysis?.fraction);
+    return auto?.image || '';
+  }
+
+  function getPlantPdfForAnalysis(analysis) {
+    const auto = getAutomaticPlant(analysis?.fraction);
+    return auto?.pdf || '';
+  }
+
+  function getPlantLabelForAnalysis(analysis) {
+    const auto = getAutomaticPlant(analysis?.fraction);
+    if (!auto) return 'Sem planta associada';
+    return auto.source || auto.plantId || 'Planta automática';
+  }
+
+
   const COMMERCIAL_DECISIONS = {
     1: { state: 'Rever gerência', proposedNow: 545000, target: 545000, note: 'T1 piso 1 Sul/Este com preço elevado face aos restantes T1. Manter, mas justificar pela área, vista ou característica especial.' },
     2: { state: 'Aplicar agora', proposedNow: 615000, target: 615000, note: 'Recomenda-se aplicar já o novo preço, pois o ajuste é moderado e mantém coerência com o posicionamento da tipologia.' },
@@ -2073,7 +2141,7 @@ ${pdfStyles()}
             <div><span>Preço/m²</span><strong>${escapeHtml(formatCurrency(pricePerSqm, 0))}/m²</strong></div>
           </div>
 
-          ${a.planUrl ? `<div class="client-plan-block"><strong>Planta da fração</strong><img src="${escapeHtml(a.planUrl)}" alt="Planta ${escapeHtml(fraction.name)}" /></div>` : ''}
+          ${getPlantImageForAnalysis(a) ? `<div class="client-plan-block"><strong>Planta da fração</strong><img src="${escapeHtml(getPlantImageForAnalysis(a))}" alt="Planta ${escapeHtml(fraction.name)}" /></div>` : ''}
 
           <div class="client-highlight">
             <strong>Resumo da unidade</strong>

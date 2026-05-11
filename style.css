@@ -1502,3 +1502,27 @@ body.modal-open {
   max-height: 45vh;
   overflow: auto;
 }
+
+
+/* Plantas no PDF cliente */
+.client-plan-block {
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 16px;
+  background: #fff;
+}
+
+.client-plan-block strong {
+  display: block;
+  margin-bottom: 12px;
+  color: #111827;
+}
+
+.client-plan-block img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  margin: 0 auto;
+}
