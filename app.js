@@ -1,5 +1,35 @@
 'use strict';
 
+  function showDebugError(error, context = '') {
+    const box = document.getElementById('debugErrorBox');
+    const message = [
+      context ? `Contexto: ${context}` : '',
+      error?.message ? `Erro: ${error.message}` : String(error),
+      error?.stack ? `Stack:\n${error.stack}` : ''
+    ].filter(Boolean).join('\n\n');
+
+    console.error('[The View Dashboard]', context, error);
+
+    if (box) {
+      box.hidden = false;
+      box.textContent = message;
+    }
+
+    try {
+      setStatus('Erro ao carregar', 'error');
+    } catch (_) {}
+  }
+
+  window.addEventListener('error', (event) => {
+    showDebugError(event.error || event.message, 'Erro global de JavaScript');
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    showDebugError(event.reason || event, 'Promise rejeitada');
+  });
+
+
+
 (() => {
   const DATA_FILES = ['data.xlsx', 'data.xls'];
   const PROJECT_NAME = 'The View';
@@ -229,7 +259,7 @@
 
 
   const el = {};
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => { try { init(); } catch (error) { showDebugError(error, 'init'); } });
 
   async function init() {
     cacheElements();
@@ -327,6 +357,16 @@
   async function loadExcelData() {
     try {
       setStatus('A carregar Excel…');
+      setTimeout(() => {
+        const box = document.getElementById('debugErrorBox');
+        const statusText = document.body.textContent || '';
+        if (statusText.includes('A carregar Excel')) {
+          if (box && box.hidden) {
+            box.hidden = false;
+            box.textContent = 'Diagnóstico: o carregamento do Excel demorou mais de 12 segundos.\n\nVerifique se /data.xlsx abre diretamente no navegador e se a biblioteca SheetJS foi carregada.';
+          }
+        }
+      }, 12000);
       if (!window.XLSX) throw new Error('Biblioteca SheetJS não carregada.');
       const loaded = await fetchWorkbookFile();
       const workbook = XLSX.read(loaded.buffer, { type: 'array' });
@@ -342,6 +382,7 @@
       setStatus('Excel carregado', 'ok');
     } catch (error) {
       console.error(error);
+      showDebugError(error, 'loadExcelData');
       setStatus('Erro no Excel', 'error');
       showError(`${safeString(error.message)} Confirme que o ficheiro data.xlsx está na raiz do projeto e mantém as colunas principais.`);
       renderEmptyState();
