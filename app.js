@@ -1257,6 +1257,7 @@
 
   function exportCommercialPdf() {
     const all = sortCommercialAnalyses(filterCommercialAnalyses(getCommercialAnalyses()));
+
     if (!all.length) {
       alert('Não existem frações para exportar com os filtros comerciais atuais.');
       return;
@@ -1264,9 +1265,18 @@
 
     const type = el.commercialPdfType?.value || 'executive';
 
-    if (type === 'technical') return exportTechnicalCommercialPdf(all);
-    if (type === 'sales') return exportSalesCommercialPdf(all);
-    if (type === 'client') return exportClientProposalPdf(all);
+    if (type === 'client') {
+      return exportClientProposalPdf(all);
+    }
+
+    if (type === 'technical') {
+      return exportTechnicalCommercialPdf(all);
+    }
+
+    if (type === 'sales') {
+      return exportSalesCommercialPdf(all);
+    }
+
     return exportExecutiveCommercialPdf(all);
   }
 
@@ -1461,6 +1471,116 @@ ${pdfStyles()}
         </div>
       </section>`;
   }
+
+
+  function exportClientProposalPdf(analyses) {
+    const ordered = sortCommercialForClient ? sortCommercialForClient(analyses) : [...analyses].sort((a, b) => naturalNameCompare(a.fraction, b.fraction));
+    const title = 'The View Olhão · Proposta de Frações';
+    const now = new Date();
+
+    if (!ordered.length) {
+      alert('Selecione pelo menos uma fração para gerar a proposta para cliente.');
+      return;
+    }
+
+    const totalPrice = sum(ordered.map((a) => a.proposedNow));
+
+    const rows = ordered.map((a) => {
+      const f = a.fraction;
+      return `<tr>
+        <td class="strong">${escapeHtml(f.name)}</td>
+        <td>${escapeHtml(f.typology)}</td>
+        <td class="num">${escapeHtml(String(f.floorLabel))}</td>
+        <td>${escapeHtml(getOrientation(f))}</td>
+        <td class="num">${escapeHtml(formatArea(f.abp))}</td>
+        <td class="num">${escapeHtml(formatArea(f.balcony))}</td>
+        <td class="num">${escapeHtml(formatArea(f.totalArea))}</td>
+        <td class="money price-main">${escapeHtml(formatMoney(a.proposedNow))}</td>
+      </tr>`;
+    }).join('');
+
+    const cards = ordered.map((a) => {
+      const f = a.fraction;
+      return `<div class="client-option-card">
+        <div>
+          <span>${escapeHtml(f.typology)} · Piso ${escapeHtml(String(f.floorLabel))}</span>
+          <strong>${escapeHtml(f.name)}</strong>
+          <small>${escapeHtml(getOrientation(f))} · Área total ${escapeHtml(formatArea(f.totalArea))}</small>
+        </div>
+        <b>${escapeHtml(formatMoney(a.proposedNow))}</b>
+      </div>`;
+    }).join('');
+
+    const sheets = ordered.map((a) => {
+      if (typeof getClientPriceSheetHtml === 'function') return getClientPriceSheetHtml(a);
+      const f = a.fraction;
+      return `<section class="page client-price-page">
+        <div class="client-sheet">
+          <div class="client-sheet-top">
+            <div>
+              <div class="brand">The View Olhão</div>
+              <h1>${escapeHtml(f.name)}</h1>
+              <p class="client-subtitle">${escapeHtml(f.typology)} · Piso ${escapeHtml(String(f.floorLabel))} · ${escapeHtml(getOrientation(f))}</p>
+            </div>
+            <div class="client-price-box">
+              <span>Preço de apresentação</span>
+              <strong>${escapeHtml(formatMoney(a.proposedNow))}</strong>
+            </div>
+          </div>
+          <div class="client-detail-grid">
+            <div><span>Tipologia</span><strong>${escapeHtml(f.typology)}</strong></div>
+            <div><span>Piso</span><strong>${escapeHtml(String(f.floorLabel))}</strong></div>
+            <div><span>Orientação</span><strong>${escapeHtml(getOrientation(f))}</strong></div>
+            <div><span>ABP</span><strong>${escapeHtml(formatArea(f.abp))}</strong></div>
+            <div><span>Varanda/Terraço</span><strong>${escapeHtml(formatArea(f.balcony))}</strong></div>
+            <div><span>Área total</span><strong>${escapeHtml(formatArea(f.totalArea))}</strong></div>
+          </div>
+        </div>
+      </section>`;
+    }).join('');
+
+    const html = `<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+${pdfStyles()}
+</head>
+<body>
+  <section class="page client-cover-page">
+    <div class="client-cover">
+      <div>
+        <div class="client-cover-brand">The View Olhão</div>
+        <h1>Proposta de Frações</h1>
+        <p>Seleção de unidades para apresentação comercial a cliente.</p>
+      </div>
+      <div class="client-cover-meta">
+        <div><span>Data</span><strong>${escapeHtml(now.toLocaleDateString('pt-PT'))}</strong></div>
+        <div><span>Frações</span><strong>${ordered.length}</strong></div>
+        <div><span>Valor total</span><strong>${escapeHtml(formatMoney(totalPrice))}</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page client-options-page">
+    <div class="brand">The View Olhão</div>
+    <h1>Resumo da seleção</h1>
+    <p class="lead">Os preços apresentados correspondem ao preço final a comunicar nesta fase.</p>
+    <div class="client-options-grid">${cards}</div>
+    <table class="client-options-table">
+      <thead><tr><th>Fração</th><th>Tipologia</th><th>Piso</th><th>Orientação</th><th>ABP</th><th>Varanda/Terraço</th><th>Área total</th><th>Preço</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="client-disclaimer">Valores sujeitos a confirmação de disponibilidade, condições contratuais e validação comercial no momento da proposta.</p>
+  </section>
+
+  ${sheets}
+</body>
+</html>`;
+
+    openPdfWindow(html);
+  }
+
 
   function exportSalesCommercialPdf(analyses) {
     const title = 'The View Olhão · Tabela Comercial para Vendas';
