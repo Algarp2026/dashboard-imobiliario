@@ -8,6 +8,7 @@
     rows: [],
     fractions: [],
     competitors: [],
+    benchmarks: [],
     filteredFractions: [],
     filteredCompetitors: [],
     selectedFraction: null,
@@ -235,7 +236,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -274,7 +275,7 @@
     if (el.clearCommercialFilters) el.clearCommercialFilters.addEventListener('click', resetCommercialFilters);
     if (el.exportCommercialPdfButton) el.exportCommercialPdfButton.addEventListener('click', exportCommercialPdf);
 
-    ['toggleCommercialSummary','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable'].forEach((id) => {
+    ['toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable'].forEach((id) => {
       if (el[id]) el[id].addEventListener('change', applyCommercialVisibility);
     });
 
@@ -297,6 +298,7 @@
       const loaded = await fetchWorkbookFile();
       const workbook = XLSX.read(loaded.buffer, { type: 'array' });
       const parsed = parseWorkbook(workbook);
+      state.benchmarks = parseBenchmarkWorkbook(workbook);
       if (!parsed.length) throw new Error('Excel não contém linhas válidas.');
       state.rows = parsed;
       splitDataset(parsed);
@@ -345,6 +347,38 @@
       .map(normalizeRow)
       .filter((row) => row.name && Number.isFinite(row.price) && row.price > 0);
   }
+
+
+  function parseBenchmarkWorkbook(workbook) {
+    if (!workbook || !Array.isArray(workbook.SheetNames)) return [];
+
+    const sheetName = workbook.SheetNames.find((name) => normalizeKey(name) === 'benchmarkmercado');
+    if (!sheetName) return [];
+
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) return [];
+
+    return XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
+      .map((row) => {
+        const get = createHeaderGetter(row);
+        return {
+          date: normalizeText(getFirst(get, ['Data'])),
+          source: normalizeText(getFirst(get, ['Fonte'])),
+          dataType: normalizeText(getFirst(get, ['Tipo de dado', 'Tipo'])),
+          location: normalizeText(getFirst(get, ['Localização', 'Localizacao'])),
+          segment: normalizeText(getFirst(get, ['Segmento'])),
+          eurosPerSqm: parseNumber(getFirst(get, ['€/m²', 'EUR/m2', 'Eur/m2', 'Preço m2', 'Preco m2'])),
+          monthlyChange: parseNumber(getFirst(get, ['Variação mensal', 'Variacao mensal'])),
+          quarterlyChange: parseNumber(getFirst(get, ['Variação trimestral', 'Variacao trimestral'])),
+          yearlyChange: parseNumber(getFirst(get, ['Variação anual', 'Variacao anual'])),
+          use: normalizeText(getFirst(get, ['Uso recomendado'])),
+          note: normalizeText(getFirst(get, ['Observação', 'Observacao'])),
+          url: normalizeText(getFirst(get, ['URL', 'Link']))
+        };
+      })
+      .filter((item) => item.location && Number.isFinite(item.eurosPerSqm));
+  }
+
 
   function normalizeRow(raw, index) {
     const get = createHeaderGetter(raw);
@@ -519,7 +553,7 @@
   }
 
   function renderAll() {
-    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderCommercialPage(); renderCalculationPage();
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderCalculationPage();
   }
 
   function renderKpis() {
@@ -613,6 +647,7 @@
   function applyCommercialVisibility() {
     const pairs = [
       ['toggleCommercialSummary', 'commercialSummarySection'],
+      ['toggleMarketContext', 'marketContextSection'],
       ['toggleCommercialFilters', 'commercialFiltersSection'],
       ['toggleCommercialCards', 'commercialCardsSection'],
       ['toggleCommercialTable', 'commercialTableSection']
@@ -622,6 +657,83 @@
       if (!el[toggleId] || !el[sectionId]) return;
       el[sectionId].classList.toggle('hidden', !el[toggleId].checked);
     });
+  }
+
+
+
+  function renderMarketContext() {
+    if (!el.marketContextGrid) return;
+
+    const tvMedian = median(state.filteredFractions.map((f) => f.eurosPerSqm).filter(Number.isFinite));
+    const olhao = getBenchmarkValue('Olhão');
+    const algarve = getBenchmarkValue('Algarve');
+    const portugal = getBenchmarkValue('Portugal');
+
+    const sourceText = getBenchmarkSourceText();
+
+    replace(el.marketContextGrid,
+      summary('The View', formatCurrency(tvMedian, 0) + '/m²', 'Mediana das frações filtradas'),
+      summary('Olhão', formatCurrency(olhao?.eurosPerSqm, 0) + '/m²', olhao ? `${olhao.source} · ${olhao.date}` : 'Não encontrado no Excel'),
+      summary('Algarve', formatCurrency(algarve?.eurosPerSqm, 0) + '/m²', algarve ? `${algarve.source} · ${algarve.date}` : 'Não encontrado no Excel'),
+      summary('Portugal', formatCurrency(portugal?.eurosPerSqm, 0) + '/m²', portugal ? `${portugal.source} · ${portugal.date}` : 'Não encontrado no Excel'),
+      summary('The View vs Olhão', formatPercentRatio(tvMedian, olhao?.eurosPerSqm), 'Prémio local'),
+      summary('The View vs Algarve', formatPercentRatio(tvMedian, algarve?.eurosPerSqm), 'Posicionamento regional')
+    );
+
+    if (el.marketContextSource) {
+      el.marketContextSource.textContent = sourceText;
+    }
+
+    if (el.marketContextReading) {
+      const localGap = getRatioGap(tvMedian, olhao?.eurosPerSqm);
+      const regionalGap = getRatioGap(tvMedian, algarve?.eurosPerSqm);
+      const macroGap = getRatioGap(tvMedian, portugal?.eurosPerSqm);
+
+      const paragraphs = [
+        `O The View apresenta mediana de ${formatCurrency(tvMedian, 0)}/m² nas frações filtradas.`,
+        Number.isFinite(localGap)
+          ? `Face ao benchmark de Olhão, o posicionamento está ${formatSignedPercent(localGap)}.`
+          : 'Não existe benchmark de Olhão disponível na folha Benchmark_Mercado.',
+        Number.isFinite(regionalGap)
+          ? `Face ao Algarve, o posicionamento está ${formatSignedPercent(regionalGap)}.`
+          : 'Não existe benchmark do Algarve disponível na folha Benchmark_Mercado.',
+        Number.isFinite(macroGap)
+          ? `Face a Portugal, o posicionamento está ${formatSignedPercent(macroGap)}.`
+          : 'Não existe benchmark de Portugal disponível na folha Benchmark_Mercado.',
+        'Estes valores são contexto de mercado. O preço recomendado continua a ser calculado pelo compset direto e pela coerência interna.'
+      ];
+
+      replace(el.marketContextReading, ...paragraphs.map((text) => h('p', { text })));
+    }
+  }
+
+  function getBenchmarkValue(location) {
+    const normalized = normalizeKey(location);
+    const items = state.benchmarks.filter((item) => normalizeKey(item.location) === normalized);
+    if (!items.length) return null;
+
+    const idealistaOffer = items.find((item) => normalizeKey(item.source).includes('idealista') && normalizeKey(item.dataType).includes('oferta'));
+    return idealistaOffer || items[0];
+  }
+
+  function getBenchmarkSourceText() {
+    if (!state.benchmarks.length) return 'Sem Benchmark_Mercado no Excel';
+    const sources = uniqueSorted(state.benchmarks.map((b) => `${b.source} ${b.date}`));
+    return sources.slice(0, 2).join(' · ') + (sources.length > 2 ? ' · +' + (sources.length - 2) : '');
+  }
+
+  function getRatioGap(value, base) {
+    return Number.isFinite(value) && Number.isFinite(base) && base > 0 ? (value / base) - 1 : null;
+  }
+
+  function formatPercentRatio(value, base) {
+    const gap = getRatioGap(value, base);
+    return Number.isFinite(gap) ? formatSignedPercent(gap) : '—';
+  }
+
+  function formatSignedPercent(value) {
+    if (!Number.isFinite(value)) return '—';
+    return `${value >= 0 ? '+' : ''}${formatNumber(value * 100, 1)}%`;
   }
 
 
@@ -1164,6 +1276,20 @@
     const stateOrder = ['Aplicar agora', 'Subida faseada', 'Rever gerência', 'Manter'];
     const now = new Date();
 
+    const tvMedian = median(analyses.map((a) => a.fraction.eurosPerSqm).filter(Number.isFinite));
+    const olhaoBenchmark = getBenchmarkValue('Olhão');
+    const algarveBenchmark = getBenchmarkValue('Algarve');
+    const portugalBenchmark = getBenchmarkValue('Portugal');
+    const marketContextHtml = `
+      <div class="pdf-market-context">
+        ${pdfKpi('The View €/m²', formatCurrency(tvMedian, 0) + '/m²')}
+        ${pdfKpi('Olhão', formatCurrency(olhaoBenchmark?.eurosPerSqm, 0) + '/m²')}
+        ${pdfKpi('Algarve', formatCurrency(algarveBenchmark?.eurosPerSqm, 0) + '/m²')}
+        ${pdfKpi('Portugal', formatCurrency(portugalBenchmark?.eurosPerSqm, 0) + '/m²')}
+        ${pdfKpi('The View vs Olhão', formatPercentRatio(tvMedian, olhaoBenchmark?.eurosPerSqm))}
+        ${pdfKpi('The View vs Algarve', formatPercentRatio(tvMedian, algarveBenchmark?.eurosPerSqm))}
+      </div>`;
+
     const stateRows = stateOrder.map((stateName) => {
       const items = grouped[stateName] || [];
       const total = getCommercialTotals(items);
@@ -1226,6 +1352,8 @@ ${pdfStyles()}
       ${pdfKpi('Subida faseada', String((grouped['Subida faseada'] || []).length))}
       ${pdfKpi('Rever gerência', String((grouped['Rever gerência'] || []).length))}
     </div>
+    <h2 class="context-title">Contexto de mercado</h2>
+    ${marketContextHtml}
   </section>
 
   <section class="page">
@@ -1333,7 +1461,7 @@ ${pdfStyles()}
       h2.state-title{margin:24px 0 8px;font-size:18px}
       .date,.filters,.executive-text{color:#475569;line-height:1.45}
       .executive-text{font-size:15px;margin:18px 0 20px;max-width:900px}
-      .pdf-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+      .pdf-kpis,.pdf-market-context{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.context-title{margin:22px 0 0;font-size:18px}
       .pdf-kpi{border:1px solid #dbe3ef;border-radius:16px;padding:14px;background:#f8fafc}
       .pdf-kpi span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}
       .pdf-kpi strong{display:block;margin-top:6px;font-size:20px}

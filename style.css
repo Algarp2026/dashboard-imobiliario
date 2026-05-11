@@ -991,3 +991,47 @@ body.modal-open {
   border: 1px solid rgba(146,113,58,.20);
   background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
 }
+
+
+/* Contexto de mercado */
+.market-context-panel {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(255,255,255,.66));
+}
+
+.market-context-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.market-context-reading {
+  margin-top: 16px;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(248,250,252,.72);
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.market-context-reading p {
+  margin: 0 0 8px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.market-context-reading p:last-child {
+  margin-bottom: 0;
+  font-weight: 750;
+  color: #334155;
+}
+
+@media(max-width: 1280px) {
+  .market-context-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media(max-width: 720px) {
+  .market-context-grid {
+    grid-template-columns: 1fr;
+  }
+}
