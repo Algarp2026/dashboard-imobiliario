@@ -1294,13 +1294,13 @@
       const items = grouped[stateName] || [];
       const total = getCommercialTotals(items);
       return `<tr>
-        <td>${escapeHtml(stateName)}</td>
+        <td><span class="state-pill ${getPdfDecisionClass(stateName)}">${escapeHtml(stateName)}</span></td>
         <td>${items.length}</td>
-        <td>${escapeHtml(formatMoney(total.current))}</td>
-        <td>${escapeHtml(formatMoney(total.proposed))}</td>
-        <td>${escapeHtml(formatMoney(total.target))}</td>
-        <td>${escapeHtml(formatSignedMoney(total.immediate))}</td>
-        <td>${escapeHtml(formatSignedMoney(total.potential))}</td>
+        <td class="money">${escapeHtml(formatMoney(total.current))}</td>
+        <td class="money">${escapeHtml(formatMoney(total.proposed))}</td>
+        <td class="money">${escapeHtml(formatMoney(total.target))}</td>
+        <td class="money positive">${escapeHtml(formatSignedMoney(total.immediate))}</td>
+        <td class="money positive">${escapeHtml(formatSignedMoney(total.potential))}</td>
       </tr>`;
     }).join('');
 
@@ -1312,11 +1312,11 @@
         <td>${escapeHtml(a.fraction.typology)}</td>
         <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
         <td>${escapeHtml(getOrientation(a.fraction))}</td>
-        <td>${escapeHtml(formatMoney(a.fraction.price))}</td>
-        <td>${escapeHtml(formatMoney(a.proposedNow))}</td>
-        <td>${escapeHtml(formatMoney(a.targetPrice))}</td>
-        <td>${escapeHtml(formatSignedMoney(a.immediateAdjustment))}</td>
-        <td>${escapeHtml(a.commercialState)}</td>
+        <td class="money">${escapeHtml(formatMoney(a.fraction.price))}</td>
+        <td class="money">${escapeHtml(formatMoney(a.proposedNow))}</td>
+        <td class="money">${escapeHtml(formatMoney(a.targetPrice))}</td>
+        <td class="money ${a.immediateAdjustment > 0 ? 'positive' : ''}">${escapeHtml(formatSignedMoney(a.immediateAdjustment))}</td>
+        <td><span class="state-pill ${getPdfDecisionClass(a.commercialState)}">${escapeHtml(a.commercialState)}</span></td>
         <td>${escapeHtml(a.commercialNote)}</td>
       </tr>`).join('');
 
@@ -1336,11 +1336,25 @@ ${pdfStyles()}
 </head>
 <body>
   <section class="page cover">
-    <div class="brand">The View Olhão</div>
-    <h1>${escapeHtml(title)}</h1>
-    <p class="date">Gerado em ${escapeHtml(now.toLocaleString('pt-PT'))}</p>
-    <p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
-    <p class="executive-text">A análise técnica indica margem de reforço em várias frações. A proposta comercial recomenda aplicar imediatamente os ajustes finos e moderados, fasear as subidas mais expressivas e submeter frações premium ou sensíveis à validação da gerência.</p>
+    <div class="cover-header">
+      <div>
+        <div class="brand">The View Olhão</div>
+        <h1>Proposta Comercial<br/>de Preços</h1>
+        <p class="cover-subtitle">Atualização de tabela · decisão comercial por fração</p>
+      </div>
+      <div class="date-card">
+        <span>Gerado em</span>
+        <strong>${escapeHtml(now.toLocaleDateString('pt-PT'))}</strong>
+        <small>${escapeHtml(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }))}</small>
+      </div>
+    </div>
+
+    <div class="executive-box">
+      <h2>Resumo executivo</h2>
+      <p>A análise técnica indica margem de reforço em várias frações. A proposta comercial recomenda aplicar imediatamente os ajustes finos e moderados, fasear as subidas mais expressivas e submeter frações premium ou sensíveis à validação da gerência.</p>
+      <p class="filters"><strong>Filtros aplicados:</strong> ${escapeHtml(getCommercialFiltersText())}</p>
+    </div>
+
     <div class="pdf-kpis">
       ${pdfKpi('Receita atual', formatMoney(totals.current))}
       ${pdfKpi('Receita proposta agora', formatMoney(totals.proposed))}
@@ -1381,19 +1395,19 @@ ${pdfStyles()}
       <td>${escapeHtml(a.fraction.typology)}</td>
       <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
       <td>${escapeHtml(getOrientation(a.fraction))}</td>
-      <td>${escapeHtml(formatMoney(a.fraction.price))}</td>
+      <td class="money">${escapeHtml(formatMoney(a.fraction.price))}</td>
       <td>${escapeHtml(formatMoney(a.modelRecommended))}</td>
-      <td>${escapeHtml(formatMoney(a.proposedNow))}</td>
-      <td>${escapeHtml(formatMoney(a.targetPrice))}</td>
-      <td>${escapeHtml(formatSignedMoney(a.immediateAdjustment))}</td>
+      <td class="money">${escapeHtml(formatMoney(a.proposedNow))}</td>
+      <td class="money">${escapeHtml(formatMoney(a.targetPrice))}</td>
+      <td class="money ${a.immediateAdjustment > 0 ? 'positive' : ''}">${escapeHtml(formatSignedMoney(a.immediateAdjustment))}</td>
       <td>${escapeHtml(formatSignedMoney(a.potentialAdjustment))}</td>
-      <td>${escapeHtml(a.commercialState)}</td>
+      <td><span class="state-pill ${getPdfDecisionClass(a.commercialState)}">${escapeHtml(a.commercialState)}</span></td>
       <td>${escapeHtml(formatNumber(a.score))}</td>
       <td>${escapeHtml(buildCalculationReading(a, a.finalRecommendation))}</td>
     </tr>`).join('');
 
     openPdfWindow(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>${pdfStyles()}</head><body>
-      <section class="page"><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
+      <section class="page"><div class="brand">The View Olhão</div><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
       <table><thead><tr><th>Fração</th><th>Tip.</th><th>Piso</th><th>Orientação</th><th>Atual</th><th>Modelo</th><th>Proposto agora</th><th>Alvo</th><th>Ajuste imediato</th><th>Ajuste potencial</th><th>Estado</th><th>Score</th><th>Leitura resumida</th></tr></thead><tbody>${rows}</tbody></table>
       </section></body></html>`);
   }
@@ -1405,12 +1419,12 @@ ${pdfStyles()}
       <td>${escapeHtml(a.fraction.typology)}</td>
       <td>${escapeHtml(String(a.fraction.floorLabel))}</td>
       <td>${escapeHtml(getOrientation(a.fraction))}</td>
-      <td>${escapeHtml(formatMoney(a.proposedNow))}</td>
+      <td class="money">${escapeHtml(formatMoney(a.proposedNow))}</td>
       <td>${escapeHtml(getSalesObservation(a))}</td>
     </tr>`).join('');
 
     openPdfWindow(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>${pdfStyles()}</head><body>
-      <section class="page"><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
+      <section class="page"><div class="brand">The View Olhão</div><div class="brand">The View Olhão</div><h1>${escapeHtml(title)}</h1><p class="filters">${escapeHtml(getCommercialFiltersText())}</p>
       <table><thead><tr><th>Fração</th><th>Tipologia</th><th>Piso</th><th>Orientação</th><th>Preço final a comunicar</th><th>Observação comercial curta</th></tr></thead><tbody>${rows}</tbody></table>
       </section></body></html>`);
   }
@@ -1447,30 +1461,316 @@ ${pdfStyles()}
     return parts.length ? parts.join(' · ') : 'Sem filtros comerciais adicionais.';
   }
 
+  function getPdfDecisionClass(stateText) {
+    const key = normalizeKey(stateText);
+    if (key.includes('aplicar')) return 'state-apply';
+    if (key.includes('faseada')) return 'state-phase';
+    if (key.includes('rever')) return 'state-review';
+    return 'state-keep';
+  }
+
   function pdfKpi(label, value) {
     return `<div class="pdf-kpi"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
   function pdfStyles() {
     return `<style>
-      body{font-family:Inter,Arial,sans-serif;margin:0;color:#111827;background:#fff}
-      .page{page-break-after:always;padding:28px}
+      :root{
+        --ink:#111827;
+        --muted:#64748b;
+        --line:#dbe3ef;
+        --gold:#92713a;
+        --gold-soft:#f7efe1;
+        --soft:#f8fafc;
+        --apply:#027a48;
+        --phase:#b54708;
+        --review:#b42318;
+        --keep:#334155;
+      }
+
+      *{box-sizing:border-box}
+
+      body{
+        font-family:Inter,Arial,sans-serif;
+        margin:0;
+        color:var(--ink);
+        background:#fff;
+      }
+
+      .page{
+        page-break-after:always;
+        padding:28px 32px;
+      }
+
       .page:last-child{page-break-after:auto}
-      .brand{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#92713a;font-weight:800;margin-bottom:10px}
-      h1{margin:0 0 10px;font-size:28px;letter-spacing:-.03em}
-      h2.state-title{margin:24px 0 8px;font-size:18px}
-      .date,.filters,.executive-text{color:#475569;line-height:1.45}
-      .executive-text{font-size:15px;margin:18px 0 20px;max-width:900px}
-      .pdf-kpis,.pdf-market-context{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}.context-title{margin:22px 0 0;font-size:18px}
-      .pdf-kpi{border:1px solid #dbe3ef;border-radius:16px;padding:14px;background:#f8fafc}
-      .pdf-kpi span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}
-      .pdf-kpi strong{display:block;margin-top:6px;font-size:20px}
-      table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:10px}
-      th,td{border:1px solid #dbe3ef;padding:7px;text-align:left;vertical-align:top}
-      th{background:#f3f6fb;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
-      td:nth-child(5),td:nth-child(6),td:nth-child(7),td:nth-child(8),td:nth-child(9){text-align:right;white-space:nowrap}
-      td:last-child{min-width:240px;line-height:1.35}
-      @page{size:A4 landscape;margin:10mm}
+
+      .cover{
+        padding:0;
+      }
+
+      .cover::before{
+        content:"";
+        display:block;
+        height:14px;
+        background:linear-gradient(90deg,#111827,#253044,#92713a,#f3d38a);
+      }
+
+      .brand{
+        font-size:12px;
+        letter-spacing:.24em;
+        text-transform:uppercase;
+        color:var(--gold);
+        font-weight:900;
+        margin-bottom:10px;
+      }
+
+      .cover .brand{
+        color:#f3d38a;
+      }
+
+      h1{
+        margin:0 0 10px;
+        font-size:30px;
+        line-height:1.06;
+        letter-spacing:-.04em;
+      }
+
+      .cover h1{
+        font-size:44px;
+        color:#fff;
+      }
+
+      .cover-header{
+        display:flex;
+        justify-content:space-between;
+        gap:30px;
+        align-items:flex-start;
+        padding:36px 40px 34px;
+        background:linear-gradient(135deg,#111827,#253044 58%,#92713a);
+        color:#fff;
+      }
+
+      .cover-subtitle{
+        margin:0;
+        color:rgba(255,255,255,.78);
+        font-size:15px;
+      }
+
+      .date-card{
+        min-width:190px;
+        border:1px solid rgba(255,255,255,.24);
+        border-radius:18px;
+        padding:16px;
+        background:rgba(255,255,255,.10);
+        text-align:right;
+      }
+
+      .date-card span,
+      .date-card small{
+        display:block;
+        color:rgba(255,255,255,.72);
+        font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:.08em;
+        font-weight:800;
+      }
+
+      .date-card strong{
+        display:block;
+        font-size:22px;
+        margin:6px 0;
+      }
+
+      .executive-box{
+        margin:24px 32px 18px;
+        border:1px solid var(--line);
+        background:#f8fafc;
+        border-radius:20px;
+        padding:18px 20px;
+      }
+
+      .executive-box h2,
+      .context-title{
+        margin:0 0 10px;
+        font-size:20px;
+        letter-spacing:-.02em;
+      }
+
+      .executive-box p,
+      .lead,
+      .filters{
+        color:#475569;
+        line-height:1.45;
+        margin:0 0 8px;
+      }
+
+      .filters{
+        font-size:12px;
+      }
+
+      .pdf-kpis,
+      .pdf-market-context{
+        display:grid;
+        grid-template-columns:repeat(5,1fr);
+        gap:10px;
+        margin:18px 32px;
+      }
+
+      .pdf-market-context{
+        grid-template-columns:repeat(6,1fr);
+      }
+
+      .pdf-kpi{
+        border:1px solid var(--line);
+        border-radius:16px;
+        padding:12px;
+        background:#fff;
+        box-shadow:0 8px 22px rgba(15,23,42,.04);
+        min-height:74px;
+      }
+
+      .pdf-kpi span{
+        display:block;
+        font-size:10px;
+        text-transform:uppercase;
+        letter-spacing:.08em;
+        color:var(--muted);
+        font-weight:900;
+      }
+
+      .pdf-kpi strong{
+        display:block;
+        margin-top:6px;
+        font-size:17px;
+        letter-spacing:-.025em;
+      }
+
+      .context-title{
+        margin:24px 32px 0;
+      }
+
+      table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0;
+        font-size:10.5px;
+        margin-top:14px;
+        border:1px solid var(--line);
+        border-radius:14px;
+        overflow:hidden;
+      }
+
+      th,td{
+        border-bottom:1px solid var(--line);
+        padding:7px 8px;
+        text-align:left;
+        vertical-align:top;
+      }
+
+      tr:last-child td{
+        border-bottom:0;
+      }
+
+      th{
+        background:#f3f6fb;
+        text-transform:uppercase;
+        font-size:9px;
+        letter-spacing:.055em;
+        color:#475569;
+      }
+
+      td:nth-child(5),
+      td:nth-child(6),
+      td:nth-child(7),
+      td:nth-child(8),
+      td:nth-child(9),
+      td:nth-child(10){
+        text-align:right;
+        white-space:nowrap;
+      }
+
+      td:last-child{
+        min-width:240px;
+        line-height:1.35;
+        color:#475569;
+      }
+
+      .state-title{
+        margin:24px 0 8px;
+        font-size:18px;
+        letter-spacing:-.02em;
+      }
+
+      .state-title::before{
+        content:"";
+        display:inline-block;
+        width:10px;
+        height:10px;
+        border-radius:999px;
+        background:var(--gold);
+        margin-right:8px;
+      }
+
+      .state-pill{
+        display:inline-flex;
+        border-radius:999px;
+        padding:4px 8px;
+        font-size:9.5px;
+        font-weight:900;
+        white-space:nowrap;
+        border:1px solid rgba(15,23,42,.08);
+      }
+
+      .state-aplicaragora,
+      .state-apply{
+        background:#ecfdf3;
+        color:#027a48;
+      }
+
+      .state-subidafaseada,
+      .state-phase{
+        background:#fffaeb;
+        color:#b54708;
+      }
+
+      .state-revergerencia,
+      .state-review{
+        background:#fff1f0;
+        color:#b42318;
+      }
+
+      .state-manter,
+      .state-keep{
+        background:#f8fafc;
+        color:#334155;
+      }
+
+      .money{
+        text-align:right;
+        white-space:nowrap;
+      }
+
+      .positive{
+        color:#027a48;
+        font-weight:900;
+      }
+
+      .footer-note{
+        margin-top:14px;
+        color:#64748b;
+        font-size:11px;
+      }
+
+      @page{
+        size:A4 landscape;
+        margin:10mm;
+      }
+
+      @media print{
+        .page{break-after:page}
+        tr{break-inside:avoid}
+        .state-section{break-inside:auto}
+      }
     </style>`;
   }
 
