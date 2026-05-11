@@ -31,6 +31,7 @@
         <button class="tab-button active" type="button" data-tab="dashboard">Dashboard</button>
         <button class="tab-button" type="button" data-tab="market">Inteligência de mercado</button>
         <button class="tab-button" type="button" data-tab="commercial">Proposta Comercial</button>
+        <button class="tab-button" type="button" data-tab="finalprices">Preços Finais</button>
         <button class="tab-button" type="button" data-tab="client">Propostas Cliente</button>
         <button class="tab-button" data-tab="calculation">Cálculo detalhado</button>
       </section>
@@ -289,6 +290,73 @@
         </section></section>
 
       
+      
+      <section id="tab-finalprices" class="tab-panel">
+        <section class="panel final-prices-hero">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Tabela final</p>
+              <h2>Preços finais a comunicar</h2>
+            </div>
+            <p class="muted small" id="finalPricesCount">—</p>
+          </div>
+          <p class="muted">
+            Esta aba serve para consolidar os preços finais oficiais. Depois de definidos, estes valores passam a ser usados
+            nas propostas para clientes, em vez do preço sugerido automaticamente.
+          </p>
+          <div class="summary-grid" id="finalPricesSummary"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Gestão</p>
+              <h2>Editar preços finais</h2>
+            </div>
+            <div class="client-actions">
+              <button type="button" class="mini-action" id="finalUseSuggestedVisible">Usar sugeridos visíveis</button>
+              <button type="button" class="mini-action" id="finalClearVisible">Limpar visíveis</button>
+              <button type="button" class="ghost-button" id="finalExportJson">Exportar tabela final</button>
+              <label class="ghost-button file-import-label">
+                Importar tabela final
+                <input type="file" id="finalImportJson" accept="application/json,.json" />
+              </label>
+            </div>
+          </div>
+
+          <div class="client-proposal-toolbar client-proposal-toolbar--multi">
+            <label class="field client-search-field">
+              <span>Pesquisar fração</span>
+              <input id="finalPriceSearch" class="search-input wide-search" type="search" placeholder="Ex.: 10, 31, T2..." />
+            </label>
+
+            <div class="client-filter-box">
+              <div class="checklist-head">
+                <span>Tipologias</span>
+                <div>
+                  <button type="button" class="mini-action" id="finalSelectAllTypologies">Todas</button>
+                  <button type="button" class="mini-action" id="finalClearTypologies">Limpar</button>
+                </div>
+              </div>
+              <div id="finalTypologyChecklist" class="compact-checklist"></div>
+            </div>
+
+            <div class="client-filter-box">
+              <div class="checklist-head">
+                <span>Pisos</span>
+                <div>
+                  <button type="button" class="mini-action" id="finalSelectAllFloors">Todos</button>
+                  <button type="button" class="mini-action" id="finalClearFloors">Limpar</button>
+                </div>
+              </div>
+              <div id="finalFloorChecklist" class="compact-checklist"></div>
+            </div>
+          </div>
+
+          <div id="finalPricesCards" class="final-prices-cards"></div>
+        </section>
+      </section>
+
       <section id="tab-client" class="tab-panel">
         <section class="panel client-proposal-hero">
           <div class="section-heading">

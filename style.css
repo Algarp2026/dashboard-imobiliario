@@ -1273,3 +1273,99 @@ body.modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Tabela final de preços */
+.final-prices-hero {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(255,255,255,.68));
+}
+
+.final-prices-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.final-price-card {
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 28px;
+  padding: 20px;
+  background: rgba(255,255,255,.70);
+  box-shadow: 0 20px 55px rgba(15,23,42,.08);
+}
+
+.final-price-card.confirmed {
+  border-color: rgba(2,122,72,.24);
+  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(236,253,243,.68));
+}
+
+.final-status {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.final-status.confirmed {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.final-status.pending {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.final-edit-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+}
+
+.final-edit-grid .client-edit-field:last-child {
+  grid-column: 1 / -1;
+}
+
+.final-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.client-plan-block {
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 16px;
+  background: #fff;
+}
+
+.client-plan-block strong {
+  display: block;
+  margin-bottom: 12px;
+  color: #111827;
+}
+
+.client-plan-block img {
+  display: block;
+  max-width: 100%;
+  max-height: 330px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+@media(max-width: 1180px) {
+  .final-prices-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media(max-width: 780px) {
+  .final-edit-grid {
+    grid-template-columns: 1fr;
+  }
+}

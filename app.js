@@ -19,6 +19,7 @@
     clientFilters: { search: '', typologies: [], floors: [] },
     clientSelections: {},
     finalPrices: {},
+    finalPriceFilters: { search: '', typologies: [], floors: [] },
     idealFocusedFraction: ''
   };
 
@@ -240,7 +241,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','finalPricesSummary','finalPricesCount','finalPriceSearch','finalTypologyChecklist','finalFloorChecklist','finalSelectAllTypologies','finalClearTypologies','finalSelectAllFloors','finalClearFloors','finalUseSuggestedVisible','finalClearVisible','finalExportJson','finalImportJson','finalPricesCards','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -284,6 +285,19 @@
     });
 
 
+
+
+    if (el.finalPriceSearch) el.finalPriceSearch.addEventListener('input', () => { state.finalPriceFilters.search = el.finalPriceSearch.value; renderFinalPricesPage(false); });
+    if (el.finalTypologyChecklist) el.finalTypologyChecklist.addEventListener('change', () => { state.finalPriceFilters.typologies = getSelectedChecklistValues(el.finalTypologyChecklist); renderFinalPricesPage(false); });
+    if (el.finalFloorChecklist) el.finalFloorChecklist.addEventListener('change', () => { state.finalPriceFilters.floors = getSelectedChecklistValues(el.finalFloorChecklist); renderFinalPricesPage(false); });
+    if (el.finalSelectAllTypologies) el.finalSelectAllTypologies.addEventListener('click', () => { setChecklistState(el.finalTypologyChecklist, true); state.finalPriceFilters.typologies = getSelectedChecklistValues(el.finalTypologyChecklist); renderFinalPricesPage(false); });
+    if (el.finalClearTypologies) el.finalClearTypologies.addEventListener('click', () => { setChecklistState(el.finalTypologyChecklist, false); state.finalPriceFilters.typologies = []; renderFinalPricesPage(false); });
+    if (el.finalSelectAllFloors) el.finalSelectAllFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, true); state.finalPriceFilters.floors = getSelectedChecklistValues(el.finalFloorChecklist); renderFinalPricesPage(false); });
+    if (el.finalClearFloors) el.finalClearFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, false); state.finalPriceFilters.floors = []; renderFinalPricesPage(false); });
+    if (el.finalUseSuggestedVisible) el.finalUseSuggestedVisible.addEventListener('click', useSuggestedPricesForVisibleFinal);
+    if (el.finalClearVisible) el.finalClearVisible.addEventListener('click', clearVisibleFinalPrices);
+    if (el.finalExportJson) el.finalExportJson.addEventListener('click', exportFinalPricesJson);
+    if (el.finalImportJson) el.finalImportJson.addEventListener('change', importFinalPricesJson);
 
     if (el.clientFractionSearch) el.clientFractionSearch.addEventListener('input', () => { state.clientFilters.search = el.clientFractionSearch.value; renderClientProposalPage(false); });
     if (el.clientTypologyChecklist) el.clientTypologyChecklist.addEventListener('change', () => { state.clientFilters.typologies = getSelectedChecklistValues(el.clientTypologyChecklist); renderClientProposalPage(false); });
@@ -572,7 +586,7 @@
   }
 
   function renderAll() {
-    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderClientProposalPage(); renderCalculationPage();
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderFinalPricesPage(); renderClientProposalPage(); renderCalculationPage();
   }
 
   function renderKpis() {
@@ -1005,6 +1019,284 @@
 
 
 
+
+  function getOfficialFinalPrice(analysis) {
+    const stored = state.finalPrices[analysis.fraction.name];
+    const value = parseNumber(stored?.price);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function getOfficialFinalNote(analysis) {
+    const stored = state.finalPrices[analysis.fraction.name];
+    return safeString(stored?.note || '');
+  }
+
+  function getOfficialPlanUrl(analysis) {
+    const stored = state.finalPrices[analysis.fraction.name];
+    return safeString(stored?.planUrl || '');
+  }
+
+  function getFinalPriceAnalyses() {
+    return getCommercialAnalyses().map((analysis) => {
+      const official = getOfficialFinalPrice(analysis);
+      return {
+        ...analysis,
+        officialFinalPrice: official,
+        officialPriceToUse: Number.isFinite(official) ? official : analysis.proposedNow,
+        officialNote: getOfficialFinalNote(analysis) || getDefaultClientNote(analysis),
+        planUrl: getOfficialPlanUrl(analysis)
+      };
+    });
+  }
+
+  function getVisibleFinalPriceAnalyses() {
+    const search = normalizeKey(state.finalPriceFilters.search || '');
+    return getFinalPriceAnalyses().filter((analysis) => {
+      const f = analysis.fraction;
+      const searchMatch = !search
+        || normalizeKey(f.name).includes(search)
+        || normalizeKey(f.typology).includes(search)
+        || String(getFractionNumber(f)).includes(search);
+      const typologies = state.finalPriceFilters.typologies || [];
+      const floors = state.finalPriceFilters.floors || [];
+      const typologyMatch = !typologies.length || typologies.includes(f.typology);
+      const floorMatch = !floors.length || floors.includes(String(f.floorNumber));
+      return searchMatch && typologyMatch && floorMatch;
+    }).sort((a, b) => naturalNameCompare(a.fraction, b.fraction));
+  }
+
+  function renderFinalPricesPage(syncControls = true) {
+    if (!el.finalPricesCards) return;
+
+    if (syncControls) syncFinalPriceControls();
+
+    const visible = getVisibleFinalPriceAnalyses();
+    const all = getFinalPriceAnalyses();
+    const confirmed = all.filter((a) => Number.isFinite(a.officialFinalPrice));
+    const totalConfirmed = sum(confirmed.map((a) => a.officialFinalPrice));
+
+    if (el.finalPricesCount) {
+      el.finalPricesCount.textContent = `${confirmed.length} preço${confirmed.length === 1 ? '' : 's'} final${confirmed.length === 1 ? '' : 'is'} definido${confirmed.length === 1 ? '' : 's'}`;
+    }
+
+    if (el.finalPricesSummary) {
+      replace(el.finalPricesSummary,
+        summary('Preços finais definidos', formatNumber(confirmed.length), `${all.length} frações totais`),
+        summary('Valor confirmado', formatMoney(totalConfirmed), 'Soma dos preços finais definidos'),
+        summary('Frações visíveis', formatNumber(visible.length), 'Após filtros desta aba'),
+        summary('Uso no PDF Cliente', 'Automático', 'Substitui preço sugerido quando definido')
+      );
+    }
+
+    el.finalPricesCards.replaceChildren();
+
+    if (!visible.length) {
+      el.finalPricesCards.append(empty('Sem frações com os filtros atuais.'));
+      return;
+    }
+
+    visible.forEach((analysis) => {
+      const f = analysis.fraction;
+      const official = analysis.officialFinalPrice;
+      const hasOfficial = Number.isFinite(official);
+
+      const priceInput = h('input', {
+        className: 'client-price-input',
+        attrs: {
+          type: 'number',
+          min: '0',
+          step: '5000',
+          value: Math.round(hasOfficial ? official : analysis.proposedNow)
+        }
+      });
+
+      const noteInput = h('textarea', {
+        className: 'client-note-input',
+        text: analysis.officialNote,
+        attrs: { rows: '2', placeholder: 'Observação curta para cliente' }
+      });
+
+      const planInput = h('input', {
+        className: 'client-price-input',
+        attrs: {
+          type: 'text',
+          value: analysis.planUrl,
+          placeholder: 'Opcional: URL/caminho da planta. Ex.: plantas/apto-10.jpg'
+        }
+      });
+
+      priceInput.addEventListener('change', () => {
+        setOfficialFinalPrice(f.name, parseNumber(priceInput.value), noteInput.value, planInput.value);
+        saveClientProposalState();
+        renderFinalPricesPage(false);
+        renderClientProposalPage();
+      });
+
+      noteInput.addEventListener('change', () => {
+        setOfficialFinalPrice(f.name, parseNumber(priceInput.value), noteInput.value, planInput.value);
+        saveClientProposalState();
+      });
+
+      planInput.addEventListener('change', () => {
+        setOfficialFinalPrice(f.name, parseNumber(priceInput.value), noteInput.value, planInput.value);
+        saveClientProposalState();
+      });
+
+      const useSuggested = h('button', { className: 'mini-action', text: 'Usar sugerido', attrs: { type: 'button' } });
+      useSuggested.addEventListener('click', () => {
+        setOfficialFinalPrice(f.name, analysis.proposedNow, noteInput.value, planInput.value);
+        saveClientProposalState();
+        renderFinalPricesPage(false);
+        renderClientProposalPage();
+      });
+
+      const clear = h('button', { className: 'mini-action', text: 'Limpar', attrs: { type: 'button' } });
+      clear.addEventListener('click', () => {
+        delete state.finalPrices[f.name];
+        saveClientProposalState();
+        renderFinalPricesPage(false);
+        renderClientProposalPage();
+      });
+
+      const card = div(`final-price-card ${hasOfficial ? 'confirmed' : ''}`, [
+        div('client-proposal-card-head', [
+          div('client-select-title', [
+            div('', [
+              h('strong', { text: f.name }),
+              h('span', { text: `${f.typology} · Piso ${f.floorLabel} · ${getOrientation(f)}` })
+            ])
+          ]),
+          h('span', { className: hasOfficial ? 'final-status confirmed' : 'final-status pending', text: hasOfficial ? 'Preço final definido' : 'A usar sugerido' })
+        ]),
+        div('client-proposal-metrics', [
+          metric('Preço sugerido', formatMoney(analysis.proposedNow)),
+          metric('Preço final', formatMoney(hasOfficial ? official : analysis.proposedNow)),
+          metric('ABP', formatArea(f.abp)),
+          metric('Área total', formatArea(f.totalArea)),
+          metric('Preço/m² final', formatCurrency((hasOfficial ? official : analysis.proposedNow) / f.totalArea, 0) + '/m²')
+        ]),
+        div('final-edit-grid', [
+          labelWrap('Preço final a comunicar', priceInput),
+          labelWrap('Observação cliente', noteInput),
+          labelWrap('Planta da fração', planInput)
+        ]),
+        div('final-card-actions', [useSuggested, clear])
+      ]);
+
+      el.finalPricesCards.append(card);
+    });
+  }
+
+  function syncFinalPriceControls() {
+    const typologies = uniqueSorted(state.filteredFractions.map((f) => f.typology));
+    const floors = uniqueSorted(state.filteredFractions.map((f) => f.floorNumber));
+
+    const prevTypologies = new Set(state.finalPriceFilters.typologies || []);
+    const prevFloors = new Set(state.finalPriceFilters.floors || []);
+
+    renderChecklist(
+      el.finalTypologyChecklist,
+      typologies.map((typology) => ({ value: typology, label: typology })),
+      { defaultAll: false }
+    );
+
+    renderChecklist(
+      el.finalFloorChecklist,
+      floors.map((floor) => ({ value: String(floor), label: `Piso ${floor}` })),
+      { defaultAll: false }
+    );
+
+    if (prevTypologies.size && el.finalTypologyChecklist) {
+      Array.from(el.finalTypologyChecklist.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = prevTypologies.has(input.value);
+      });
+    }
+
+    if (prevFloors.size && el.finalFloorChecklist) {
+      Array.from(el.finalFloorChecklist.querySelectorAll('input[type="checkbox"]')).forEach((input) => {
+        input.checked = prevFloors.has(input.value);
+      });
+    }
+
+    state.finalPriceFilters.typologies = getSelectedChecklistValues(el.finalTypologyChecklist);
+    state.finalPriceFilters.floors = getSelectedChecklistValues(el.finalFloorChecklist);
+  }
+
+  function setOfficialFinalPrice(fractionName, price, note = '', planUrl = '') {
+    if (!Number.isFinite(price) || price <= 0) {
+      delete state.finalPrices[fractionName];
+      return;
+    }
+
+    state.finalPrices[fractionName] = {
+      price,
+      note: safeString(note),
+      planUrl: safeString(planUrl)
+    };
+  }
+
+  function useSuggestedPricesForVisible() {
+    getVisibleFinalPriceAnalyses().forEach((analysis) => {
+      setOfficialFinalPrice(analysis.fraction.name, analysis.proposedNow, analysis.officialNote, analysis.planUrl);
+    });
+    saveClientProposalState();
+    renderFinalPricesPage(false);
+    renderClientProposalPage();
+  }
+
+  function clearVisibleFinalPrices() {
+    getVisibleFinalPriceAnalyses().forEach((analysis) => {
+      delete state.finalPrices[analysis.fraction.name];
+    });
+    saveClientProposalState();
+    renderFinalPricesPage(false);
+    renderClientProposalPage();
+  }
+
+  function exportFinalPricesJson() {
+    const payload = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      finalPrices: state.finalPrices
+    };
+
+    downloadJson(payload, 'the-view-tabela-final-precos.json');
+  }
+
+  function importFinalPricesJson(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || '{}'));
+        state.finalPrices = parsed.finalPrices || parsed || {};
+        saveClientProposalState();
+        renderFinalPricesPage();
+        renderClientProposalPage();
+      } catch (error) {
+        alert('Não foi possível importar a tabela final.');
+      } finally {
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function downloadJson(payload, filename) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+
   const CLIENT_STORAGE_KEY = 'theViewClientProposalV1';
 
   function loadClientProposalState() {
@@ -1035,11 +1327,14 @@
       const key = analysis.fraction.name;
       const storedPrice = parseNumber(state.finalPrices[key]?.price);
       const storedNote = safeString(state.finalPrices[key]?.note || '');
+      const storedPlanUrl = safeString(state.finalPrices[key]?.planUrl || '');
       return {
         ...analysis,
         clientSelected: state.clientSelections[key] === true,
         clientFinalPrice: Number.isFinite(storedPrice) ? storedPrice : analysis.proposedNow,
-        clientNote: storedNote || getDefaultClientNote(analysis)
+        clientNote: storedNote || getDefaultClientNote(analysis),
+        planUrl: storedPlanUrl,
+        usesOfficialFinalPrice: Number.isFinite(storedPrice)
       };
     });
   }
@@ -1247,15 +1542,7 @@
       finalPrices: state.finalPrices
     };
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'the-view-precos-finais-cliente.json';
-    document.body.append(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadJson(payload, 'the-view-precos-finais-cliente.json');
   }
 
   function importClientProposalJson(event) {
@@ -1753,6 +2040,8 @@ ${pdfStyles()}
             <div><span>Área total</span><strong>${escapeHtml(formatArea(fraction.totalArea))}</strong></div>
             <div><span>Preço/m²</span><strong>${escapeHtml(formatCurrency(pricePerSqm, 0))}/m²</strong></div>
           </div>
+
+          ${a.planUrl ? `<div class="client-plan-block"><strong>Planta da fração</strong><img src="${escapeHtml(a.planUrl)}" alt="Planta ${escapeHtml(fraction.name)}" /></div>` : ''}
 
           <div class="client-highlight">
             <strong>Resumo da unidade</strong>
@@ -2501,6 +2790,11 @@ ${pdfStyles()}
       .client-note p{
         margin:0;
       }
+
+
+      .client-plan-block{margin-top:20px;border:1px solid #e5e7eb;border-radius:20px;padding:16px;background:#fff}
+      .client-plan-block strong{display:block;margin-bottom:12px;color:#111827}
+      .client-plan-block img{display:block;max-width:100%;max-height:330px;object-fit:contain;margin:0 auto}
 
       @page{
         size:A4 landscape;
