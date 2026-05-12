@@ -590,6 +590,7 @@
       name: safeString(name),
       development: safeString(development || ''),
       typology: safeString(typology || 'N/D'),
+      comparableTypology: getComparableTypology(typology || 'N/D'),
       floorLabel: safeString(floorRaw || floorNumber),
       floorNumber,
       view: safeString(view || 'N/D'),
@@ -1363,46 +1364,72 @@
     const finalPrice = Number.isFinite(analysis.officialFinalPrice) ? analysis.officialFinalPrice : analysis.proposedNow;
     const original = Number(f.price);
     const suggested = Number(analysis.proposedNow);
-    const manual = Number.isFinite(analysis.officialFinalPrice) && Math.round(analysis.officialFinalPrice) !== Math.round(analysis.proposedNow);
+    const market = Number(analysis.marketPrice);
+    const internal = Number(analysis.internalPurePrice);
+    const technicalMixed = Number(analysis.coherentPrice);
+    const modelRecommended = Number(analysis.modelRecommended);
+    const comparableTypology = getComparableTypology(f.typology);
+    const stateLabel = analysis.commercialState || '';
     const finalDiff = Number.isFinite(finalPrice) && Number.isFinite(original) ? finalPrice - original : null;
-    const suggestedDiff = Number.isFinite(suggested) && Number.isFinite(original) ? suggested - original : null;
     const finalPct = Number.isFinite(finalDiff) && original ? (finalDiff / original) * 100 : null;
-    const suggestedPct = Number.isFinite(suggestedDiff) && original ? (suggestedDiff / original) * 100 : null;
+    const isManual = Number.isFinite(analysis.officialFinalPrice) && Math.round(analysis.officialFinalPrice) !== Math.round(analysis.proposedNow);
+
+    const parts = [];
+
+    parts.push(`${f.name}: ${f.typology}${comparableTypology !== f.typology ? ` analisado como ${comparableTypology}` : ''}, piso ${f.floorLabel}, orientação ${getOrientation(f)}, área total ${formatArea(f.totalArea)}.`);
 
     if (!Number.isFinite(finalPrice) || !Number.isFinite(original)) {
-      return 'Preço final ou preço original indisponível; validar manualmente.';
+      parts.push('A razão não foi calculada automaticamente porque falta preço original ou preço final.');
+      return parts.join(' ');
+    }
+
+    if (Number.isFinite(market)) {
+      parts.push(`Mercado ponderado: ${formatMoney(market)}.`);
+    }
+
+    if (Number.isFinite(internal)) {
+      parts.push(`Coerência interna The View: ${formatMoney(internal)}.`);
+    }
+
+    if (Number.isFinite(technicalMixed)) {
+      parts.push(`Referência técnica mista: ${formatMoney(technicalMixed)}.`);
+    }
+
+    if (Number.isFinite(modelRecommended)) {
+      parts.push(`Preço recomendado pelo modelo: ${formatMoney(modelRecommended)}.`);
     }
 
     if (Math.round(finalPrice) === Math.round(original)) {
-      return 'Sem alteração face ao preço original. Mantém-se o preço atual definido na tabela.';
+      parts.push('Preço mantido porque a tabela atual foi considerada defensável para esta fração.');
+      if (analysis.commercialNote) parts.push(`Justificação comercial: ${analysis.commercialNote}`);
+      return parts.join(' ');
     }
 
-    const direction = finalDiff > 0 ? 'subida' : 'redução';
-    const diffText = `${formatSignedMoney(finalDiff)} (${signed(formatNumber(Math.abs(finalPct), 1) + '%', finalDiff)})`;
+    const direction = finalDiff > 0 ? 'aumenta' : 'reduz';
+    parts.push(`Preço final ${direction} ${formatSignedMoney(finalDiff)} face ao preço original (${signed(formatNumber(Math.abs(finalPct), 1) + '%', finalDiff)}).`);
 
-    if (manual) {
-      const suggestedText = Number.isFinite(suggestedDiff)
-        ? `O modelo/proposta sugeria ${formatMoney(suggested)} (${signed(formatNumber(Math.abs(suggestedPct), 1) + '%', suggestedDiff)} face ao original), mas o preço final foi ajustado manualmente para ${formatMoney(finalPrice)}.`
-        : `O preço final foi ajustado manualmente para ${formatMoney(finalPrice)}.`;
-
-      return `Alteração manual: ${direction} de ${diffText} face ao preço original. ${suggestedText} Usar este valor como preço final a comunicar.`;
+    if (isManual) {
+      parts.push(`O valor foi ajustado manualmente: a proposta sugerida era ${formatMoney(suggested)}, mas o preço final definido foi ${formatMoney(finalPrice)}.`);
+    } else {
+      parts.push(`O preço final acompanha o preço sugerido para aplicação comercial nesta fase (${formatMoney(suggested)}).`);
     }
 
-    if (analysis.commercialState === 'Subida faseada') {
-      return `Subida faseada: preço final acompanha a proposta imediata, com ${diffText} face ao preço original. O objetivo é aplicar a atualização de forma prudente, evitando um salto comercial demasiado brusco.`;
+    if (stateLabel === 'Aplicar agora') {
+      parts.push('Motivo: há margem de atualização e o ajuste foi considerado aplicável de imediato sem comprometer a coerência da tabela.');
+    } else if (stateLabel === 'Subida faseada') {
+      parts.push('Motivo: existe margem de reforço, mas a subida deve ser faseada para evitar resistência comercial ou salto excessivo face à tabela anterior.');
+    } else if (stateLabel === 'Rever gerência') {
+      parts.push('Motivo: fração sensível, premium ou atípica; o preço deve ser validado pela gerência antes de comunicação definitiva.');
+    } else if (stateLabel === 'Manter') {
+      parts.push('Motivo: apesar da leitura técnica, a recomendação comercial é preservar o preço atual por prudência e coerência interna.');
     }
 
-    if (analysis.commercialState === 'Aplicar agora') {
-      return `Aplicar agora: preço final acompanha a proposta sugerida, com ${diffText} face ao preço original. Ajuste considerado comercialmente aplicável nesta fase.`;
+    if (analysis.commercialNote) {
+      parts.push(`Justificação comercial: ${analysis.commercialNote}`);
     }
 
-    if (analysis.commercialState === 'Rever gerência') {
-      return `Rever gerência: preço final apresenta ${diffText} face ao preço original, mas a fração é sensível/premium ou exige validação comercial antes de comunicação definitiva.`;
-    }
-
-    return `Preço final acompanha a proposta sugerida, com ${diffText} face ao preço original. ${analysis.commercialNote || 'Alteração definida com base na camada comercial do modelo.'}`;
+    return parts.join(' ');
   }
-
 
   function exportFinalPricesExcel() {
     try {
@@ -1416,6 +1443,7 @@
         return {
           'Apartamento': f.name,
           'Tipologia': f.typology,
+          'Tipologia Comparável': getComparableTypology(f.typology),
           'Piso': f.floorLabel,
           'Orientação': getOrientation(f),
           'ABP': f.abp,
@@ -1441,12 +1469,12 @@
 
       const ws = XLSX.utils.json_to_sheet(rows);
       ws['!cols'] = [
-        {wch:18},{wch:12},{wch:10},{wch:16},{wch:10},{wch:16},{wch:12},
+        {wch:18},{wch:12},{wch:16},{wch:10},{wch:16},{wch:10},{wch:16},{wch:12},
         {wch:15},{wch:15},{wch:15},{wch:22},{wch:16},{wch:18},{wch:18},{wch:18},{wch:70},{wch:45}
       ];
 
-      const moneyCols = ['H','I','J','K'];
-      const sqmCols = ['L','M'];
+      const moneyCols = ['I','J','K','L'];
+      const sqmCols = ['M','N'];
       for (let r = 2; r <= rows.length + 1; r += 1) {
         moneyCols.forEach((col) => { if (ws[`${col}${r}`]) ws[`${col}${r}`].z = '#,##0 €'; });
         sqmCols.forEach((col) => { if (ws[`${col}${r}`]) ws[`${col}${r}`].z = '#,##0 €/m²'; });
@@ -3203,7 +3231,7 @@ ${pdfStyles()}
   function closeCompetitorModal() { el.competitorModal.classList.add('hidden'); }
 
   function getCompetitorSets(fraction, competitors) {
-    const sameTypology = (c) => normalizeKey(c.typology) === normalizeKey(fraction.typology);
+    const sameTypology = (c) => isSameComparableTypology(c.typology, fraction.typology);
     const sameFloor = (c) => c.floorNumber === fraction.floorNumber;
     const sameView = (c) => normalizeKey(c.view) === normalizeKey(fraction.view);
     const direct = competitors.filter((c) => sameTypology(c) && sameFloor(c) && sameView(c));
@@ -3754,6 +3782,26 @@ ${pdfStyles()}
     return match ? Number(match[0]) : NaN;
   }
   function normalizeTypology(value) { return safeString(value).toUpperCase().replace(/\s+/g,'').replace('T0+1','T0+1'); }
+  function isSameComparableTypology(a, b) { return getComparableTypology(a) === getComparableTypology(b); }
+
+  function getComparableTypology(value) {
+    const raw = safeString(value).toUpperCase().replace(/\s+/g, '');
+    if (!raw) return 'N/D';
+
+    const normalized = raw
+      .replace('DUPLEX', 'DUP')
+      .replace(/[-_]/g, '');
+
+    if (/^T1\+1$/.test(normalized) || /^T1MAIS1$/.test(normalized)) return 'T2';
+    if (/^T2\+1$/.test(normalized) || /^T2MAIS1$/.test(normalized)) return 'T3';
+
+    const match = normalized.match(/^T(\d+)/);
+    if (match) return `T${match[1]}`;
+
+    return raw;
+  }
+
+
   function normalizeText(value) { return safeString(value).replace(/\s+/g, ' ').trim(); }
   function normalizeKey(value) { return safeString(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,''); }
   function safeString(value) { return String(value ?? '').trim(); }
