@@ -377,7 +377,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','finalPricesSummary','finalPricesCount','finalPriceSearch','finalTypologyChecklist','finalFloorChecklist','finalSelectAllTypologies','finalClearTypologies','finalSelectAllFloors','finalClearFloors','finalUseSuggestedVisible','finalClearVisible','finalExportExcel','finalExportJson','finalImportJson','finalPricesCards','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','compareDevelopmentSelect','compareDevelopmentSummary','compareDevelopmentTable','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','finalPricesSummary','finalPricesCount','finalPriceSearch','finalTypologyChecklist','finalFloorChecklist','finalSelectAllTypologies','finalClearTypologies','finalSelectAllFloors','finalClearFloors','finalUseSuggestedVisible','finalClearVisible','finalExportExcel','finalExportJson','finalImportJson','finalPricesCards','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -394,6 +394,7 @@
     el.developmentFilter.addEventListener('change', () => updateFilter('development', el.developmentFilter.value));
     el.sortFilter.addEventListener('change', () => updateSort(el.sortFilter.value));
     el.resetFilters.addEventListener('click', resetFilters);
+    if (el.compareDevelopmentSelect) el.compareDevelopmentSelect.addEventListener('change', renderDevelopmentComparison);
     if (el.idealFractionSelect) el.idealFractionSelect.addEventListener('change', () => { state.idealFocusedFraction = el.idealFractionSelect.value || ''; renderIdealPage(); });
     if (el.exportPdfButton) el.exportPdfButton.addEventListener('click', exportRecommendedPdf);
     if (el.selectAllPdfFloors) el.selectAllPdfFloors.addEventListener('click', () => setChecklistState(el.pdfFloorChecklist, true));
@@ -737,7 +738,7 @@
   }
 
   function renderAll() {
-    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderFinalPricesPage(); renderClientProposalPage(); renderCalculationPage();
+    renderKpis(); renderExecutiveSummary(); renderCards(); renderMarketPage(); renderDevelopmentComparison(); renderIdealPage(); renderMarketContext(); renderCommercialPage(); renderFinalPricesPage(); renderClientProposalPage(); renderCalculationPage();
   }
 
   function renderKpis() {
@@ -1926,6 +1927,106 @@
     }
 
     return `${base} Sem recomendação comercial fixa, usa-se o valor técnico como referência.`;
+  }
+
+
+
+  function renderDevelopmentComparison() {
+    if (!el.compareDevelopmentSelect || !el.compareDevelopmentSummary || !el.compareDevelopmentTable) return;
+
+    const developments = uniqueSorted(state.filteredCompetitors.map((c) => c.development).filter(Boolean));
+    const current = el.compareDevelopmentSelect.value;
+    el.compareDevelopmentSelect.replaceChildren();
+
+    if (!developments.length) {
+      el.compareDevelopmentSelect.append(createOption('', 'Sem concorrentes'));
+      replace(el.compareDevelopmentSummary, summary('Sem dados', '—', 'Não existem concorrentes filtrados'));
+      replace(el.compareDevelopmentTable, empty('Sem dados para comparar.'));
+      return;
+    }
+
+    developments.forEach((dev) => el.compareDevelopmentSelect.append(createOption(dev, dev)));
+
+    if (current && developments.includes(current)) {
+      el.compareDevelopmentSelect.value = current;
+    } else {
+      el.compareDevelopmentSelect.value = developments[0];
+    }
+
+    const selected = el.compareDevelopmentSelect.value;
+    const competitors = state.filteredCompetitors.filter((c) => c.development === selected);
+    const tv = state.filteredFractions;
+
+    const tvStats = getDevelopmentComparisonStats(tv);
+    const compStats = getDevelopmentComparisonStats(competitors);
+
+    const totalDiff = compStats.totalPrice - tvStats.totalPrice;
+    const totalDiffPct = tvStats.totalPrice ? (totalDiff / tvStats.totalPrice) * 100 : null;
+
+    replace(el.compareDevelopmentSummary,
+      summary('The View · total', formatMoney(tvStats.totalPrice), `${tvStats.count} frações`),
+      summary(`${selected} · total`, formatMoney(compStats.totalPrice), `${compStats.count} unidades`),
+      summary('Diferença total', Number.isFinite(totalDiff) ? formatSignedMoney(totalDiff) : '—', Number.isFinite(totalDiffPct) ? signed(formatNumber(Math.abs(totalDiffPct), 1) + '%', totalDiff) : '—'),
+      summary('The View €/m² mediano', formatCurrency(tvStats.medianSqm, 0) + '/m²', `Médio: ${formatCurrency(tvStats.avgSqm, 0)}/m²`),
+      summary(`${selected} €/m² mediano`, formatCurrency(compStats.medianSqm, 0) + '/m²', `Médio: ${formatCurrency(compStats.avgSqm, 0)}/m²`)
+    );
+
+    const typologies = uniqueSorted([
+      ...tv.map((f) => getComparableTypology(f.typology)),
+      ...competitors.map((c) => getComparableTypology(c.typology))
+    ]);
+
+    const rows = typologies.map((typology) => {
+      const tvItems = tv.filter((f) => getComparableTypology(f.typology) === typology);
+      const compItems = competitors.filter((c) => getComparableTypology(c.typology) === typology);
+      const a = getDevelopmentComparisonStats(tvItems);
+      const b = getDevelopmentComparisonStats(compItems);
+      const diff = b.totalPrice - a.totalPrice;
+      return h('tr', {}, [
+        h('td', { text: typology }),
+        h('td', { className: 'num', text: formatNumber(a.count) }),
+        h('td', { className: 'money', text: formatMoney(a.totalPrice) }),
+        h('td', { className: 'num', text: formatCurrency(a.medianSqm, 0) + '/m²' }),
+        h('td', { className: 'num', text: formatNumber(b.count) }),
+        h('td', { className: 'money', text: formatMoney(b.totalPrice) }),
+        h('td', { className: 'num', text: formatCurrency(b.medianSqm, 0) + '/m²' }),
+        h('td', { className: diff >= 0 ? 'money positive' : 'money negative', text: Number.isFinite(diff) ? formatSignedMoney(diff) : '—' })
+      ]);
+    });
+
+    const table = h('table', { className: 'compare-dev-table' });
+    table.append(
+      h('thead', {}, [
+        h('tr', {}, [
+          h('th', { text: 'Tipologia comparável' }),
+          h('th', { text: 'The View · Nº' }),
+          h('th', { text: 'The View · Total' }),
+          h('th', { text: 'The View · €/m²' }),
+          h('th', { text: `${selected} · Nº` }),
+          h('th', { text: `${selected} · Total` }),
+          h('th', { text: `${selected} · €/m²` }),
+          h('th', { text: 'Diferença total' })
+        ])
+      ]),
+      h('tbody', {}, rows)
+    );
+
+    replace(el.compareDevelopmentTable, table);
+  }
+
+  function getDevelopmentComparisonStats(items) {
+    const validPrice = items.filter((item) => Number.isFinite(item.price));
+    const totalPrice = sum(validPrice.map((item) => item.price));
+    const totalArea = sum(items.map((item) => item.totalArea).filter(Number.isFinite));
+    const sqmValues = items.map((item) => item.eurosPerSqm).filter(Number.isFinite);
+    return {
+      count: items.length,
+      totalPrice,
+      totalArea,
+      avgPrice: validPrice.length ? totalPrice / validPrice.length : null,
+      avgSqm: totalArea > 0 ? totalPrice / totalArea : null,
+      medianSqm: median(sqmValues)
+    };
   }
 
 

@@ -87,6 +87,29 @@
           <p class="muted">Esta página mostra a penalização objetiva aplicada aos dados antigos e ao Le Parc. A fórmula é: peso base de mercado = peso do ano × peso do empreendimento.</p>
           <div class="summary-grid" id="marketSummary"></div>
         </section>
+
+        <section class="panel compare-development-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow eyebrow--dark">Comparação direta</p>
+              <h2>The View vs empreendimento</h2>
+            </div>
+          </div>
+
+          <div class="compare-toolbar">
+            <label class="field">
+              <span>Empreendimento concorrente</span>
+              <select id="compareDevelopmentSelect"></select>
+            </label>
+            <p class="muted small">
+              Compara o valor total das frações The View filtradas com o valor total das unidades do empreendimento escolhido.
+            </p>
+          </div>
+
+          <div id="compareDevelopmentSummary" class="summary-grid"></div>
+          <div id="compareDevelopmentTable" class="table-wrap"></div>
+        </section>
+
         <section class="panel">
           <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Compset atual</p><h2>Concorrentes ponderados</h2></div><p class="muted small" id="marketCount">—</p></div>
           <div class="table-wrap"><table class="data-table" id="marketTable"></table></div>

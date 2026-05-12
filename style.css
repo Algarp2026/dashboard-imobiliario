@@ -1526,3 +1526,74 @@ body.modal-open {
   object-fit: contain;
   margin: 0 auto;
 }
+
+
+/* Comparação direta por empreendimento */
+.compare-development-panel {
+  border: 1px solid rgba(146,113,58,.22);
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(255,255,255,.68));
+}
+
+.compare-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 420px) 1fr;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.compare-dev-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 20px;
+  background: rgba(255,255,255,.82);
+}
+
+.compare-dev-table th,
+.compare-dev-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15,23,42,.08);
+  vertical-align: middle;
+}
+
+.compare-dev-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.compare-dev-table th {
+  background: rgba(248,250,252,.94);
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 900;
+  text-align: left;
+}
+
+.compare-dev-table .num,
+.compare-dev-table .money {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.negative {
+  color: #b42318;
+  font-weight: 900;
+}
+
+@media(max-width: 900px) {
+  .compare-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-development-panel .table-wrap {
+    overflow-x: auto;
+  }
+
+  .compare-dev-table {
+    min-width: 920px;
+  }
+}
