@@ -377,7 +377,7 @@
   function cacheElements() {
     [
       'dataStatus','errorBox','kpiGrid','executiveSummary','cardsGrid','resultCount',
-      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','finalPricesSummary','finalPricesCount','finalPriceSearch','finalTypologyChecklist','finalFloorChecklist','finalSelectAllTypologies','finalClearTypologies','finalSelectAllFloors','finalClearFloors','finalUseSuggestedVisible','finalClearVisible','finalExportJson','finalImportJson','finalPricesCards','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
+      'marketSummary','marketTable','marketCount','idealSummary','idealCount','idealFractionSelect','idealDetails','pdfFloorChecklist','pdfFractionChecklist','selectAllPdfFloors','clearPdfFloors','selectAllPdfFractions','clearPdfFractions','exportPdfButton','commercialSummary','commercialCount','commercialSummarySection','marketContextSection','marketContextGrid','marketContextReading','marketContextSource','commercialFiltersSection','commercialCardsSection','commercialTableSection','toggleCommercialSummary','toggleMarketContext','toggleCommercialFilters','toggleCommercialCards','toggleCommercialTable','commercialStateFilter','commercialImpactFilter','commercialTypologyFilter','commercialSort','commercialFloorChecklist','commercialFractionChecklist','commercialFractionSearch','commercialSelectedChips','commercialSelectAllFloors','commercialClearFloors','commercialSelectAllFractions','commercialSelectVisibleFractions','commercialClearFractions','clearCommercialFilters','commercialCards','commercialTable','commercialPdfType','exportCommercialPdfButton','finalPricesSummary','finalPricesCount','finalPriceSearch','finalTypologyChecklist','finalFloorChecklist','finalSelectAllTypologies','finalClearTypologies','finalSelectAllFloors','finalClearFloors','finalUseSuggestedVisible','finalClearVisible','finalExportExcel','finalExportJson','finalImportJson','finalPricesCards','clientProposalSummary','clientProposalCount','clientFractionSearch','clientTypologyChecklist','clientFloorChecklist','clientSelectAllTypologies','clientClearTypologies','clientSelectAllFloors','clientClearFloors','clientSelectAll','clientClearAll','clientResetPrices','clientProposalCards','clientExportPdf','clientExportJson','clientImportJson','calculationCards','calculationCount',
       'floorFilter','viewFilter','typologyFilter','fractionFilter','developmentFilter','sortFilter','resetFilters',
       'fractionModal','fractionModalContent','closeFractionModal','competitorModal','competitorModalContent','closeCompetitorModal'
     ].forEach((id) => { el[id] = document.getElementById(id); });
@@ -432,6 +432,7 @@
     if (el.finalClearFloors) el.finalClearFloors.addEventListener('click', () => { setChecklistState(el.finalFloorChecklist, false); state.finalPriceFilters.floors = []; renderFinalPricesPage(false); });
     if (el.finalUseSuggestedVisible) el.finalUseSuggestedVisible.addEventListener('click', useSuggestedPricesForVisible);
     if (el.finalClearVisible) el.finalClearVisible.addEventListener('click', clearVisibleFinalPrices);
+    if (el.finalExportExcel) el.finalExportExcel.addEventListener('click', exportFinalPricesExcel);
     if (el.finalExportJson) el.finalExportJson.addEventListener('click', exportFinalPricesJson);
     if (el.finalImportJson) el.finalImportJson.addEventListener('change', importFinalPricesJson);
 
@@ -574,6 +575,7 @@
     const price = parseNumber(getFirst(get, ['PVP','Preço','Preco','Valor','Price']));
     const eurosPerSqmRaw = parseNumber(getFirst(get, ['€/m²','€/m2','EUR/m2','Preço m2','Preco m2']));
     const referenceYear = parseNumber(getFirst(get, ['Ano Referência','Ano Referencia','Ano','Reference Year']));
+    const comparableWeight = parseNumber(getFirst(get, ['Peso comparável','Peso comparavel','Peso','Comparable Weight','Weight']));
     const status = normalizeText(getFirst(get, ['Status','Estado','Disponibilidade']));
     const source = normalizeText(getFirst(get, ['Fonte','Source','Portal']));
     const url = normalizeText(getFirst(get, ['URL','Link']));
@@ -597,6 +599,7 @@
       price: positiveOrNull(price),
       eurosPerSqm: positiveOrNull(eurosPerSqm),
       referenceYear: positiveOrNull(referenceYear),
+      comparableWeight: positiveOrNull(comparableWeight),
       status, source, url, updatedAt, notes, typeFlag,
       isProject: isProjectRow({ development, typeFlag, name })
     };
@@ -758,7 +761,7 @@
     const below = gaps.filter((g) => g < -2).length;
     replace(el.executiveSummary,
       summary('€/m² The View', formatCurrency(tvMedian, 0), 'Mediana das frações filtradas'),
-      summary('€/m² mercado ponderado', formatCurrency(compWeighted, 0), 'Ano + penalização Le Parc'),
+      summary('€/m² mercado ponderado', formatCurrency(compWeighted, 0), 'Ano + Le Parc + peso comparável'),
       summary('Gap médio atual', Number.isFinite(avgGap) ? signed(formatNumber(Math.abs(avgGap), 1) + '%', avgGap) : '—', 'Vs preço ideal de mercado'),
       summary('Acima / abaixo', `${above} / ${below}`, 'Fora de uma banda de ±2%')
     );
@@ -1352,6 +1355,63 @@
       planUrl: safeString(planUrl)
     };
   }
+
+
+  function exportFinalPricesExcel() {
+    try {
+      if (!window.XLSX) throw new Error('Biblioteca SheetJS não carregada.');
+
+      const rows = getVisibleFinalPriceAnalyses().map((analysis) => {
+        const f = analysis.fraction;
+        const finalPrice = Number.isFinite(analysis.officialFinalPrice) ? analysis.officialFinalPrice : analysis.proposedNow;
+        const pricePerSqm = Number.isFinite(finalPrice) && Number.isFinite(f.totalArea) && f.totalArea > 0 ? finalPrice / f.totalArea : null;
+        const originalPricePerSqm = Number.isFinite(f.price) && Number.isFinite(f.totalArea) && f.totalArea > 0 ? f.price / f.totalArea : null;
+        return {
+          'Apartamento': f.name,
+          'Tipologia': f.typology,
+          'Piso': f.floorLabel,
+          'Orientação': getOrientation(f),
+          'ABP': f.abp,
+          'Varanda/Terraço': f.balcony,
+          'Área Total': f.totalArea,
+          'Preço Original': f.price,
+          'Preço Sugerido': analysis.proposedNow,
+          'Preço Final': finalPrice,
+          'Diferença Final vs Original': finalPrice - f.price,
+          'Preço Final €/m²': pricePerSqm,
+          'Preço Original €/m²': originalPricePerSqm,
+          'Observação Cliente': analysis.officialNote || getDefaultClientNote(analysis)
+        };
+      });
+
+      if (!rows.length) {
+        alert('Não existem frações visíveis para exportar.');
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [
+        {wch:18},{wch:12},{wch:10},{wch:16},{wch:10},{wch:16},{wch:12},
+        {wch:15},{wch:15},{wch:15},{wch:22},{wch:16},{wch:18},{wch:45}
+      ];
+
+      const moneyCols = ['H','I','J','K'];
+      const sqmCols = ['L','M'];
+      for (let r = 2; r <= rows.length + 1; r += 1) {
+        moneyCols.forEach((col) => { if (ws[`${col}${r}`]) ws[`${col}${r}`].z = '#,##0 €'; });
+        sqmCols.forEach((col) => { if (ws[`${col}${r}`]) ws[`${col}${r}`].z = '#,##0 €/m²'; });
+        ['E','F','G'].forEach((col) => { if (ws[`${col}${r}`]) ws[`${col}${r}`].z = '#,##0.00'; });
+      }
+
+      const wbOut = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wbOut, ws, 'Preços Finais');
+      XLSX.writeFile(wbOut, `the-view-precos-finais-${new Date().toISOString().slice(0,10)}.xlsx`);
+    } catch (error) {
+      showDebugError(error, 'exportFinalPricesExcel');
+      alert('Não foi possível exportar o Excel. Veja o detalhe no topo da página.');
+    }
+  }
+
 
   function exportFinalPricesJson() {
     const payload = {
@@ -3329,11 +3389,12 @@ ${pdfStyles()}
   function getViewAdjustment(view) { return getViewScore(view) >= 40 ? 0.035 : getViewScore(view) >= 24 ? 0.015 : getViewScore(view) <= 6 ? -0.015 : 0; }
   function getFloorAdjustment(floor) { const n = Number(floor) || 0; return clamp(n * 0.006, -0.01, 0.035); }
 
-  function getFinalWeight(item, category) { return getCategoryWeight(category) * getYearWeight(item) * getDevelopmentWeight(item); }
+  function getFinalWeight(item, category) { return getCategoryWeight(category) * getYearWeight(item) * getDevelopmentWeight(item) * getComparableWeight(item); }
   function getCategoryWeight(category) { return category === 'direct' ? 1 : category === 'indirect' ? 0.75 : 0.50; }
-  function getBaseMarketWeight(item) { return getYearWeight(item) * getDevelopmentWeight(item); }
+  function getBaseMarketWeight(item) { return getYearWeight(item) * getDevelopmentWeight(item) * getComparableWeight(item); }
   function getYearWeight(item) { const year = getYear(item); if (!year) return 0.70; if (year >= 2026) return 1.00; if (year === 2025) return 0.85; if (year === 2024) return 0.60; return 0.40; }
   function getDevelopmentWeight(item) { return isLeParc(item) ? 0.60 : 1.00; }
+  function getComparableWeight(item) { const weight = Number(item?.comparableWeight); return Number.isFinite(weight) && weight > 0 ? weight : 1.00; }
   function isLeParc(item) { return normalizeKey(item.development).includes('leparc'); }
   function getYear(item) { return Number(item.referenceYear) || extractYear(item.updatedAt) || null; }
   function getWeightReason(item) {
@@ -3342,6 +3403,7 @@ ${pdfStyles()}
     parts.push(year ? `ano ${year}: ${formatNumber(getYearWeight(item),2)}` : 'sem ano: 0,70');
     if (isLeParc(item)) parts.push('Le Parc: 0,60');
     else parts.push('empreendimento: 1,00');
+    parts.push(`peso base: ${formatNumber(getComparableWeight(item),2)}`);
     return parts.join(' · ');
   }
 
