@@ -1357,6 +1357,53 @@
   }
 
 
+
+  function getFinalPriceChangeReason(analysis) {
+    const f = analysis.fraction;
+    const finalPrice = Number.isFinite(analysis.officialFinalPrice) ? analysis.officialFinalPrice : analysis.proposedNow;
+    const original = Number(f.price);
+    const suggested = Number(analysis.proposedNow);
+    const manual = Number.isFinite(analysis.officialFinalPrice) && Math.round(analysis.officialFinalPrice) !== Math.round(analysis.proposedNow);
+    const finalDiff = Number.isFinite(finalPrice) && Number.isFinite(original) ? finalPrice - original : null;
+    const suggestedDiff = Number.isFinite(suggested) && Number.isFinite(original) ? suggested - original : null;
+    const finalPct = Number.isFinite(finalDiff) && original ? (finalDiff / original) * 100 : null;
+    const suggestedPct = Number.isFinite(suggestedDiff) && original ? (suggestedDiff / original) * 100 : null;
+
+    if (!Number.isFinite(finalPrice) || !Number.isFinite(original)) {
+      return 'Preço final ou preço original indisponível; validar manualmente.';
+    }
+
+    if (Math.round(finalPrice) === Math.round(original)) {
+      return 'Sem alteração face ao preço original. Mantém-se o preço atual definido na tabela.';
+    }
+
+    const direction = finalDiff > 0 ? 'subida' : 'redução';
+    const diffText = `${formatSignedMoney(finalDiff)} (${signed(formatNumber(Math.abs(finalPct), 1) + '%', finalDiff)})`;
+
+    if (manual) {
+      const suggestedText = Number.isFinite(suggestedDiff)
+        ? `O modelo/proposta sugeria ${formatMoney(suggested)} (${signed(formatNumber(Math.abs(suggestedPct), 1) + '%', suggestedDiff)} face ao original), mas o preço final foi ajustado manualmente para ${formatMoney(finalPrice)}.`
+        : `O preço final foi ajustado manualmente para ${formatMoney(finalPrice)}.`;
+
+      return `Alteração manual: ${direction} de ${diffText} face ao preço original. ${suggestedText} Usar este valor como preço final a comunicar.`;
+    }
+
+    if (analysis.commercialState === 'Subida faseada') {
+      return `Subida faseada: preço final acompanha a proposta imediata, com ${diffText} face ao preço original. O objetivo é aplicar a atualização de forma prudente, evitando um salto comercial demasiado brusco.`;
+    }
+
+    if (analysis.commercialState === 'Aplicar agora') {
+      return `Aplicar agora: preço final acompanha a proposta sugerida, com ${diffText} face ao preço original. Ajuste considerado comercialmente aplicável nesta fase.`;
+    }
+
+    if (analysis.commercialState === 'Rever gerência') {
+      return `Rever gerência: preço final apresenta ${diffText} face ao preço original, mas a fração é sensível/premium ou exige validação comercial antes de comunicação definitiva.`;
+    }
+
+    return `Preço final acompanha a proposta sugerida, com ${diffText} face ao preço original. ${analysis.commercialNote || 'Alteração definida com base na camada comercial do modelo.'}`;
+  }
+
+
   function exportFinalPricesExcel() {
     try {
       if (!window.XLSX) throw new Error('Biblioteca SheetJS não carregada.');
@@ -1380,6 +1427,9 @@
           'Diferença Final vs Original': finalPrice - f.price,
           'Preço Final €/m²': pricePerSqm,
           'Preço Original €/m²': originalPricePerSqm,
+          'Estado da Decisão': analysis.commercialState || '',
+          'Estratégia': analysis.strategy || '',
+          'Razão da Alteração': getFinalPriceChangeReason(analysis),
           'Observação Cliente': analysis.officialNote || getDefaultClientNote(analysis)
         };
       });
@@ -1392,7 +1442,7 @@
       const ws = XLSX.utils.json_to_sheet(rows);
       ws['!cols'] = [
         {wch:18},{wch:12},{wch:10},{wch:16},{wch:10},{wch:16},{wch:12},
-        {wch:15},{wch:15},{wch:15},{wch:22},{wch:16},{wch:18},{wch:45}
+        {wch:15},{wch:15},{wch:15},{wch:22},{wch:16},{wch:18},{wch:18},{wch:18},{wch:70},{wch:45}
       ];
 
       const moneyCols = ['H','I','J','K'];
@@ -1403,6 +1453,7 @@
         ['E','F','G'].forEach((col) => { if (ws[`${col}${r}`]) ws[`${col}${r}`].z = '#,##0.00'; });
       }
 
+      ws['!autofilter'] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(ws['!ref'])) };
       const wbOut = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wbOut, ws, 'Preços Finais');
       XLSX.writeFile(wbOut, `the-view-precos-finais-${new Date().toISOString().slice(0,10)}.xlsx`);
