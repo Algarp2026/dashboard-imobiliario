@@ -163,6 +163,20 @@ function exportPdf(){
   </script></body></html>`);
   w.document.close();
 }
+
+function filteredProposal(){return filterFractions(state.pf)}
+function filteredPrices(){return filterFractions(state.rf)}
+function filteredPrice(){return filteredPrices()}
+function filterFractions(fil={}){
+  const q=norm(fil.search||'');
+  return state.fractions.filter(f=>
+    ((fil.typology||'all')==='all'||f.typology===fil.typology) &&
+    ((fil.floor||'all')==='all'||String(f.floorLabel)===String(fil.floor)) &&
+    ((fil.status||'all')==='all'||statusOf(f)===fil.status) &&
+    (!q||norm([f.name,f.typology,f.floorLabel,f.orientation,statusOf(f)].join(' ')).includes(q))
+  );
+}
+
 function syncProposal(){state.pf={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};renderProposals()}function syncPrice(){state.rf={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};renderPrices()}
 function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const cnt=t=>evs.filter(e=>e.type===t).length;const offers=evs.filter(e=>['Proposta recebida','Contra-proposta enviada','Reserva','Venda'].includes(e.type)&&e.amount).map(e=>e.amount);const last=evs[evs.length-1];return{visits:cnt('Visita'),interested:cnt('Interessado')+cnt('Reunião com cliente'),proposals:cnt('Proposta recebida')+cnt('Contra-proposta enviada')+cnt('Reserva')+cnt('Venda'),lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){state.fractions.forEach(f=>{state.data.priceHistory[f.number] ||= [{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}]});save()}
@@ -216,5 +230,74 @@ async function syncRemote(){
     setStatus('Falha ao sincronizar · dados guardados localmente');
   }
 }
+
+function exportAll(){
+  const rows = state.fractions.map(f=>({
+    Apartamento:f.name,
+    Tipologia:f.typology,
+    Piso:f.floorLabel,
+    Orientacao:f.orientation,
+    PrecoInicial:f.price,
+    PrecoFinal:finalPrice(f),
+    Estado:statusOf(f),
+    PrecoVendaReserva:salePrice(f)||'',
+    ABP:f.abp,
+    Exterior:f.terrace,
+    AreaTotal:f.totalArea
+  }));
+  downloadJson(rows, 'the-view-dados-comerciais.json');
+}
+
+function exportPriceHistory(){
+  const rows = [];
+  state.fractions.forEach(f=>{
+    historyOf(f).forEach(h=>rows.push({
+      Apartamento:f.name,
+      Data:h.date,
+      Preco:h.price,
+      PrecoAnterior:h.oldPrice||'',
+      Razao:h.reason||''
+    }));
+  });
+  downloadJson(rows, 'the-view-historico-precos.json');
+}
+
+function exportSalesEvents(){
+  const rows = state.data.events.map(e=>({
+    Data:e.date,
+    Hora:e.time||'',
+    Tipo:e.type,
+    Cliente:client(e.clientId)?.name||'',
+    Valor:e.amount||'',
+    Fracoes:(e.fractions||[]).map(n=>'Apartamento '+n).join(', '),
+    Notas:e.notes||'',
+    Objecoes:e.objections||''
+  }));
+  downloadJson(rows, 'the-view-eventos-vendas.json');
+}
+
+function resetLocal(){
+  if(confirm('Apagar dados locais deste navegador? Os dados da Google Sheet não serão apagados.')){
+    localStorage.removeItem(KEY);
+    state.data=loadDataLocal();
+    ensureHistory();
+    renderAll();
+    setStatus('Dados locais repostos');
+  }
+}
+
+function downloadJson(rows, filename){
+  const blob = new Blob([JSON.stringify(rows, null, 2)], {type:'application/json;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+
 function fill(sel,vals,allLabel,labelFn){sel.innerHTML=vals.map(v=>`<option value="${attr(v)}">${v==='all'?allLabel:esc(labelFn?labelFn(v):v)}</option>`).join('')}function fillMulti(sel,vals){sel.innerHTML=vals.map(([v,l])=>`<option value="${attr(v)}">${esc(l)}</option>`).join('')}function setMulti(sel,vals){[...sel.options].forEach(o=>o.selected=vals.map(String).includes(o.value))}function getMulti(sel){return[...sel.selectedOptions].map(o=>o.value)}function row(a,b){return`<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`}function kpi(a,b,c){return`<article class="kpi-card"><span>${esc(a)}</span><strong>${esc(b)}</strong><small>${esc(c||'')}</small></article>`}function badge(st){return'badge '+(st==='Vendido'?'badge--sold':st==='Reservado'?'badge--reserved':'badge--available')}function setStatus(t){el.dataStatus.textContent=t}function showError(t){el.globalErrorBox.textContent=t;el.globalErrorBox.classList.remove('hidden')}function num(v){if(typeof v==='number'&&isFinite(v))return v;const n=Number(safe(v).replace(/\s+/g,'').replace(/€/g,'').replace(/m²/gi,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(/,(?=\d{2,}$)/g,'.').replace(/[^0-9.-]/g,''));return isFinite(n)?n:0}function floor(v){if(typeof v==='number')return v;const m=safe(v).match(/-?\d+/);return m?+m[0]:null}function nat(s,fb=null){const m=safe(s).match(/\d+/);return m?+m[0]:fb}function pretty(v){return safe(v).replace(/\s+/g,' ').replace(/DUPLEX/i,'Duplex').replace(/DUP$/i,'Duplex')}function safe(v){return v==null?'':String(v).trim()}function norm(v){return safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}function uniq(a){return[...new Set(a.filter(Boolean))].sort((x,y)=>String(x).localeCompare(String(y),'pt-PT',{numeric:true,sensitivity:'base'}))}function uniqNum(a){return[...new Set(a.map(Number).filter(Boolean))].sort((x,y)=>x-y)}function sum(a){return a.reduce((x,y)=>x+(+y||0),0)}function money(v,d=0){return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR',minimumFractionDigits:d,maximumFractionDigits:d}).format(+v||0)}function area(v){return`${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(+v||0)} m²`}function today(){return new Date().toISOString().slice(0,10)}function id(){return String(Date.now())+String(Math.random()).slice(2,7)}function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}function attr(v){return esc(v).replace(/`/g,'&#096;')}
 })();
