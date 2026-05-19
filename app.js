@@ -161,23 +161,13 @@
   }
 
   async function loadWorkbook() {
-    const attempted = [];
-    for (const file of DATA_FILES) {
-      try {
-        const res = await fetch(file, { cache:'no-store' });
-        if (!res.ok) { attempted.push(`${file} (${res.status})`); continue; }
-        const buf = await res.arrayBuffer();
-        return XLSX.read(buf, { type:'array' });
-      } catch (err) {
-        attempted.push(`${file} (${err.message})`);
-      }
-    }
-    throw new Error(`Não consegui abrir data.xlsx/data.xls. Tentativas: ${attempted.join(' · ')}`);
+    const res = await fetch('data.json', { cache:'no-store' });
+    if (!res.ok) throw new Error(`Não consegui abrir data.json (${res.status}).`);
+    return await res.json();
   }
 
-  function parseWorkbook(wb) {
-    const sheetName = wb.SheetNames.includes('Dados') ? 'Dados' : wb.SheetNames[0];
-    return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval:'' }).map(parseRow).filter(Boolean);
+  function parseWorkbook(rawRows) {
+    return rawRows.map(parseRow).filter(Boolean);
   }
 
   function parseRow(raw) {
