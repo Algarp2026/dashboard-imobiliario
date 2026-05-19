@@ -45,12 +45,91 @@ function saveClient(){let cid=el.clientId.value||id();const c={id:cid,name:el.cl
 function openEventModal(){el.eventClientId.value=state.selectedClientId||'';el.eventType.value='Reunião com cliente';el.eventDate.value=today();el.eventTime.value='';el.eventAmount.value='';el.eventInterest.value='';el.eventFollowup.value='';el.eventFollowupDate.value='';setMulti(el.eventFractions,[]);el.eventObjections.value='';el.eventNotes.value='';el.eventModal.classList.remove('hidden');document.body.style.overflow='hidden'}
 function closeEventModal(){el.eventModal.classList.add('hidden');document.body.style.overflow=''}
 function saveEvent(){const cid=el.eventClientId.value;if(!cid){alert('Escolha um cliente.');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){alert('Escolha pelo menos uma fração.');return}const ev={id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:num(el.eventAmount.value),interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim()};state.data.events.push(ev);const c=client(cid);if(c){c.fractions=uniqNum([...(c.fractions||[]),...frs]);if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';if(ev.type==='Visita')c.stage='Visitou';if(ev.type==='Reserva')c.stage='Reserva';if(ev.type==='Venda')c.stage='Vendido'}if(ev.type==='Reserva')frs.forEach(n=>{state.data.statuses[n]='Reservado';if(ev.amount)state.data.salePrices[n]=ev.amount});if(ev.type==='Venda')frs.forEach(n=>{state.data.statuses[n]='Vendido';if(ev.amount)state.data.salePrices[n]=ev.amount});save();closeEventModal();renderAll()}
-function exportPdf(){const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)!=='Vendido').sort((a,b)=>a.number-b.number);if(!fs.length){alert('Selecione pelo menos uma fração disponível.');return}const include=el.proposalIncludePlants.checked,w=window.open('','_blank');if(!w){alert('Autorize pop-ups.');return}const pages=fs.map((f,i)=>`<section class="pdf-page ${i===fs.length-1?'last':''}"><div class="pdf-header"><div><p class="pdf-eyebrow">The View Olhão</p><h1>${esc(f.name)}</h1><p>${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p></div><div class="pdf-price"><span>Preço</span><strong>${money(finalPrice(f))}</strong></div></div><div class="pdf-cards"><article><span>ABP</span><strong>${area(f.abp)}</strong></article><article><span>Varanda/Terraço</span><strong>${area(f.terrace)}</strong></article><article><span>Área total</span><strong>${area(f.totalArea)}</strong></article><article><span>Tipologia</span><strong>${esc(f.typology)}</strong></article></div>${include?`<div class="pdf-plant-wrap">${(PLANT_MAP[f.number]&&PLANT_MAP[f.number].image)?`<img class="pdf-plant" src="${PLANT_MAP[f.number].image}" />`:'<div class="pdf-missing">Planta indisponível para esta fração.</div>'}</div>`:''}</section>`).join('');w.document.open();w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Proposta Cliente</title><style>@page{size:A4;margin:14mm}body{font-family:Inter,Arial,sans-serif;color:#16233d}.pdf-page{min-height:260mm;page-break-after:always;display:flex;flex-direction:column;gap:20px}.last{page-break-after:auto}.pdf-header{display:flex;justify-content:space-between;border-bottom:1px solid #d9e1eb;padding-bottom:16px}.pdf-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:#8e6a34}h1{margin:0;font-size:32px}.pdf-price{background:#f4f7fb;border:1px solid #d9e1eb;border-radius:16px;padding:14px 18px;text-align:right}.pdf-price span{display:block;color:#5f6f89;font-size:12px}.pdf-price strong{font-size:28px}.pdf-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.pdf-cards article{background:#f8fafc;border:1px solid #e3eaf1;border-radius:14px;padding:14px}.pdf-cards span{display:block;color:#5f6f89;font-size:12px}.pdf-cards strong{font-size:18px}.pdf-missing{border:1px dashed #d9e1eb;border-radius:20px;min-height:160mm;display:flex;align-items:center;justify-content:center;color:#5f6f89}</style></head><body>${pages}<script>setTimeout(()=>{window.focus();window.print()},300)<\/script></body></html>`);w.document.close()}
-function exportAll(){const rows=state.fractions.map(f=>({Apartamento:f.name,Tipologia:f.typology,Piso:f.floorLabel,Orientação:f.orientation,PreçoInicial:f.price,PreçoFinal:finalPrice(f),Estado:statusOf(f),PreçoVenda:salePrice(f)||'',ABP:f.abp,Exterior:f.terrace,ÁreaTotal:f.totalArea}));download(rows,'the-view-dados-comerciais.xlsx','Comercial')}
-function exportPriceHistory(){let rows=[];state.fractions.forEach(f=>historyOf(f).forEach(h=>rows.push({Apartamento:f.name,Data:h.date,Preço:h.price,PreçoAnterior:h.oldPrice||'',Motivo:h.reason||''})));download(rows,'the-view-historico-precos.xlsx','Histórico')}
-function resetLocal(){if(confirm('Apagar dados locais de clientes, eventos, preços e vendas?')){localStorage.removeItem(KEY);state.data=loadDataLocal();ensureHistory();renderAll()}}
-function download(rows,name,sheet){if(!window.XLSX){alert('Biblioteca Excel não carregada.');return}const ws=XLSX.utils.json_to_sheet(rows);ws['!autofilter']={ref:ws['!ref']};const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,sheet);XLSX.writeFile(wb,name)}
-function filteredProposal(){return filter(state.pf)}function filteredPrice(){return filter(state.rf)}function filter(flt){const s=norm(flt.search);return state.fractions.filter(f=>(flt.typology==='all'||f.typology===flt.typology)&&(flt.floor==='all'||String(f.floorLabel)===flt.floor)&&(flt.status==='all'||statusOf(f)===flt.status)&&(!s||norm([f.name,f.typology,f.floorLabel,f.orientation,statusOf(f)].join(' ')).includes(s)))}
+function exportPdf(){
+  const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)!=='Vendido').sort((a,b)=>a.number-b.number);
+  if(!fs.length){alert('Selecione pelo menos uma fração disponível.');return}
+  const include=el.proposalIncludePlants.checked;
+  const w=window.open('','_blank');
+  if(!w){alert('Autorize pop-ups para gerar o PDF.');return}
+
+  const publicArea=v=>Math.max(0,Math.floor((+v||0)-2));
+  const publicM2=v=>`${publicArea(v)} m²`;
+  const disclaimer='Documento meramente informativo e de apresentação comercial. Os valores, áreas e condições aqui indicados não constituem proposta contratual, reserva, promessa de venda ou proposta oficial, estando sujeitos a confirmação e aprovação pela entidade promotora.';
+
+  const pages=fs.map((f,i)=>{
+    const plant=(PLANT_MAP[f.number]&&PLANT_MAP[f.number].image)?PLANT_MAP[f.number].image:'';
+    const abpPublic=publicArea(f.abp);
+    const extPublic=publicArea(f.terrace);
+    const totalPublic=abpPublic+extPublic;
+
+    return `<section class="pdf-page ${i===fs.length-1?'last':''}">
+      <header class="pdf-header">
+        <div>
+          <p class="pdf-eyebrow">The View Olhão</p>
+          <h1>${esc(f.name)}</h1>
+          <p class="pdf-subtitle">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p>
+        </div>
+        <div class="pdf-price"><span>Preço de apresentação</span><strong>${money(finalPrice(f))}</strong></div>
+      </header>
+
+      <div class="pdf-cards">
+        <article><span>ABP aprox.</span><strong>${abpPublic} m²</strong></article>
+        <article><span>Varanda/Terraço aprox.</span><strong>${extPublic} m²</strong></article>
+        <article><span>Área total aprox.</span><strong>${totalPublic} m²</strong></article>
+        <article><span>Tipologia</span><strong>${esc(f.typology)}</strong></article>
+      </div>
+
+      ${include?`<div class="pdf-plant-wrap">${plant?`<img class="pdf-plant" src="${plant}" />`:'<div class="pdf-missing">Planta indisponível para esta fração.</div>'}</div>`:''}
+
+      <footer class="pdf-footer">
+        <p>${esc(disclaimer)}</p>
+      </footer>
+    </section>`;
+  }).join('');
+
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Proposta Cliente</title>
+  <style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
+  @page{size:A4 portrait;margin:12mm}
+  *{box-sizing:border-box}
+  body{font-family:'Montserrat',Arial,sans-serif;margin:0;color:#0f2443;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pdf-page{min-height:calc(297mm - 24mm);page-break-after:always;display:flex;flex-direction:column;gap:13mm}
+  .pdf-page.last{page-break-after:auto}
+  .pdf-header{display:grid;grid-template-columns:1fr auto;gap:18mm;align-items:start;border-bottom:1px solid #d9e1eb;padding-bottom:8mm}
+  .pdf-eyebrow{margin:0 0 4mm;text-transform:uppercase;letter-spacing:.26em;font-size:9px;font-weight:700;color:#9a7440}
+  h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;font-size:35pt;line-height:.95;font-weight:700;letter-spacing:.01em;color:#0e2444}
+  .pdf-subtitle{margin:5mm 0 0;font-size:12pt;color:#435675;font-weight:500}
+  .pdf-price{min-width:48mm;text-align:right;background:#f5f7fa;border:1px solid #dbe4ef;border-radius:14px;padding:7mm 8mm}
+  .pdf-price span{display:block;font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#63748d;margin-bottom:3mm}
+  .pdf-price strong{font-size:23pt;color:#0e2444;white-space:nowrap}
+  .pdf-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm}
+  .pdf-cards article{background:#f8fafc;border:1px solid #e1e9f2;border-radius:12px;padding:5mm}
+  .pdf-cards span{display:block;font-size:8.5pt;color:#63748d;margin-bottom:2mm}
+  .pdf-cards strong{display:block;font-size:14pt;color:#0e2444}
+  .pdf-plant-wrap{flex:1;min-height:130mm;display:flex;justify-content:center;align-items:center;border:1px solid #e1e9f2;border-radius:18px;overflow:hidden;padding:7mm;background:#fff}
+  .pdf-plant{max-width:100%;max-height:150mm;object-fit:contain;display:block}
+  .pdf-missing{color:#63748d;font-size:11pt}
+  .pdf-footer{margin-top:auto;border-top:1px solid #d9e1eb;padding-top:5mm}
+  .pdf-footer p{margin:0;color:#62738a;font-size:8.5pt;line-height:1.55;text-align:justify}
+  @media print{
+    body{background:#fff}
+    .pdf-page{break-after:page}
+    .pdf-page.last{break-after:auto}
+  }
+  </style></head><body>${pages}
+  <script>
+  const imgs=[...document.images];
+  let pending=imgs.length;
+  function done(){setTimeout(()=>{window.focus();window.print()},500)}
+  if(!pending) done();
+  imgs.forEach(img=>{
+    if(img.complete){pending--; if(pending<=0) done()}
+    else {img.onload=img.onerror=()=>{pending--; if(pending<=0) done()}}
+  });
+  </script></body></html>`);
+  w.document.close();
+}
 function syncProposal(){state.pf={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};renderProposals()}function syncPrice(){state.rf={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};renderPrices()}
 function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const cnt=t=>evs.filter(e=>e.type===t).length;const offers=evs.filter(e=>['Proposta recebida','Contra-proposta enviada','Reserva','Venda'].includes(e.type)&&e.amount).map(e=>e.amount);const last=evs[evs.length-1];return{visits:cnt('Visita'),interested:cnt('Interessado')+cnt('Reunião com cliente'),proposals:cnt('Proposta recebida')+cnt('Contra-proposta enviada')+cnt('Reserva')+cnt('Venda'),lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){state.fractions.forEach(f=>{state.data.priceHistory[f.number] ||= [{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}]});save()}
