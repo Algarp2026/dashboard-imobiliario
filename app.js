@@ -141,7 +141,7 @@
   }
 
   async function loadData() {
-    setStatus('A carregar Excel…'); hideError();
+    setStatus('A carregar dados…'); hideError();
     try {
       const workbook = await loadWorkbook();
       const rows = parseWorkbook(workbook);

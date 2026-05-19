@@ -17,14 +17,33 @@ async function loadExcel(){
     const r = await fetch('data.json', {cache:'no-store'});
     if(!r.ok) throw new Error('Não consegui abrir data.json.');
     const rawRows = await r.json();
+
     state.rows = rawRows.map(parseRow).filter(Boolean);
     state.fractions = state.rows.filter(r=>r.isTheView).sort((a,b)=>a.number-b.number);
+
     if(!state.fractions.length) throw new Error('Não encontrei frações The View.');
-    if(REMOTE_URL) await loadRemoteData();
+
     ensureHistory();
     populate();
     renderAll();
-    setStatus(REMOTE_URL?`${state.fractions.length} frações · sincronização Google Sheets ativa`:`${state.fractions.length} frações · dados locais`);
+
+    // O painel não fica bloqueado à espera do Google Sheets.
+    // Primeiro mostra os dados locais; depois tenta sincronizar em segundo plano.
+    setStatus(REMOTE_URL ? `${state.fractions.length} frações carregadas · a sincronizar Google Sheets…` : `${state.fractions.length} frações carregadas`);
+
+    if(REMOTE_URL){
+      loadRemoteData()
+        .then(()=>{
+          ensureHistory();
+          populate();
+          renderAll();
+          setStatus(`${state.fractions.length} frações · sincronização Google Sheets ativa`);
+        })
+        .catch(err=>{
+          console.warn('Falha ao sincronizar Google Sheets em segundo plano', err);
+          setStatus(`${state.fractions.length} frações carregadas · dados locais`);
+        });
+    }
   }catch(e){
     console.error(e);
     showError(e.message || String(e));
@@ -167,20 +186,16 @@ function loadRemoteJsonp(){
 
 async function loadRemoteData(){
   if(!REMOTE_URL) return;
-  try{
-    setStatus('A sincronizar com Google Sheets…');
-    const j=await loadRemoteJsonp();
-    if(j&&j.ok&&j.data){
-      state.data=normalizeData(j.data);
-      localStorage.setItem(KEY,JSON.stringify(state.data));
-      setStatus('Dados carregados do Google Sheets');
-    }else if(j&&j.error){
-      throw new Error(j.error);
-    }
-  }catch(e){
-    console.warn('Falha na leitura Google Sheets',e);
-    setStatus('Google Sheets indisponível · a usar dados locais');
+  setStatus('A sincronizar com Google Sheets…');
+  const j = await loadRemoteJsonp();
+  if(j && j.ok && j.data){
+    state.data = normalizeData(j.data);
+    localStorage.setItem(KEY, JSON.stringify(state.data));
+    setStatus('Dados carregados do Google Sheets');
+    return;
   }
+  if(j && j.error) throw new Error(j.error);
+  throw new Error('Resposta inválida do Google Sheets');
 }
 let saveTimer=null;
 function save(){localStorage.setItem(KEY,JSON.stringify(state.data));if(REMOTE_URL){clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,500)}}
