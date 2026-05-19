@@ -3,279 +3,171 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="The View · Centro de decisão comercial e comparador imobiliário" />
-  <title>The View · Centro de Decisão</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <title>The View · Gestão Comercial</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <noscript><div class="noscript">Este dashboard requer JavaScript ativo para ler o Excel e apresentar os dados.</div></noscript>
-
-  <div class="app-shell">
-    <header class="hero" role="banner" aria-label="The View">
-      <img class="hero__image" src="Olhao_Ext_Piscina_Web.jpg" alt="Vista premium do empreendimento The View" onerror="this.onerror=null;this.src='Olhao_Cam_Suite_Web.jpg'" />
-      <div class="hero__overlay"></div>
-      <nav class="topbar" aria-label="Resumo do dashboard">
-        <div class="brand-pill"><span class="brand-dot" aria-hidden="true"></span><span>The View · Centro de Decisão</span></div>
-        <div class="topbar__actions">
-          <button class="ghost-button ghost-button--light hidden" id="backToHomeTop" type="button">← Voltar ao centro</button>
-          <div class="status-pill" id="dataStatus">A carregar Excel…</div>
-        </div>
-      </nav>
-      <div class="hero__content">
-        <p class="eyebrow">The View Olhão</p>
-        <h1>Centro de decisão</h1>
-        <p>Comparador técnico, pricing comercial, propostas ao cliente e controlo de vendas num só painel.</p>
-      </div>
-    </header>
-
-    <main class="main">
-      <div id="globalErrorBox" class="error-box hidden" role="alert"></div>
-
-      <section id="homeView" class="view-section view-section--active">
-        <section class="panel panel--welcome">
-          <div class="panel__intro">
-            <p class="eyebrow eyebrow--dark">Modo de trabalho</p>
-            <h2>Escolha a versão do dashboard</h2>
-            <p class="muted">A versão <strong>Comparador</strong> mantém o foco em análise competitiva. A versão <strong>Comercial</strong> concentra preço final, negociação, argumentos de venda, propostas e funil comercial.</p>
-          </div>
-          <div class="mode-grid">
-            <article class="mode-card">
-              <div>
-                <p class="mode-card__eyebrow">Análise</p>
-                <h3>Versão Comparador</h3>
-                <p>Benchmark, inventário, filtros e leitura competitiva simplificada.</p>
-                <ul class="mode-card__list">
-                  <li>Cards das frações</li>
-                  <li>Concorrência por tipologia/piso/vista</li>
-                  <li>KPIs técnicos</li>
-                  <li>Detalhe por fração</li>
-                </ul>
-              </div>
-              <button class="primary-button" id="openCompareMode" type="button">Entrar no Comparador</button>
-            </article>
-            <article class="mode-card mode-card--accent">
-              <div>
-                <p class="mode-card__eyebrow">Decisão</p>
-                <h3>Versão Comercial</h3>
-                <p>Pricing final, mínimos autorizados, argumentos de venda, propostas e gestão do funil.</p>
-                <ul class="mode-card__list">
-                  <li>Tabela comercial completa</li>
-                  <li>Comparador interno</li>
-                  <li>PDF de proposta cliente</li>
-                  <li>Funil e decisão da gerência</li>
-                </ul>
-              </div>
-              <button class="primary-button" id="openCommercialMode" type="button">Entrar no Comercial</button>
-            </article>
-          </div>
-        </section>
-      </section>
-
-      <section id="compareView" class="view-section hidden">
-        <section class="panel intro-panel">
-          <div>
-            <p class="eyebrow eyebrow--dark">Pricing · Competição · Benchmark</p>
-            <h2>Versão Comparador</h2>
-            <p class="muted">Leitura técnica do The View, focada em inventário, posição relativa e comparação com o compset.</p>
-          </div>
-          <div class="kpi-grid" id="compareKpis"></div>
-        </section>
-
-        <section class="panel filters-panel">
-          <div class="section-heading">
-            <div><p class="eyebrow eyebrow--dark">Filtros</p><h2>Refinar análise</h2></div>
-            <button class="ghost-button" id="resetCompareFilters" type="button">Limpar filtros</button>
-          </div>
-          <div class="filters-grid">
-            <label class="field"><span>Tipologia</span><select id="compareTypologyFilter"><option value="all">Todas</option></select></label>
-            <label class="field"><span>Piso</span><select id="compareFloorFilter"><option value="all">Todos</option></select></label>
-            <label class="field"><span>Vista</span><select id="compareViewFilter"><option value="all">Todas</option></select></label>
-            <label class="field"><span>Fração</span><select id="compareFractionFilter"><option value="all">Todas</option></select></label>
-            <label class="field field--wide"><span>Empreendimento concorrente</span><select id="compareDevelopmentFilter"><option value="all">Todos</option></select></label>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="section-heading">
-            <div><p class="eyebrow eyebrow--dark">Inventário</p><h2>Cards das frações</h2></div>
-            <p class="muted small" id="compareResultCount">—</p>
-          </div>
-          <div id="compareCardsGrid" class="cards-grid"></div>
-        </section>
-      </section>
-
-      <section id="commercialView" class="view-section hidden">
-        <section class="panel intro-panel">
-          <div>
-            <p class="eyebrow eyebrow--dark">Painel Comercial</p>
-            <h2>Gestão comercial The View</h2>
-            <p class="muted">Preço final, mínimo autorizado, estado comercial, argumentos de venda, propostas e funil.</p>
-          </div>
-          <div class="cta-stack">
-            <button class="primary-button" id="exportClientPdfTop" type="button">Exportar PDF cliente</button>
-            <button class="ghost-button" id="exportCommercialExcelTop" type="button">Exportar Excel</button>
-          </div>
-        </section>
-
-        <nav class="module-tabs" aria-label="Módulos comerciais">
-          <button class="module-tab active" data-commercial-tab="dashboard">Dashboard Comercial</button>
-          <button class="module-tab" data-commercial-tab="table">Tabela Comercial</button>
-          <button class="module-tab" data-commercial-tab="compare">Comparador Interno</button>
-          <button class="module-tab" data-commercial-tab="arguments">Argumentos de Venda</button>
-          <button class="module-tab" data-commercial-tab="proposals">Propostas Cliente</button>
-          <button class="module-tab" data-commercial-tab="funnel">Funil de Vendas</button>
-          <button class="module-tab" data-commercial-tab="management">Decisão Gerência</button>
-        </nav>
-
-        <section id="commercial-dashboard" class="commercial-module active">
-          <section class="panel">
-            <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Resumo</p><h2>Indicadores comerciais</h2></div></div>
-            <div class="kpi-grid kpi-grid--commercial" id="commercialKpis"></div>
-          </section>
-          <section class="panel">
-            <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Alertas</p><h2>Frações que exigem atenção</h2></div></div>
-            <div id="commercialAlerts" class="alert-grid"></div>
-          </section>
-        </section>
-
-        <section id="commercial-table-module" class="commercial-module hidden">
-          <section class="panel filters-panel">
-            <div class="section-heading">
-              <div><p class="eyebrow eyebrow--dark">Filtros e apresentação</p><h2>Tabela comercial completa</h2></div>
-              <div class="table-actions">
-                <button class="ghost-button" id="resetCommercialFilters" type="button">Limpar filtros</button>
-                <button class="ghost-button" id="resetCommercialData" type="button">Repor dados comerciais</button>
-              </div>
-            </div>
-
-            <div class="filters-grid filters-grid--commercial">
-              <label class="field field--wide"><span>Pesquisar fração</span><input id="commercialSearch" type="search" placeholder="Ex.: 23, T2, Sul/Este, premium, vendido" /></label>
-              <label class="field field--wide"><span>Tipologias</span><select id="commercialTypologyFilter" multiple size="5"></select><small class="field__hint">Use Ctrl/Cmd para selecionar várias opções.</small></label>
-              <label class="field field--wide"><span>Pisos</span><select id="commercialFloorFilter" multiple size="6"></select><small class="field__hint">Use Ctrl/Cmd para selecionar vários pisos.</small></label>
-            </div>
-            <div class="toggle-row">
-              <label class="toggle-pill"><input type="checkbox" id="toggleSuggestedColumn" checked /> <span>Preço sugerido</span></label>
-              <label class="toggle-pill"><input type="checkbox" id="toggleOriginalColumn" checked /> <span>Preço inicial</span></label>
-              <label class="toggle-pill"><input type="checkbox" id="toggleRationaleColumn" checked /> <span>Argumento</span></label>
-              <label class="toggle-pill"><input type="checkbox" id="toggleFunnelColumn" checked /> <span>Funil</span></label>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="section-heading">
-              <div><p class="eyebrow eyebrow--dark">Controlo final</p><h2>Preço, mínimo e negociação</h2></div>
-              <div class="table-actions">
-                <button class="ghost-button" id="selectVisibleFractions" type="button">Selecionar visíveis</button>
-                <button class="ghost-button" id="clearSelectedFractions" type="button">Limpar seleção</button>
-                <span class="muted small" id="selectedFractionsInfo">0 frações selecionadas</span>
-              </div>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table commercial-table" id="commercialTable">
-                <thead>
-                  <tr>
-                    <th class="text-center">PDF</th>
-                    <th>Fração</th>
-                    <th>Tipo</th>
-                    <th>Piso</th>
-                    <th>Orientação</th>
-                    <th class="num-col col-original">Inicial</th>
-                    <th class="num-col col-suggested">Sugerido</th>
-                    <th class="num-col">Final</th>
-                    <th class="num-col">Mínimo</th>
-                    <th class="num-col">Margem</th>
-                    <th>Estado</th>
-                    <th>Classificação</th>
-                    <th class="col-rationale">Argumento de venda</th>
-                    <th class="col-funnel">Próxima ação</th>
-                  </tr>
-                </thead>
-                <tbody id="commercialTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-        </section>
-
-        <section id="commercial-compare-module" class="commercial-module hidden">
-          <section class="panel">
-            <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Comparador Interno</p><h2>Comparar frações entre si</h2></div></div>
-            <div class="compare-internal-grid">
-              <label class="field"><span>Fração A</span><select id="internalCompareA"></select></label>
-              <label class="field"><span>Fração B</span><select id="internalCompareB"></select></label>
-            </div>
-            <div id="internalCompareResult" class="internal-compare-result"></div>
-          </section>
-        </section>
-
-        <section id="commercial-arguments-module" class="commercial-module hidden">
-          <section class="panel">
-            <div class="section-heading">
-              <div><p class="eyebrow eyebrow--dark">Argumentos de Venda</p><h2>Como defender cada fração</h2></div>
-              <label class="field inline-field"><span>Fração</span><select id="argumentFractionSelect"></select></label>
-            </div>
-            <div id="argumentPanel"></div>
-          </section>
-        </section>
-
-        <section id="commercial-proposals-module" class="commercial-module hidden">
-          <section class="panel">
-            <div class="section-heading">
-              <div><p class="eyebrow eyebrow--dark">Propostas Cliente</p><h2>Escolher frações e gerar PDF</h2></div>
-              <button class="primary-button" id="exportClientPdf" type="button">Exportar PDF cliente</button>
-            </div>
-            <p class="muted">O PDF não inclui página de soma total. Cada fração aparece como opção individual, com preço, áreas, argumento comercial e planta.</p>
-            <div id="proposalSelectionGrid" class="proposal-grid"></div>
-          </section>
-        </section>
-
-        <section id="commercial-funnel-module" class="commercial-module hidden">
-          <section class="panel">
-            <div class="section-heading">
-              <div><p class="eyebrow eyebrow--dark">Funil de Vendas</p><h2>Visitas, interessados e propostas</h2></div>
-              <button class="ghost-button" id="exportFunnelExcel" type="button">Exportar funil</button>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table funnel-table">
-                <thead>
-                  <tr>
-                    <th>Fração</th>
-                    <th>Estado</th>
-                    <th>Cliente / Lead</th>
-                    <th>Canal</th>
-                    <th class="num-col">Visitas</th>
-                    <th class="num-col">Propostas</th>
-                    <th class="num-col">Última proposta</th>
-                    <th class="num-col">Prob.</th>
-                    <th>Próxima ação</th>
-                  </tr>
-                </thead>
-                <tbody id="funnelTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-        </section>
-
-        <section id="commercial-management-module" class="commercial-module hidden">
-          <section class="panel">
-            <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Decisão Gerência</p><h2>Receita, risco e validações</h2></div></div>
-            <div id="managementSummary" class="management-grid"></div>
-          </section>
-          <section class="panel">
-            <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Validação</p><h2>Frações premium e sensíveis</h2></div></div>
-            <div id="managementTableWrap" class="table-wrap"></div>
-          </section>
-        </section>
-      </section>
-    </main>
-  </div>
-
-  <div id="fractionModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal modal--large" role="document">
-      <button class="modal-close" id="closeFractionModal" type="button" aria-label="Fechar modal">×</button>
-      <div id="fractionModalContent"></div>
+  <noscript><div class="noscript">Este painel requer JavaScript ativo.</div></noscript>
+  <header class="hero">
+    <img class="hero__image" src="Olhao_Ext_Piscina_Web.jpg" alt="The View Olhão" />
+    <div class="hero__overlay"></div>
+    <nav class="topbar">
+      <div class="brand-pill"><span class="brand-dot"></span><span>The View · Gestão Comercial</span></div>
+      <div class="status-pill" id="dataStatus">A carregar Excel…</div>
+    </nav>
+    <div class="hero__content">
+      <p class="eyebrow">The View Olhão</p>
+      <h1>Gestão Comercial</h1>
+      <p>Clientes, visitas, propostas, preços finais e controlo de vendas.</p>
     </div>
-  </div>
+  </header>
+
+  <main class="main">
+    <div id="globalErrorBox" class="error-box hidden"></div>
+
+    <section class="panel">
+      <div class="section-heading compact">
+        <div>
+          <p class="eyebrow eyebrow--dark">Painel</p>
+          <h2>Área comercial simplificada</h2>
+        </div>
+        <div class="top-actions">
+          <button class="ghost-button" id="exportAllData" type="button">Exportar dados</button>
+          <button class="ghost-button danger" id="resetLocalData" type="button">Repor dados locais</button>
+        </div>
+      </div>
+      <nav class="module-tabs">
+        <button class="module-tab active" data-tab="proposals">Propostas Clientes</button>
+        <button class="module-tab" data-tab="dashboard">Dashboard Comercial</button>
+        <button class="module-tab" data-tab="prices">Definições de preços finais e histórico</button>
+        <button class="module-tab" data-tab="compare">Comparador de Frações</button>
+        <button class="module-tab" data-tab="sales">Gerenciamento de Vendas e Propostas</button>
+      </nav>
+    </section>
+
+    <section id="tab-proposals" class="tab-section active">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow eyebrow--dark">Propostas Clientes</p>
+            <h2>Gerar PDF para cliente</h2>
+            <p class="muted">Frações vendidas aparecem como indisponíveis. O PDF não tem soma total nem enquadramento comercial.</p>
+          </div>
+          <div class="top-actions">
+            <label class="toggle-pill"><input id="proposalIncludePlants" type="checkbox" checked /> <span>Incluir plantas</span></label>
+            <button class="primary-button" id="exportClientPdf" type="button">Exportar PDF cliente</button>
+          </div>
+        </div>
+        <div class="filters-grid four">
+          <label class="field"><span>Pesquisar</span><input id="proposalSearch" type="search" placeholder="Ex.: 19, T1, Oeste" /></label>
+          <label class="field"><span>Tipologia</span><select id="proposalTypology"><option value="all">Todas</option></select></label>
+          <label class="field"><span>Piso</span><select id="proposalFloor"><option value="all">Todos</option></select></label>
+          <label class="field"><span>Estado</span><select id="proposalStatus"><option value="all">Todos</option></select></label>
+        </div>
+        <div class="table-actions">
+          <button class="ghost-button" id="selectProposalVisible" type="button">Selecionar visíveis</button>
+          <button class="ghost-button" id="clearProposalSelected" type="button">Limpar seleção</button>
+          <span class="muted small" id="proposalSelectedInfo">0 selecionadas</span>
+        </div>
+        <div id="proposalGrid" class="proposal-grid"></div>
+      </section>
+    </section>
+
+    <section id="tab-dashboard" class="tab-section hidden">
+      <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Dashboard Comercial</p><h2>Resumo</h2></div></div>
+        <div class="kpi-grid" id="dashboardKpis"></div>
+      </section>
+    </section>
+
+    <section id="tab-prices" class="tab-section hidden">
+      <section class="panel">
+        <div class="section-heading">
+          <div><p class="eyebrow eyebrow--dark">Preços finais</p><h2>Definições e histórico</h2><p class="muted">Cada alteração de preço fica registada localmente com data e motivo.</p></div>
+          <button class="ghost-button" id="exportPriceHistory" type="button">Exportar histórico</button>
+        </div>
+        <div class="filters-grid four">
+          <label class="field"><span>Pesquisar</span><input id="priceSearch" type="search" placeholder="Ex.: 18, T2" /></label>
+          <label class="field"><span>Tipologia</span><select id="priceTypology"><option value="all">Todas</option></select></label>
+          <label class="field"><span>Piso</span><select id="priceFloor"><option value="all">Todos</option></select></label>
+          <label class="field"><span>Estado</span><select id="priceStatus"><option value="all">Todos</option></select></label>
+        </div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipo</th><th>Piso</th><th>Orientação</th><th class="num-col">Inicial</th><th class="num-col">Final</th><th>Motivo</th><th>Histórico</th></tr></thead><tbody id="pricesTableBody"></tbody></table></div>
+      </section>
+      <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Evolução</p><h2>Histórico do preço</h2></div><label class="field inline-field"><span>Fração</span><select id="historyFractionSelect"></select></label></div>
+        <div class="chart-wrap"><canvas id="priceHistoryChart" width="1200" height="360"></canvas></div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </section>
+
+    <section id="tab-compare" class="tab-section hidden">
+      <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Comparador de Frações</p><h2>Comparar duas frações</h2></div></div>
+        <div class="compare-controls"><label class="field"><span>Fração A</span><select id="compareA"></select></label><label class="field"><span>Fração B</span><select id="compareB"></select></label></div>
+        <div id="compareResult" class="compare-result"></div>
+      </section>
+    </section>
+
+    <section id="tab-sales" class="tab-section hidden">
+      <section class="panel">
+        <div class="section-heading">
+          <div><p class="eyebrow eyebrow--dark">Clientes / Leads</p><h2>Ficha do cliente e linha do tempo</h2><p class="muted">Crie o cliente uma vez. Depois adicione eventos, visitas, propostas e follow-ups ligados a esse cliente.</p></div>
+          <div class="top-actions"><button class="primary-button" id="openClientModal" type="button">+ Novo / editar cliente</button><button class="primary-button" id="openEventModalBtn" type="button">+ Adicionar evento</button></div>
+        </div>
+        <div class="filters-grid three">
+          <label class="field"><span>Pesquisar cliente</span><input id="clientSearch" type="search" placeholder="Nome, email, contacto, origem..." /></label>
+          <label class="field"><span>Estado do lead</span><select id="clientStageFilter"><option value="all">Todos</option></select></label>
+          <label class="field"><span>Cliente selecionado</span><select id="selectedClient"></select></label>
+        </div>
+        <div class="client-layout">
+          <div id="clientsList" class="clients-list"></div>
+          <div id="clientDetail" class="client-detail"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Estado das frações</p><h2>Disponível, reservado ou vendido</h2></div></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Estado</th><th class="num-col">Preço final</th><th class="num-col">Preço reserva/venda</th><th class="num-col">Visitas</th><th class="num-col">Interessados</th><th class="num-col">Propostas</th><th class="num-col">Última proposta</th><th>Última ação</th></tr></thead><tbody id="salesTableBody"></tbody></table></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="clientModal" class="modal-backdrop hidden"><div class="modal"><button class="modal-close" id="closeClientModal" type="button">×</button><p class="eyebrow eyebrow--dark">Cliente / Lead</p><h2>Ficha do cliente</h2>
+    <input type="hidden" id="clientId" />
+    <div class="form-grid">
+      <label class="field"><span>Nome completo</span><input id="clientName" /></label>
+      <label class="field"><span>Contacto</span><input id="clientPhone" /></label>
+      <label class="field"><span>Email</span><input id="clientEmail" /></label>
+      <label class="field"><span>NIF</span><input id="clientNif" /></label>
+      <label class="field"><span>Nacionalidade</span><input id="clientNationality" /></label>
+      <label class="field"><span>Origem</span><select id="clientOrigin"><option>Portal imobiliário</option><option>Redes sociais</option><option>Outdoor / Mupie</option><option>Agente</option><option>Amigo / Familiar</option><option>Outro</option></select></label>
+      <label class="field"><span>Agente</span><input id="clientAgent" /></label>
+      <label class="field"><span>Agência</span><input id="clientAgency" /></label>
+      <label class="field"><span>Orçamento</span><input id="clientBudget" type="number" step="1000" /></label>
+      <label class="field"><span>Estado do lead</span><select id="clientStage"><option>Novo lead</option><option>Contactado</option><option>Visitou</option><option>Em negociação</option><option>Reserva</option><option>Vendido</option><option>Desistiu</option></select></label>
+    </div>
+    <label class="field"><span>Frações de interesse</span><select id="clientFractions" multiple size="7"></select></label>
+    <label class="field"><span>Observações gerais</span><textarea id="clientNotes"></textarea></label>
+    <div class="modal-actions"><button class="ghost-button" id="cancelClient" type="button">Cancelar</button><button class="primary-button" id="saveClient" type="button">Guardar cliente</button></div>
+  </div></div>
+
+  <div id="eventModal" class="modal-backdrop hidden"><div class="modal"><button class="modal-close" id="closeEventModal" type="button">×</button><p class="eyebrow eyebrow--dark">Evento comercial</p><h2>Novo evento</h2>
+    <div class="form-grid">
+      <label class="field"><span>Cliente</span><select id="eventClientId"></select></label>
+      <label class="field"><span>Tipo</span><select id="eventType"><option>Reunião com cliente</option><option>Visita</option><option>Interessado</option><option>Proposta recebida</option><option>Contra-proposta enviada</option><option>Reserva</option><option>Venda</option><option>Follow-up</option></select></label>
+      <label class="field"><span>Data</span><input id="eventDate" type="date" /></label>
+      <label class="field"><span>Hora</span><input id="eventTime" type="time" /></label>
+      <label class="field"><span>Valor proposto / venda</span><input id="eventAmount" type="number" min="0" step="1000" /></label>
+      <label class="field"><span>Interesse 1 a 5</span><select id="eventInterest"><option></option><option>1 — Sem interesse</option><option>2 — Interesse baixo</option><option>3 — Interesse moderado</option><option>4 — Interesse elevado</option><option>5 — Muito interessado</option></select></label>
+      <label class="field"><span>Follow-up</span><select id="eventFollowup"><option></option><option>Telefonema</option><option>Email</option><option>2ª Visita</option><option>Proposta</option><option>Nenhum</option></select></label>
+      <label class="field"><span>Data follow-up</span><input id="eventFollowupDate" type="date" /></label>
+    </div>
+    <label class="field"><span>Frações relacionadas</span><select id="eventFractions" multiple size="8"></select></label>
+    <label class="field"><span>Objeções / dúvidas</span><textarea id="eventObjections"></textarea></label>
+    <label class="field"><span>Notas / próxima ação</span><textarea id="eventNotes"></textarea></label>
+    <div class="modal-actions"><button class="ghost-button" id="cancelEvent" type="button">Cancelar</button><button class="primary-button" id="saveEvent" type="button">Guardar evento</button></div>
+  </div></div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="app.js" defer></script>
