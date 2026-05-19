@@ -17,11 +17,25 @@ const ESTADOS_SHEET = 'EstadosVendas';
 const PRECOS_SHEET = 'PrecosHistorico';
 
 function doGet(e) {
-  const action = (e.parameter.action || 'load').toLowerCase();
+  const action = ((e.parameter && e.parameter.action) || 'load').toLowerCase();
+  let obj;
   if (action === 'load') {
-    return jsonOutput({ ok: true, data: readStore_(), updatedAt: getUpdatedAt_() });
+    obj = { ok: true, data: readStore_(), updatedAt: getUpdatedAt_() };
+  } else {
+    obj = { ok: false, error: 'Ação inválida.' };
   }
-  return jsonOutput({ ok: false, error: 'Ação inválida.' });
+
+  // Suporte JSONP para leitura a partir de websites externos,
+  // evitando limitações CORS do Google Apps Script.
+  const callback = e.parameter && e.parameter.callback;
+  if (callback) {
+    const safeCallback = String(callback).replace(/[^\w.$]/g, '');
+    return ContentService
+      .createTextOutput(safeCallback + '(' + JSON.stringify(obj) + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return jsonOutput(obj);
 }
 
 function doPost(e) {

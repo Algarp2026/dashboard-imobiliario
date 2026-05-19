@@ -46,9 +46,57 @@ function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).incl
 function ensureHistory(){state.fractions.forEach(f=>{state.data.priceHistory[f.number] ||= [{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}]});save()}
 function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return +state.data.finalPrices[f.number]||SUG[f.number]||f.price}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return +state.data.salePrices[f.number]||0}function historyOf(f){return state.data.priceHistory[f.number]||[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[]}}
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
-async function loadRemoteData(){try{setStatus('A sincronizar com Google Sheets…');const r=await fetch(REMOTE_URL+(REMOTE_URL.includes('?')?'&':'?')+'action=load&ts='+Date.now(),{cache:'no-store'});const j=await r.json();if(j&&j.ok&&j.data){state.data=normalizeData(j.data);localStorage.setItem(KEY,JSON.stringify(state.data));setStatus('Dados carregados do Google Sheets')}}catch(e){console.warn('Falha na leitura Google Sheets',e);setStatus('Google Sheets indisponível · a usar dados locais')}}
+
+function loadRemoteJsonp(){
+  return new Promise((resolve, reject)=>{
+    if(!REMOTE_URL){ resolve(null); return; }
+    const cb='theViewJsonp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const sep=REMOTE_URL.includes('?')?'&':'?';
+    const s=document.createElement('script');
+    const timer=setTimeout(()=>{ cleanup(); reject(new Error('Tempo esgotado ao ler Google Sheets')); }, 12000);
+    function cleanup(){ clearTimeout(timer); try{ delete window[cb]; }catch{} if(s.parentNode) s.parentNode.removeChild(s); }
+    window[cb]=(data)=>{ cleanup(); resolve(data); };
+    s.onerror=()=>{ cleanup(); reject(new Error('Erro ao carregar JSONP Google Sheets')); };
+    s.src=REMOTE_URL+sep+'action=load&callback='+encodeURIComponent(cb)+'&ts='+Date.now();
+    document.head.appendChild(s);
+  });
+}
+
+async function loadRemoteData(){
+  if(!REMOTE_URL) return;
+  try{
+    setStatus('A sincronizar com Google Sheets…');
+    const j=await loadRemoteJsonp();
+    if(j&&j.ok&&j.data){
+      state.data=normalizeData(j.data);
+      localStorage.setItem(KEY,JSON.stringify(state.data));
+      setStatus('Dados carregados do Google Sheets');
+    }else if(j&&j.error){
+      throw new Error(j.error);
+    }
+  }catch(e){
+    console.warn('Falha na leitura Google Sheets',e);
+    setStatus('Google Sheets indisponível · a usar dados locais');
+  }
+}
 let saveTimer=null;
 function save(){localStorage.setItem(KEY,JSON.stringify(state.data));if(REMOTE_URL){clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,500)}}
-async function syncRemote(){try{setStatus('A guardar no Google Sheets…');const r=await fetch(REMOTE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()})});const j=await r.json();if(!j.ok)throw new Error(j.error||'Erro desconhecido');setStatus('Sincronizado com Google Sheets')}catch(e){console.warn('Falha ao guardar Google Sheets',e);setStatus('Falha ao sincronizar · dados guardados localmente')}}
+async function syncRemote(){
+  if(!REMOTE_URL) return;
+  try{
+    setStatus('A guardar no Google Sheets…');
+    await fetch(REMOTE_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()})
+    });
+    // Com no-cors o browser não permite ler a resposta, mas o Apps Script recebe o POST.
+    setStatus('Enviado para Google Sheets');
+  }catch(e){
+    console.warn('Falha ao guardar Google Sheets',e);
+    setStatus('Falha ao sincronizar · dados guardados localmente');
+  }
+}
 function fill(sel,vals,allLabel,labelFn){sel.innerHTML=vals.map(v=>`<option value="${attr(v)}">${v==='all'?allLabel:esc(labelFn?labelFn(v):v)}</option>`).join('')}function fillMulti(sel,vals){sel.innerHTML=vals.map(([v,l])=>`<option value="${attr(v)}">${esc(l)}</option>`).join('')}function setMulti(sel,vals){[...sel.options].forEach(o=>o.selected=vals.map(String).includes(o.value))}function getMulti(sel){return[...sel.selectedOptions].map(o=>o.value)}function row(a,b){return`<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`}function kpi(a,b,c){return`<article class="kpi-card"><span>${esc(a)}</span><strong>${esc(b)}</strong><small>${esc(c||'')}</small></article>`}function badge(st){return'badge '+(st==='Vendido'?'badge--sold':st==='Reservado'?'badge--reserved':'badge--available')}function setStatus(t){el.dataStatus.textContent=t}function showError(t){el.globalErrorBox.textContent=t;el.globalErrorBox.classList.remove('hidden')}function num(v){if(typeof v==='number'&&isFinite(v))return v;const n=Number(safe(v).replace(/\s+/g,'').replace(/€/g,'').replace(/m²/gi,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(/,(?=\d{2,}$)/g,'.').replace(/[^0-9.-]/g,''));return isFinite(n)?n:0}function floor(v){if(typeof v==='number')return v;const m=safe(v).match(/-?\d+/);return m?+m[0]:null}function nat(s,fb=null){const m=safe(s).match(/\d+/);return m?+m[0]:fb}function pretty(v){return safe(v).replace(/\s+/g,' ').replace(/DUPLEX/i,'Duplex').replace(/DUP$/i,'Duplex')}function safe(v){return v==null?'':String(v).trim()}function norm(v){return safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}function uniq(a){return[...new Set(a.filter(Boolean))].sort((x,y)=>String(x).localeCompare(String(y),'pt-PT',{numeric:true,sensitivity:'base'}))}function uniqNum(a){return[...new Set(a.map(Number).filter(Boolean))].sort((x,y)=>x-y)}function sum(a){return a.reduce((x,y)=>x+(+y||0),0)}function money(v,d=0){return new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR',minimumFractionDigits:d,maximumFractionDigits:d}).format(+v||0)}function area(v){return`${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(+v||0)} m²`}function today(){return new Date().toISOString().slice(0,10)}function id(){return String(Date.now())+String(Math.random()).slice(2,7)}function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}function attr(v){return esc(v).replace(/`/g,'&#096;')}
 })();
