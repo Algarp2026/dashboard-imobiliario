@@ -162,27 +162,27 @@ function exportPdf(){
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Proposta Cliente</title>
   <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
-  @page{size:A4 portrait;margin:12mm}
+  @page{size:A4 portrait;margin:8mm}
   *{box-sizing:border-box}
   body{font-family:'Montserrat',Arial,sans-serif;margin:0;color:#0f2443;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .pdf-page{min-height:calc(297mm - 24mm);page-break-after:always;display:flex;flex-direction:column;gap:13mm}
+  .pdf-page{min-height:calc(297mm - 16mm);page-break-after:always;display:flex;flex-direction:column;gap:6mm}
   .pdf-page.last{page-break-after:auto}
-  .pdf-header{display:grid;grid-template-columns:1fr auto;gap:18mm;align-items:start;border-bottom:1px solid #d9e1eb;padding-bottom:8mm}
+  .pdf-header{display:grid;grid-template-columns:1fr auto;gap:10mm;align-items:start;border-bottom:1px solid #d9e1eb;padding-bottom:4mm}
   .pdf-eyebrow{margin:0 0 4mm;text-transform:uppercase;letter-spacing:.26em;font-size:9px;font-weight:700;color:#9a7440}
-  h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;font-size:35pt;line-height:.95;font-weight:700;letter-spacing:.01em;color:#0e2444}
-  .pdf-subtitle{margin:5mm 0 0;font-size:12pt;color:#435675;font-weight:500}
-  .pdf-price{min-width:48mm;text-align:right;background:#f5f7fa;border:1px solid #dbe4ef;border-radius:14px;padding:7mm 8mm}
+  h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;font-size:29pt;line-height:.95;font-weight:700;letter-spacing:.01em;color:#0e2444}
+  .pdf-subtitle{margin:3mm 0 0;font-size:10.5pt;color:#435675;font-weight:500}
+  .pdf-price{min-width:42mm;text-align:right;background:#f5f7fa;border:1px solid #dbe4ef;border-radius:12px;padding:5mm 6mm}
   .pdf-price span{display:block;font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#63748d;margin-bottom:3mm}
-  .pdf-price strong{font-size:23pt;color:#0e2444;white-space:nowrap}
-  .pdf-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm}
-  .pdf-cards article{background:#f8fafc;border:1px solid #e1e9f2;border-radius:12px;padding:5mm}
+  .pdf-price strong{font-size:19pt;color:#0e2444;white-space:nowrap}
+  .pdf-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}
+  .pdf-cards article{background:#f8fafc;border:1px solid #e1e9f2;border-radius:10px;padding:3.5mm}
   .pdf-cards span{display:block;font-size:8.5pt;color:#63748d;margin-bottom:2mm}
-  .pdf-cards strong{display:block;font-size:14pt;color:#0e2444}
-  .pdf-plant-wrap{flex:1;min-height:130mm;display:flex;justify-content:center;align-items:center;border:1px solid #e1e9f2;border-radius:18px;overflow:hidden;padding:7mm;background:#fff}
-  .pdf-plant{max-width:100%;max-height:150mm;object-fit:contain;display:block}
+  .pdf-cards strong{display:block;font-size:12pt;color:#0e2444}
+  .pdf-plant-wrap{flex:1 1 auto;min-height:172mm;display:flex;justify-content:center;align-items:center;border:1px solid #e1e9f2;border-radius:14px;overflow:hidden;padding:2mm;background:#fff}
+  .pdf-plant{width:100%;height:100%;max-width:100%;max-height:182mm;object-fit:contain;display:block}
   .pdf-missing{color:#63748d;font-size:11pt}
-  .pdf-footer{margin-top:auto;border-top:1px solid #d9e1eb;padding-top:5mm}
-  .pdf-footer p{margin:0;color:#62738a;font-size:8.5pt;line-height:1.55;text-align:justify}
+  .pdf-footer{margin-top:auto;border-top:1px solid #d9e1eb;padding-top:3mm}
+  .pdf-footer p{margin:0;color:#62738a;font-size:7.6pt;line-height:1.35;text-align:justify}
   @media print{body{background:#fff}.pdf-page{break-after:page}.pdf-page.last{break-after:auto}}
   </style></head><body>${pages}
   <script>
