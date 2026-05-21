@@ -96,7 +96,107 @@ function applyUpdatedInitialPriceMigration(){
   return changed;
 }
 
-function renderAll(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();}
+
+function ensureSalesManagementTabs(){
+  const tab=document.getElementById('tab-sales');
+  if(!tab)return;
+
+  const clientPanel=el.clientsList?el.clientsList.closest('.panel'):null;
+  const fractionsPanel=el.salesTableBody?el.salesTableBody.closest('.panel'):null;
+  const agentsPanel=document.getElementById('agentsPanel');
+
+  if(clientPanel)clientPanel.dataset.salesView='clients';
+  if(fractionsPanel)fractionsPanel.dataset.salesView='fractions';
+  if(agentsPanel)agentsPanel.dataset.salesView='agents';
+
+  let eventsPanel=document.getElementById('salesEventsPanel');
+  if(!eventsPanel){
+    eventsPanel=document.createElement('section');
+    eventsPanel.className='panel';
+    eventsPanel.id='salesEventsPanel';
+    eventsPanel.dataset.salesView='events';
+    eventsPanel.innerHTML=`<div class="section-heading">
+      <div><p class="eyebrow eyebrow--dark">Eventos / Histórico</p><h2>Histórico comercial</h2><p class="muted">Consulta geral de visitas, propostas, reservas, vendas, follow-ups e alterações de estado.</p></div>
+      <div class="top-actions"><button class="primary-button" id="salesEventsNewEvent" type="button">Adicionar evento</button><button class="ghost-button" id="salesEventsExport" type="button">Exportar eventos</button></div>
+    </div>
+    <div id="salesEventsList" class="events-list"></div>`;
+    tab.appendChild(eventsPanel);
+    const addBtn=eventsPanel.querySelector('#salesEventsNewEvent');
+    if(addBtn)addBtn.onclick=()=>openEventModal();
+    const exportBtn=eventsPanel.querySelector('#salesEventsExport');
+    if(exportBtn)exportBtn.onclick=exportSalesEvents;
+  }
+
+  let nav=document.getElementById('salesSubTabs');
+  if(!nav){
+    nav=document.createElement('nav');
+    nav.id='salesSubTabs';
+    nav.className='module-tabs sales-subtabs';
+    nav.innerHTML=`
+      <button class="module-tab active" type="button" data-sales-subtab="fractions">Frações e Estados</button>
+      <button class="module-tab" type="button" data-sales-subtab="clients">Clientes / Leads</button>
+      <button class="module-tab" type="button" data-sales-subtab="agents">Agentes</button>
+      <button class="module-tab" type="button" data-sales-subtab="events">Eventos / Histórico</button>
+    `;
+    tab.insertBefore(nav, tab.firstChild);
+    nav.querySelectorAll('[data-sales-subtab]').forEach(btn=>btn.onclick=()=>{state.salesSubtab=btn.dataset.salesSubtab;renderSalesSubTabs()});
+
+    const st=document.createElement('style');
+    st.id='salesSubTabsStyle';
+    st.textContent=`
+      #tab-sales #salesSubTabs{margin-bottom:18px}
+      #tab-sales .sales-view-hidden{display:none!important}
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Ordem visual: primeiro frações, depois clientes, agentes e histórico.
+  const ordered=[fractionsPanel,clientPanel,agentsPanel,eventsPanel].filter(Boolean);
+  let anchor=nav.nextSibling;
+  ordered.forEach(panel=>{
+    if(panel && panel.parentNode===tab){
+      tab.insertBefore(panel, anchor);
+      anchor=panel.nextSibling;
+    }
+  });
+
+  if(!state.salesSubtab)state.salesSubtab='fractions';
+  renderSalesSubTabs();
+}
+
+function renderSalesSubTabs(){
+  const active=state.salesSubtab||'fractions';
+  document.querySelectorAll('#salesSubTabs [data-sales-subtab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.salesSubtab===active));
+  document.querySelectorAll('#tab-sales [data-sales-view]').forEach(panel=>panel.classList.toggle('sales-view-hidden',panel.dataset.salesView!==active));
+  renderSalesEventsPanel();
+}
+
+function renderSalesEventsPanel(){
+  const box=document.getElementById('salesEventsList');
+  if(!box)return;
+  const events=(state.data.events||[]).slice().sort((a,b)=>String((b.date||'')+(b.time||'')).localeCompare(String((a.date||'')+(a.time||''))));
+  box.innerHTML=events.length?events.map(ev=>{
+    const c=client(ev.clientId);
+    const fr=(ev.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—';
+    const ag=ev.agentId?agent(ev.agentId):null;
+    return `<div class="event-item">
+      <div class="section-heading compact">
+        <div>
+          <strong>${esc(ev.date||'—')} ${esc(ev.time||'')} · ${esc(ev.type||'Evento')}</strong>
+          <p class="muted small">${esc(c?.name||'Sem cliente associado')} · Frações: ${esc(fr)}${ev.amount?' · Valor: '+money(ev.amount):''}${ag?' · Agente: '+esc(ag.name||ag.agency||'—'):''}</p>
+        </div>
+        <span class="badge badge--neutral">${esc(ev.type||'Evento')}</span>
+      </div>
+      ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
+      ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
+      ${ev.objections?`<p><strong>Objeções:</strong> ${esc(ev.objections)}</p>`:''}
+      ${ev.notes?`<p>${esc(ev.notes)}</p>`:''}
+    </div>`;
+  }).join(''):'<div class="empty-state">Ainda não existem eventos registados.</div>';
+}
+
+
+function renderAll(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();}
 function renderProposals(){const fs=filteredProposal();el.proposalSelectedInfo.textContent=`${[...state.selected].filter(n=>statusOf(getF(n))!=='Vendido').length} selecionadas`;el.proposalGrid.innerHTML=fs.length?fs.map(f=>{const st=statusOf(f),blocked=st!=='Disponível';return`<label class="proposal-card ${blocked?'proposal-card--sold':''}"><input type="checkbox" data-proposal-select="${f.number}" ${state.selected.has(f.number)&&!blocked?'checked':''} ${blocked?'disabled':''}/><div><span class="${badge(st)}">${blocked?st:st}</span><h3>${esc(f.name)}</h3><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p><p><strong>${blocked?st:money(finalPrice(f))}</strong></p><p class="muted small">ABP ${area(f.abp)} · Exterior ${area(f.terrace)} · Total ${area(f.totalArea)}</p></div></label>`}).join(''):'<div class="empty-state">Sem frações.</div>';el.proposalGrid.querySelectorAll('[data-proposal-select]').forEach(x=>x.onchange=()=>{const n=+x.dataset.proposalSelect;x.checked?state.selected.add(n):state.selected.delete(n);renderProposals()})}
 function renderDashboard(){
   const sold=state.fractions.filter(f=>statusOf(f)==='Vendido'),available=state.fractions.filter(f=>statusOf(f)==='Disponível'),reserved=state.fractions.filter(f=>statusOf(f)==='Reservado'),unavailable=state.fractions.filter(f=>statusOf(f)==='Indisponível');
