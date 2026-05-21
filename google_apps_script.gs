@@ -15,6 +15,8 @@ const CLIENTES_SHEET = 'Clientes';
 const EVENTOS_SHEET = 'Eventos';
 const ESTADOS_SHEET = 'EstadosVendas';
 const PRECOS_SHEET = 'PrecosHistorico';
+const AGENTES_SHEET = 'Agentes';
+const COMISSOES_SHEET = 'VendasComissoes';
 
 function doGet(e) {
   const action = ((e.parameter && e.parameter.action) || 'load').toLowerCase();
@@ -62,7 +64,11 @@ function normalize_(d) {
     salePrices: d.salePrices || {},
     priceHistory: d.priceHistory || {},
     clients: d.clients || [],
-    events: d.events || []
+    events: d.events || [],
+    agents: d.agents || [],
+    saleCommissions: d.saleCommissions || {},
+    unavailableReasons: d.unavailableReasons || {},
+    priceMigrationKey: d.priceMigrationKey || ''
   };
 }
 
@@ -90,6 +96,12 @@ function writeMirrorSheets_(data) {
 
   writeTable_(EVENTOS_SHEET, ['id','clienteId','tipo','data','hora','fracoes','valor','interesse','followUp','dataFollowUp','objecoes','notas'],
     data.events.map(ev => [ev.id, ev.clientId, ev.type, ev.date, ev.time, (ev.fractions || []).join(', '), ev.amount, ev.interest, ev.followup, ev.followupDate, ev.objections, ev.notes]));
+
+  writeTable_(AGENTES_SHEET, ['id','nome','agencia','ami','telefone','email','comissaoPadrao','notas'],
+    (data.agents || []).map(a => [a.id, a.name, a.agency, a.ami, a.phone, a.email, a.defaultCommission, a.notes]));
+
+  writeTable_(COMISSOES_SHEET, ['fracao','comAgente','agenteId','tipoComissao','valorComissao','comissaoCalculada','receitaLiquida','eventoId','data'],
+    Object.keys(data.saleCommissions || {}).map(n => { const c = data.saleCommissions[n] || {}; return [n, c.withAgent, c.agentId, c.commissionType, c.commissionValue, c.amount, c.netRevenue, c.eventId, c.date]; }));
 
   const numbers = uniqueNumbers_(Object.keys(data.statuses).concat(Object.keys(data.salePrices)).concat(Object.keys(data.finalPrices)));
   writeTable_(ESTADOS_SHEET, ['apartamento','estado','precoFinal','precoVendaReserva'],
