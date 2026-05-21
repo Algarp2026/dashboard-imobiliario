@@ -121,10 +121,89 @@ function exportPdf(){
   const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)!=='Vendido').sort((a,b)=>a.number-b.number);
   if(!fs.length){alert('Selecione pelo menos uma fração disponível.');return}
   const include=el.proposalIncludePlants.checked;
+  openPresentationPriceModal(fs, include);
+}
+
+function openPresentationPriceModal(fs, includePlants){
+  const existing=document.getElementById('presentationPriceModal');
+  if(existing) existing.remove();
+
+  const modal=document.createElement('div');
+  modal.id='presentationPriceModal';
+  modal.className='modal-backdrop';
+  modal.innerHTML=`
+    <div class="modal presentation-price-modal">
+      <button class="modal-close" type="button" data-close-price-modal>×</button>
+      <p class="eyebrow eyebrow--dark">Propostas Clientes</p>
+      <h2>Definir preços a apresentar</h2>
+      <p class="muted">Estes valores serão usados apenas neste PDF. Não alteram os preços finais, o histórico, o dashboard nem a Google Sheet.</p>
+
+      <div class="table-wrap presentation-price-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Fração</th>
+              <th>Tipologia</th>
+              <th class="num-col">Preço final definido</th>
+              <th class="num-col">Preço a apresentar no PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${fs.map(f=>`
+              <tr>
+                <td><strong>${esc(f.name)}</strong><div class="muted small">Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</div></td>
+                <td>${esc(f.typology)}</td>
+                <td class="num-col">${money(finalPrice(f))}</td>
+                <td class="num-col">
+                  <input class="presentation-price-input" type="number" min="0" step="1000" value="${Math.round(finalPrice(f))}" data-presentation-price="${f.number}" />
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-button" type="button" data-close-price-modal>Cancelar</button>
+        <button class="primary-button" type="button" data-generate-presentation-pdf>Gerar PDF com estes preços</button>
+      </div>
+    </div>
+  `;
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #presentationPriceModal .presentation-price-modal{width:min(980px,100%);}
+    #presentationPriceModal .presentation-price-table-wrap{max-height:55vh;overflow:auto;margin-top:16px;}
+    #presentationPriceModal .presentation-price-input{width:150px;text-align:right;}
+  `;
+  modal.appendChild(style);
+  document.body.appendChild(modal);
+  document.body.style.overflow='hidden';
+
+  const close=()=>{
+    modal.remove();
+    document.body.style.overflow='';
+  };
+
+  modal.querySelectorAll('[data-close-price-modal]').forEach(btn=>btn.addEventListener('click',close));
+  modal.addEventListener('click',e=>{if(e.target===modal)close()});
+
+  modal.querySelector('[data-generate-presentation-pdf]').addEventListener('click',()=>{
+    const priceMap={};
+    modal.querySelectorAll('[data-presentation-price]').forEach(input=>{
+      priceMap[Number(input.dataset.presentationPrice)]=num(input.value)||0;
+    });
+    close();
+    generateClientPresentationPdf(fs, includePlants, priceMap);
+  });
+}
+
+function generateClientPresentationPdf(fs, include, presentationPrices={}){
   const w=window.open('','_blank');
   if(!w){alert('Autorize pop-ups para gerar o PDF.');return}
 
   const publicArea=v=>Math.max(0,Math.floor((+v||0)-2));
+  const presentationPriceFor=f=>presentationPrices[f.number]||finalPrice(f);
   const disclaimer='Documento meramente informativo e de apresentação comercial. Os valores, áreas e condições aqui indicados não constituem proposta contratual, reserva, promessa de venda ou proposta oficial, estando sujeitos a confirmação e aprovação pela entidade promotora.';
 
   const pages=fs.map((f,i)=>{
@@ -140,7 +219,7 @@ function exportPdf(){
           <h1>${esc(f.name)}</h1>
           <p class="pdf-subtitle">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p>
         </div>
-        <div class="pdf-price"><span>Preço de apresentação</span><strong>${money(finalPrice(f))}</strong></div>
+        <div class="pdf-price"><span>Preço de apresentação</span><strong>${money(presentationPriceFor(f))}</strong></div>
       </header>
 
       <div class="pdf-cards">
