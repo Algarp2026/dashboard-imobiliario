@@ -127,6 +127,32 @@ function ensureSalesManagementTabs(){
     if(exportBtn)exportBtn.onclick=exportSalesEvents;
   }
 
+  let quick=document.getElementById('salesQuickActions');
+  if(!quick){
+    quick=document.createElement('section');
+    quick.id='salesQuickActions';
+    quick.className='panel sales-quick-actions';
+    quick.innerHTML=`<div class="section-heading compact">
+      <div>
+        <p class="eyebrow eyebrow--dark">Ações rápidas</p>
+        <h2>Gerenciamento de Vendas e Propostas</h2>
+        <p class="muted">Crie clientes, agentes e eventos sem sair da visão atual.</p>
+      </div>
+      <div class="top-actions">
+        <button class="primary-button" id="quickNewClient" type="button">Novo Cliente</button>
+        <button class="primary-button" id="quickNewAgent" type="button">Novo Agente</button>
+        <button class="primary-button" id="quickNewEvent" type="button">Novo Evento</button>
+      </div>
+    </div>`;
+    tab.insertBefore(quick, tab.firstChild);
+    const btnClient=quick.querySelector('#quickNewClient');
+    const btnAgent=quick.querySelector('#quickNewAgent');
+    const btnEvent=quick.querySelector('#quickNewEvent');
+    if(btnClient)btnClient.onclick=()=>openClientModal(state.selectedClientId||'');
+    if(btnAgent)btnAgent.onclick=()=>{state.salesSubtab='agents';renderSalesSubTabs();clearAgentForm();const input=document.getElementById('agentName');if(input)input.focus();};
+    if(btnEvent)btnEvent.onclick=()=>openEventModal();
+  }
+
   let nav=document.getElementById('salesSubTabs');
   if(!nav){
     nav=document.createElement('nav');
@@ -138,13 +164,15 @@ function ensureSalesManagementTabs(){
       <button class="module-tab" type="button" data-sales-subtab="agents">Agentes</button>
       <button class="module-tab" type="button" data-sales-subtab="events">Eventos / Histórico</button>
     `;
-    tab.insertBefore(nav, tab.firstChild);
+    tab.insertBefore(nav, quick ? quick.nextSibling : tab.firstChild);
     nav.querySelectorAll('[data-sales-subtab]').forEach(btn=>btn.onclick=()=>{state.salesSubtab=btn.dataset.salesSubtab;renderSalesSubTabs()});
 
     const st=document.createElement('style');
     st.id='salesSubTabsStyle';
     st.textContent=`
+      #tab-sales #salesQuickActions{margin-bottom:18px}
       #tab-sales #salesSubTabs{margin-bottom:18px}
+      #tab-sales .sales-quick-actions{position:relative;z-index:1}
       #tab-sales .sales-view-hidden{display:none!important}
     `;
     document.head.appendChild(st);
