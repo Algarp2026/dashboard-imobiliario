@@ -7,7 +7,7 @@ const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:3900
 const UPDATED_INITIAL_PRICES={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
 const STATUS=['Disponível','Reservado','Vendido','Indisponível'];
 const STAGES=['Novo lead','Contactado','Visitou','Em negociação','Reserva','Vendido','Desistiu'];
-const state={rows:[],fractions:[],tab:'proposals',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},data:loadDataLocal()};
+const state={rows:[],fractions:[],tab:'proposals',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
 function init(){['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientAgent','clientAgency','clientBudget','clientStage','clientFractions','clientNotes','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
@@ -54,7 +54,7 @@ async function loadExcel(){
   }
 }
 function parseRow(raw){const development=safe(raw['Empreendimento']),fr=safe(raw['Fração']);if(!development||!fr)return null;const isTheView=norm(development)==='the view',n=isTheView?nat(fr):nat(fr,0),abp=num(raw['ABP']),terr=num(raw['Varanda/Terraço']),tot=num(raw['Área Total'])||abp+terr,price=num(raw['PVP']);return{raw,development,fractionRaw:fr,isTheView,number:n,name:isTheView?fr:`${development} · ${fr}`,typology:pretty(raw['Tipologia']),floorLabel:safe(raw['Piso'])||'—',floor:floor(raw['Piso']),view:num(raw['Vista']),orientation:isTheView?(ORIENT[n]||safe(raw['Orientação'])):safe(raw['Orientação']),abp,terrace:terr,totalArea:tot,price,pricePerSqm:tot?price/tot:0}}
-function populate(){const tys=['all',...uniq(state.fractions.map(f=>f.typology))],fls=['all',...uniq(state.fractions.map(f=>String(f.floorLabel)))],sts=['all',...STATUS];fill(el.proposalTypology,tys,'Todas');fill(el.proposalFloor,fls,'Todos');fill(el.proposalStatus,sts,'Todos');fill(el.priceTypology,tys,'Todas');fill(el.priceFloor,fls,'Todos');fill(el.priceStatus,sts,'Todos');fill(el.historyFractionSelect,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);fill(el.compareA,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);fill(el.compareB,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);if(state.fractions[1])el.compareB.value=String(state.fractions[1].number);fillMulti(el.clientFractions,state.fractions.map(f=>[String(f.number),f.name]));fillMulti(el.eventFractions,state.fractions.map(f=>[String(f.number),f.name]));fill(el.clientStageFilter,['all',...STAGES],'Todos');}
+function populate(){const tys=['all',...uniq(state.fractions.map(f=>f.typology))],fls=['all',...uniq(state.fractions.map(f=>String(f.floorLabel)))],sts=['all',...STATUS];fill(el.proposalTypology,tys,'Todas');fill(el.proposalFloor,fls,'Todos');fill(el.proposalStatus,sts,'Todos');fill(el.priceTypology,tys,'Todas');fill(el.priceFloor,fls,'Todos');fill(el.priceStatus,sts,'Todos');fill(el.historyFractionSelect,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);fill(el.compareA,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);fill(el.compareB,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);if(state.fractions[1])el.compareB.value=String(state.fractions[1].number);fillMulti(el.clientFractions,state.fractions.map(f=>[String(f.number),f.name]));fillMulti(el.eventFractions,state.fractions.map(f=>[String(f.number),f.name]));fill(el.clientStageFilter,['all',...STAGES],'Todos');populateClientAgentSelect();}
 
 function switchTab(tab){
   state.tab = tab;
@@ -149,7 +149,7 @@ function ensureSalesManagementTabs(){
     const btnAgent=quick.querySelector('#quickNewAgent');
     const btnEvent=quick.querySelector('#quickNewEvent');
     if(btnClient)btnClient.onclick=()=>openClientModal('');
-    if(btnAgent)btnAgent.onclick=()=>{state.salesSubtab='agents';renderSalesSubTabs();clearAgentForm();const input=document.getElementById('agentName');if(input)input.focus();};
+    if(btnAgent)btnAgent.onclick=()=>{state.salesSubtab='agents';renderSalesSubTabs();openAgentModal('');};
     if(btnEvent)btnEvent.onclick=()=>openEventModal();
   }
 
@@ -256,46 +256,193 @@ function renderClientDetail(){const c=client(state.selectedClientId);if(!c){el.c
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
 function agent(id){return (state.data.agents||[]).find(a=>a.id===id)}
 function calculateCommission(amount,type,value){amount=+amount||0;value=+value||0;return type==='percent'?amount*value/100:value}
+
+function ensureClientAgentSelect(){
+  const field=el.clientAgent?.parentElement;
+  if(!field || el.clientAgent?.tagName==='SELECT')return;
+  const old=el.clientAgent;
+  const select=document.createElement('select');
+  select.id='clientAgent';
+  select.innerHTML='<option value="">Sem agente associado</option>';
+  old.replaceWith(select);
+  el.clientAgent=select;
+
+  const actions=document.createElement('div');
+  actions.className='top-actions';
+  actions.style.marginTop='8px';
+  actions.innerHTML='<button class="ghost-button" id="createAgentFromClientBtn" type="button">Criar agente</button>';
+  field.appendChild(actions);
+  const btn=actions.querySelector('#createAgentFromClientBtn');
+  if(btn)btn.onclick=()=>{state.pendingClientAgentCreation=true;openAgentModal('')};
+  el.clientAgent.onchange=syncClientAgentAgency;
+}
+function populateClientAgentSelect(selectedId=''){
+  ensureClientAgentSelect();
+  if(!el.clientAgent)return;
+  const agents=state.data.agents||[];
+  el.clientAgent.innerHTML='<option value="">Sem agente associado</option>'+agents.map(a=>`<option value="${attr(a.id)}">${esc((a.name||'Agente sem nome')+(a.agency?' · '+a.agency:''))}</option>`).join('');
+  if(selectedId)el.clientAgent.value=selectedId;
+}
+function syncClientAgentAgency(){
+  const a=agent(el.clientAgent?.value||'');
+  if(el.clientAgency)el.clientAgency.value=a?(a.agency||''):'';
+}
+function clientAgentIdFromClient(c={}){
+  if(c.agentId)return c.agentId;
+  const name=norm(c.agent||''), agency=norm(c.agency||'');
+  const a=(state.data.agents||[]).find(x=>(name&&norm(x.name||'')===name)||(agency&&norm(x.agency||'')===agency));
+  return a?a.id:'';
+}
+function ensureEventClientQuickCreate(){
+  const field=el.eventClientId?.parentElement;
+  if(!field || document.getElementById('eventCreateClientBtn'))return;
+  const actions=document.createElement('div');
+  actions.className='top-actions';
+  actions.style.marginTop='8px';
+  actions.innerHTML='<button class="ghost-button" id="eventCreateClientBtn" type="button">Criar novo cliente</button>';
+  field.appendChild(actions);
+  const btn=actions.querySelector('#eventCreateClientBtn');
+  if(btn)btn.onclick=()=>{state.pendingEventClientCreation=true;openClientModal('')};
+}
+function openAgentModal(aid=''){
+  ensureAgentModal();
+  const isEdit=!!aid;
+  const a=isEdit?(agent(aid)||{}):{};
+  ['agentId','agentName','agentAgency','agentAmi','agentPhone','agentEmail','agentDefaultCommission','agentNotes'].forEach(id=>{
+    const e=document.getElementById(id);if(e)e.value='';
+  });
+  document.getElementById('agentId').value=isEdit?(a.id||''):'';
+  document.getElementById('agentName').value=isEdit?(a.name||''):'';
+  document.getElementById('agentAgency').value=isEdit?(a.agency||''):'';
+  document.getElementById('agentAmi').value=isEdit?(a.ami||''):'';
+  document.getElementById('agentPhone').value=isEdit?(a.phone||''):'';
+  document.getElementById('agentEmail').value=isEdit?(a.email||''):'';
+  document.getElementById('agentDefaultCommission').value=isEdit?(a.defaultCommission||''):'';
+  const notes=document.getElementById('agentNotes');if(notes)notes.value=isEdit?(a.notes||''):'';
+  const title=document.querySelector('#agentModal h2');if(title)title.textContent=isEdit?'Editar agente / agência':'Novo agente / agência';
+  const saveBtn=document.getElementById('saveAgentBtn');if(saveBtn)saveBtn.textContent=isEdit?'Atualizar agente':'Guardar agente';
+  document.getElementById('agentModal').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function closeAgentModal(){
+  const modal=document.getElementById('agentModal');
+  if(modal)modal.classList.add('hidden');
+  document.body.style.overflow='';
+  state.pendingClientAgentCreation=false;
+}
+function ensureAgentModal(){
+  if(document.getElementById('agentModal'))return;
+  const modal=document.createElement('div');
+  modal.id='agentModal';
+  modal.className='modal-backdrop hidden';
+  modal.innerHTML=`<div class="modal">
+    <button class="modal-close" id="closeAgentModal" type="button">×</button>
+    <p class="eyebrow eyebrow--dark">Agentes / Agências</p>
+    <h2>Novo agente / agência</h2>
+    <input id="agentId" type="hidden" />
+    <div class="form-grid">
+      <label class="field"><span>Nome do agente</span><input id="agentName" placeholder="Nome" /></label>
+      <label class="field"><span>Agência</span><input id="agentAgency" placeholder="Agência" /></label>
+      <label class="field"><span>Nº AMI</span><input id="agentAmi" placeholder="AMI" /></label>
+      <label class="field"><span>Contacto</span><input id="agentPhone" placeholder="Contacto" /></label>
+      <label class="field"><span>Email</span><input id="agentEmail" placeholder="Email" /></label>
+      <label class="field"><span>Comissão padrão (%)</span><input id="agentDefaultCommission" type="number" step="0.1" min="0" placeholder="Ex.: 5" /></label>
+    </div>
+    <label class="field"><span>Notas</span><textarea id="agentNotes" placeholder="Notas sobre o agente/agência"></textarea></label>
+    <div class="modal-actions">
+      <button class="ghost-button" id="cancelAgentModal" type="button">Cancelar</button>
+      <button class="primary-button" id="saveAgentBtn" type="button">Guardar agente</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('closeAgentModal').onclick=closeAgentModal;
+  document.getElementById('cancelAgentModal').onclick=closeAgentModal;
+  document.getElementById('saveAgentBtn').onclick=saveAgent;
+  modal.onclick=e=>{if(e.target===modal)closeAgentModal()};
+}
+
+
 function ensureAgentsPanel(){
   const tab=document.getElementById('tab-sales');
   if(!tab||document.getElementById('agentsPanel'))return;
   const panel=document.createElement('section');
   panel.className='panel';
   panel.id='agentsPanel';
-  panel.innerHTML=`<div class="section-heading"><div><p class="eyebrow eyebrow--dark">Agentes / Agências</p><h2>Cadastro de agentes imobiliários</h2><p class="muted">Use este cadastro quando uma venda for feita através de agente.</p></div></div>
-  <input id="agentId" type="hidden" />
-  <div class="form-grid">
-    <label class="field"><span>Nome do agente</span><input id="agentName" placeholder="Nome" /></label>
-    <label class="field"><span>Agência</span><input id="agentAgency" placeholder="Agência" /></label>
-    <label class="field"><span>Nº AMI</span><input id="agentAmi" placeholder="AMI" /></label>
-    <label class="field"><span>Contacto</span><input id="agentPhone" placeholder="Contacto" /></label>
-    <label class="field"><span>Email</span><input id="agentEmail" placeholder="Email" /></label>
-    <label class="field"><span>Comissão padrão (%)</span><input id="agentDefaultCommission" type="number" step="0.1" min="0" placeholder="Ex.: 5" /></label>
+  panel.innerHTML=`<div class="section-heading">
+    <div><p class="eyebrow eyebrow--dark">Agentes / Agências</p><h2>Cadastro de agentes imobiliários</h2><p class="muted">Lista, detalhe e edição de agentes/agências no mesmo padrão dos clientes.</p></div>
+    <div class="top-actions"><button class="primary-button" id="openAgentModalBtn" type="button">Novo Agente</button></div>
   </div>
-  <div class="modal-actions"><button class="ghost-button" id="cancelAgentEditBtn" type="button">Limpar / cancelar edição</button><button class="primary-button" id="saveAgentBtn" type="button">Guardar agente</button></div>
-  <div id="agentsList" class="events-list"></div>`;
+  <div class="client-layout">
+    <div id="agentsList" class="clients-list"></div>
+    <div id="agentDetail" class="client-detail"></div>
+  </div>`;
   const first=tab.querySelector('.panel');
   if(first&&first.nextSibling)tab.insertBefore(panel,first.nextSibling);else tab.appendChild(panel);
-  document.getElementById('saveAgentBtn').onclick=saveAgent;
-  const cancel=document.getElementById('cancelAgentEditBtn');if(cancel)cancel.onclick=clearAgentForm;
+  document.getElementById('openAgentModalBtn').onclick=()=>openAgentModal('');
+  ensureAgentModal();
 }
-function clearAgentForm(){['agentId','agentName','agentAgency','agentAmi','agentPhone','agentEmail','agentDefaultCommission'].forEach(x=>{const e=document.getElementById(x);if(e)e.value=''});const btn=document.getElementById('saveAgentBtn');if(btn)btn.textContent='Guardar agente'}
-function editAgent(aid){const a=agent(aid);if(!a)return;document.getElementById('agentId').value=a.id||'';document.getElementById('agentName').value=a.name||'';document.getElementById('agentAgency').value=a.agency||'';document.getElementById('agentAmi').value=a.ami||'';document.getElementById('agentPhone').value=a.phone||'';document.getElementById('agentEmail').value=a.email||'';document.getElementById('agentDefaultCommission').value=a.defaultCommission||'';const btn=document.getElementById('saveAgentBtn');if(btn)btn.textContent='Guardar alterações'}
+function clearAgentForm(){openAgentModal('')}
+function editAgent(aid){openAgentModal(aid)}
 function saveAgent(){
   const aid=document.getElementById('agentId')?.value||id();
-  const a={id:aid,name:document.getElementById('agentName').value.trim(),agency:document.getElementById('agentAgency').value.trim(),ami:document.getElementById('agentAmi').value.trim(),phone:document.getElementById('agentPhone').value.trim(),email:document.getElementById('agentEmail').value.trim(),defaultCommission:num(document.getElementById('agentDefaultCommission').value),notes:'',updated:new Date().toLocaleString('pt-PT')};
+  const a={
+    id:aid,
+    name:document.getElementById('agentName').value.trim(),
+    agency:document.getElementById('agentAgency').value.trim(),
+    ami:document.getElementById('agentAmi').value.trim(),
+    phone:document.getElementById('agentPhone').value.trim(),
+    email:document.getElementById('agentEmail').value.trim(),
+    defaultCommission:num(document.getElementById('agentDefaultCommission').value),
+    notes:(document.getElementById('agentNotes')?.value||'').trim(),
+    updated:new Date().toLocaleString('pt-PT')
+  };
   if(!a.name&&!a.agency){alert('Indique pelo menos o nome do agente ou a agência.');return}
   state.data.agents=state.data.agents||[];
   const idx=state.data.agents.findIndex(x=>x.id===aid);
   idx>=0?state.data.agents[idx]=a:state.data.agents.push(a);
-  save();renderAgents();populateAgentSelect();clearAgentForm();
+  state.selectedAgentId=aid;
+  save();
+  populateAgentSelect();
+  populateClientAgentSelect(aid);
+  if(state.pendingClientAgentCreation&&el.clientAgent){
+    el.clientAgent.value=aid;
+    syncClientAgentAgency();
+  }
+  closeAgentModal();
+  renderAgents();
+  renderSalesSubTabs&&renderSalesSubTabs();
 }
 function renderAgents(){
-  const box=document.getElementById('agentsList');if(!box)return;
+  const listBox=document.getElementById('agentsList');
+  const detail=document.getElementById('agentDetail');
+  if(!listBox||!detail)return;
   const list=state.data.agents||[];
-  box.innerHTML=list.length?list.map(a=>`<div class="event-item"><div class="section-heading compact"><div><strong>${esc(a.name||'Agente sem nome')}</strong><p class="muted">${esc(a.agency||'')} ${a.ami?'· AMI '+esc(a.ami):''} ${a.defaultCommission?'· Comissão padrão '+a.defaultCommission+'%':''}</p><p class="muted small">${esc(a.phone||'')} ${a.email?'· '+esc(a.email):''}</p></div><div class="top-actions"><button class="ghost-button" type="button" data-edit-agent="${a.id}">Editar</button><button class="ghost-button danger" type="button" data-delete-agent="${a.id}">Remover</button></div></div></div>`).join(''):'<div class="empty-state">Ainda não existem agentes cadastrados.</div>';
-  box.querySelectorAll('[data-edit-agent]').forEach(btn=>btn.onclick=()=>editAgent(btn.dataset.editAgent));
-  box.querySelectorAll('[data-delete-agent]').forEach(btn=>btn.onclick=()=>{if(confirm('Remover este agente?')){state.data.agents=(state.data.agents||[]).filter(a=>a.id!==btn.dataset.deleteAgent);save();renderAgents();populateAgentSelect();clearAgentForm();}})
+  if(!state.selectedAgentId&&list[0])state.selectedAgentId=list[0].id;
+  if(state.selectedAgentId&&!list.some(a=>a.id===state.selectedAgentId))state.selectedAgentId=list[0]?.id||'';
+  listBox.innerHTML=list.length?list.map(a=>`<div class="client-card ${a.id===state.selectedAgentId?'active':''}" data-agent-card="${a.id}">
+    <div class="section-heading compact">
+      <div><strong>${esc(a.name||'Agente sem nome')}</strong><p class="muted small">${esc(a.agency||'')} ${a.ami?'· AMI '+esc(a.ami):''}</p><span class="badge badge--neutral">${a.defaultCommission?esc(a.defaultCommission+'% comissão padrão'):'Sem comissão padrão'}</span></div>
+      <button class="ghost-button" type="button" data-edit-agent="${a.id}">Editar</button>
+    </div>
+  </div>`).join(''):'<div class="empty-state">Ainda não existem agentes cadastrados.</div>';
+  listBox.querySelectorAll('[data-agent-card]').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-agent]'))return;state.selectedAgentId=card.dataset.agentCard;renderAgents()});
+  listBox.querySelectorAll('[data-edit-agent]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();state.selectedAgentId=btn.dataset.editAgent;openAgentModal(state.selectedAgentId)});
+  const a=agent(state.selectedAgentId);
+  if(!a){detail.innerHTML='<div class="empty-state">Selecione ou crie um agente.</div>';return}
+  const relatedSales=state.data.events.filter(ev=>ev.agentId===a.id||Object.values(state.data.saleCommissions||{}).some(c=>c.agentId===a.id&&c.eventId===ev.id));
+  detail.innerHTML=`<div class="section-heading">
+    <div><h2>${esc(a.name||'Agente sem nome')}</h2><p class="muted">${esc(a.agency||'')} ${a.ami?'· AMI '+esc(a.ami):''}</p></div>
+    <button class="ghost-button" data-edit-agent-detail="${a.id}" type="button">Editar agente</button>
+  </div>
+  <div class="fraction-card__metrics">
+    <div class="metric-box"><span>Contacto</span><strong>${esc(a.phone||'—')}</strong></div>
+    <div class="metric-box"><span>Email</span><strong>${esc(a.email||'—')}</strong></div>
+    <div class="metric-box"><span>Comissão padrão</span><strong>${a.defaultCommission?esc(a.defaultCommission+'%'):'—'}</strong></div>
+    <div class="metric-box"><span>Eventos associados</span><strong>${relatedSales.length}</strong></div>
+  </div>
+  ${a.notes?`<p class="muted">${esc(a.notes)}</p>`:''}`;
+  const edit=detail.querySelector('[data-edit-agent-detail]');
+  if(edit)edit.onclick=()=>openAgentModal(edit.dataset.editAgentDetail);
 }
 function ensureEventAgentFields(){
   if(document.getElementById('eventAgentFields'))return;
@@ -321,8 +468,11 @@ function toggleEventAgentFields(){
 
 function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}</td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=()=>{const n=+s.dataset.status,old=statusOf(getF(n)),st=s.value,f=getF(n);if(['Reservado','Vendido'].includes(st)){alert('Para registar uma reserva ou venda completa, use "Adicionar evento" e escolha o tipo Reserva ou Venda. Esta alteração manual ficará apenas como ajuste de estado.')}state.data.statuses[n]=st;if(st==='Indisponível'){const reason=prompt(`${f.name} ficará indisponível. Indique o motivo:`,state.data.unavailableReasons?.[n]||'');state.data.unavailableReasons=state.data.unavailableReasons||{};if(reason!==null)state.data.unavailableReasons[n]=reason.trim()}if(st==='Disponível'){if(state.data.unavailableReasons)delete state.data.unavailableReasons[n]}if((st==='Reservado'||st==='Vendido')&&!state.data.salePrices[n]){const v=prompt(`${f.name} foi marcado como ${st}.\nPreço definido: ${money(finalPrice(f))}\nConfirme o preço real ou deixe vazio para usar o preço definido:`,Math.round(finalPrice(f)));state.data.salePrices[n]=v?num(v):finalPrice(f)}state.data.events.push({id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${old} para ${st}`});save();renderAll()});el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{state.data.salePrices[+i.dataset.salePrice]=num(i.value);save();renderDashboard();renderSales()})}
 function openClientModal(cid=''){
+  ensureClientAgentSelect();
+  populateClientAgentSelect();
   const isEdit=!!cid;
   const c=isEdit?(client(cid)||{}):{};
+  const aid=isEdit?clientAgentIdFromClient(c):'';
   el.clientId.value=isEdit?(c.id||''):'';
   el.clientName.value=isEdit?(c.name||''):'';
   el.clientPhone.value=isEdit?(c.phone||''):'';
@@ -330,8 +480,9 @@ function openClientModal(cid=''){
   el.clientNif.value=isEdit?(c.nif||''):'';
   el.clientNationality.value=isEdit?(c.nationality||''):'';
   el.clientOrigin.value=isEdit?(c.origin||''):'Portal imobiliário';
-  el.clientAgent.value=isEdit?(c.agent||''):'';
+  if(el.clientAgent)el.clientAgent.value=aid;
   el.clientAgency.value=isEdit?(c.agency||''):'';
+  if(aid)syncClientAgentAgency();
   el.clientBudget.value=isEdit?(c.budget||''):'';
   el.clientStage.value=isEdit?(c.stage||'Novo lead'):'Novo lead';
   setMulti(el.clientFractions,isEdit?(c.fractions||[]):[]);
@@ -341,11 +492,45 @@ function openClientModal(cid=''){
   const saveBtn=document.getElementById('saveClient');
   if(saveBtn)saveBtn.textContent=isEdit?'Atualizar cliente':'Guardar cliente';
   el.clientModal.classList.remove('hidden');
+  el.clientModal.style.zIndex='50';
   document.body.style.overflow='hidden';
 }
-function closeClientModal(){el.clientModal.classList.add('hidden');document.body.style.overflow=''}
-function saveClient(){let cid=el.clientId.value||id();const c={id:cid,name:el.clientName.value.trim(),phone:el.clientPhone.value.trim(),email:el.clientEmail.value.trim(),nif:el.clientNif.value.trim(),nationality:el.clientNationality.value.trim(),origin:el.clientOrigin.value,agent:el.clientAgent.value.trim(),agency:el.clientAgency.value.trim(),budget:num(el.clientBudget.value),stage:el.clientStage.value,fractions:getMulti(el.clientFractions).map(Number),notes:el.clientNotes.value.trim(),updated:new Date().toLocaleString('pt-PT')};const idx=state.data.clients.findIndex(x=>x.id===cid);idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);state.selectedClientId=cid;save();closeClientModal();renderAll()}
-function openEventModal(){ensureEventAgentFields();populateAgentSelect();el.eventClientId.value=state.selectedClientId||'';el.eventType.value='Reunião com cliente';el.eventDate.value=today();el.eventTime.value='';el.eventAmount.value='';el.eventInterest.value='';el.eventFollowup.value='';el.eventFollowupDate.value='';setMulti(el.eventFractions,[]);el.eventObjections.value='';el.eventNotes.value='';const wa=document.getElementById('eventWithAgent');if(wa)wa.checked=false;const cv=document.getElementById('eventCommissionValue');if(cv)cv.value='';toggleEventAgentFields();el.eventType.onchange=toggleEventAgentFields;el.eventModal.classList.remove('hidden');document.body.style.overflow='hidden'}
+function closeClientModal(){el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
+function saveClient(){
+  let cid=el.clientId.value||id();
+  const selectedAgentId=el.clientAgent?.value||'';
+  const selectedAgent=agent(selectedAgentId);
+  const c={
+    id:cid,
+    name:el.clientName.value.trim(),
+    phone:el.clientPhone.value.trim(),
+    email:el.clientEmail.value.trim(),
+    nif:el.clientNif.value.trim(),
+    nationality:el.clientNationality.value.trim(),
+    origin:el.clientOrigin.value,
+    agentId:selectedAgentId,
+    agent:selectedAgent?(selectedAgent.name||''):'',
+    agency:selectedAgent?(selectedAgent.agency||''):(el.clientAgency.value.trim()),
+    budget:num(el.clientBudget.value),
+    stage:el.clientStage.value,
+    fractions:getMulti(el.clientFractions).map(Number),
+    notes:el.clientNotes.value.trim(),
+    updated:new Date().toLocaleString('pt-PT')
+  };
+  if(!c.name){alert('Indique o nome do cliente.');return}
+  const idx=state.data.clients.findIndex(x=>x.id===cid);
+  idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
+  state.selectedClientId=cid;
+  save();
+  renderClientSelects();
+  if(state.pendingEventClientCreation&&el.eventClientId){
+    el.eventClientId.value=cid;
+    state.pendingEventClientCreation=false;
+  }
+  closeClientModal();
+  renderAll();
+}
+function openEventModal(){ensureEventAgentFields();ensureEventClientQuickCreate();populateAgentSelect();renderClientSelects();el.eventClientId.value=state.selectedClientId||'';el.eventType.value='Reunião com cliente';el.eventDate.value=today();el.eventTime.value='';el.eventAmount.value='';el.eventInterest.value='';el.eventFollowup.value='';el.eventFollowupDate.value='';setMulti(el.eventFractions,[]);el.eventObjections.value='';el.eventNotes.value='';const wa=document.getElementById('eventWithAgent');if(wa)wa.checked=false;const cv=document.getElementById('eventCommissionValue');if(cv)cv.value='';toggleEventAgentFields();el.eventType.onchange=toggleEventAgentFields;el.eventModal.classList.remove('hidden');document.body.style.overflow='hidden'}
 function closeEventModal(){el.eventModal.classList.add('hidden');document.body.style.overflow=''}
 function saveEvent(){const cid=el.eventClientId.value;if(!cid){alert('Escolha um cliente.');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){alert('Escolha pelo menos uma fração.');return}const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';const commissionType=document.getElementById('eventCommissionType')?.value||'percent';const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);const saleAmount=num(el.eventAmount.value);const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;const ev={id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};state.data.events.push(ev);const c=client(cid);if(c){c.fractions=uniqNum([...(c.fractions||[]),...frs]);if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';if(ev.type==='Visita')c.stage='Visitou';if(ev.type==='Reserva')c.stage='Reserva';if(ev.type==='Venda')c.stage='Vendido'}if(ev.type==='Reserva')frs.forEach(n=>{state.data.statuses[n]='Reservado';if(ev.amount)state.data.salePrices[n]=ev.amount});if(ev.type==='Venda')frs.forEach(n=>{state.data.statuses[n]='Vendido';if(ev.amount)state.data.salePrices[n]=ev.amount;state.data.saleCommissions=state.data.saleCommissions||{};state.data.saleCommissions[n]={withAgent,agentId:ev.agentId,commissionType,commissionValue,amount:commissionAmount,netRevenue:(ev.amount||finalPrice(getF(n)))-commissionAmount,eventId:ev.id,date:ev.date}});save();closeEventModal();renderAll()}
 function exportPdf(){
