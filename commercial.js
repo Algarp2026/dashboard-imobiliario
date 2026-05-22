@@ -321,13 +321,19 @@ function openAgentModal(aid=''){
   const notes=document.getElementById('agentNotes');if(notes)notes.value=isEdit?(a.notes||''):'';
   const title=document.querySelector('#agentModal h2');if(title)title.textContent=isEdit?'Editar agente / agência':'Novo agente / agência';
   const saveBtn=document.getElementById('saveAgentBtn');if(saveBtn)saveBtn.textContent=isEdit?'Atualizar agente':'Guardar agente';
-  document.getElementById('agentModal').classList.remove('hidden');
+  const agentModal=document.getElementById('agentModal');
+  agentModal.classList.remove('hidden');
+  agentModal.style.zIndex='80';
+  const clientModal=document.getElementById('clientModal');
+  if(clientModal&&!clientModal.classList.contains('hidden'))clientModal.style.zIndex='50';
   document.body.style.overflow='hidden';
 }
 function closeAgentModal(){
   const modal=document.getElementById('agentModal');
-  if(modal)modal.classList.add('hidden');
-  document.body.style.overflow='';
+  if(modal){modal.classList.add('hidden');modal.style.zIndex='';}
+  const clientOpen=el.clientModal&&!el.clientModal.classList.contains('hidden');
+  const eventOpen=el.eventModal&&!el.eventModal.classList.contains('hidden');
+  document.body.style.overflow=(clientOpen||eventOpen)?'hidden':'';
   state.pendingClientAgentCreation=false;
 }
 function ensureAgentModal(){
@@ -335,6 +341,10 @@ function ensureAgentModal(){
   const modal=document.createElement('div');
   modal.id='agentModal';
   modal.className='modal-backdrop hidden';
+  const zfix=document.createElement('style');
+  zfix.id='agentModalZIndexFix';
+  zfix.textContent='#agentModal{z-index:80!important} #clientModal{z-index:50}';
+  document.head.appendChild(zfix);
   modal.innerHTML=`<div class="modal">
     <button class="modal-close" id="closeAgentModal" type="button">×</button>
     <p class="eyebrow eyebrow--dark">Agentes / Agências</p>
