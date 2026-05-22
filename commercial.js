@@ -604,31 +604,60 @@ function save(){
 async function syncRemote(){
   if(!REMOTE_URL) return;
   const payload = JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()});
+
   try{
     setStatus('A guardar no Google Sheets…');
-    await fetch(REMOTE_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:payload,
-      keepalive:true
-    });
+
+    // Método principal: POST por formulário oculto.
+    // Isto evita bloqueios CORS/no-cors e entrega o payload ao Apps Script em e.parameter.payload.
+    postToAppsScriptForm(payload);
+
+    // Mantém também uma tentativa fetch em segundo plano. Se o browser bloquear, o formulário já fez o envio.
+    try{
+      await fetch(REMOTE_URL,{
+        method:'POST',
+        mode:'no-cors',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:payload,
+        keepalive:true
+      });
+    }catch(fetchErr){
+      console.warn('Fetch no-cors falhou; formulário oculto já foi enviado.', fetchErr);
+    }
+
     setStatus('Enviado para Google Sheets');
   }catch(e){
     console.warn('Falha ao guardar Google Sheets',e);
-    // Fallback: tenta beacon; útil se o utilizador fizer refresh logo após guardar.
-    try{
-      if(navigator.sendBeacon){
-        const blob = new Blob([payload], {type:'text/plain;charset=utf-8'});
-        navigator.sendBeacon(REMOTE_URL, blob);
-        setStatus('Envio pendente para Google Sheets');
-        return;
-      }
-    }catch(beaconErr){
-      console.warn('Falha no sendBeacon', beaconErr);
-    }
     setStatus('Falha ao sincronizar · dados guardados localmente');
   }
+}
+
+function postToAppsScriptForm(payload){
+  const iframeName = 'gsheets_sync_iframe';
+  let iframe = document.getElementById(iframeName);
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.name = iframeName;
+    iframe.id = iframeName;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = REMOTE_URL;
+  form.target = iframeName;
+  form.style.display = 'none';
+
+  const input = document.createElement('textarea');
+  input.name = 'payload';
+  input.value = payload;
+  form.appendChild(input);
+
+  document.body.appendChild(form);
+  form.submit();
+
+  setTimeout(()=>{ try{ form.remove(); }catch(e){} }, 1000);
 }
 
 function exportAll(){
