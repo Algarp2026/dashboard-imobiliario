@@ -142,15 +142,18 @@ function ensureSalesManagementTabs(){
         <button class="primary-button" id="quickNewClient" type="button">Novo Cliente</button>
         <button class="primary-button" id="quickNewAgent" type="button">Novo Agente</button>
         <button class="primary-button" id="quickNewEvent" type="button">Novo Evento</button>
+        <button class="ghost-button danger" id="quickMaintenance" type="button">Limpar Testes</button>
       </div>
     </div>`;
     tab.insertBefore(quick, tab.firstChild);
     const btnClient=quick.querySelector('#quickNewClient');
     const btnAgent=quick.querySelector('#quickNewAgent');
     const btnEvent=quick.querySelector('#quickNewEvent');
+    const btnMaintenance=quick.querySelector('#quickMaintenance');
     if(btnClient)btnClient.onclick=()=>openClientModal('');
     if(btnAgent)btnAgent.onclick=()=>{state.salesSubtab='agents';renderSalesSubTabs();openAgentModal('');};
     if(btnEvent)btnEvent.onclick=()=>openEventModal();
+    if(btnMaintenance)btnMaintenance.onclick=()=>openMaintenanceModal();
   }
 
   let nav=document.getElementById('salesSubTabs');
@@ -304,6 +307,152 @@ function ensureEventClientQuickCreate(){
   const btn=actions.querySelector('#eventCreateClientBtn');
   if(btn)btn.onclick=()=>{state.pendingEventClientCreation=true;openClientModal('')};
 }
+
+function openMaintenanceModal(){
+  ensureMaintenanceModal();
+  renderMaintenanceModalLists();
+  const modal=document.getElementById('maintenanceModal');
+  modal.classList.remove('hidden');
+  modal.style.zIndex='90';
+  document.body.style.overflow='hidden';
+}
+function closeMaintenanceModal(){
+  const modal=document.getElementById('maintenanceModal');
+  if(modal){modal.classList.add('hidden');modal.style.zIndex='';}
+  const clientOpen=el.clientModal&&!el.clientModal.classList.contains('hidden');
+  const eventOpen=el.eventModal&&!el.eventModal.classList.contains('hidden');
+  const agentOpen=document.getElementById('agentModal')&&!document.getElementById('agentModal').classList.contains('hidden');
+  document.body.style.overflow=(clientOpen||eventOpen||agentOpen)?'hidden':'';
+}
+function ensureMaintenanceModal(){
+  if(document.getElementById('maintenanceModal'))return;
+  const modal=document.createElement('div');
+  modal.id='maintenanceModal';
+  modal.className='modal-backdrop hidden';
+  modal.innerHTML=`<div class="modal maintenance-modal">
+    <button class="modal-close" id="closeMaintenanceModal" type="button">×</button>
+    <p class="eyebrow eyebrow--dark">Manutenção</p>
+    <h2>Limpar dados de teste</h2>
+    <p class="muted">Selecione clientes, agentes e eventos de teste para eliminar definitivamente. Esta ação atualiza a Google Sheet na próxima sincronização.</p>
+    <div class="filters-grid filters-grid--clients">
+      <label class="field"><span>Pesquisar</span><input id="maintenanceSearch" type="search" placeholder="Ex.: teste, nome, email, agente..." /></label>
+      <label class="toggle-pill"><input id="maintenanceDeleteLinkedEvents" type="checkbox" checked /> <span>Eliminar eventos ligados aos clientes selecionados</span></label>
+    </div>
+    <div class="maintenance-grid">
+      <section class="maintenance-section"><div class="section-heading compact"><div><h3>Clientes</h3><p class="muted small">Apaga o cliente selecionado.</p></div><button class="ghost-button" type="button" data-maint-select="clients">Selecionar testes</button></div><div id="maintenanceClients" class="maintenance-list"></div></section>
+      <section class="maintenance-section"><div class="section-heading compact"><div><h3>Agentes</h3><p class="muted small">Apaga o agente e limpa referências em clientes/eventos.</p></div><button class="ghost-button" type="button" data-maint-select="agents">Selecionar testes</button></div><div id="maintenanceAgents" class="maintenance-list"></div></section>
+      <section class="maintenance-section"><div class="section-heading compact"><div><h3>Eventos</h3><p class="muted small">Apaga eventos selecionados.</p></div><button class="ghost-button" type="button" data-maint-select="events">Selecionar testes</button></div><div id="maintenanceEvents" class="maintenance-list"></div></section>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost-button" id="cancelMaintenance" type="button">Cancelar</button>
+      <button class="primary-button danger" id="deleteMaintenanceSelected" type="button">Eliminar selecionados</button>
+    </div>
+  </div>`;
+  const style=document.createElement('style');
+  style.id='maintenanceModalStyle';
+  style.textContent=`
+    #maintenanceModal{z-index:90!important}
+    #maintenanceModal .maintenance-modal{width:min(1180px,100%);}
+    #maintenanceModal .maintenance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+    #maintenanceModal .maintenance-section{border:1px solid rgba(22,35,61,.1);border-radius:18px;background:rgba(255,255,255,.76);padding:14px;min-height:260px}
+    #maintenanceModal .maintenance-list{display:grid;gap:8px;max-height:42vh;overflow:auto}
+    #maintenanceModal .maintenance-item{display:flex;gap:10px;align-items:flex-start;border:1px solid rgba(22,35,61,.08);background:#fff;border-radius:14px;padding:10px}
+    #maintenanceModal .maintenance-item input{margin-top:4px}
+    @media(max-width:980px){#maintenanceModal .maintenance-grid{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+  document.body.appendChild(modal);
+  document.getElementById('closeMaintenanceModal').onclick=closeMaintenanceModal;
+  document.getElementById('cancelMaintenance').onclick=closeMaintenanceModal;
+  document.getElementById('deleteMaintenanceSelected').onclick=deleteMaintenanceSelected;
+  document.getElementById('maintenanceSearch').oninput=renderMaintenanceModalLists;
+  modal.querySelectorAll('[data-maint-select]').forEach(btn=>btn.onclick=()=>selectMaintenanceTests(btn.dataset.maintSelect));
+  modal.onclick=e=>{if(e.target===modal)closeMaintenanceModal()};
+}
+function isTestLikeText(v){
+  return norm(v||'').includes('teste')||norm(v||'').includes('test');
+}
+function maintenanceQueryMatch(values,q){
+  if(!q)return true;
+  return norm(values.filter(Boolean).join(' ')).includes(q);
+}
+function renderMaintenanceModalLists(){
+  const q=norm(document.getElementById('maintenanceSearch')?.value||'');
+  const clients=(state.data.clients||[]).filter(c=>maintenanceQueryMatch([c.name,c.email,c.phone,c.origin,c.agent,c.agency,c.notes],q));
+  const agents=(state.data.agents||[]).filter(a=>maintenanceQueryMatch([a.name,a.agency,a.email,a.phone,a.ami,a.notes],q));
+  const events=(state.data.events||[]).filter(ev=>{
+    const c=client(ev.clientId);
+    const ag=agent(ev.agentId);
+    return maintenanceQueryMatch([ev.type,ev.date,ev.notes,ev.objections,ev.followup,c?.name,ag?.name,ag?.agency,(ev.fractions||[]).join(' ')],q);
+  });
+  const cBox=document.getElementById('maintenanceClients');
+  const aBox=document.getElementById('maintenanceAgents');
+  const eBox=document.getElementById('maintenanceEvents');
+  if(cBox)cBox.innerHTML=clients.length?clients.map(c=>`<label class="maintenance-item"><input type="checkbox" data-maint-client="${esc(c.id)}"/><div><strong>${esc(c.name||'Cliente sem nome')}</strong><p class="muted small">${esc(c.email||'')} ${c.phone?'· '+esc(c.phone):''}</p></div></label>`).join(''):'<div class="empty-state">Sem clientes para este filtro.</div>';
+  if(aBox)aBox.innerHTML=agents.length?agents.map(a=>`<label class="maintenance-item"><input type="checkbox" data-maint-agent="${esc(a.id)}"/><div><strong>${esc(a.name||'Agente sem nome')}</strong><p class="muted small">${esc(a.agency||'')} ${a.email?'· '+esc(a.email):''}</p></div></label>`).join(''):'<div class="empty-state">Sem agentes para este filtro.</div>';
+  if(eBox)eBox.innerHTML=events.length?events.map(ev=>`<label class="maintenance-item"><input type="checkbox" data-maint-event="${esc(ev.id)}"/><div><strong>${esc(ev.date||'—')} · ${esc(ev.type||'Evento')}</strong><p class="muted small">${esc(client(ev.clientId)?.name||'Sem cliente')} · Frações: ${esc((ev.fractions||[]).join(', ')||'—')}</p>${ev.notes?`<p class="muted small">${esc(ev.notes)}</p>`:''}</div></label>`).join(''):'<div class="empty-state">Sem eventos para este filtro.</div>';
+}
+function selectMaintenanceTests(kind){
+  const sel = kind==='clients'?'[data-maint-client]':kind==='agents'?'[data-maint-agent]':'[data-maint-event]';
+  document.querySelectorAll(sel).forEach(input=>{
+    const card=input.closest('.maintenance-item');
+    input.checked=isTestLikeText(card?.innerText||'');
+  });
+}
+function checkedValues(selector){
+  const attr=selector.slice(1,-1);
+  return [...document.querySelectorAll(selector+':checked')].map(x=>x.getAttribute(attr));
+}
+function deleteMaintenanceSelected(){
+  const clientIds=checkedValues('[data-maint-client]');
+  const agentIds=checkedValues('[data-maint-agent]');
+  const eventIds=checkedValues('[data-maint-event]');
+  const deleteLinked=!!document.getElementById('maintenanceDeleteLinkedEvents')?.checked;
+  if(!clientIds.length&&!agentIds.length&&!eventIds.length){alert('Selecione pelo menos um item para eliminar.');return}
+
+  let finalEventIds=new Set(eventIds);
+  if(deleteLinked){
+    (state.data.events||[]).forEach(ev=>{if(clientIds.includes(ev.clientId))finalEventIds.add(ev.id)});
+  }
+
+  const msg=`Eliminar definitivamente:\n- ${clientIds.length} cliente(s)\n- ${agentIds.length} agente(s)\n- ${finalEventIds.size} evento(s)\n\nEsta ação não pode ser desfeita.`;
+  if(!confirm(msg))return;
+
+  if(clientIds.length){
+    state.data.clients=(state.data.clients||[]).filter(c=>!clientIds.includes(c.id));
+    if(clientIds.includes(state.selectedClientId))state.selectedClientId='';
+  }
+
+  if(agentIds.length){
+    state.data.agents=(state.data.agents||[]).filter(a=>!agentIds.includes(a.id));
+    (state.data.clients||[]).forEach(c=>{
+      if(agentIds.includes(c.agentId)){c.agentId='';c.agent='';c.agency=''}
+    });
+    (state.data.events||[]).forEach(ev=>{
+      if(agentIds.includes(ev.agentId)){ev.agentId='';ev.withAgent=false;ev.commissionType='';ev.commissionValue=0;ev.commissionAmount=0}
+    });
+    Object.keys(state.data.saleCommissions||{}).forEach(n=>{
+      if(agentIds.includes(state.data.saleCommissions[n]?.agentId)){
+        state.data.saleCommissions[n].agentId='';
+        state.data.saleCommissions[n].withAgent=false;
+      }
+    });
+    if(agentIds.includes(state.selectedAgentId))state.selectedAgentId='';
+  }
+
+  if(finalEventIds.size){
+    state.data.events=(state.data.events||[]).filter(ev=>!finalEventIds.has(ev.id));
+    Object.keys(state.data.saleCommissions||{}).forEach(n=>{
+      if(finalEventIds.has(state.data.saleCommissions[n]?.eventId))delete state.data.saleCommissions[n];
+    });
+  }
+
+  save();
+  closeMaintenanceModal();
+  renderAll();
+}
+
+
 function openAgentModal(aid=''){
   ensureAgentModal();
   const isEdit=!!aid;
