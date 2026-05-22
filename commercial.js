@@ -193,16 +193,9 @@ function ensureSalesManagementTabs(){
 }
 
 function renderSalesSubTabs(){
-  const allowed=['fractions','clients','agents','events'];
-  const active=allowed.includes(state.salesSubtab)?state.salesSubtab:'fractions';
-  state.salesSubtab=active;
+  const active=state.salesSubtab||'fractions';
   document.querySelectorAll('#salesSubTabs [data-sales-subtab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.salesSubtab===active));
-  const panels=[...document.querySelectorAll('#tab-sales [data-sales-view]')];
-  panels.forEach(panel=>panel.classList.toggle('sales-view-hidden',panel.dataset.salesView!==active));
-  if(!panels.some(p=>p.dataset.salesView===active)){
-    state.salesSubtab='fractions';
-    panels.forEach(panel=>panel.classList.toggle('sales-view-hidden',panel.dataset.salesView!=='fractions'));
-  }
+  document.querySelectorAll('#tab-sales [data-sales-view]').forEach(panel=>panel.classList.toggle('sales-view-hidden',panel.dataset.salesView!==active));
   renderSalesEventsPanel();
 }
 
@@ -295,8 +288,7 @@ function saveAgent(){
   state.data.agents=state.data.agents||[];
   const idx=state.data.agents.findIndex(x=>x.id===aid);
   idx>=0?state.data.agents[idx]=a:state.data.agents.push(a);
-  state.salesSubtab='agents';
-  save();renderAll();populateAgentSelect();clearAgentForm();setStatus('Agente guardado');
+  save();renderAgents();populateAgentSelect();clearAgentForm();
 }
 function renderAgents(){
   const box=document.getElementById('agentsList');if(!box)return;
@@ -330,10 +322,10 @@ function toggleEventAgentFields(){
 function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}</td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=()=>{const n=+s.dataset.status,old=statusOf(getF(n)),st=s.value,f=getF(n);if(['Reservado','Vendido'].includes(st)){alert('Para registar uma reserva ou venda completa, use "Adicionar evento" e escolha o tipo Reserva ou Venda. Esta alteração manual ficará apenas como ajuste de estado.')}state.data.statuses[n]=st;if(st==='Indisponível'){const reason=prompt(`${f.name} ficará indisponível. Indique o motivo:`,state.data.unavailableReasons?.[n]||'');state.data.unavailableReasons=state.data.unavailableReasons||{};if(reason!==null)state.data.unavailableReasons[n]=reason.trim()}if(st==='Disponível'){if(state.data.unavailableReasons)delete state.data.unavailableReasons[n]}if((st==='Reservado'||st==='Vendido')&&!state.data.salePrices[n]){const v=prompt(`${f.name} foi marcado como ${st}.\nPreço definido: ${money(finalPrice(f))}\nConfirme o preço real ou deixe vazio para usar o preço definido:`,Math.round(finalPrice(f)));state.data.salePrices[n]=v?num(v):finalPrice(f)}state.data.events.push({id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${old} para ${st}`});save();renderAll()});el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{state.data.salePrices[+i.dataset.salePrice]=num(i.value);save();renderDashboard();renderSales()})}
 function openClientModal(cid=''){const c=client(cid)||{};el.clientId.value=c.id||'';el.clientName.value=c.name||'';el.clientPhone.value=c.phone||'';el.clientEmail.value=c.email||'';el.clientNif.value=c.nif||'';el.clientNationality.value=c.nationality||'';el.clientOrigin.value=c.origin||'Portal imobiliário';el.clientAgent.value=c.agent||'';el.clientAgency.value=c.agency||'';el.clientBudget.value=c.budget||'';el.clientStage.value=c.stage||'Novo lead';setMulti(el.clientFractions,c.fractions||[]);el.clientNotes.value=c.notes||'';el.clientModal.classList.remove('hidden');document.body.style.overflow='hidden'}
 function closeClientModal(){el.clientModal.classList.add('hidden');document.body.style.overflow=''}
-function saveClient(){let cid=el.clientId.value||id();const c={id:cid,name:el.clientName.value.trim(),phone:el.clientPhone.value.trim(),email:el.clientEmail.value.trim(),nif:el.clientNif.value.trim(),nationality:el.clientNationality.value.trim(),origin:el.clientOrigin.value,agent:el.clientAgent.value.trim(),agency:el.clientAgency.value.trim(),budget:num(el.clientBudget.value),stage:el.clientStage.value,fractions:getMulti(el.clientFractions).map(Number),notes:el.clientNotes.value.trim(),updated:new Date().toLocaleString('pt-PT')};const idx=state.data.clients.findIndex(x=>x.id===cid);idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);state.selectedClientId=cid;state.salesSubtab='clients';save();closeClientModal();renderAll();setStatus('Cliente guardado')}
+function saveClient(){let cid=el.clientId.value||id();const c={id:cid,name:el.clientName.value.trim(),phone:el.clientPhone.value.trim(),email:el.clientEmail.value.trim(),nif:el.clientNif.value.trim(),nationality:el.clientNationality.value.trim(),origin:el.clientOrigin.value,agent:el.clientAgent.value.trim(),agency:el.clientAgency.value.trim(),budget:num(el.clientBudget.value),stage:el.clientStage.value,fractions:getMulti(el.clientFractions).map(Number),notes:el.clientNotes.value.trim(),updated:new Date().toLocaleString('pt-PT')};const idx=state.data.clients.findIndex(x=>x.id===cid);idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);state.selectedClientId=cid;save();closeClientModal();renderAll()}
 function openEventModal(){ensureEventAgentFields();populateAgentSelect();el.eventClientId.value=state.selectedClientId||'';el.eventType.value='Reunião com cliente';el.eventDate.value=today();el.eventTime.value='';el.eventAmount.value='';el.eventInterest.value='';el.eventFollowup.value='';el.eventFollowupDate.value='';setMulti(el.eventFractions,[]);el.eventObjections.value='';el.eventNotes.value='';const wa=document.getElementById('eventWithAgent');if(wa)wa.checked=false;const cv=document.getElementById('eventCommissionValue');if(cv)cv.value='';toggleEventAgentFields();el.eventType.onchange=toggleEventAgentFields;el.eventModal.classList.remove('hidden');document.body.style.overflow='hidden'}
 function closeEventModal(){el.eventModal.classList.add('hidden');document.body.style.overflow=''}
-function saveEvent(){const cid=el.eventClientId.value;if(!cid){alert('Escolha um cliente.');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){alert('Escolha pelo menos uma fração.');return}const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';const commissionType=document.getElementById('eventCommissionType')?.value||'percent';const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);const saleAmount=num(el.eventAmount.value);const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;const ev={id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};state.data.events.push(ev);const c=client(cid);if(c){c.fractions=uniqNum([...(c.fractions||[]),...frs]);if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';if(ev.type==='Visita')c.stage='Visitou';if(ev.type==='Reserva')c.stage='Reserva';if(ev.type==='Venda')c.stage='Vendido'}if(ev.type==='Reserva')frs.forEach(n=>{state.data.statuses[n]='Reservado';if(ev.amount)state.data.salePrices[n]=ev.amount});if(ev.type==='Venda')frs.forEach(n=>{state.data.statuses[n]='Vendido';if(ev.amount)state.data.salePrices[n]=ev.amount;state.data.saleCommissions=state.data.saleCommissions||{};state.data.saleCommissions[n]={withAgent,agentId:ev.agentId,commissionType,commissionValue,amount:commissionAmount,netRevenue:(ev.amount||finalPrice(getF(n)))-commissionAmount,eventId:ev.id,date:ev.date}});state.salesSubtab=['Reserva','Venda','Alteração de estado'].includes(ev.type)?'fractions':'events';save();closeEventModal();renderAll();setStatus('Evento guardado')}
+function saveEvent(){const cid=el.eventClientId.value;if(!cid){alert('Escolha um cliente.');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){alert('Escolha pelo menos uma fração.');return}const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';const commissionType=document.getElementById('eventCommissionType')?.value||'percent';const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);const saleAmount=num(el.eventAmount.value);const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;const ev={id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};state.data.events.push(ev);const c=client(cid);if(c){c.fractions=uniqNum([...(c.fractions||[]),...frs]);if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';if(ev.type==='Visita')c.stage='Visitou';if(ev.type==='Reserva')c.stage='Reserva';if(ev.type==='Venda')c.stage='Vendido'}if(ev.type==='Reserva')frs.forEach(n=>{state.data.statuses[n]='Reservado';if(ev.amount)state.data.salePrices[n]=ev.amount});if(ev.type==='Venda')frs.forEach(n=>{state.data.statuses[n]='Vendido';if(ev.amount)state.data.salePrices[n]=ev.amount;state.data.saleCommissions=state.data.saleCommissions||{};state.data.saleCommissions[n]={withAgent,agentId:ev.agentId,commissionType,commissionValue,amount:commissionAmount,netRevenue:(ev.amount||finalPrice(getF(n)))-commissionAmount,eventId:ev.id,date:ev.date}});save();closeEventModal();renderAll()}
 function exportPdf(){
   const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)!=='Vendido').sort((a,b)=>a.number-b.number);
   if(!fs.length){alert('Selecione pelo menos uma fração disponível.');return}
@@ -513,6 +505,42 @@ function ensureHistory(){state.fractions.forEach(f=>{state.data.priceHistory[f.n
 function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return +state.data.finalPrices[f.number]||SUG[f.number]||f.price}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return +state.data.salePrices[f.number]||0}function historyOf(f){return state.data.priceHistory[f.number]||[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{}}}
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
 
+
+function hasBusinessData(d){
+  d = normalizeData(d || {});
+  return Object.keys(d.finalPrices||{}).length>0 ||
+    Object.keys(d.statuses||{}).length>0 ||
+    Object.keys(d.salePrices||{}).length>0 ||
+    Object.keys(d.priceHistory||{}).length>0 ||
+    Object.keys(d.saleCommissions||{}).length>0 ||
+    Object.keys(d.unavailableReasons||{}).length>0 ||
+    (d.clients||[]).length>0 ||
+    (d.events||[]).length>0 ||
+    (d.agents||[]).length>0;
+}
+function mergeById(remoteArr=[], localArr=[]){
+  const map = new Map();
+  (remoteArr||[]).forEach(x=>{ if(x && x.id) map.set(x.id, x); });
+  (localArr||[]).forEach(x=>{ if(x && x.id) map.set(x.id, {...(map.get(x.id)||{}), ...x}); });
+  return [...map.values()];
+}
+function mergeDataSafe(remoteData={}, localData={}){
+  const r = normalizeData(remoteData || {});
+  const l = normalizeData(localData || {});
+  return normalizeData({
+    finalPrices:{...r.finalPrices, ...l.finalPrices},
+    statuses:{...r.statuses, ...l.statuses},
+    salePrices:{...r.salePrices, ...l.salePrices},
+    priceHistory:{...r.priceHistory, ...l.priceHistory},
+    clients:mergeById(r.clients, l.clients),
+    events:mergeById(r.events, l.events),
+    agents:mergeById(r.agents, l.agents),
+    saleCommissions:{...r.saleCommissions, ...l.saleCommissions},
+    unavailableReasons:{...r.unavailableReasons, ...l.unavailableReasons},
+    priceMigrationKey:l.priceMigrationKey || r.priceMigrationKey || ''
+  });
+}
+
 function loadRemoteJsonp(){
   return new Promise((resolve, reject)=>{
     if(!REMOTE_URL){ resolve(null); return; }
@@ -531,32 +559,74 @@ function loadRemoteJsonp(){
 async function loadRemoteData(){
   if(!REMOTE_URL) return;
   setStatus('A sincronizar com Google Sheets…');
+
+  const localData = loadDataLocal();
+  const localHasData = hasBusinessData(localData);
+
   const j = await loadRemoteJsonp();
   if(j && j.ok && j.data){
-    state.data = normalizeData(j.data);
+    const remoteData = normalizeData(j.data);
+    const remoteHasData = hasBusinessData(remoteData);
+
+    // Proteção contra perda de dados:
+    // se a Google Sheet ainda estiver vazia, não deixa que ela apague o que acabou de ser criado no navegador.
+    if(!remoteHasData && localHasData){
+      state.data = localData;
+      localStorage.setItem(KEY, JSON.stringify(state.data));
+      setStatus('Google Sheets vazio · dados locais preservados');
+      syncRemote();
+      return;
+    }
+
+    // Se ambos tiverem dados, faz merge conservador, preservando alterações locais ainda não enviadas.
+    if(remoteHasData && localHasData){
+      state.data = mergeDataSafe(remoteData, localData);
+    }else{
+      state.data = remoteHasData ? remoteData : localData;
+    }
+
     localStorage.setItem(KEY, JSON.stringify(state.data));
-    setStatus('Dados carregados do Google Sheets');
+    setStatus('Dados sincronizados com Google Sheets');
     return;
   }
+
   if(j && j.error) throw new Error(j.error);
   throw new Error('Resposta inválida do Google Sheets');
 }
 let saveTimer=null;
-function save(){localStorage.setItem(KEY,JSON.stringify(state.data));if(REMOTE_URL){clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,500)}}
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(state.data));
+  if(REMOTE_URL){
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(syncRemote,300);
+  }
+}
 async function syncRemote(){
   if(!REMOTE_URL) return;
+  const payload = JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()});
   try{
     setStatus('A guardar no Google Sheets…');
     await fetch(REMOTE_URL,{
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()})
+      body:payload,
+      keepalive:true
     });
-    // Com no-cors o browser não permite ler a resposta, mas o Apps Script recebe o POST.
     setStatus('Enviado para Google Sheets');
   }catch(e){
     console.warn('Falha ao guardar Google Sheets',e);
+    // Fallback: tenta beacon; útil se o utilizador fizer refresh logo após guardar.
+    try{
+      if(navigator.sendBeacon){
+        const blob = new Blob([payload], {type:'text/plain;charset=utf-8'});
+        navigator.sendBeacon(REMOTE_URL, blob);
+        setStatus('Envio pendente para Google Sheets');
+        return;
+      }
+    }catch(beaconErr){
+      console.warn('Falha no sendBeacon', beaconErr);
+    }
     setStatus('Falha ao sincronizar · dados guardados localmente');
   }
 }
