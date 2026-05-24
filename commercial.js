@@ -24,28 +24,37 @@ async function loadExcel(){
 
     if(!state.fractions.length) throw new Error('Não encontrei frações The View.');
 
-    applyUpdatedInitialPriceMigration();
-    ensureHistory();
-    populate();
-    renderAll();
-
-    // O painel não fica bloqueado à espera do Google Sheets.
-    // Primeiro mostra os dados locais; depois tenta sincronizar em segundo plano.
+    let remoteLoaded=!REMOTE_URL;
+    let shouldSyncAfterLoad=false;
     setStatus(REMOTE_URL ? `${state.fractions.length} frações carregadas · a sincronizar Google Sheets…` : `${state.fractions.length} frações carregadas`);
 
     if(REMOTE_URL){
-      loadRemoteData()
-        .then(()=>{
-          const migrated = applyUpdatedInitialPriceMigration();
-          ensureHistory();
-          populate();
-          renderAll();
-          if(migrated){ save(); setStatus(`${state.fractions.length} frações · preços atualizados e sincronização ativa`); } else { setStatus(`${state.fractions.length} frações · sincronização Google Sheets ativa`); }
-        })
-        .catch(err=>{
-          console.warn('Falha ao sincronizar Google Sheets em segundo plano', err);
-          setStatus(`${state.fractions.length} frações carregadas · dados locais`);
-        });
+      try{
+        const remoteResult=await loadRemoteData();
+        remoteLoaded=true;
+        shouldSyncAfterLoad=!!remoteResult?.shouldSave;
+      }catch(err){
+        console.warn('Falha ao sincronizar Google Sheets antes de preparar dados locais', err);
+        setStatus(`${state.fractions.length} frações carregadas · dados locais`);
+      }
+    }
+
+    const migrated = applyUpdatedInitialPriceMigration();
+    const historyChanged = ensureHistory();
+    populate();
+    renderAll();
+
+    if(REMOTE_URL){
+      if(remoteLoaded && (shouldSyncAfterLoad || migrated || historyChanged)){
+        save();
+      }else if(!remoteLoaded && (migrated || historyChanged)){
+        saveLocalOnly();
+      }
+      if(remoteLoaded){
+        setStatus(migrated || historyChanged ? `${state.fractions.length} frações · preços/histórico preparados e sincronização ativa` : `${state.fractions.length} frações · sincronização Google Sheets ativa`);
+      }
+    }else if(migrated || historyChanged){
+      save();
     }
   }catch(e){
     console.error(e);
@@ -71,6 +80,7 @@ function applyUpdatedInitialPriceMigration(){
   if(state.data.priceMigrationKey === migrationKey) return false;
 
   let changed = false;
+  const keyChanged = state.data.priceMigrationKey !== migrationKey;
   state.data.finalPrices = state.data.finalPrices || {};
   state.data.priceHistory = state.data.priceHistory || {};
 
@@ -93,7 +103,7 @@ function applyUpdatedInitialPriceMigration(){
   });
 
   state.data.priceMigrationKey = migrationKey;
-  return changed;
+  return changed || keyChanged;
 }
 
 
@@ -693,7 +703,7 @@ function openEventModal(){ensureEventAgentFields();ensureEventClientQuickCreate(
 function closeEventModal(){el.eventModal.classList.add('hidden');document.body.style.overflow=''}
 function saveEvent(){const cid=el.eventClientId.value;if(!cid){alert('Escolha um cliente.');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){alert('Escolha pelo menos uma fração.');return}const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';const commissionType=document.getElementById('eventCommissionType')?.value||'percent';const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);const saleAmount=num(el.eventAmount.value);const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;const ev={id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};state.data.events.push(ev);const c=client(cid);if(c){c.fractions=uniqNum([...(c.fractions||[]),...frs]);if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';if(ev.type==='Visita')c.stage='Visitou';if(ev.type==='Reserva')c.stage='Reserva';if(ev.type==='Venda')c.stage='Vendido'}if(ev.type==='Reserva')frs.forEach(n=>{state.data.statuses[n]='Reservado';if(ev.amount)state.data.salePrices[n]=ev.amount});if(ev.type==='Venda')frs.forEach(n=>{state.data.statuses[n]='Vendido';if(ev.amount)state.data.salePrices[n]=ev.amount;state.data.saleCommissions=state.data.saleCommissions||{};state.data.saleCommissions[n]={withAgent,agentId:ev.agentId,commissionType,commissionValue,amount:commissionAmount,netRevenue:(ev.amount||finalPrice(getF(n)))-commissionAmount,eventId:ev.id,date:ev.date}});save();closeEventModal();renderAll()}
 function exportPdf(){
-  const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)!=='Vendido').sort((a,b)=>a.number-b.number);
+  const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)==='Disponível').sort((a,b)=>a.number-b.number);
   if(!fs.length){alert('Selecione pelo menos uma fração disponível.');return}
   const include=el.proposalIncludePlants.checked;
   openPresentationPriceModal(fs, include);
@@ -867,7 +877,7 @@ function filterFractions(fil={}){
 
 function syncProposal(){state.pf={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};renderProposals()}function syncPrice(){state.rf={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};renderPrices()}
 function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const cnt=t=>evs.filter(e=>e.type===t).length;const offers=evs.filter(e=>['Proposta recebida','Contra-proposta enviada','Reserva','Venda'].includes(e.type)&&e.amount).map(e=>e.amount);const last=evs[evs.length-1];return{visits:cnt('Visita'),interested:cnt('Interessado')+cnt('Reunião com cliente'),proposals:cnt('Proposta recebida')+cnt('Contra-proposta enviada')+cnt('Reserva')+cnt('Venda'),lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
-function ensureHistory(){state.fractions.forEach(f=>{state.data.priceHistory[f.number] ||= [{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}]});save()}
+function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
 function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return +state.data.finalPrices[f.number]||SUG[f.number]||f.price}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return +state.data.salePrices[f.number]||0}function historyOf(f){return state.data.priceHistory[f.number]||[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{}}}
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
 
@@ -938,30 +948,33 @@ async function loadRemoteData(){
     // se a Google Sheet ainda estiver vazia, não deixa que ela apague o que acabou de ser criado no navegador.
     if(!remoteHasData && localHasData){
       state.data = localData;
-      localStorage.setItem(KEY, JSON.stringify(state.data));
+      saveLocalOnly();
       setStatus('Google Sheets vazio · dados locais preservados');
-      syncRemote();
-      return;
+      return {shouldSave:true};
     }
 
-    // Se ambos tiverem dados, faz merge conservador, preservando alterações locais ainda não enviadas.
-    if(remoteHasData && localHasData){
-      state.data = mergeDataSafe(remoteData, localData);
-    }else{
-      state.data = remoteHasData ? remoteData : localData;
+    if(remoteHasData){
+      state.data = remoteData;
+      saveLocalOnly();
+      setStatus('Dados sincronizados com Google Sheets');
+      return {shouldSave:false};
     }
 
-    localStorage.setItem(KEY, JSON.stringify(state.data));
-    setStatus('Dados sincronizados com Google Sheets');
-    return;
+    state.data = localData;
+    saveLocalOnly();
+    setStatus('Google Sheets vazio · sem dados comerciais remotos');
+    return {shouldSave:false};
   }
 
   if(j && j.error) throw new Error(j.error);
   throw new Error('Resposta inválida do Google Sheets');
 }
 let saveTimer=null;
-function save(){
+function saveLocalOnly(){
   localStorage.setItem(KEY, JSON.stringify(state.data));
+}
+function save(){
+  saveLocalOnly();
   if(REMOTE_URL){
     clearTimeout(saveTimer);
     saveTimer=setTimeout(syncRemote,300);
