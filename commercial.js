@@ -9,9 +9,17 @@ const STATUS=['Disponível','Reservado','Vendido','Indisponível'];
 const STAGES=['Novo lead','Contactado','Visitou','Em negociação','Reserva','Vendido','Desistiu'];
 const state={rows:[],fractions:[],tab:'proposals',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
+const RenderFlow={
+  all(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();},
+  priceChanged(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderSales();renderSalesEventsPanel();},
+  clientChanged(){renderClientSelects();renderClients();renderClientDetail();renderSalesEventsPanel();renderMaintenanceModalLists();},
+  agentChanged(){populateAgentSelect();populateClientAgentSelect(el.clientAgent?.value||'');renderAgents();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();},
+  eventChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();renderSalesEventsPanel();renderMaintenanceModalLists();},
+  salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();}
+};
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
 function init(){['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientAgent','clientAgency','clientBudget','clientStage','clientFractions','clientNotes','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
-function bind(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderAll()};document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderAll()};document.getElementById('exportClientPdf').onclick=exportPdf;document.getElementById('exportAllData').onclick=exportAll;document.getElementById('resetLocalData').onclick=resetLocal;document.getElementById('exportPriceHistory').onclick=exportPriceHistory;['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});el.historyFractionSelect.onchange=renderHistory;el.compareA.onchange=renderCompare;el.compareB.onchange=renderCompare;document.getElementById('openClientModal').onclick=()=>openClientModal('');document.getElementById('closeClientModal').onclick=closeClientModal;document.getElementById('cancelClient').onclick=closeClientModal;document.getElementById('saveClient').onclick=saveClient;document.getElementById('openEventModalBtn').onclick=()=>openEventModal();document.getElementById('closeEventModal').onclick=closeEventModal;document.getElementById('cancelEvent').onclick=closeEventModal;document.getElementById('saveEvent').onclick=saveEvent;el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};el.clientModal.onclick=e=>{if(e.target===el.clientModal)closeClientModal()};el.eventModal.onclick=e=>{if(e.target===el.eventModal)closeEventModal()};}
+function bind(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderProposals()};document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderProposals()};document.getElementById('exportClientPdf').onclick=exportPdf;document.getElementById('exportAllData').onclick=exportAll;document.getElementById('resetLocalData').onclick=resetLocal;document.getElementById('exportPriceHistory').onclick=exportPriceHistory;['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});el.historyFractionSelect.onchange=renderHistory;el.compareA.onchange=renderCompare;el.compareB.onchange=renderCompare;document.getElementById('openClientModal').onclick=()=>openClientModal('');document.getElementById('closeClientModal').onclick=closeClientModal;document.getElementById('cancelClient').onclick=closeClientModal;document.getElementById('saveClient').onclick=saveClient;document.getElementById('openEventModalBtn').onclick=()=>openEventModal();document.getElementById('closeEventModal').onclick=closeEventModal;document.getElementById('cancelEvent').onclick=closeEventModal;document.getElementById('saveEvent').onclick=saveEvent;el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};el.clientModal.onclick=e=>{if(e.target===el.clientModal)closeClientModal()};el.eventModal.onclick=e=>{if(e.target===el.eventModal)closeEventModal()};}
 async function loadExcel(){
   setStatus('A carregar dados…');
   try{
@@ -237,7 +245,7 @@ function renderSalesEventsPanel(){
 }
 
 
-function renderAll(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();}
+function renderAll(){RenderFlow.all();}
 function renderProposals(){const fs=filteredProposal();el.proposalSelectedInfo.textContent=`${[...state.selected].filter(n=>statusOf(getF(n))!=='Vendido').length} selecionadas`;el.proposalGrid.innerHTML=fs.length?fs.map(f=>{const st=statusOf(f),blocked=st!=='Disponível';return`<label class="proposal-card ${blocked?'proposal-card--sold':''}"><input type="checkbox" data-proposal-select="${f.number}" ${state.selected.has(f.number)&&!blocked?'checked':''} ${blocked?'disabled':''}/><div><span class="${badge(st)}">${blocked?st:st}</span><h3>${esc(f.name)}</h3><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p><p><strong>${blocked?st:money(finalPrice(f))}</strong></p><p class="muted small">ABP ${area(f.abp)} · Exterior ${area(f.terrace)} · Total ${area(f.totalArea)}</p></div></label>`}).join(''):'<div class="empty-state">Sem frações.</div>';el.proposalGrid.querySelectorAll('[data-proposal-select]').forEach(x=>x.onchange=()=>{const n=+x.dataset.proposalSelect;x.checked?state.selected.add(n):state.selected.delete(n);renderProposals()})}
 function renderDashboard(){
   const sold=state.fractions.filter(f=>statusOf(f)==='Vendido'),available=state.fractions.filter(f=>statusOf(f)==='Disponível'),reserved=state.fractions.filter(f=>statusOf(f)==='Reservado'),unavailable=state.fractions.filter(f=>statusOf(f)==='Indisponível');
@@ -257,7 +265,7 @@ function renderDashboard(){
 
 function renderDecisionAlerts(){if(!el.decisionAlerts)return;const soldBelow=state.fractions.filter(f=>statusOf(f)==='Vendido'&&salePrice(f)&&salePrice(f)<finalPrice(f));const reserved=state.fractions.filter(f=>statusOf(f)==='Reservado');const changed=state.fractions.filter(f=>historyOf(f).length>1).slice(0,8);const hot=state.fractions.map(f=>({f,m:metrics(f.number)})).filter(x=>x.m.proposals||x.m.interested).sort((a,b)=>(b.m.proposals-a.m.proposals)||(b.m.interested-a.m.interested)).slice(0,6);let blocks=[];blocks.push(`<article class="decision-alert decision-alert--warn"><h3>Reservas pendentes</h3><p><strong>${reserved.length}</strong> frações reservadas.</p><p>${reserved.slice(0,5).map(f=>esc(f.name)).join(', ')||'Sem reservas neste momento.'}</p></article>`);blocks.push(`<article class="decision-alert ${soldBelow.length?'decision-alert--danger':'decision-alert--success'}"><h3>Vendas abaixo da tabela</h3><p><strong>${soldBelow.length}</strong> vendas abaixo do preço final definido.</p><p>${soldBelow.slice(0,5).map(f=>`${esc(f.name)} (${money(finalPrice(f)-salePrice(f))})`).join(', ')||'Sem desvios negativos registados.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Preços alterados</h3><p><strong>${changed.length}</strong> frações com histórico de alteração.</p><p>${changed.map(f=>esc(f.name)).join(', ')||'Ainda sem alterações manuais.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Maior procura</h3><p>${hot.length?hot.map(x=>`${esc(x.f.name)} · ${x.m.interested} interessados · ${x.m.proposals} propostas`).join('<br>'):'Ainda sem eventos comerciais suficientes.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Sincronização</h3><p>${REMOTE_URL?'Google Sheets ativo. As alterações são guardadas na base partilhada.':'Modo local. Configure o URL do Google Apps Script em config.js para partilhar dados.'}</p></article>`);el.decisionAlerts.innerHTML=blocks.join('')}
 
-function renderPrices(){const fs=filteredPrice();el.pricesTableBody.innerHTML=fs.length?fs.map(f=>{const h=historyOf(f),last=h[h.length-1];return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(statusOf(f))}</div></td><td>${esc(f.typology)}</td><td>${esc(f.floorLabel)}</td><td>${esc(f.orientation||'—')}</td><td class="num-col">${money(f.price)}</td><td class="num-col"><input type="number" step="1000" data-price="${f.number}" value="${Math.round(finalPrice(f))}"/></td><td><textarea data-price-reason="${f.number}" placeholder="Motivo da alteração"></textarea></td><td><span class="muted small">${h.length} registos</span><br><span class="muted small">Último: ${last?esc(last.date):'—'}</span></td></tr>`}).join(''):'<tr><td colspan="8"><div class="empty-state">Sem frações.</div></td></tr>';el.pricesTableBody.querySelectorAll('[data-price]').forEach(inp=>inp.onchange=()=>{const n=+inp.dataset.price,f=getF(n),old=finalPrice(f),p=num(inp.value);if(!p||p===old)return;const r=document.querySelector(`[data-price-reason="${n}"]`).value.trim();state.data.finalPrices[n]=Math.round(p);state.data.priceHistory[n] ||= [];state.data.priceHistory[n].push({date:today(),price:Math.round(p),oldPrice:Math.round(old),reason:r||'Alteração manual'});save();renderAll()})}
+function renderPrices(){const fs=filteredPrice();el.pricesTableBody.innerHTML=fs.length?fs.map(f=>{const h=historyOf(f),last=h[h.length-1];return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(statusOf(f))}</div></td><td>${esc(f.typology)}</td><td>${esc(f.floorLabel)}</td><td>${esc(f.orientation||'—')}</td><td class="num-col">${money(f.price)}</td><td class="num-col"><input type="number" step="1000" data-price="${f.number}" value="${Math.round(finalPrice(f))}"/></td><td><textarea data-price-reason="${f.number}" placeholder="Motivo da alteração"></textarea></td><td><span class="muted small">${h.length} registos</span><br><span class="muted small">Último: ${last?esc(last.date):'—'}</span></td></tr>`}).join(''):'<tr><td colspan="8"><div class="empty-state">Sem frações.</div></td></tr>';el.pricesTableBody.querySelectorAll('[data-price]').forEach(inp=>inp.onchange=()=>{const n=+inp.dataset.price,f=getF(n),old=finalPrice(f),p=num(inp.value);if(!p||p===old)return;const r=document.querySelector(`[data-price-reason="${n}"]`).value.trim();state.data.finalPrices[n]=Math.round(p);state.data.priceHistory[n] ||= [];state.data.priceHistory[n].push({date:today(),price:Math.round(p),oldPrice:Math.round(old),reason:r||'Alteração manual'});save();RenderFlow.priceChanged()})}
 function renderHistory(){const f=getF(+el.historyFractionSelect.value)||state.fractions[0];if(!f)return;const h=historyOf(f);draw(h,f);el.historyList.innerHTML=h.slice().reverse().map(x=>`<div class="history-item"><strong>${esc(x.date)} · ${money(x.price)}</strong><p class="muted">${esc(x.reason||'Sem nota')}</p></div>`).join('')}
 function draw(h,f){const c=el.priceHistoryChart,ctx=c.getContext('2d'),w=c.width,hgt=c.height;ctx.clearRect(0,0,w,hgt);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,hgt);ctx.strokeStyle='#d9e1eb';for(let i=0;i<5;i++){let y=50+i*((hgt-100)/4);ctx.beginPath();ctx.moveTo(60,y);ctx.lineTo(w-30,y);ctx.stroke()}ctx.fillStyle='#16233d';ctx.font='24px sans-serif';ctx.fillText(`Evolução do preço · ${f.name}`,60,34);if(!h.length)return;let vals=h.map(x=>+x.price),mn=Math.min(...vals),mx=Math.max(...vals);if(mn===mx){mn*=.95;mx*=1.05}const L=60,R=30,T=60,B=55,PW=w-L-R,PH=hgt-T-B,x=i=>L+(h.length===1?PW/2:i*PW/(h.length-1)),y=v=>T+(mx-v)*PH/(mx-mn);ctx.strokeStyle='#1e467c';ctx.lineWidth=4;ctx.beginPath();h.forEach((it,i)=>i?ctx.lineTo(x(i),y(it.price)):ctx.moveTo(x(i),y(it.price)));ctx.stroke();h.forEach((it,i)=>{ctx.fillStyle='#b89253';ctx.beginPath();ctx.arc(x(i),y(it.price),7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#61718b';ctx.font='14px sans-serif';ctx.fillText(money(it.price),x(i)-42,y(it.price)-14)})}
 function renderCompare(){const a=getF(+el.compareA.value)||state.fractions[0],b=getF(+el.compareB.value)||state.fractions[1]||a;el.compareResult.innerHTML=[panel(a),panel(b)].join('')}
@@ -269,6 +277,59 @@ function renderClientDetail(){const c=client(state.selectedClientId);if(!c){el.c
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
 function agent(id){return (state.data.agents||[]).find(a=>a.id===id)}
 function calculateCommission(amount,type,value){amount=+amount||0;value=+value||0;return type==='percent'?amount*value/100:value}
+function applyClientEventStage(c,ev){
+  if(!c)return;
+  c.fractions=uniqNum([...(c.fractions||[]),...(ev.fractions||[])]);
+  if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';
+  if(ev.type==='Visita')c.stage='Visitou';
+  if(ev.type==='Reserva')c.stage='Reserva';
+  if(ev.type==='Venda')c.stage='Vendido';
+}
+function applyReservationEvent(ev){
+  (ev.fractions||[]).forEach(n=>{
+    state.data.statuses[n]='Reservado';
+    if(ev.amount)state.data.salePrices[n]=ev.amount;
+  });
+}
+function applySaleEvent(ev){
+  state.data.saleCommissions=state.data.saleCommissions||{};
+  (ev.fractions||[]).forEach(n=>{
+    state.data.statuses[n]='Vendido';
+    if(ev.amount)state.data.salePrices[n]=ev.amount;
+    state.data.saleCommissions[n]={
+      withAgent:!!ev.withAgent,
+      agentId:ev.agentId||'',
+      commissionType:ev.commissionType||'',
+      commissionValue:+ev.commissionValue||0,
+      amount:+ev.commissionAmount||0,
+      netRevenue:(ev.amount||finalPrice(getF(n)))-(+ev.commissionAmount||0),
+      eventId:ev.id,
+      date:ev.date
+    };
+  });
+}
+function applyEventBusinessRules(ev){
+  state.data.events.push(ev);
+  applyClientEventStage(client(ev.clientId),ev);
+  if(ev.type==='Reserva')applyReservationEvent(ev);
+  if(ev.type==='Venda')applySaleEvent(ev);
+}
+function createManualStatusEvent(n,oldStatus,newStatus){
+  return {id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${oldStatus} para ${newStatus}`};
+}
+function applyManualStatusChange(n,oldStatus,newStatus,{unavailableReason=null,salePriceValue=null}={}){
+  state.data.statuses[n]=newStatus;
+  if(newStatus==='Indisponível'){
+    state.data.unavailableReasons=state.data.unavailableReasons||{};
+    if(unavailableReason!==null)state.data.unavailableReasons[n]=String(unavailableReason).trim();
+  }
+  if(newStatus==='Disponível'&&state.data.unavailableReasons)delete state.data.unavailableReasons[n];
+  if((newStatus==='Reservado'||newStatus==='Vendido')&&!state.data.salePrices[n]){
+    const f=getF(n);
+    state.data.salePrices[n]=salePriceValue?num(salePriceValue):finalPrice(f);
+  }
+  state.data.events.push(createManualStatusEvent(n,oldStatus,newStatus));
+}
 
 function ensureClientAgentSelect(){
   const field=el.clientAgent?.parentElement;
@@ -413,12 +474,12 @@ function checkedValues(selector){
   const attr=selector.slice(1,-1);
   return [...document.querySelectorAll(selector+':checked')].map(x=>x.getAttribute(attr));
 }
-function deleteMaintenanceSelected(){
+async function deleteMaintenanceSelected(){
   const clientIds=checkedValues('[data-maint-client]');
   const agentIds=checkedValues('[data-maint-agent]');
   const eventIds=checkedValues('[data-maint-event]');
   const deleteLinked=!!document.getElementById('maintenanceDeleteLinkedEvents')?.checked;
-  if(!clientIds.length&&!agentIds.length&&!eventIds.length){alert('Selecione pelo menos um item para eliminar.');return}
+  if(!clientIds.length&&!agentIds.length&&!eventIds.length){await notifyUser('Selecione pelo menos um item para eliminar.','Limpar Testes');return}
 
   let finalEventIds=new Set(eventIds);
   if(deleteLinked){
@@ -426,7 +487,7 @@ function deleteMaintenanceSelected(){
   }
 
   const msg=`Eliminar definitivamente:\n- ${clientIds.length} cliente(s)\n- ${agentIds.length} agente(s)\n- ${finalEventIds.size} evento(s)\n\nEsta ação não pode ser desfeita.`;
-  if(!confirm(msg))return;
+  if(!await confirmUser(msg,'Confirmar eliminação'))return;
 
   if(clientIds.length){
     state.data.clients=(state.data.clients||[]).filter(c=>!clientIds.includes(c.id));
@@ -459,7 +520,7 @@ function deleteMaintenanceSelected(){
 
   save();
   closeMaintenanceModal();
-  renderAll();
+  RenderFlow.eventChanged();
 }
 
 
@@ -552,7 +613,7 @@ function ensureAgentsPanel(){
 }
 function clearAgentForm(){openAgentModal('')}
 function editAgent(aid){openAgentModal(aid)}
-function saveAgent(){
+async function saveAgent(){
   const aid=document.getElementById('agentId')?.value||id();
   const a={
     id:aid,
@@ -565,7 +626,7 @@ function saveAgent(){
     notes:(document.getElementById('agentNotes')?.value||'').trim(),
     updated:new Date().toLocaleString('pt-PT')
   };
-  if(!a.name&&!a.agency){alert('Indique pelo menos o nome do agente ou a agência.');return}
+  if(!a.name&&!a.agency){await notifyUser('Indique pelo menos o nome do agente ou a agência.','Agente');return}
   state.data.agents=state.data.agents||[];
   const idx=state.data.agents.findIndex(x=>x.id===aid);
   idx>=0?state.data.agents[idx]=a:state.data.agents.push(a);
@@ -578,7 +639,7 @@ function saveAgent(){
     syncClientAgentAgency();
   }
   closeAgentModal();
-  renderAgents();
+  RenderFlow.agentChanged();
   renderSalesSubTabs&&renderSalesSubTabs();
 }
 function renderAgents(){
@@ -635,7 +696,23 @@ function toggleEventAgentFields(){
   fields.style.display=isSale?'grid':'none';
 }
 
-function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}</td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=()=>{const n=+s.dataset.status,old=statusOf(getF(n)),st=s.value,f=getF(n);if(['Reservado','Vendido'].includes(st)){alert('Para registar uma reserva ou venda completa, use "Adicionar evento" e escolha o tipo Reserva ou Venda. Esta alteração manual ficará apenas como ajuste de estado.')}state.data.statuses[n]=st;if(st==='Indisponível'){const reason=prompt(`${f.name} ficará indisponível. Indique o motivo:`,state.data.unavailableReasons?.[n]||'');state.data.unavailableReasons=state.data.unavailableReasons||{};if(reason!==null)state.data.unavailableReasons[n]=reason.trim()}if(st==='Disponível'){if(state.data.unavailableReasons)delete state.data.unavailableReasons[n]}if((st==='Reservado'||st==='Vendido')&&!state.data.salePrices[n]){const v=prompt(`${f.name} foi marcado como ${st}.\nPreço definido: ${money(finalPrice(f))}\nConfirme o preço real ou deixe vazio para usar o preço definido:`,Math.round(finalPrice(f)));state.data.salePrices[n]=v?num(v):finalPrice(f)}state.data.events.push({id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${old} para ${st}`});save();renderAll()});el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{state.data.salePrices[+i.dataset.salePrice]=num(i.value);save();renderDashboard();renderSales()})}
+function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}</td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=async()=>handleManualStatusSelect(+s.dataset.status,s.value));el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{state.data.salePrices[+i.dataset.salePrice]=num(i.value);save();renderDashboard();renderSales()})}
+async function handleManualStatusSelect(n,newStatus){
+  const f=getF(n),oldStatus=statusOf(f);
+  if(['Reservado','Vendido'].includes(newStatus)){
+    await notifyUser('Para registar uma reserva ou venda completa, use "Adicionar evento" e escolha o tipo Reserva ou Venda. Esta alteração manual ficará apenas como ajuste de estado.','Ajuste manual de estado');
+  }
+  let unavailableReason=null,salePriceValue=null;
+  if(newStatus==='Indisponível'){
+    unavailableReason=await promptUser(`${f.name} ficará indisponível. Indique o motivo:`,state.data.unavailableReasons?.[n]||'','Motivo de indisponibilidade');
+  }
+  if((newStatus==='Reservado'||newStatus==='Vendido')&&!state.data.salePrices[n]){
+    salePriceValue=await promptUser(`${f.name} foi marcado como ${newStatus}.\nPreço definido: ${money(finalPrice(f))}\nConfirme o preço real ou deixe vazio para usar o preço definido:`,Math.round(finalPrice(f)),'Preço real');
+  }
+  applyManualStatusChange(n,oldStatus,newStatus,{unavailableReason,salePriceValue});
+  save();
+  RenderFlow.salesChanged();
+}
 function openClientModal(cid=''){
   ensureClientAgentSelect();
   populateClientAgentSelect();
@@ -665,7 +742,7 @@ function openClientModal(cid=''){
   document.body.style.overflow='hidden';
 }
 function closeClientModal(){el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
-function saveClient(){
+async function saveClient(){
   let cid=el.clientId.value||id();
   const selectedAgentId=el.clientAgent?.value||'';
   const selectedAgent=agent(selectedAgentId);
@@ -686,7 +763,7 @@ function saveClient(){
     notes:el.clientNotes.value.trim(),
     updated:new Date().toLocaleString('pt-PT')
   };
-  if(!c.name){alert('Indique o nome do cliente.');return}
+  if(!c.name){await notifyUser('Indique o nome do cliente.','Cliente / Lead');return}
   const idx=state.data.clients.findIndex(x=>x.id===cid);
   idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
   state.selectedClientId=cid;
@@ -697,14 +774,22 @@ function saveClient(){
     state.pendingEventClientCreation=false;
   }
   closeClientModal();
-  renderAll();
+  RenderFlow.clientChanged();
 }
 function openEventModal(){ensureEventAgentFields();ensureEventClientQuickCreate();populateAgentSelect();renderClientSelects();el.eventClientId.value=state.selectedClientId||'';el.eventType.value='Reunião com cliente';el.eventDate.value=today();el.eventTime.value='';el.eventAmount.value='';el.eventInterest.value='';el.eventFollowup.value='';el.eventFollowupDate.value='';setMulti(el.eventFractions,[]);el.eventObjections.value='';el.eventNotes.value='';const wa=document.getElementById('eventWithAgent');if(wa)wa.checked=false;const cv=document.getElementById('eventCommissionValue');if(cv)cv.value='';toggleEventAgentFields();el.eventType.onchange=toggleEventAgentFields;el.eventModal.classList.remove('hidden');document.body.style.overflow='hidden'}
 function closeEventModal(){el.eventModal.classList.add('hidden');document.body.style.overflow=''}
-function saveEvent(){const cid=el.eventClientId.value;if(!cid){alert('Escolha um cliente.');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){alert('Escolha pelo menos uma fração.');return}const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';const commissionType=document.getElementById('eventCommissionType')?.value||'percent';const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);const saleAmount=num(el.eventAmount.value);const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;const ev={id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};state.data.events.push(ev);const c=client(cid);if(c){c.fractions=uniqNum([...(c.fractions||[]),...frs]);if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';if(ev.type==='Visita')c.stage='Visitou';if(ev.type==='Reserva')c.stage='Reserva';if(ev.type==='Venda')c.stage='Vendido'}if(ev.type==='Reserva')frs.forEach(n=>{state.data.statuses[n]='Reservado';if(ev.amount)state.data.salePrices[n]=ev.amount});if(ev.type==='Venda')frs.forEach(n=>{state.data.statuses[n]='Vendido';if(ev.amount)state.data.salePrices[n]=ev.amount;state.data.saleCommissions=state.data.saleCommissions||{};state.data.saleCommissions[n]={withAgent,agentId:ev.agentId,commissionType,commissionValue,amount:commissionAmount,netRevenue:(ev.amount||finalPrice(getF(n)))-commissionAmount,eventId:ev.id,date:ev.date}});save();closeEventModal();renderAll()}
+async function saveEvent(){const cid=el.eventClientId.value;if(!cid){await notifyUser('Escolha um cliente.','Evento comercial');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){await notifyUser('Escolha pelo menos uma fração.','Evento comercial');return}const ev=buildEventFromForm(cid,frs);applyEventBusinessRules(ev);save();closeEventModal();RenderFlow.eventChanged()}
+function buildEventFromForm(cid,frs){
+  const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';
+  const commissionType=document.getElementById('eventCommissionType')?.value||'percent';
+  const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);
+  const saleAmount=num(el.eventAmount.value);
+  const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;
+  return {id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
+}
 function exportPdf(){
   const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)==='Disponível').sort((a,b)=>a.number-b.number);
-  if(!fs.length){alert('Selecione pelo menos uma fração disponível.');return}
+  if(!fs.length){notifyUser('Selecione pelo menos uma fração disponível.','Propostas Clientes');return}
   const include=el.proposalIncludePlants.checked;
   openPresentationPriceModal(fs, include);
 }
@@ -795,7 +880,7 @@ function openPresentationPriceModal(fs, includePlants){
 
 function generateClientPresentationPdf(fs, include, presentationPrices={}, language='pt-en'){
   const w=window.open('','_blank');
-  if(!w){alert('Autorize pop-ups para gerar o PDF.');return}
+  if(!w){notifyUser('Autorize pop-ups para gerar o PDF.','Propostas Clientes');return}
 
   const publicArea=v=>Math.max(0,Math.floor((+v||0)-2));
   const presentationPriceFor=f=>presentationPrices[f.number]||finalPrice(f);
@@ -1061,6 +1146,51 @@ function postToAppsScriptForm(payload){
   setTimeout(()=>{ try{ form.remove(); }catch(e){} }, 1000);
 }
 
+function appDialog({title='Aviso',message='',confirmText='OK',cancelText='',input=false,defaultValue='',danger=false}={}){
+  return new Promise(resolve=>{
+    const existing=document.getElementById('appDialogModal');
+    if(existing)existing.remove();
+    const previousOverflow=document.body.style.overflow;
+    const modal=document.createElement('div');
+    modal.id='appDialogModal';
+    modal.className='modal-backdrop';
+    modal.style.zIndex='160';
+    modal.innerHTML=`<div class="modal app-dialog-modal">
+      <button class="modal-close" type="button" data-dialog-cancel>×</button>
+      <p class="eyebrow eyebrow--dark">The View</p>
+      <h2>${esc(title)}</h2>
+      <p class="muted">${esc(message).replace(/\n/g,'<br>')}</p>
+      ${input?`<label class="field"><span>Resposta</span><input id="appDialogInput" value="${attr(defaultValue)}" /></label>`:''}
+      <div class="modal-actions">
+        ${cancelText?`<button class="ghost-button" type="button" data-dialog-cancel>${esc(cancelText)}</button>`:''}
+        <button class="primary-button ${danger?'danger':''}" type="button" data-dialog-confirm>${esc(confirmText)}</button>
+      </div>
+    </div>`;
+    const style=document.createElement('style');
+    style.textContent='#appDialogModal .app-dialog-modal{width:min(520px,100%)}#appDialogModal .field{margin-top:16px}';
+    modal.appendChild(style);
+    document.body.appendChild(modal);
+    document.body.style.overflow='hidden';
+    const inputEl=modal.querySelector('#appDialogInput');
+    if(inputEl){inputEl.focus();inputEl.select();}
+    const close=value=>{
+      modal.remove();
+      document.body.style.overflow=previousOverflow;
+      resolve(value);
+    };
+    modal.querySelectorAll('[data-dialog-cancel]').forEach(btn=>btn.addEventListener('click',()=>close(input?null:false)));
+    modal.querySelector('[data-dialog-confirm]').addEventListener('click',()=>close(input?(inputEl?.value||''):true));
+    modal.addEventListener('click',e=>{if(e.target===modal)close(input?null:false)});
+    modal.addEventListener('keydown',e=>{
+      if(e.key==='Escape')close(input?null:false);
+      if(e.key==='Enter'&&!e.shiftKey)close(input?(inputEl?.value||''):true);
+    });
+  });
+}
+function notifyUser(message,title='Aviso'){return appDialog({title,message,confirmText:'OK'});}
+function confirmUser(message,title='Confirmar'){return appDialog({title,message,confirmText:'Confirmar',cancelText:'Cancelar',danger:true});}
+function promptUser(message,defaultValue='',title='Informação'){return appDialog({title,message,input:true,defaultValue,confirmText:'Guardar',cancelText:'Cancelar'});}
+
 function exportAll(){
   const rows = state.fractions.map(f=>({
     Apartamento:f.name,
@@ -1106,8 +1236,8 @@ function exportSalesEvents(){
   downloadJson(rows, 'the-view-eventos-vendas.json');
 }
 
-function resetLocal(){
-  if(confirm('Apagar dados locais deste navegador? Os dados da Google Sheet não serão apagados.')){
+async function resetLocal(){
+  if(await confirmUser('Apagar dados locais deste navegador? Os dados da Google Sheet não serão apagados.','Repor dados locais')){
     localStorage.removeItem(KEY);
     state.data=loadDataLocal();
     ensureHistory();
