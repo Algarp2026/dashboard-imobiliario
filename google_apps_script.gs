@@ -1,6 +1,7 @@
 var STORE_SHEET_NAME = 'Store';
 var STORE_JSON_CELL = 'B2';
 var STORE_UPDATED_AT_CELL = 'B3';
+var BACKUP_SHEET_NAME = 'Backups';
 
 function doGet(e) {
   var params = e && e.parameter ? e.parameter : {};
@@ -81,12 +82,27 @@ function loadStore_() {
 
 function saveStore_(data, updatedAt) {
   var sheet = getStoreSheet_();
+  var nextJson = JSON.stringify(data);
+  backupStoreBeforeSave_(sheet, nextJson, updatedAt);
   sheet.getRange('A1').setValue('Campo');
   sheet.getRange('B1').setValue('Valor');
   sheet.getRange('A2').setValue('JSON');
-  sheet.getRange(STORE_JSON_CELL).setValue(JSON.stringify(data));
+  sheet.getRange(STORE_JSON_CELL).setValue(nextJson);
   sheet.getRange('A3').setValue('AtualizadoEm');
   sheet.getRange(STORE_UPDATED_AT_CELL).setValue(updatedAt || new Date().toISOString());
+}
+
+function backupStoreBeforeSave_(storeSheet, nextJson, updatedAt) {
+  var previousJson = String(storeSheet.getRange(STORE_JSON_CELL).getValue() || '');
+  if (!previousJson.trim() || previousJson === nextJson) return;
+
+  var previousUpdatedAt = String(storeSheet.getRange(STORE_UPDATED_AT_CELL).getValue() || '');
+  var backupSheet = getOrCreateSheet_(BACKUP_SHEET_NAME);
+  if (backupSheet.getLastRow() === 0) {
+    backupSheet.getRange(1, 1, 1, 4).setValues([['BackupEm', 'StoreAtualizadoEm', 'NovoAtualizadoEm', 'JSONAnterior']]);
+    backupSheet.setFrozenRows(1);
+  }
+  backupSheet.appendRow([new Date().toISOString(), previousUpdatedAt, updatedAt || '', previousJson]);
 }
 
 function getStoreUpdatedAt_() {

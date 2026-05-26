@@ -1,6 +1,6 @@
 "use strict";
 (()=>{
-const DATA_FILES=['data.xlsx','data.xls'],KEY='theView.crmCommercial.v2',CONFIG=window.THE_VIEW_CONFIG||{},REMOTE_URL=(CONFIG.GOOGLE_SHEETS_WEBAPP_URL||'').trim();
+const KEY='theView.crmCommercial.v2',LOCAL_REMOTE_BACKUP_KEY=KEY+'.backupBeforeRemoteLoad',CONFIG=window.THE_VIEW_CONFIG||{},REMOTE_URL=(CONFIG.GOOGLE_SHEETS_WEBAPP_URL||'').trim();
 const PLANT_MAP={"1": {"image": "plantas/planta-apartamento-01.jpg", "pdf": "plantas/planta-apartamento-01.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_01.pdf"}, "2": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "10": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "17": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "24": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "31": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "3": {"image": "plantas/planta-apartamento-03.jpg", "pdf": "plantas/planta-apartamento-03.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_03.pdf"}, "4": {"image": "plantas/planta-apartamento-04.jpg", "pdf": "plantas/planta-apartamento-04.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_04.pdf"}, "5": {"image": "plantas/planta-apartamento-05.jpg", "pdf": "plantas/planta-apartamento-05.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_05.pdf"}, "6": {"image": "plantas/planta-apartamento-06.jpg", "pdf": "plantas/planta-apartamento-06.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_06.pdf"}, "7": {"image": "plantas/planta-apartamento-07-15.jpg", "pdf": "plantas/planta-apartamento-07-15.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf"}, "15": {"image": "plantas/planta-apartamento-07-15.jpg", "pdf": "plantas/planta-apartamento-07-15.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf"}, "8": {"image": "plantas/planta-apartamento-08.jpg", "pdf": "plantas/planta-apartamento-08.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_08.pdf"}, "9": {"image": "plantas/planta-apartamento-09-16.jpg", "pdf": "plantas/planta-apartamento-09-16.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf"}, "16": {"image": "plantas/planta-apartamento-09-16.jpg", "pdf": "plantas/planta-apartamento-09-16.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf"}, "11": {"image": "plantas/planta-apartamento-11.jpg", "pdf": "plantas/planta-apartamento-11.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_11.pdf"}, "12": {"image": "plantas/planta-apartamento-12.jpg", "pdf": "plantas/planta-apartamento-12.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_12.pdf"}, "13": {"image": "plantas/planta-apartamento-13.jpg", "pdf": "plantas/planta-apartamento-13.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_13.pdf"}, "14": {"image": "plantas/planta-apartamento-14.jpg", "pdf": "plantas/planta-apartamento-14.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_14.pdf"}, "18": {"image": "plantas/planta-apartamento-18.jpg", "pdf": "plantas/planta-apartamento-18.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_18.pdf"}, "19": {"image": "plantas/planta-apartamento-19.jpg", "pdf": "plantas/planta-apartamento-19.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_19.pdf"}, "20": {"image": "plantas/planta-apartamento-20.jpg", "pdf": "plantas/planta-apartamento-20.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_20.pdf"}, "21": {"image": "plantas/planta-apartamento-21.jpg", "pdf": "plantas/planta-apartamento-21.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_21.pdf"}, "22": {"image": "plantas/planta-apartamento-22.jpg", "pdf": "plantas/planta-apartamento-22.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_22.pdf"}, "23": {"image": "plantas/planta-apartamento-23-30.jpg", "pdf": "plantas/planta-apartamento-23-30.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf"}, "30": {"image": "plantas/planta-apartamento-23-30.jpg", "pdf": "plantas/planta-apartamento-23-30.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf"}, "25": {"image": "plantas/planta-apartamento-25.jpg", "pdf": "plantas/planta-apartamento-25.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_25.pdf"}, "26": {"image": "plantas/planta-apartamento-26.jpg", "pdf": "plantas/planta-apartamento-26.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_26.pdf"}, "27": {"image": "plantas/planta-apartamento-27.jpg", "pdf": "plantas/planta-apartamento-27.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_27.pdf"}, "28": {"image": "plantas/planta-apartamento-28.jpg", "pdf": "plantas/planta-apartamento-28.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_28.pdf"}, "29": {"image": "plantas/planta-apartamento-29.jpg", "pdf": "plantas/planta-apartamento-29.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_29.pdf"}, "32": {"image": "plantas/planta-apartamento-32.jpg", "pdf": "plantas/planta-apartamento-32.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_32.pdf"}, "33": {"image": "plantas/planta-apartamento-33.jpg", "pdf": "plantas/planta-apartamento-33.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_33.pdf"}, "34": {"image": "plantas/planta-apartamento-34.jpg", "pdf": "plantas/planta-apartamento-34.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_34.pdf"}, "35": {"image": "plantas/planta-apartamento-35.jpg", "pdf": "plantas/planta-apartamento-35.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_35.pdf"}, "36": {"image": "plantas/planta-apartamento-36.jpg", "pdf": "plantas/planta-apartamento-36.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_36.pdf"}, "37": {"image": "plantas/planta-apartamento-37.jpg", "pdf": "plantas/planta-apartamento-37.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_37.pdf"}, "38": {"image": "plantas/planta-apartamento-38.jpg", "pdf": "plantas/planta-apartamento-38.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_38.pdf"}, "39": {"image": "plantas/planta-apartamento-39.jpg", "pdf": "plantas/planta-apartamento-39.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_39.pdf"}};
 const ORIENT={1:'Sul/Este',2:'Sul/Oeste',3:'Oeste',4:'Oeste',5:'Oeste',6:'Este/Oeste',7:'Este',8:'Este',9:'Sul/Este',10:'Sul/Oeste',11:'Oeste',12:'Oeste',13:'Oeste',14:'Este/Oeste',15:'Este',16:'Sul/Este',17:'Sul/Oeste',18:'Oeste',19:'Oeste',20:'Oeste',21:'Este/Oeste',22:'Este',23:'Sul/Este',24:'Sul/Oeste',25:'Oeste',26:'Este/Oeste',27:'Oeste',28:'Este/Oeste',29:'Este',30:'Sul/Este',31:'Sul/Oeste',32:'Oeste',33:'Este/Oeste',34:'Este/Oeste',35:'Este/Oeste',36:'Sul/Este',37:'Sul/Oeste',38:'Oeste',39:'Este/Oeste'};
 const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
@@ -909,7 +909,7 @@ function filterFractions(fil={}){
 function syncProposal(){state.pf={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};renderProposals()}function syncPrice(){state.rf={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};renderPrices()}
 function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const cnt=t=>evs.filter(e=>e.type===t).length;const offers=evs.filter(e=>['Proposta recebida','Contra-proposta enviada','Reserva','Venda'].includes(e.type)&&e.amount).map(e=>e.amount);const last=evs[evs.length-1];return{visits:cnt('Visita'),interested:cnt('Interessado')+cnt('Reunião com cliente'),proposals:cnt('Proposta recebida')+cnt('Contra-proposta enviada')+cnt('Reserva')+cnt('Venda'),lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
-function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return +state.data.finalPrices[f.number]||SUG[f.number]||f.price}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return +state.data.salePrices[f.number]||0}function historyOf(f){return state.data.priceHistory[f.number]||[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{}}}
+function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return +state.data.finalPrices[f.number]||SUG[f.number]||f.price}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return +state.data.salePrices[f.number]||0}function historyOf(f){return state.data.priceHistory[f.number]||[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{},priceMigrationKey:d.priceMigrationKey||''}}
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
 
 
@@ -925,29 +925,6 @@ function hasBusinessData(d){
     (d.events||[]).length>0 ||
     (d.agents||[]).length>0;
 }
-function mergeById(remoteArr=[], localArr=[]){
-  const map = new Map();
-  (remoteArr||[]).forEach(x=>{ if(x && x.id) map.set(x.id, x); });
-  (localArr||[]).forEach(x=>{ if(x && x.id) map.set(x.id, {...(map.get(x.id)||{}), ...x}); });
-  return [...map.values()];
-}
-function mergeDataSafe(remoteData={}, localData={}){
-  const r = normalizeData(remoteData || {});
-  const l = normalizeData(localData || {});
-  return normalizeData({
-    finalPrices:{...r.finalPrices, ...l.finalPrices},
-    statuses:{...r.statuses, ...l.statuses},
-    salePrices:{...r.salePrices, ...l.salePrices},
-    priceHistory:{...r.priceHistory, ...l.priceHistory},
-    clients:mergeById(r.clients, l.clients),
-    events:mergeById(r.events, l.events),
-    agents:mergeById(r.agents, l.agents),
-    saleCommissions:{...r.saleCommissions, ...l.saleCommissions},
-    unavailableReasons:{...r.unavailableReasons, ...l.unavailableReasons},
-    priceMigrationKey:l.priceMigrationKey || r.priceMigrationKey || ''
-  });
-}
-
 function loadRemoteJsonp(){
   return new Promise((resolve, reject)=>{
     if(!REMOTE_URL){ resolve(null); return; }
@@ -985,6 +962,7 @@ async function loadRemoteData(){
     }
 
     if(remoteHasData){
+      backupLocalBeforeRemoteLoad(localData, remoteData);
       state.data = remoteData;
       saveLocalOnly();
       setStatus('Dados sincronizados com Google Sheets');
@@ -1003,6 +981,19 @@ async function loadRemoteData(){
 let saveTimer=null;
 function saveLocalOnly(){
   localStorage.setItem(KEY, JSON.stringify(state.data));
+}
+function backupLocalBeforeRemoteLoad(localData, remoteData){
+  try{
+    const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
+    if(!hasBusinessData(local)||JSON.stringify(local)===JSON.stringify(remote))return;
+    localStorage.setItem(LOCAL_REMOTE_BACKUP_KEY,JSON.stringify({
+      createdAt:new Date().toISOString(),
+      reason:'Backup automático antes de substituir dados locais por dados do Google Sheets',
+      data:local
+    }));
+  }catch(err){
+    console.warn('Falha ao criar backup local antes da sincronização remota',err);
+  }
 }
 function save(){
   saveLocalOnly();
