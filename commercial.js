@@ -723,6 +723,14 @@ function openPresentationPriceModal(fs, includePlants){
       <h2>Definir preços a apresentar</h2>
       <p class="muted">Estes valores serão usados apenas neste PDF. Não alteram os preços finais, o histórico, o dashboard nem a Google Sheet.</p>
 
+      <label class="field presentation-language-field">
+        <span>Idioma do PDF</span>
+        <select id="presentationPdfLanguage">
+          <option value="pt-en" selected>PT/ENG</option>
+          <option value="pt-fr">PT/FR</option>
+        </select>
+      </label>
+
       <div class="table-wrap presentation-price-table-wrap">
         <table class="data-table">
           <thead>
@@ -758,6 +766,7 @@ function openPresentationPriceModal(fs, includePlants){
   const style=document.createElement('style');
   style.textContent=`
     #presentationPriceModal .presentation-price-modal{width:min(980px,100%);}
+    #presentationPriceModal .presentation-language-field{max-width:220px;margin-top:16px;}
     #presentationPriceModal .presentation-price-table-wrap{max-height:55vh;overflow:auto;margin-top:16px;}
     #presentationPriceModal .presentation-price-input{width:150px;text-align:right;}
   `;
@@ -775,21 +784,43 @@ function openPresentationPriceModal(fs, includePlants){
 
   modal.querySelector('[data-generate-presentation-pdf]').addEventListener('click',()=>{
     const priceMap={};
+    const pdfLanguage=modal.querySelector('#presentationPdfLanguage')?.value||'pt-en';
     modal.querySelectorAll('[data-presentation-price]').forEach(input=>{
       priceMap[Number(input.dataset.presentationPrice)]=num(input.value)||0;
     });
     close();
-    generateClientPresentationPdf(fs, includePlants, priceMap);
+    generateClientPresentationPdf(fs, includePlants, priceMap, pdfLanguage);
   });
 }
 
-function generateClientPresentationPdf(fs, include, presentationPrices={}){
+function generateClientPresentationPdf(fs, include, presentationPrices={}, language='pt-en'){
   const w=window.open('','_blank');
   if(!w){alert('Autorize pop-ups para gerar o PDF.');return}
 
   const publicArea=v=>Math.max(0,Math.floor((+v||0)-2));
   const presentationPriceFor=f=>presentationPrices[f.number]||finalPrice(f);
-  const disclaimer='Documento meramente informativo e de apresentação comercial. Os valores, áreas e condições aqui indicados não constituem proposta contratual, reserva, promessa de venda ou proposta oficial, estando sujeitos a confirmação e aprovação pela entidade promotora.';
+  const ptDisclaimer='Documento meramente informativo e de apresentação comercial. Os valores, áreas e condições aqui indicados não constituem proposta contratual, reserva, promessa de venda ou proposta oficial, estando sujeitos a confirmação e aprovação pela entidade promotora.';
+  const copies={
+    'pt-fr':{
+      price:'Preço de apresentação / Prix de présentation',
+      abp:'ABP aprox. / Surface brute privative approximative',
+      terrace:'Varanda/Terraço aprox. / Surface balcon/terrasse approximative',
+      total:'Área total aprox. / Surface totale approximative',
+      typology:'Tipologia / Type de bien',
+      missing:'Planta indisponível para esta fração. / Plan indisponible pour cette unité.',
+      disclaimer:ptDisclaimer+'\n\nCe document est fourni uniquement à titre informatif et de présentation commerciale. Les prix, surfaces et conditions indiqués ne constituent ni une proposition contractuelle, ni une réservation, ni une promesse de vente, ni une offre officielle, et restent soumis à confirmation et approbation par le promoteur.'
+    },
+    'pt-en':{
+      price:'Preço de apresentação / Presentation Price',
+      abp:'ABP aprox. / Approx. Gross Private Area',
+      terrace:'Varanda/Terraço aprox. / Approx. Balcony/Terrace Area',
+      total:'Área total aprox. / Approx. Total Area',
+      typology:'Tipologia / Unit Type',
+      missing:'Planta indisponível para esta fração. / Floor plan unavailable for this unit.',
+      disclaimer:ptDisclaimer+'\n\nThis document is for informational and commercial presentation purposes only. The prices, areas and conditions shown herein do not constitute a contractual proposal, reservation, promissory sale agreement or official offer, and are subject to confirmation and approval by the developer.'
+    }
+  };
+  const copy=copies[language]||copies['pt-en'];
 
   const pages=fs.map((f,i)=>{
     const plant=(PLANT_MAP[f.number]&&PLANT_MAP[f.number].image)?PLANT_MAP[f.number].image:'';
@@ -804,20 +835,20 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}){
           <h1>${esc(f.name)}</h1>
           <p class="pdf-subtitle">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p>
         </div>
-        <div class="pdf-price"><span>Preço de apresentação</span><strong>${money(presentationPriceFor(f))}</strong></div>
+        <div class="pdf-price"><span>${esc(copy.price)}</span><strong>${money(presentationPriceFor(f))}</strong></div>
       </header>
 
       <div class="pdf-cards">
-        <article><span>ABP aprox.</span><strong>${abpPublic} m²</strong></article>
-        <article><span>Varanda/Terraço aprox.</span><strong>${extPublic} m²</strong></article>
-        <article><span>Área total aprox.</span><strong>${totalPublic} m²</strong></article>
-        <article><span>Tipologia</span><strong>${esc(f.typology)}</strong></article>
+        <article><span>${esc(copy.abp)}</span><strong>${abpPublic} m²</strong></article>
+        <article><span>${esc(copy.terrace)}</span><strong>${extPublic} m²</strong></article>
+        <article><span>${esc(copy.total)}</span><strong>${totalPublic} m²</strong></article>
+        <article><span>${esc(copy.typology)}</span><strong>${esc(f.typology)}</strong></article>
       </div>
 
-      ${include?`<div class="pdf-plant-wrap">${plant?`<img class="pdf-plant" src="${plant}" />`:'<div class="pdf-missing">Planta indisponível para esta fração.</div>'}</div>`:''}
+      ${include?`<div class="pdf-plant-wrap">${plant?`<img class="pdf-plant" src="${plant}" />`:`<div class="pdf-missing">${esc(copy.missing)}</div>`}</div>`:''}
 
       <footer class="pdf-footer">
-        <p>${esc(disclaimer)}</p>
+        <p>${esc(copy.disclaimer).replace(/\n/g,'<br>')}</p>
       </footer>
     </section>`;
   }).join('');
