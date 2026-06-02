@@ -163,10 +163,10 @@ function generatePriceListPdf(options={}){
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Lista de Preços</title>
   <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
-  @page{size:A4 landscape;margin:8mm}
+  @page{size:A4 portrait;margin:8mm}
   *{box-sizing:border-box}
   body{font-family:'Montserrat',Arial,sans-serif;margin:0;color:#0f2443;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .price-list-page{min-height:calc(210mm - 16mm);display:flex;flex-direction:column}
+  .price-list-page{min-height:calc(297mm - 16mm);display:flex;flex-direction:column}
   .doc-header{display:flex;justify-content:space-between;gap:12mm;align-items:flex-start;border-bottom:1px solid #d9e1eb;padding-bottom:5mm;margin-bottom:5mm}
   .eyebrow{margin:0 0 3mm;text-transform:uppercase;letter-spacing:.24em;font-size:8px;font-weight:700;color:#9a7440}
   h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;color:#0e2444;font-size:27pt;line-height:1;font-weight:700}
