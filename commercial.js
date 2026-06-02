@@ -19,7 +19,271 @@ const RenderFlow={
 };
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
 function init(){['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientAgent','clientAgency','clientBudget','clientStage','clientFractions','clientNotes','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
-function bind(){document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderProposals()};document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderProposals()};document.getElementById('exportClientPdf').onclick=exportPdf;document.getElementById('exportAllData').onclick=exportAll;document.getElementById('resetLocalData').onclick=resetLocal;document.getElementById('exportPriceHistory').onclick=exportPriceHistory;['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});el.historyFractionSelect.onchange=renderHistory;el.compareA.onchange=renderCompare;el.compareB.onchange=renderCompare;document.getElementById('openClientModal').onclick=()=>openClientModal('');document.getElementById('closeClientModal').onclick=closeClientModal;document.getElementById('cancelClient').onclick=closeClientModal;document.getElementById('saveClient').onclick=saveClient;document.getElementById('openEventModalBtn').onclick=()=>openEventModal();document.getElementById('closeEventModal').onclick=closeEventModal;document.getElementById('cancelEvent').onclick=closeEventModal;document.getElementById('saveEvent').onclick=saveEvent;el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};el.clientModal.onclick=e=>{if(e.target===el.clientModal)closeClientModal()};el.eventModal.onclick=e=>{if(e.target===el.eventModal)closeEventModal()};}
+function bind(){ensurePriceListButton();document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderProposals()};document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderProposals()};document.getElementById('exportClientPdf').onclick=exportPdf;document.getElementById('exportAllData').onclick=exportAll;document.getElementById('resetLocalData').onclick=resetLocal;document.getElementById('exportPriceHistory').onclick=exportPriceHistory;['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});el.historyFractionSelect.onchange=renderHistory;el.compareA.onchange=renderCompare;el.compareB.onchange=renderCompare;document.getElementById('openClientModal').onclick=()=>openClientModal('');document.getElementById('closeClientModal').onclick=closeClientModal;document.getElementById('cancelClient').onclick=closeClientModal;document.getElementById('saveClient').onclick=saveClient;document.getElementById('openEventModalBtn').onclick=()=>openEventModal();document.getElementById('closeEventModal').onclick=closeEventModal;document.getElementById('cancelEvent').onclick=closeEventModal;document.getElementById('saveEvent').onclick=saveEvent;el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};el.clientModal.onclick=e=>{if(e.target===el.clientModal)closeClientModal()};el.eventModal.onclick=e=>{if(e.target===el.eventModal)closeEventModal()};}
+function ensurePriceListButton(){
+  if(document.getElementById('printPriceListBtn')) return;
+  const exportBtn=document.getElementById('exportAllData');
+  if(!exportBtn||!exportBtn.parentElement) return;
+  const btn=document.createElement('button');
+  btn.className='ghost-button';
+  btn.id='printPriceListBtn';
+  btn.type='button';
+  btn.textContent='Imprimir Lista de Preços';
+  btn.onclick=openPriceListModal;
+  exportBtn.parentElement.insertBefore(btn, exportBtn);
+}
+function openPriceListModal(){
+  const existing=document.getElementById('priceListModal');
+  if(existing) existing.remove();
+
+  const statusOptions=[
+    ['Disponível','Disponíveis',true],
+    ['Reservado','Reservadas',true],
+    ['Indisponível','Indisponíveis',false],
+    ['Vendido','Vendidas',false]
+  ];
+  const columnOptions=[
+    ['fraction','Fração',true,true],
+    ['floor','Piso',true,false],
+    ['typology','Tipologia',true,false],
+    ['price','Preço',true,false],
+    ['status','Estado comercial',false,false],
+    ['orientation','Orientação',false,false],
+    ['abp','ABP',false,false],
+    ['terrace','Varanda/Terraço',false,false],
+    ['total','Área total',false,false],
+    ['pricePerSqm','Preço/m²',false,false]
+  ];
+
+  const modal=document.createElement('div');
+  modal.id='priceListModal';
+  modal.className='modal-backdrop';
+  modal.innerHTML=`
+    <div class="modal price-list-modal">
+      <button class="modal-close" type="button" data-close-price-list-modal>×</button>
+      <p class="eyebrow eyebrow--dark">Documento interno</p>
+      <h2>Imprimir Lista de Preços</h2>
+      <p class="muted">Gera uma lista interna para consulta comercial. Não altera CRM, preços finais, histórico nem Google Sheets.</p>
+
+      <label class="field price-list-language-field">
+        <span>Idioma</span>
+        <select id="priceListLanguage">
+          <option value="pt-en" selected>PT/ENG</option>
+          <option value="pt-fr">PT/FR</option>
+        </select>
+      </label>
+
+      <div class="price-list-options">
+        <section>
+          <h3>Frações a incluir</h3>
+          <div class="price-list-check-grid">
+            ${statusOptions.map(([value,label,checked])=>`
+              <label class="check-option">
+                <input type="checkbox" value="${attr(value)}" data-price-list-status ${checked?'checked':''}>
+                <span>${esc(label)}</span>
+              </label>
+            `).join('')}
+          </div>
+        </section>
+
+        <section>
+          <h3>Colunas a mostrar</h3>
+          <div class="price-list-check-grid">
+            ${columnOptions.map(([value,label,checked,required])=>`
+              <label class="check-option">
+                <input type="checkbox" value="${attr(value)}" data-price-list-column ${checked?'checked':''} ${required?'disabled':''}>
+                <span>${esc(label)}${required?' <small>obrigatória</small>':''}</span>
+              </label>
+            `).join('')}
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-button" type="button" data-close-price-list-modal>Cancelar</button>
+        <button class="primary-button" type="button" data-generate-price-list-pdf>Gerar PDF</button>
+      </div>
+    </div>
+  `;
+
+  const style=document.createElement('style');
+  style.textContent=`
+    #priceListModal .price-list-modal{width:min(760px,100%);}
+    #priceListModal .price-list-language-field{max-width:220px;margin-top:16px;}
+    #priceListModal .price-list-options{display:grid;grid-template-columns:1fr 1.35fr;gap:18px;margin-top:18px;}
+    #priceListModal .price-list-options section{border:1px solid #dfe7f0;border-radius:12px;padding:14px;background:#f8fafc;}
+    #priceListModal .price-list-options h3{margin:0 0 12px;color:#0e2444;font-size:15px;}
+    #priceListModal .price-list-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;}
+    #priceListModal .check-option{display:flex;align-items:center;gap:8px;color:#213652;font-size:14px;}
+    #priceListModal .check-option input{width:16px;height:16px;}
+    #priceListModal .check-option small{display:block;color:#6f7f92;font-size:11px;}
+    @media (max-width:720px){#priceListModal .price-list-options{grid-template-columns:1fr}#priceListModal .price-list-check-grid{grid-template-columns:1fr}}
+  `;
+  modal.appendChild(style);
+  document.body.appendChild(modal);
+  document.body.style.overflow='hidden';
+
+  const close=()=>{
+    modal.remove();
+    document.body.style.overflow='';
+  };
+
+  modal.querySelectorAll('[data-close-price-list-modal]').forEach(btn=>btn.addEventListener('click',close));
+  modal.addEventListener('click',e=>{if(e.target===modal)close()});
+  modal.querySelector('[data-generate-price-list-pdf]').addEventListener('click',()=>{
+    const statuses=[...modal.querySelectorAll('[data-price-list-status]:checked')].map(input=>input.value);
+    const columns=[...modal.querySelectorAll('[data-price-list-column]:checked')].map(input=>input.value);
+    if(!columns.includes('fraction')) columns.unshift('fraction');
+    if(!statuses.length){notifyUser('Escolha pelo menos um estado comercial para incluir.','Lista de Preços');return}
+    close();
+    generatePriceListPdf({
+      language:modal.querySelector('#priceListLanguage')?.value||'pt-en',
+      statuses,
+      columns
+    });
+  });
+}
+function generatePriceListPdf(options={}){
+  const language=options.language||'pt-en';
+  const selectedStatuses=new Set(options.statuses||[]);
+  const columns=(options.columns||['fraction','floor','typology','price']).filter(Boolean);
+  const rows=state.fractions.filter(f=>selectedStatuses.has(statusOf(f))).sort((a,b)=>a.number-b.number);
+  if(!rows.length){notifyUser('Não existem frações para os filtros escolhidos.','Lista de Preços');return}
+
+  const copy=priceListCopy(language);
+  const definitions=priceListColumnDefinitions(copy).filter(col=>columns.includes(col.key));
+  const w=window.open('','_blank');
+  if(!w){notifyUser('Autorize pop-ups para gerar o PDF.','Lista de Preços');return}
+
+  const tableRows=rows.map(f=>`<tr>${definitions.map(col=>`<td class="${col.numeric?'num-col':''}">${priceListCellValue(f,col.key,copy)}</td>`).join('')}</tr>`).join('');
+  const tableHead=definitions.map(col=>`<th class="${col.numeric?'num-col':''}">${esc(col.label)}</th>`).join('');
+  const generatedAt=new Date().toLocaleString('pt-PT');
+
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Lista de Preços</title>
+  <style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
+  @page{size:A4 landscape;margin:8mm}
+  *{box-sizing:border-box}
+  body{font-family:'Montserrat',Arial,sans-serif;margin:0;color:#0f2443;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .price-list-page{min-height:calc(210mm - 16mm);display:flex;flex-direction:column}
+  .doc-header{display:flex;justify-content:space-between;gap:12mm;align-items:flex-start;border-bottom:1px solid #d9e1eb;padding-bottom:5mm;margin-bottom:5mm}
+  .eyebrow{margin:0 0 3mm;text-transform:uppercase;letter-spacing:.24em;font-size:8px;font-weight:700;color:#9a7440}
+  h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;color:#0e2444;font-size:27pt;line-height:1;font-weight:700}
+  h2{margin:2mm 0 0;color:#435675;font-size:12pt;font-weight:600}
+  .meta{margin:0;color:#62738a;font-size:8pt;text-align:right;line-height:1.45}
+  table{width:100%;border-collapse:collapse;font-size:8.2pt}
+  thead{display:table-header-group}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  th,td{border-bottom:1px solid #dfe7f0;padding:2.3mm 2.1mm;text-align:left;vertical-align:top}
+  th{background:#f1f5f9;color:#0e2444;font-size:7.2pt;text-transform:uppercase;letter-spacing:.04em}
+  tbody tr:nth-child(even){background:#fafbfd}
+  .num-col{text-align:right;white-space:nowrap}
+  .footer{margin-top:auto;border-top:1px solid #d9e1eb;padding-top:3mm;color:#62738a;font-size:7.3pt;line-height:1.35}
+  @media print{body{background:#fff}}
+  </style></head><body>
+    <main class="price-list-page">
+      <header class="doc-header">
+        <div>
+          <p class="eyebrow">The View Olhão</p>
+          <h1>The View Olhão</h1>
+          <h2>${esc(copy.title)}</h2>
+        </div>
+        <p class="meta">Documento interno<br>${esc(generatedAt)}</p>
+      </header>
+      <table>
+        <thead><tr>${tableHead}</tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <footer class="footer">${esc(copy.footer).replace(/\n/g,'<br>')}</footer>
+    </main>
+    <script>setTimeout(()=>{window.focus();window.print()},250)</script>
+  </body></html>`);
+  w.document.close();
+}
+function priceListCopy(language){
+  const copies={
+    'pt-fr':{
+      title:'Lista de Preços / Liste de Prix',
+      footer:'Documento interno de consulta comercial. Preços, áreas e disponibilidade sujeitos a confirmação.\nDocument interne de consultation commerciale. Prix, surfaces et disponibilité soumis à confirmation.',
+      labels:{
+        fraction:'Fração / Unité',
+        floor:'Piso / Étage',
+        typology:'Tipologia / Type de bien',
+        price:'Preço / Prix',
+        status:'Estado / Statut',
+        orientation:'Orientação / Orientation',
+        abp:'ABP aprox. / Surface brute privative approximative',
+        terrace:'Varanda/Terraço aprox. / Surface balcon/terrasse approximative',
+        total:'Área total aprox. / Surface totale approximative',
+        pricePerSqm:'Preço/m² / Prix/m²'
+      },
+      statuses:{
+        'Disponível':'Disponível / Disponible',
+        'Reservado':'Reservado / Réservé',
+        'Indisponível':'Indisponível / Indisponible',
+        'Vendido':'Vendido / Vendu'
+      }
+    },
+    'pt-en':{
+      title:'Lista de Preços / Price List',
+      footer:'Documento interno de consulta comercial. Preços, áreas e disponibilidade sujeitos a confirmação.\nInternal commercial reference document. Prices, areas and availability are subject to confirmation.',
+      labels:{
+        fraction:'Fração / Unit',
+        floor:'Piso / Floor',
+        typology:'Tipologia / Unit Type',
+        price:'Preço / Price',
+        status:'Estado / Status',
+        orientation:'Orientação / Orientation',
+        abp:'ABP aprox. / Approx. Gross Private Area',
+        terrace:'Varanda/Terraço aprox. / Approx. Balcony/Terrace Area',
+        total:'Área total aprox. / Approx. Total Area',
+        pricePerSqm:'Preço/m² / Price/sqm'
+      },
+      statuses:{
+        'Disponível':'Disponível / Available',
+        'Reservado':'Reservado / Reserved',
+        'Indisponível':'Indisponível / Unavailable',
+        'Vendido':'Vendido / Sold'
+      }
+    }
+  };
+  return copies[language]||copies['pt-en'];
+}
+function priceListColumnDefinitions(copy){
+  return [
+    {key:'fraction',label:copy.labels.fraction},
+    {key:'floor',label:copy.labels.floor},
+    {key:'typology',label:copy.labels.typology},
+    {key:'price',label:copy.labels.price,numeric:true},
+    {key:'status',label:copy.labels.status},
+    {key:'orientation',label:copy.labels.orientation},
+    {key:'abp',label:copy.labels.abp,numeric:true},
+    {key:'terrace',label:copy.labels.terrace,numeric:true},
+    {key:'total',label:copy.labels.total,numeric:true},
+    {key:'pricePerSqm',label:copy.labels.pricePerSqm,numeric:true}
+  ];
+}
+function priceListAdjustedArea(v){return Math.max(0,Math.floor((+v||0)-2))}
+function priceListCellValue(f,key,copy){
+  const abp=priceListAdjustedArea(f.abp);
+  const terrace=priceListAdjustedArea(f.terrace);
+  const total=abp+terrace;
+  const price=finalPrice(f);
+  const values={
+    fraction:esc(f.name),
+    floor:esc(f.floorLabel),
+    typology:esc(f.typology),
+    price:money(price),
+    status:esc(copy.statuses[statusOf(f)]||statusOf(f)),
+    orientation:esc(f.orientation||'—'),
+    abp:`${abp} m²`,
+    terrace:`${terrace} m²`,
+    total:`${total} m²`,
+    pricePerSqm:total?`${money(price/total)}/m²`:'—'
+  };
+  return values[key]||'';
+}
 async function loadExcel(){
   setStatus('A carregar dados…');
   try{
