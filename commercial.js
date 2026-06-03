@@ -33,6 +33,7 @@ function ensurePriceListButton(){
   exportBtn.parentElement.insertBefore(btn, exportBtn);
 }
 function openPriceListModal(){
+  if(!state.fractions.length){notifyUser('Aguarde o carregamento das frações antes de gerar a lista de preços.','Lista de Preços');return}
   const existing=document.getElementById('priceListModal');
   if(existing) existing.remove();
 
@@ -75,7 +76,7 @@ function openPriceListModal(){
 
       <div class="price-list-options">
         <section>
-          <h3>Frações a incluir</h3>
+          <h3>Estados comerciais</h3>
           <div class="price-list-check-grid">
             ${statusOptions.map(([value,label,checked])=>`
               <label class="check-option">
@@ -99,6 +100,19 @@ function openPriceListModal(){
         </section>
       </div>
 
+      <section class="price-list-fractions-panel">
+        <div class="price-list-fractions-head">
+          <div>
+            <h3>Frações a incluir</h3>
+            <p class="muted small">Por defeito, todas as frações elegíveis estão selecionadas.</p>
+          </div>
+          <strong data-price-list-selected-count>0 frações selecionadas</strong>
+        </div>
+        <input id="priceListFractionSearch" class="price-list-search" type="search" placeholder="Pesquisar fração, piso ou tipologia…" autocomplete="off">
+        <div class="price-list-quick-actions" data-price-list-quick-actions></div>
+        <div class="price-list-fraction-chips" data-price-list-fraction-chips></div>
+      </section>
+
       <div class="modal-actions">
         <button class="ghost-button" type="button" data-close-price-list-modal>Cancelar</button>
         <button class="primary-button" type="button" data-generate-price-list-pdf>Gerar PDF</button>
@@ -108,7 +122,7 @@ function openPriceListModal(){
 
   const style=document.createElement('style');
   style.textContent=`
-    #priceListModal .price-list-modal{width:min(760px,100%);}
+    #priceListModal .price-list-modal{width:min(920px,100%);}
     #priceListModal .price-list-language-field{max-width:220px;margin-top:16px;}
     #priceListModal .price-list-options{display:grid;grid-template-columns:1fr 1.35fr;gap:18px;margin-top:18px;}
     #priceListModal .price-list-options section{border:1px solid #dfe7f0;border-radius:12px;padding:14px;background:#f8fafc;}
@@ -117,11 +131,87 @@ function openPriceListModal(){
     #priceListModal .check-option{display:flex;align-items:center;gap:8px;color:#213652;font-size:14px;}
     #priceListModal .check-option input{width:16px;height:16px;}
     #priceListModal .check-option small{display:block;color:#6f7f92;font-size:11px;}
-    @media (max-width:720px){#priceListModal .price-list-options{grid-template-columns:1fr}#priceListModal .price-list-check-grid{grid-template-columns:1fr}}
+    #priceListModal .price-list-fractions-panel{border:1px solid #dfe7f0;border-radius:12px;padding:14px;background:#fff;margin-top:18px;}
+    #priceListModal .price-list-fractions-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;}
+    #priceListModal .price-list-fractions-head h3{margin:0 0 4px;color:#0e2444;font-size:15px;}
+    #priceListModal .price-list-fractions-head strong{white-space:nowrap;color:#0e2444;font-size:14px;background:#f1f5f9;border:1px solid #dfe7f0;border-radius:999px;padding:8px 12px;}
+    #priceListModal .price-list-search{width:100%;margin-top:12px;border:1px solid #cfd9e6;border-radius:10px;padding:10px 12px;font:inherit;color:#0e2444;background:#fff;}
+    #priceListModal .price-list-quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+    #priceListModal .price-list-action-chip{border:1px solid #cfd9e6;background:#f8fafc;color:#213652;border-radius:999px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer;}
+    #priceListModal .price-list-action-chip:hover:not(:disabled){border-color:#9a7440;color:#0e2444;background:#fff;}
+    #priceListModal .price-list-action-chip:disabled{opacity:.45;cursor:not-allowed;}
+    #priceListModal .price-list-fraction-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin-top:12px;max-height:220px;overflow:auto;padding-right:2px;}
+    #priceListModal .price-list-fraction-chip{border:1px solid #d6e0eb;background:#f8fafc;color:#213652;border-radius:10px;padding:8px 9px;text-align:left;cursor:pointer;min-height:52px;}
+    #priceListModal .price-list-fraction-chip strong{display:block;color:#0e2444;font-size:13px;line-height:1.15;}
+    #priceListModal .price-list-fraction-chip span{display:block;color:#6f7f92;font-size:11px;line-height:1.25;margin-top:3px;}
+    #priceListModal .price-list-fraction-chip.is-selected{background:#0e2444;border-color:#0e2444;box-shadow:0 8px 20px rgba(14,36,68,.14);}
+    #priceListModal .price-list-fraction-chip.is-selected strong,#priceListModal .price-list-fraction-chip.is-selected span{color:#fff;}
+    #priceListModal .price-list-empty{grid-column:1/-1;color:#6f7f92;background:#f8fafc;border:1px dashed #cfd9e6;border-radius:10px;padding:12px;text-align:center;}
+    @media (max-width:720px){#priceListModal .price-list-options{grid-template-columns:1fr}#priceListModal .price-list-check-grid{grid-template-columns:1fr}#priceListModal .price-list-fractions-head{display:block}#priceListModal .price-list-fractions-head strong{display:inline-block;margin-top:8px}#priceListModal .price-list-fraction-chips{grid-template-columns:repeat(2,minmax(0,1fr));}}
   `;
   modal.appendChild(style);
   document.body.appendChild(modal);
   document.body.style.overflow='hidden';
+
+  let selectedStatuses=new Set(statusOptions.filter(([, ,checked])=>checked).map(([value])=>value));
+  let selectedFractions=new Set();
+  let manualFractionSelection=false;
+  const statusInputs=[...modal.querySelectorAll('[data-price-list-status]')];
+  const fractionSearch=modal.querySelector('#priceListFractionSearch');
+  const fractionCount=modal.querySelector('[data-price-list-selected-count]');
+  const quickActions=modal.querySelector('[data-price-list-quick-actions]');
+  const fractionChips=modal.querySelector('[data-price-list-fraction-chips]');
+  const eligibleFractions=()=>state.fractions.filter(f=>selectedStatuses.has(statusOf(f))).sort((a,b)=>a.number-b.number);
+  const eligibleNumberSet=()=>new Set(eligibleFractions().map(f=>f.number));
+  const selectedEligibleFractions=()=>eligibleFractions().filter(f=>selectedFractions.has(f.number));
+  const syncSelectedStatuses=()=>{selectedStatuses=new Set(statusInputs.filter(input=>input.checked).map(input=>input.value))};
+  const syncSelectionWithEligibility=()=>{
+    const eligible=eligibleNumberSet();
+    selectedFractions=manualFractionSelection?new Set([...selectedFractions].filter(n=>eligible.has(n))):eligible;
+  };
+  const selectMatchingFractions=match=>{
+    manualFractionSelection=true;
+    selectedFractions=new Set(eligibleFractions().filter(match).map(f=>f.number));
+    renderFractionSelector();
+  };
+  const quickActionDefinitions=()=>{
+    const defs=[
+      {id:'all',label:'Todas'},
+      {id:'clear',label:'Limpar'},
+      {id:'status-available',label:'Disponíveis',match:f=>statusOf(f)==='Disponível'},
+      {id:'status-reserved',label:'Reservadas',match:f=>statusOf(f)==='Reservado'}
+    ];
+    ['T1','T1+1','T2','T2+1','T3'].forEach(t=>{
+      if(state.fractions.some(f=>f.typology===t)) defs.push({id:`typology-${t}`,label:t,match:f=>f.typology===t});
+    });
+    if(state.fractions.some(f=>norm(f.typology).includes('duplex'))) defs.push({id:'typology-duplex',label:'Duplex',match:f=>norm(f.typology).includes('duplex')});
+    uniq(state.fractions.map(f=>String(f.floorLabel))).forEach(fl=>{
+      defs.push({id:`floor-${fl}`,label:`Piso ${fl}`,match:f=>String(f.floorLabel)===fl});
+    });
+    return defs;
+  };
+  const renderQuickActions=()=>{
+    const eligible=eligibleFractions();
+    const selectedCount=selectedEligibleFractions().length;
+    quickActions.innerHTML=quickActionDefinitions().map(def=>{
+      const count=def.id==='all'?eligible.length:def.id==='clear'?selectedCount:eligible.filter(def.match).length;
+      return `<button class="price-list-action-chip" type="button" data-price-list-action="${attr(def.id)}" ${count?'':'disabled'}>${esc(def.label)}</button>`;
+    }).join('');
+  };
+  const renderFractionChips=()=>{
+    const q=norm(fractionSearch.value);
+    const visible=eligibleFractions().filter(f=>!q||norm([f.name,priceListFractionChipLabel(f),f.typology,f.floorLabel,f.orientation,statusOf(f)].join(' ')).includes(q));
+    fractionCount.textContent=priceListSelectionLabel(selectedEligibleFractions().length);
+    fractionChips.innerHTML=visible.length?visible.map(f=>`
+      <button class="price-list-fraction-chip ${selectedFractions.has(f.number)?'is-selected':''}" type="button" data-price-list-fraction="${f.number}">
+        <strong>${esc(priceListFractionChipLabel(f))}</strong>
+        <span>${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span>
+      </button>
+    `).join(''):'<div class="price-list-empty">Sem frações elegíveis para a pesquisa atual.</div>';
+  };
+  function renderFractionSelector(){renderQuickActions();renderFractionChips()}
+  syncSelectionWithEligibility();
+  renderFractionSelector();
 
   const close=()=>{
     modal.remove();
@@ -130,24 +220,62 @@ function openPriceListModal(){
 
   modal.querySelectorAll('[data-close-price-list-modal]').forEach(btn=>btn.addEventListener('click',close));
   modal.addEventListener('click',e=>{if(e.target===modal)close()});
+  statusInputs.forEach(input=>input.addEventListener('change',()=>{
+    syncSelectedStatuses();
+    syncSelectionWithEligibility();
+    renderFractionSelector();
+  }));
+  fractionSearch.addEventListener('input',renderFractionChips);
+  quickActions.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-price-list-action]');
+    if(!btn||btn.disabled) return;
+    const action=btn.dataset.priceListAction;
+    if(action==='all'){
+      manualFractionSelection=false;
+      selectedFractions=eligibleNumberSet();
+      renderFractionSelector();
+      return;
+    }
+    if(action==='clear'){
+      manualFractionSelection=true;
+      selectedFractions.clear();
+      renderFractionSelector();
+      return;
+    }
+    const def=quickActionDefinitions().find(item=>item.id===action);
+    if(def) selectMatchingFractions(def.match);
+  });
+  fractionChips.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-price-list-fraction]');
+    if(!btn) return;
+    const n=Number(btn.dataset.priceListFraction);
+    manualFractionSelection=true;
+    selectedFractions.has(n)?selectedFractions.delete(n):selectedFractions.add(n);
+    renderFractionSelector();
+  });
   modal.querySelector('[data-generate-price-list-pdf]').addEventListener('click',()=>{
     const statuses=[...modal.querySelectorAll('[data-price-list-status]:checked')].map(input=>input.value);
     const columns=[...modal.querySelectorAll('[data-price-list-column]:checked')].map(input=>input.value);
+    const eligible=eligibleNumberSet();
+    const fractions=[...selectedFractions].filter(n=>eligible.has(n)).sort((a,b)=>a-b);
     if(!columns.includes('fraction')) columns.unshift('fraction');
-    if(!statuses.length){notifyUser('Escolha pelo menos um estado comercial para incluir.','Lista de Preços');return}
+    if(!fractions.length){notifyUser('Selecione pelo menos uma fração para gerar a lista de preços.','Lista de Preços');return}
     close();
     generatePriceListPdf({
       language:modal.querySelector('#priceListLanguage')?.value||'pt-en',
       statuses,
-      columns
+      columns,
+      fractions
     });
   });
 }
 function generatePriceListPdf(options={}){
   const language=options.language||'pt-en';
   const selectedStatuses=new Set(options.statuses||[]);
+  const hasSpecificFractions=Array.isArray(options.fractions);
+  const selectedFractions=new Set((options.fractions||[]).map(Number));
   const columns=(options.columns||['fraction','floor','typology','price']).filter(Boolean);
-  const rows=state.fractions.filter(f=>selectedStatuses.has(statusOf(f))).sort((a,b)=>a.number-b.number);
+  const rows=state.fractions.filter(f=>selectedStatuses.has(statusOf(f))&&(!hasSpecificFractions||selectedFractions.has(f.number))).sort((a,b)=>a.number-b.number);
   if(!rows.length){notifyUser('Não existem frações para os filtros escolhidos.','Lista de Preços');return}
 
   const copy=priceListCopy(language);
@@ -264,6 +392,8 @@ function priceListColumnDefinitions(copy){
     {key:'pricePerSqm',label:copy.labels.pricePerSqm,numeric:true}
   ];
 }
+function priceListFractionChipLabel(f){return`Apt. ${String(f.number).padStart(2,'0')}`}
+function priceListSelectionLabel(count){return`${count} ${count===1?'fração selecionada':'frações selecionadas'}`}
 function priceListAdjustedArea(v){return Math.max(0,Math.floor((+v||0)-2))}
 function priceListCellValue(f,key,copy){
   const abp=priceListAdjustedArea(f.abp);
