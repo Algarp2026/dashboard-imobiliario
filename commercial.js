@@ -628,7 +628,10 @@ function renderSalesEventsPanel(){
           <strong>${esc(ev.date||'—')} ${esc(ev.time||'')} · ${esc(ev.type||'Evento')}</strong>
           <p class="muted small">${esc(c?.name||'Sem cliente associado')} · Frações: ${esc(fr)}${ev.amount?' · Valor: '+money(ev.amount):''}${ag?' · Agente: '+esc(ag.name||ag.agency||'—'):''}</p>
         </div>
-        <span class="badge badge--neutral">${esc(ev.type||'Evento')}</span>
+        <div class="top-actions">
+          <span class="badge badge--neutral">${esc(ev.type||'Evento')}</span>
+          <button class="ghost-button" type="button" data-edit-event="${attr(ev.id)}">Editar</button>
+        </div>
       </div>
       ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
       ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
@@ -636,6 +639,7 @@ function renderSalesEventsPanel(){
       ${ev.notes?`<p>${esc(ev.notes)}</p>`:''}
     </div>`;
   }).join(''):'<div class="empty-state">Ainda não existem eventos registados.</div>';
+  box.querySelectorAll('[data-edit-event]').forEach(btn=>btn.addEventListener('click',()=>openEventModal(btn.dataset.editEvent,'events')));
 }
 
 
@@ -666,18 +670,33 @@ function renderCompare(){const a=getF(+el.compareA.value)||state.fractions[0],b=
 function panel(f){return`<article class="compare-panel"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><h3>${esc(f.name)}</h3><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p><table class="compare-table">${row('Preço final',money(finalPrice(f)))}${row('Preço inicial',money(f.price))}${row('Preço venda real',salePrice(f)?money(salePrice(f)):'—')}${row('ABP',area(f.abp))}${row('Exterior',area(f.terrace))}${row('Área total',area(f.totalArea))}${row('€/m² final',f.totalArea?money(Math.round(finalPrice(f)/f.totalArea),0):'—')}</table></article>`}
 function renderClientSelects(){const opts=state.data.clients.map(c=>[c.id,c.name||'Cliente sem nome']);fillMulti(el.selectedClient,opts);fillMulti(el.eventClientId,opts);if(!state.selectedClientId&&state.data.clients[0])state.selectedClientId=state.data.clients[0].id;el.selectedClient.value=state.selectedClientId;el.eventClientId.value=state.selectedClientId;}
 function renderClients(){const s=norm(state.cf.search),st=state.cf.stage;const cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.agent,c.agency,c.notes,(c.fractions||[]).join(' ')].join(' ')).includes(s)));el.clientsList.innerHTML=cs.length?cs.map(c=>`<div class="client-card ${c.id===state.selectedClientId?'active':''}" data-client="${c.id}"><div class="section-heading compact"><div><strong>${esc(c.name||'Cliente sem nome')}</strong><p class="muted small">${esc(c.phone||'')} · ${esc(c.email||'')}</p><span class="badge badge--neutral">${esc(c.stage||'Novo lead')}</span></div><button class="ghost-button" type="button" data-edit-client-card="${c.id}">Editar</button></div></div>`).join(''):'<div class="empty-state">Sem clientes.</div>';el.clientsList.querySelectorAll('[data-client]').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-client-card]'))return;state.selectedClientId=card.dataset.client;el.selectedClient.value=state.selectedClientId;renderClients();renderClientDetail()});el.clientsList.querySelectorAll('[data-edit-client-card]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();state.selectedClientId=btn.dataset.editClientCard;el.selectedClient.value=state.selectedClientId;openClientModal(state.selectedClientId)})}
-function renderClientDetail(){const c=client(state.selectedClientId);if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}const evs=state.data.events.filter(e=>e.clientId===c.id).sort((a,b)=>String(b.date+' '+b.time).localeCompare(String(a.date+' '+a.time)));el.clientDetail.innerHTML=`<div class="section-heading"><div><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="muted">${esc(c.phone||'')} · ${esc(c.email||'')}</p></div><button class="ghost-button" data-edit-client="${c.id}">Editar ficha</button></div><div class="kpi-grid"><article class="kpi-card"><span>Estado</span><strong>${esc(c.stage||'Novo lead')}</strong></article><article class="kpi-card"><span>Orçamento</span><strong>${c.budget?money(c.budget):'—'}</strong></article><article class="kpi-card"><span>Eventos</span><strong>${evs.length}</strong></article><article class="kpi-card"><span>Frações interesse</span><strong>${(c.fractions||[]).length}</strong></article></div><h3>Linha do tempo</h3><div class="timeline">${evs.length?evs.map(e=>`<div class="timeline-item"><strong>${esc(e.date||'')} ${esc(e.time||'')} · ${esc(e.type)}</strong><p class="muted">Frações: ${esc((e.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</p>${e.amount?`<p><strong>Valor:</strong> ${money(e.amount)}</p>`:''}<p>${esc(e.notes||'')}</p>${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}</div>`).join(''):'<div class="empty-state">Sem eventos para este cliente.</div>'}</div>`;el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id))}
+function renderClientDetail(){
+  const c=client(state.selectedClientId);
+  if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}
+  const evs=state.data.events.filter(e=>e.clientId===c.id).sort((a,b)=>String(b.date+' '+b.time).localeCompare(String(a.date+' '+a.time)));
+  el.clientDetail.innerHTML=`<div class="section-heading"><div><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="muted">${esc(c.phone||'')} · ${esc(c.email||'')}</p></div><button class="ghost-button" data-edit-client="${c.id}">Editar ficha</button></div><div class="kpi-grid"><article class="kpi-card"><span>Estado</span><strong>${esc(c.stage||'Novo lead')}</strong></article><article class="kpi-card"><span>Orçamento</span><strong>${c.budget?money(c.budget):'—'}</strong></article><article class="kpi-card"><span>Eventos</span><strong>${evs.length}</strong></article><article class="kpi-card"><span>Frações interesse</span><strong>${(c.fractions||[]).length}</strong></article></div><h3>Linha do tempo</h3><div class="timeline">${evs.length?evs.map(e=>`<div class="timeline-item"><div class="section-heading compact"><div><strong>${esc(e.date||'')} ${esc(e.time||'')} · ${esc(e.type)}</strong><p class="muted">Frações: ${esc((e.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</p></div><button class="ghost-button" type="button" data-edit-client-event="${attr(e.id)}">Editar</button></div>${e.amount?`<p><strong>Valor:</strong> ${money(e.amount)}</p>`:''}<p>${esc(e.notes||'')}</p>${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}</div>`).join(''):'<div class="empty-state">Sem eventos para este cliente.</div>'}</div>`;
+  el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
+  el.clientDetail.querySelectorAll('[data-edit-client-event]').forEach(btn=>btn.addEventListener('click',()=>openEventModal(btn.dataset.editClientEvent,'client')));
+}
 
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
 function agent(id){return (state.data.agents||[]).find(a=>a.id===id)}
 function calculateCommission(amount,type,value){amount=+amount||0;value=+value||0;return type==='percent'?amount*value/100:value}
+function isCommercialClosingEvent(ev){return ev&&['Reserva','Venda'].includes(ev.type)}
+function commercialStatusFromEvent(ev){return ev?.type==='Reserva'?'Reservado':ev?.type==='Venda'?'Vendido':''}
+function eventDerivedStage(ev){
+  if(!ev)return '';
+  if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))return 'Em negociação';
+  if(ev.type==='Visita')return 'Visitou';
+  if(ev.type==='Reserva')return 'Reserva';
+  if(ev.type==='Venda')return 'Vendido';
+  return '';
+}
 function applyClientEventStage(c,ev){
   if(!c)return;
   c.fractions=uniqNum([...(c.fractions||[]),...(ev.fractions||[])]);
-  if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))c.stage='Em negociação';
-  if(ev.type==='Visita')c.stage='Visitou';
-  if(ev.type==='Reserva')c.stage='Reserva';
-  if(ev.type==='Venda')c.stage='Vendido';
+  const stage=eventDerivedStage(ev);
+  if(stage)c.stage=stage;
 }
 function applyReservationEvent(ev){
   (ev.fractions||[]).forEach(n=>{
@@ -685,21 +704,25 @@ function applyReservationEvent(ev){
     if(ev.amount)state.data.salePrices[n]=ev.amount;
   });
 }
+function setSaleCommissionForFraction(n,ev){
+  state.data.saleCommissions=state.data.saleCommissions||{};
+  state.data.saleCommissions[n]={
+    withAgent:!!ev.withAgent,
+    agentId:ev.agentId||'',
+    commissionType:ev.commissionType||'',
+    commissionValue:+ev.commissionValue||0,
+    amount:+ev.commissionAmount||0,
+    netRevenue:(ev.amount||finalPrice(getF(n)))-(+ev.commissionAmount||0),
+    eventId:ev.id,
+    date:ev.date
+  };
+}
 function applySaleEvent(ev){
   state.data.saleCommissions=state.data.saleCommissions||{};
   (ev.fractions||[]).forEach(n=>{
     state.data.statuses[n]='Vendido';
     if(ev.amount)state.data.salePrices[n]=ev.amount;
-    state.data.saleCommissions[n]={
-      withAgent:!!ev.withAgent,
-      agentId:ev.agentId||'',
-      commissionType:ev.commissionType||'',
-      commissionValue:+ev.commissionValue||0,
-      amount:+ev.commissionAmount||0,
-      netRevenue:(ev.amount||finalPrice(getF(n)))-(+ev.commissionAmount||0),
-      eventId:ev.id,
-      date:ev.date
-    };
+    setSaleCommissionForFraction(n,ev);
   });
 }
 function applyEventBusinessRules(ev){
@@ -707,6 +730,83 @@ function applyEventBusinessRules(ev){
   applyClientEventStage(client(ev.clientId),ev);
   if(ev.type==='Reserva')applyReservationEvent(ev);
   if(ev.type==='Venda')applySaleEvent(ev);
+}
+function eventSortKey(ev,index=0){return`${ev.date||''} ${ev.time||''} ${String(index).padStart(6,'0')}`}
+function latestCommercialEventForFraction(n){
+  return (state.data.events||[])
+    .map((ev,index)=>({ev,index}))
+    .filter(item=>isCommercialClosingEvent(item.ev)&&(item.ev.fractions||[]).includes(n))
+    .sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index)))
+    .pop()?.ev||null;
+}
+function latestDerivedStageForClient(cid){
+  return (state.data.events||[])
+    .map((ev,index)=>({ev,index}))
+    .filter(item=>item.ev.clientId===cid&&eventDerivedStage(item.ev))
+    .sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index)))
+    .pop()?.ev;
+}
+function reapplyClientLinksAfterEventEdit(oldEv,newEv){
+  const affected=uniq([oldEv?.clientId,newEv?.clientId]);
+  affected.forEach(cid=>{
+    const c=client(cid);
+    if(!c)return;
+    if(oldEv?.clientId===cid){
+      const stillReferenced=new Set((state.data.events||[]).filter(ev=>ev.clientId===cid).flatMap(ev=>ev.fractions||[]));
+      const oldFractions=oldEv.fractions||[];
+      c.fractions=uniqNum((c.fractions||[]).filter(n=>!oldFractions.includes(n)||stillReferenced.has(n)));
+      const oldStage=eventDerivedStage(oldEv);
+      if(oldStage&&c.stage===oldStage){
+        const latest=latestDerivedStageForClient(cid);
+        c.stage=latest?eventDerivedStage(latest):'Novo lead';
+      }
+    }
+  });
+  applyClientEventStage(client(newEv.clientId),newEv);
+}
+function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){
+  state.data.statuses=state.data.statuses||{};
+  state.data.salePrices=state.data.salePrices||{};
+  state.data.saleCommissions=state.data.saleCommissions||{};
+  const touched=uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]);
+  touched.forEach(n=>{
+    if(state.data.saleCommissions[n]?.eventId===oldEv.id)delete state.data.saleCommissions[n];
+    const latest=latestCommercialEventForFraction(n);
+    if(latest){
+      state.data.statuses[n]=commercialStatusFromEvent(latest);
+      if(latest.amount){
+        state.data.salePrices[n]=latest.amount;
+      }else if(oldEv.amount&&Number(state.data.salePrices[n])===Number(oldEv.amount)){
+        delete state.data.salePrices[n];
+      }
+      if(latest.type==='Venda'){
+        setSaleCommissionForFraction(n,latest);
+      }else{
+        delete state.data.saleCommissions[n];
+      }
+      return;
+    }
+    if(commercialStatusFromEvent(oldEv)&&state.data.statuses[n]===commercialStatusFromEvent(oldEv))delete state.data.statuses[n];
+    if(oldEv.amount&&Number(state.data.salePrices[n])===Number(oldEv.amount))delete state.data.salePrices[n];
+  });
+}
+function hasCriticalCommercialEventChange(oldEv,newEv){
+  if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
+  return oldEv.type!==newEv.type ||
+    JSON.stringify(uniqNum(oldEv.fractions||[]))!==JSON.stringify(uniqNum(newEv.fractions||[])) ||
+    Number(oldEv.amount||0)!==Number(newEv.amount||0) ||
+    !!oldEv.withAgent!==!!newEv.withAgent ||
+    (oldEv.agentId||'')!==(newEv.agentId||'') ||
+    (oldEv.commissionType||'')!==(newEv.commissionType||'') ||
+    Number(oldEv.commissionValue||0)!==Number(newEv.commissionValue||0);
+}
+function replaceEventAndReapplyBusinessRules(oldEv,newEv){
+  const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
+  if(idx<0)return false;
+  state.data.events[idx]=newEv;
+  reapplyClientLinksAfterEventEdit(oldEv,newEv);
+  reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
+  return true;
 }
 function createManualStatusEvent(n,oldStatus,newStatus){
   return {id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${oldStatus} para ${newStatus}`};
@@ -1170,16 +1270,88 @@ async function saveClient(){
   closeClientModal();
   RenderFlow.clientChanged();
 }
-function openEventModal(){ensureEventAgentFields();ensureEventClientQuickCreate();populateAgentSelect();renderClientSelects();el.eventClientId.value=state.selectedClientId||'';el.eventType.value='Reunião com cliente';el.eventDate.value=today();el.eventTime.value='';el.eventAmount.value='';el.eventInterest.value='';el.eventFollowup.value='';el.eventFollowupDate.value='';setMulti(el.eventFractions,[]);el.eventObjections.value='';el.eventNotes.value='';const wa=document.getElementById('eventWithAgent');if(wa)wa.checked=false;const cv=document.getElementById('eventCommissionValue');if(cv)cv.value='';toggleEventAgentFields();el.eventType.onchange=toggleEventAgentFields;el.eventModal.classList.remove('hidden');document.body.style.overflow='hidden'}
-function closeEventModal(){el.eventModal.classList.add('hidden');document.body.style.overflow=''}
-async function saveEvent(){const cid=el.eventClientId.value;if(!cid){await notifyUser('Escolha um cliente.','Evento comercial');return}const frs=getMulti(el.eventFractions).map(Number);if(!frs.length){await notifyUser('Escolha pelo menos uma fração.','Evento comercial');return}const ev=buildEventFromForm(cid,frs);applyEventBusinessRules(ev);save();closeEventModal();RenderFlow.eventChanged()}
-function buildEventFromForm(cid,frs){
+function openEventModal(eventId='',source=''){
+  ensureEventAgentFields();
+  ensureEventClientQuickCreate();
+  populateAgentSelect();
+  renderClientSelects();
+  state.editingEventId='';
+  state.eventEditSource='';
+  const ev=eventId?(state.data.events||[]).find(e=>e.id===eventId):null;
+  if(eventId&&!ev){notifyUser('Não encontrei esse evento. Atualize a página e tente novamente.','Evento comercial');return}
+  state.editingEventId=ev?.id||'';
+  state.eventEditSource=source||'';
+  el.eventClientId.value=ev?(ev.clientId||''):(state.selectedClientId||'');
+  el.eventType.value=ev?(ev.type||'Reunião com cliente'):'Reunião com cliente';
+  el.eventDate.value=ev?(ev.date||today()):today();
+  el.eventTime.value=ev?(ev.time||''):'';
+  el.eventAmount.value=ev?(ev.amount||''):'';
+  el.eventInterest.value=ev?(ev.interest||''):'';
+  el.eventFollowup.value=ev?(ev.followup||''):'';
+  el.eventFollowupDate.value=ev?(ev.followupDate||''):'';
+  setMulti(el.eventFractions,ev?(ev.fractions||[]):[]);
+  el.eventObjections.value=ev?(ev.objections||''):'';
+  el.eventNotes.value=ev?(ev.notes||''):'';
+  const wa=document.getElementById('eventWithAgent');
+  if(wa)wa.checked=!!(ev&&ev.withAgent&&ev.type==='Venda');
+  const agentSel=document.getElementById('eventAgentId');
+  if(agentSel)agentSel.value=ev?(ev.agentId||''):'';
+  const ct=document.getElementById('eventCommissionType');
+  if(ct)ct.value=ev?(ev.commissionType||'percent'):'percent';
+  const cv=document.getElementById('eventCommissionValue');
+  if(cv)cv.value=ev?(ev.commissionValue||''):'';
+  const title=el.eventModal.querySelector('h2');
+  if(title)title.textContent=ev?'Editar evento':'Novo evento';
+  const saveBtn=document.getElementById('saveEvent');
+  if(saveBtn)saveBtn.textContent=ev?'Atualizar evento':'Guardar evento';
+  toggleEventAgentFields();
+  el.eventType.onchange=toggleEventAgentFields;
+  el.eventModal.classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function closeEventModal(){
+  el.eventModal.classList.add('hidden');
+  state.editingEventId='';
+  state.eventEditSource='';
+  const title=el.eventModal.querySelector('h2');
+  if(title)title.textContent='Novo evento';
+  const saveBtn=document.getElementById('saveEvent');
+  if(saveBtn)saveBtn.textContent='Guardar evento';
+  document.body.style.overflow='';
+}
+async function saveEvent(){
+  const cid=el.eventClientId.value;
+  if(!cid){await notifyUser('Escolha um cliente.','Evento comercial');return}
+  const frs=getMulti(el.eventFractions).map(Number);
+  if(!frs.length){await notifyUser('Escolha pelo menos uma fração.','Evento comercial');return}
+  const editingId=state.editingEventId||'';
+  const returnSource=state.eventEditSource||'';
+  const oldEv=editingId?(state.data.events||[]).find(ev=>ev.id===editingId):null;
+  if(editingId&&!oldEv){await notifyUser('Não encontrei o evento original. Atualize a página e tente novamente.','Evento comercial');return}
+  const ev=buildEventFromForm(cid,frs,editingId);
+  if(oldEv){
+    const oldSnapshot=JSON.parse(JSON.stringify(oldEv));
+    if(hasCriticalCommercialEventChange(oldSnapshot,ev)){
+      const msg='Está a alterar campos críticos de uma Reserva/Venda: tipo, frações, valor, agente ou comissão.\n\nAo confirmar, os estados das frações, preço de reserva/venda e comissão serão recalculados para refletir o evento editado.';
+      if(!await confirmUser(msg,'Atualizar Reserva/Venda'))return;
+    }
+    replaceEventAndReapplyBusinessRules(oldSnapshot,ev);
+  }else{
+    applyEventBusinessRules(ev);
+  }
+  if(returnSource==='events')state.salesSubtab='events';
+  if(returnSource==='client'){state.salesSubtab='clients';state.selectedClientId=ev.clientId}
+  save();
+  closeEventModal();
+  RenderFlow.eventChanged();
+}
+function buildEventFromForm(cid,frs,eventId=''){
   const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';
   const commissionType=document.getElementById('eventCommissionType')?.value||'percent';
   const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);
   const saleAmount=num(el.eventAmount.value);
   const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;
-  return {id:id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
+  return {id:eventId||id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
 }
 function exportPdf(){
   const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)==='Disponível').sort((a,b)=>a.number-b.number);
