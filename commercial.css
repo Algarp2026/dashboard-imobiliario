@@ -3,5 +3,31 @@
 /* Google Sheets sync + alertas de decisão */
 .decision-alerts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}.decision-alert{border-radius:18px;background:rgba(255,255,255,.92);border:1px solid rgba(22,35,61,.1);box-shadow:var(--soft);padding:16px}.decision-alert h3{margin:0 0 8px;font-size:1.05rem}.decision-alert p{margin:6px 0;color:var(--muted);line-height:1.5}.decision-alert--warn{border-color:rgba(178,117,23,.22);background:rgba(255,250,242,.95)}.decision-alert--danger{border-color:rgba(178,60,46,.22);background:rgba(255,244,242,.95)}.decision-alert--success{border-color:rgba(23,125,87,.2);background:rgba(244,253,249,.95)}.sync-note{border-radius:14px;background:rgba(30,70,124,.08);border:1px solid rgba(30,70,124,.16);padding:12px 14px;color:var(--blue);margin-top:12px}
 
+/* CRM comercial e funil */
+.crm-form-section{margin:20px 0;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.crm-form-section__heading,.crm-detail-section__heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+.crm-form-section h3,.crm-detail-section h3{margin:0 0 8px;font-size:1.08rem}
+.crm-form-section__heading p{margin:0}
+.crm-detail-section{padding:20px 0;border-top:1px solid var(--line)}
+.crm-detail-section:first-of-type{border-top:0;padding-top:4px}
+.client-detail-header h2{margin:12px 0 6px}
+.client-summary-grid .compact-value{font-size:1.15rem}
+.crm-inline-summary{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:rgba(30,70,124,.07);color:var(--text);line-height:1.5}
+.crm-preference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.crm-preference-grid>div{padding:12px 14px;border-left:3px solid rgba(184,146,83,.55);background:#fff}
+.crm-preference-grid span{display:block;color:var(--muted);font-size:.82rem;margin-bottom:5px}
+.crm-preference-grid strong{font-size:.95rem}
+.compact-table{min-width:720px}
+.compact-button{margin-top:8px;padding:7px 11px;font-size:.78rem}
+.event-price-rows{display:grid;gap:12px}
+.event-price-row{padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.event-price-row__title{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:12px}
+.event-price-row__title span{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}
+.price-negative{color:var(--danger)!important}
+.crm-warning{margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--warning);background:#fff8ec;color:#7d5315;font-size:.88rem;line-height:1.45}
+.fraction-history-modal{width:min(1180px,100%)}
+@media(max-width:800px){.crm-form-section__heading,.crm-detail-section__heading,.event-price-row__title{display:block}.crm-preference-grid{grid-template-columns:1fr}.client-summary-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.client-summary-grid{grid-template-columns:1fr}}
+
 .ghost-link{display:inline-flex;align-items:center;border-radius:999px;padding:10px 16px;color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(18px)}
 .topbar__actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}

@@ -6,7 +6,10 @@ const ORIENT={1:'Sul/Este',2:'Sul/Oeste',3:'Oeste',4:'Oeste',5:'Oeste',6:'Este/O
 const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
 const UPDATED_INITIAL_PRICES={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
 const STATUS=['Disponível','Reservado','Vendido','Indisponível'];
-const STAGES=['Novo lead','Contactado','Visitou','Em negociação','Reserva','Vendido','Desistiu'];
+const STAGES=['Novo Lead','Qualificado','Apresentado','Em negociação','Reservado','Vendido','Desistiu'];
+const EVENT_TYPES=['Pedido de informação recebido','Contacto efetuado','Preferências recebidas','Reunião agendada','Reunião realizada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Follow-up','Outro'];
+const LEGACY_EVENT_TYPES=['Reunião com cliente','Visita','Interessado','Proposta recebida','Reserva','Venda'];
+const CRM_MIGRATION_KEY='crm-funnel-2026-06-v1';
 const state={rows:[],fractions:[],tab:'proposals',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
 const RenderFlow={
@@ -18,8 +21,65 @@ const RenderFlow={
   salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();}
 };
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
-function init(){['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientAgent','clientAgency','clientBudget','clientStage','clientFractions','clientNotes','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
+function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientAgent','clientAgency','clientBudget','clientStage','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
 function bind(){ensurePriceListButton();document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderProposals()};document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderProposals()};document.getElementById('exportClientPdf').onclick=exportPdf;document.getElementById('exportAllData').onclick=exportAll;document.getElementById('resetLocalData').onclick=resetLocal;document.getElementById('exportPriceHistory').onclick=exportPriceHistory;['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});el.historyFractionSelect.onchange=renderHistory;el.compareA.onchange=renderCompare;el.compareB.onchange=renderCompare;document.getElementById('openClientModal').onclick=()=>openClientModal('');document.getElementById('closeClientModal').onclick=closeClientModal;document.getElementById('cancelClient').onclick=closeClientModal;document.getElementById('saveClient').onclick=saveClient;document.getElementById('openEventModalBtn').onclick=()=>openEventModal();document.getElementById('closeEventModal').onclick=closeEventModal;document.getElementById('cancelEvent').onclick=closeEventModal;document.getElementById('saveEvent').onclick=saveEvent;el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};el.clientModal.onclick=e=>{if(e.target===el.clientModal)e.stopPropagation()};el.eventModal.onclick=e=>{if(e.target===el.eventModal)e.stopPropagation()};}
+function ensureCrmFormFields(){
+  const clientStage=document.getElementById('clientStage');
+  if(clientStage)clientStage.innerHTML=STAGES.map(stage=>`<option>${esc(stage)}</option>`).join('');
+
+  const clientFractions=document.getElementById('clientFractions');
+  const clientFractionsField=clientFractions?.closest('.field');
+  if(clientFractionsField&&!document.getElementById('clientPreferenceFields')){
+    const section=document.createElement('section');
+    section.id='clientPreferenceFields';
+    section.className='crm-form-section';
+    section.innerHTML=`<div class="crm-form-section__heading"><h3>Preferências estruturadas</h3><p class="muted small">Dados comerciais resumidos, independentes das notas livres.</p></div>
+      <div class="form-grid">
+        <label class="field"><span>Tipologia pretendida</span><input id="clientTypologyPreference" placeholder="Ex.: T2 ou T2+1"></label>
+        <label class="field"><span>Piso preferido</span><input id="clientFloorPreference" placeholder="Ex.: Piso 2 ou pisos altos"></label>
+        <label class="field"><span>Orientação</span><input id="clientOrientationPreference" placeholder="Ex.: Sul/Oeste"></label>
+        <label class="field"><span>Objetivo da compra</span><select id="clientPurchaseObjective"><option value=""></option><option>Habitação própria</option><option>Segunda habitação</option><option>Investimento</option><option>Outro</option></select></label>
+        <label class="field"><span>Prazo de decisão</span><input id="clientDecisionTime" placeholder="Ex.: 30 dias"></label>
+        <label class="field"><span>Observações resumidas</span><input id="clientPreferenceSummary" placeholder="Preferências essenciais"></label>
+      </div>`;
+    clientFractionsField.parentElement.insertBefore(section,clientFractionsField);
+  }
+
+  const eventType=document.getElementById('eventType');
+  if(eventType)eventType.innerHTML=`<optgroup label="Fluxo comercial">${EVENT_TYPES.map(type=>`<option>${esc(type)}</option>`).join('')}</optgroup><optgroup label="Tipos anteriores (compatibilidade)">${LEGACY_EVENT_TYPES.map(type=>`<option>${esc(type)}</option>`).join('')}</optgroup>`;
+  const eventTime=document.getElementById('eventTime');
+  const eventGrid=eventTime?.closest('.form-grid');
+  if(eventGrid&&!document.getElementById('eventChannel')){
+    const channel=document.createElement('label');
+    channel.className='field';
+    channel.innerHTML='<span>Canal</span><select id="eventChannel"><option value=""></option><option>Reunião</option><option>Telefone</option><option>WhatsApp</option><option>Email</option><option>Presencial</option><option>PDF</option><option>Outro</option></select>';
+    eventTime.closest('.field').after(channel);
+  }
+  const eventFractions=document.getElementById('eventFractions');
+  const eventFractionsField=eventFractions?.closest('.field');
+  if(eventFractionsField&&!document.getElementById('eventPreferenceFields')){
+    const preferences=document.createElement('section');
+    preferences.id='eventPreferenceFields';
+    preferences.className='crm-form-section hidden';
+    preferences.innerHTML=`<div class="crm-form-section__heading"><h3>Preferências recebidas</h3><p class="muted small">Estes dados atualizam o resumo estruturado do cliente.</p></div>
+      <div class="form-grid">
+        <label class="field"><span>Tipologia pretendida</span><input id="eventPreferenceTypology"></label>
+        <label class="field"><span>Orçamento</span><input id="eventPreferenceBudget" type="number" min="0" step="1000"></label>
+        <label class="field"><span>Piso preferido</span><input id="eventPreferenceFloor"></label>
+        <label class="field"><span>Orientação</span><input id="eventPreferenceOrientation"></label>
+        <label class="field"><span>Objetivo da compra</span><input id="eventPreferenceObjective"></label>
+        <label class="field"><span>Prazo de decisão</span><input id="eventPreferenceDecisionTime"></label>
+      </div>
+      <label class="field"><span>Observações resumidas</span><textarea id="eventPreferenceSummary"></textarea></label>`;
+    eventFractionsField.parentElement.insertBefore(preferences,eventFractionsField);
+
+    const prices=document.createElement('section');
+    prices.id='eventPriceFields';
+    prices.className='crm-form-section hidden';
+    prices.innerHTML=`<div class="crm-form-section__heading"><h3>Preços comunicados por fração</h3><p class="muted small">O preço oficial fica guardado como fotografia da data e não é alterado.</p></div><div id="eventPriceNotice"></div><div id="eventPriceRows" class="event-price-rows"></div>`;
+    eventFractionsField.after(prices);
+  }
+}
 function ensurePriceListButton(){
   if(document.getElementById('printPriceListBtn')) return;
   const exportBtn=document.getElementById('exportAllData');
@@ -442,20 +502,21 @@ async function loadExcel(){
     }
 
     const migrated = applyUpdatedInitialPriceMigration();
+    const crmMigrated = migrateCrmData();
     const historyChanged = ensureHistory();
     populate();
     renderAll();
 
     if(REMOTE_URL){
-      if(remoteLoaded && (shouldSyncAfterLoad || migrated || historyChanged)){
+      if(remoteLoaded && (shouldSyncAfterLoad || migrated || crmMigrated || historyChanged)){
         save();
-      }else if(!remoteLoaded && (migrated || historyChanged)){
+      }else if(!remoteLoaded && (migrated || crmMigrated || historyChanged)){
         saveLocalOnly();
       }
       if(remoteLoaded){
-        setStatus(migrated || historyChanged ? `${state.fractions.length} frações · preços/histórico preparados e sincronização ativa` : `${state.fractions.length} frações · sincronização Google Sheets ativa`);
+        setStatus(migrated || crmMigrated || historyChanged ? `${state.fractions.length} frações · dados preparados e sincronização ativa` : `${state.fractions.length} frações · sincronização Google Sheets ativa`);
       }
-    }else if(migrated || historyChanged){
+    }else if(migrated || crmMigrated || historyChanged){
       save();
     }
   }catch(e){
@@ -506,6 +567,142 @@ function applyUpdatedInitialPriceMigration(){
 
   state.data.priceMigrationKey = migrationKey;
   return changed || keyChanged;
+}
+
+function emptyPreferences(){return{typology:'',floor:'',orientation:'',objective:'',decisionTime:'',summary:''}}
+function cleanPreferences(value={}){
+  return {
+    typology:safe(value.typology),
+    floor:safe(value.floor),
+    orientation:safe(value.orientation),
+    objective:safe(value.objective),
+    decisionTime:safe(value.decisionTime),
+    summary:safe(value.summary)
+  };
+}
+function hasPreferenceData(value={}){return Object.values(cleanPreferences(value)).some(Boolean)}
+function normalizeClientStage(stage){
+  const value=norm(stage);
+  const aliases={
+    'novo lead':'Novo Lead','novo':'Novo Lead','contactado':'Novo Lead',
+    'qualificado':'Qualificado','visitou':'Apresentado','apresentado':'Apresentado',
+    'em negociacao':'Em negociação','negociacao':'Em negociação',
+    'reserva':'Reservado','reservado':'Reservado','vendido':'Vendido','desistiu':'Desistiu'
+  };
+  return aliases[value]||'Novo Lead';
+}
+function stageRank(stage){return Math.max(0,STAGES.indexOf(normalizeClientStage(stage)))}
+function isReservationEvent(ev){return !!ev&&['Reserva','Reserva efetuada'].includes(ev.type)}
+function isSaleEvent(ev){return !!ev&&['Venda','Venda concluída'].includes(ev.type)}
+function isReservationCancellationEvent(ev){return ev?.type==='Reserva cancelada'}
+function isAbandonmentEvent(ev){return ev?.type==='Desistência'}
+function stageFromEvent(ev){
+  if(!ev)return '';
+  if(isSaleEvent(ev))return 'Vendido';
+  if(isReservationEvent(ev))return 'Reservado';
+  if(isAbandonmentEvent(ev))return 'Desistiu';
+  if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida'].includes(ev.type))return 'Em negociação';
+  if(['Reunião realizada','Frações apresentadas','Preços informados','Reunião com cliente','Visita'].includes(ev.type))return 'Apresentado';
+  if(['Preferências recebidas','Interessado'].includes(ev.type))return 'Qualificado';
+  if(ev.type==='Pedido de informação recebido')return 'Novo Lead';
+  return '';
+}
+function sortedClientEvents(clientId){
+  return (state.data.events||[]).map((ev,index)=>({ev,index})).filter(item=>item.ev.clientId===clientId).sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index))).map(item=>item.ev);
+}
+function eventFractionsPresented(ev){
+  return ['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva','Venda concluída','Venda','Visita','Reunião com cliente'].includes(ev.type);
+}
+function recalculateResumoCliente(clientId){
+  const c=client(clientId);
+  if(!c)return false;
+  const before=JSON.stringify(c);
+  const events=sortedClientEvents(clientId);
+  const manualPreferences=cleanPreferences(c.manualPreferences||c.preferences||{});
+  let preferences={...manualPreferences};
+  let budget=Number(c.manualBudget??c.budget)||0;
+  let derivedStage=(hasPreferenceData(manualPreferences)||budget>0||(c.manualFractions||[]).length)?'Qualificado':'Novo Lead';
+  const presented=new Set();
+  const linkedFractions=new Set((c.manualFractions||c.fractions||[]).map(Number).filter(Boolean));
+  const latestPrices=new Map();
+
+  events.forEach(ev=>{
+    (ev.fractions||[]).map(Number).filter(Boolean).forEach(n=>linkedFractions.add(n));
+    if(eventFractionsPresented(ev))(ev.fractions||[]).forEach(n=>presented.add(Number(n)));
+    if(ev.type==='Preferências recebidas'){
+      const eventPreferences=cleanPreferences(ev.preferences||{});
+      Object.keys(eventPreferences).forEach(key=>{if(eventPreferences[key])preferences[key]=eventPreferences[key]});
+      if(Number(ev.preferenceBudget)>0)budget=Number(ev.preferenceBudget);
+    }
+    (ev.informedPrices||[]).forEach(item=>{
+      const n=Number(item.fraction||item.unitId);
+      if(n)latestPrices.set(n,{fraction:n,officialPrice:Number(item.officialPrice)||0,informedPrice:Number(item.informedPrice)||0,observation:safe(item.observation),date:ev.date||'',eventId:ev.id});
+    });
+    if(isReservationCancellationEvent(ev)&&derivedStage==='Reservado')derivedStage='Apresentado';
+    else{
+      const next=stageFromEvent(ev);
+      if(next==='Desistiu'||next==='Reservado'||next==='Vendido'||stageRank(next)>stageRank(derivedStage))derivedStage=next||derivedStage;
+    }
+  });
+
+  const criticalDerived=['Reservado','Vendido','Desistiu'].includes(derivedStage);
+  if(criticalDerived)c.stage=derivedStage;
+  else if(c.stageManual&&c.manualStage)c.stage=normalizeClientStage(c.manualStage);
+  else{
+    const fallback=normalizeClientStage(c.legacyStageFallback||'Novo Lead');
+    c.stage=stageRank(derivedStage)>=stageRank(fallback)?derivedStage:fallback;
+  }
+  c.preferences=preferences;
+  c.budget=budget;
+  c.fractions=uniqNum([...linkedFractions]);
+  const followups=events.map(ev=>({ev,date:ev.followupDate||(ev.type==='Reunião agendada'?ev.date:'')})).filter(item=>item.date&&item.date>=today()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const lastContact=events.slice().reverse().find(ev=>ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
+  const nextFollowup=followups[0]||null;
+  c.commercialSummary={
+    presentedFractions:uniqNum([...presented]),
+    lastInformedPrices:[...latestPrices.values()].sort((a,b)=>a.fraction-b.fraction),
+    lastContact,
+    nextFollowup:nextFollowup?.date||'',
+    nextStep:nextFollowup?.ev?.followup||nextFollowup?.ev?.notes||(nextFollowup?.ev?.type==='Reunião agendada'?'Reunião agendada':'')
+  };
+  return before!==JSON.stringify(c);
+}
+function recalculateResumoTodosClientes(){return(state.data.clients||[]).reduce((changed,c)=>recalculateResumoCliente(c.id)||changed,false)}
+function migrateCrmData(){
+  let changed=state.data.crmMigrationKey!==CRM_MIGRATION_KEY;
+  state.data.statusEventIds=state.data.statusEventIds||{};
+  state.data.salePriceEventIds=state.data.salePriceEventIds||{};
+  (state.data.clients||[]).forEach(c=>{
+    const original=JSON.stringify(c);
+    const normalizedStage=normalizeClientStage(c.stage);
+    if(!Array.isArray(c.manualFractions))c.manualFractions=uniqNum(c.fractions||[]);
+    if(c.manualBudget===undefined)c.manualBudget=Number(c.budget)||0;
+    if(!c.manualPreferences)c.manualPreferences=cleanPreferences(c.preferences||{});
+    if(c.stageManual===undefined)c.stageManual=false;
+    if(!c.manualStage)c.manualStage='';
+    if(!c.legacyStageFallback)c.legacyStageFallback=normalizedStage;
+    c.stage=normalizedStage;
+    c.preferences=cleanPreferences(c.preferences||c.manualPreferences||{});
+    if(original!==JSON.stringify(c))changed=true;
+  });
+  (state.data.events||[]).forEach(ev=>{
+    const original=JSON.stringify(ev);
+    ev.fractions=uniqNum(ev.fractions||[]);
+    if(!Array.isArray(ev.informedPrices))ev.informedPrices=[];
+    if(ev.preferences)ev.preferences=cleanPreferences(ev.preferences);
+    if(original!==JSON.stringify(ev))changed=true;
+  });
+  state.data.crmMigrationKey=CRM_MIGRATION_KEY;
+  if(recalculateResumoTodosClientes())changed=true;
+  state.fractions.forEach(f=>{
+    const effect=commercialEffectForFraction(f.number);
+    if(effect&&statusOf(f)===effect.status&&!state.data.statusEventIds[f.number]){
+      state.data.statusEventIds[f.number]=effect.event.id;
+      if(effect.amount&&Number(state.data.salePrices[f.number])===Number(effect.amount))state.data.salePriceEventIds[f.number]=effect.event.id;
+      changed=true;
+    }
+  });
+  return changed;
 }
 
 
@@ -634,6 +831,8 @@ function renderSalesEventsPanel(){
         </div>
       </div>
       ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
+      ${ev.channel?`<p class="muted small">Canal: ${esc(ev.channel)}</p>`:''}
+      ${(ev.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(ev.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
       ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
       ${ev.objections?`<p><strong>Objeções:</strong> ${esc(ev.objections)}</p>`:''}
       ${ev.notes?`<p>${esc(ev.notes)}</p>`:''}
@@ -669,41 +868,51 @@ function draw(h,f){const c=el.priceHistoryChart,ctx=c.getContext('2d'),w=c.width
 function renderCompare(){const a=getF(+el.compareA.value)||state.fractions[0],b=getF(+el.compareB.value)||state.fractions[1]||a;el.compareResult.innerHTML=[panel(a),panel(b)].join('')}
 function panel(f){return`<article class="compare-panel"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><h3>${esc(f.name)}</h3><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p><table class="compare-table">${row('Preço final',money(finalPrice(f)))}${row('Preço inicial',money(f.price))}${row('Preço venda real',salePrice(f)?money(salePrice(f)):'—')}${row('ABP',area(f.abp))}${row('Exterior',area(f.terrace))}${row('Área total',area(f.totalArea))}${row('€/m² final',f.totalArea?money(Math.round(finalPrice(f)/f.totalArea),0):'—')}</table></article>`}
 function renderClientSelects(){const opts=state.data.clients.map(c=>[c.id,c.name||'Cliente sem nome']);fillMulti(el.selectedClient,opts);fillMulti(el.eventClientId,opts);if(!state.selectedClientId&&state.data.clients[0])state.selectedClientId=state.data.clients[0].id;el.selectedClient.value=state.selectedClientId;el.eventClientId.value=state.selectedClientId;}
-function renderClients(){const s=norm(state.cf.search),st=state.cf.stage;const cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.agent,c.agency,c.notes,(c.fractions||[]).join(' ')].join(' ')).includes(s)));el.clientsList.innerHTML=cs.length?cs.map(c=>`<div class="client-card ${c.id===state.selectedClientId?'active':''}" data-client="${c.id}"><div class="section-heading compact"><div><strong>${esc(c.name||'Cliente sem nome')}</strong><p class="muted small">${esc(c.phone||'')} · ${esc(c.email||'')}</p><span class="badge badge--neutral">${esc(c.stage||'Novo lead')}</span></div><button class="ghost-button" type="button" data-edit-client-card="${c.id}">Editar</button></div></div>`).join(''):'<div class="empty-state">Sem clientes.</div>';el.clientsList.querySelectorAll('[data-client]').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-client-card]'))return;state.selectedClientId=card.dataset.client;el.selectedClient.value=state.selectedClientId;renderClients();renderClientDetail()});el.clientsList.querySelectorAll('[data-edit-client-card]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();state.selectedClientId=btn.dataset.editClientCard;el.selectedClient.value=state.selectedClientId;openClientModal(state.selectedClientId)})}
+function renderClients(){const s=norm(state.cf.search),st=state.cf.stage;const cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.agent,c.agency,c.notes,c.preferences?.typology,c.preferences?.floor,c.preferences?.orientation,c.preferences?.objective,(c.fractions||[]).join(' ')].join(' ')).includes(s)));el.clientsList.innerHTML=cs.length?cs.map(c=>`<div class="client-card ${c.id===state.selectedClientId?'active':''}" data-client="${c.id}"><div class="section-heading compact"><div><strong>${esc(c.name||'Cliente sem nome')}</strong><p class="muted small">${esc(c.phone||'')} · ${esc(c.email||'')}</p><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span></div><button class="ghost-button" type="button" data-edit-client-card="${c.id}">Editar</button></div></div>`).join(''):'<div class="empty-state">Sem clientes.</div>';el.clientsList.querySelectorAll('[data-client]').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-client-card]'))return;state.selectedClientId=card.dataset.client;el.selectedClient.value=state.selectedClientId;renderClients();renderClientDetail()});el.clientsList.querySelectorAll('[data-edit-client-card]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();state.selectedClientId=btn.dataset.editClientCard;el.selectedClient.value=state.selectedClientId;openClientModal(state.selectedClientId)})}
+function clientFractionCommercialRows(c,events){
+  return uniqNum([...(c.fractions||[]),...(c.commercialSummary?.presentedFractions||[])]).map(n=>{
+    const related=events.filter(ev=>(ev.fractions||[]).includes(n));
+    const latest=related.slice().reverse().find(ev=>eventFractionsPresented(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))||null;
+    const informed=related.flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,date:ev.date,eventId:ev.id}))).pop();
+    let status='Interesse';
+    if(latest){
+      if(isSaleEvent(latest))status='Venda';
+      else if(isReservationEvent(latest))status='Reserva';
+      else if(isReservationCancellationEvent(latest))status='Reserva cancelada';
+      else if(isAbandonmentEvent(latest))status='Desistência';
+      else if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida'].includes(latest.type))status='Negociação';
+      else if(informed)status='Preço informado';
+      else if(eventFractionsPresented(latest))status='Apresentada';
+    }
+    return{fraction:n,status,informedPrice:Number(informed?.informedPrice)||0,date:informed?.date||latest?.date||'',observation:safe(informed?.observation||latest?.notes)};
+  });
+}
 function renderClientDetail(){
   const c=client(state.selectedClientId);
   if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}
-  const evs=state.data.events.filter(e=>e.clientId===c.id).sort((a,b)=>String(b.date+' '+b.time).localeCompare(String(a.date+' '+a.time)));
-  el.clientDetail.innerHTML=`<div class="section-heading"><div><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="muted">${esc(c.phone||'')} · ${esc(c.email||'')}</p></div><button class="ghost-button" data-edit-client="${c.id}">Editar ficha</button></div><div class="kpi-grid"><article class="kpi-card"><span>Estado</span><strong>${esc(c.stage||'Novo lead')}</strong></article><article class="kpi-card"><span>Orçamento</span><strong>${c.budget?money(c.budget):'—'}</strong></article><article class="kpi-card"><span>Eventos</span><strong>${evs.length}</strong></article><article class="kpi-card"><span>Frações interesse</span><strong>${(c.fractions||[]).length}</strong></article></div><h3>Linha do tempo</h3><div class="timeline">${evs.length?evs.map(e=>`<div class="timeline-item"><div class="section-heading compact"><div><strong>${esc(e.date||'')} ${esc(e.time||'')} · ${esc(e.type)}</strong><p class="muted">Frações: ${esc((e.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</p></div><button class="ghost-button" type="button" data-edit-client-event="${attr(e.id)}">Editar</button></div>${e.amount?`<p><strong>Valor:</strong> ${money(e.amount)}</p>`:''}<p>${esc(e.notes||'')}</p>${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}</div>`).join(''):'<div class="empty-state">Sem eventos para este cliente.</div>'}</div>`;
+  recalculateResumoCliente(c.id);
+  const chronological=sortedClientEvents(c.id),evs=chronological.slice().reverse(),summary=c.commercialSummary||{},prefs=cleanPreferences(c.preferences||{}),fractionRows=clientFractionCommercialRows(c,chronological);
+  const associatedAgent=agent(c.agentId);
+  const informed=(summary.lastInformedPrices||[]).map(item=>`Apt. ${item.fraction}: ${money(item.informedPrice)}`).join(' · ');
+  el.clientDetail.innerHTML=`<div class="section-heading client-detail-header"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="muted">${esc(c.phone||'—')} · ${esc(c.email||'—')}</p><p class="muted small">Origem: ${esc(c.origin||'—')} · Agente: ${esc(associatedAgent?.name||c.agent||c.agency||'Sem agente')}</p></div><div class="top-actions"><button class="ghost-button" data-edit-client="${c.id}" type="button">Editar Cliente</button><button class="primary-button" data-add-client-event="${c.id}" type="button">Adicionar Evento</button></div></div>
+    <section class="crm-detail-section"><div class="crm-detail-section__heading"><h3>Resumo Comercial</h3><span class="muted small">Próximo passo: ${esc(summary.nextStep||summary.nextFollowup||'—')}</span></div><div class="kpi-grid client-summary-grid"><article class="kpi-card"><span>Orçamento</span><strong>${c.budget?money(c.budget):'—'}</strong></article><article class="kpi-card"><span>Frações apresentadas</span><strong>${(summary.presentedFractions||[]).length}</strong><small>${esc((summary.presentedFractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</small></article><article class="kpi-card"><span>Último contacto</span><strong class="compact-value">${esc(summary.lastContact||'—')}</strong></article><article class="kpi-card"><span>Próximo follow-up</span><strong class="compact-value">${esc(summary.nextFollowup||'—')}</strong></article></div>${informed?`<p class="crm-inline-summary"><strong>Últimos preços informados:</strong> ${esc(informed)}</p>`:''}</section>
+    <section class="crm-detail-section"><h3>Preferências</h3><div class="crm-preference-grid">${[['Tipologia',prefs.typology],['Piso',prefs.floor],['Orientação',prefs.orientation],['Objetivo',prefs.objective],['Prazo de decisão',prefs.decisionTime],['Resumo',prefs.summary]].map(([label,value])=>`<div><span>${esc(label)}</span><strong>${esc(value||'—')}</strong></div>`).join('')}</div></section>
+    <section class="crm-detail-section"><h3>Frações e Preços</h3>${fractionRows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Fração</th><th>Estado com cliente</th><th class="num-col">Preço informado</th><th>Data</th><th>Observação</th></tr></thead><tbody>${fractionRows.map(row=>`<tr><td>Apt. ${row.fraction}</td><td>${esc(row.status)}</td><td class="num-col">${row.informedPrice?money(row.informedPrice):'—'}</td><td>${esc(row.date||'—')}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem frações associadas.</div>'}</section>
+    <section class="crm-detail-section"><h3>Histórico</h3><div class="timeline">${evs.length?evs.map(e=>`<div class="timeline-item"><div class="section-heading compact"><div><strong>${esc(e.date||'')} ${esc(e.time||'')} · ${esc(e.type)}</strong><p class="muted">Frações: ${esc((e.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</p></div><button class="ghost-button" type="button" data-edit-client-event="${attr(e.id)}">Ver / Editar</button></div>${e.channel?`<p class="muted small">Canal: ${esc(e.channel)}</p>`:''}${e.amount?`<p><strong>Valor:</strong> ${money(e.amount)}</p>`:''}${(e.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(e.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}${e.notes?`<p>${esc(e.notes)}</p>`:''}${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}</div>`).join(''):'<div class="empty-state">Sem eventos para este cliente.</div>'}</div></section>
+    <section class="crm-detail-section"><h3>Notas</h3><p class="muted">${esc(c.notes||'Sem notas livres.')}</p></section>`;
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
+  el.clientDetail.querySelector('[data-add-client-event]')?.addEventListener('click',()=>openEventModal('','client'));
   el.clientDetail.querySelectorAll('[data-edit-client-event]').forEach(btn=>btn.addEventListener('click',()=>openEventModal(btn.dataset.editClientEvent,'client')));
 }
 
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
 function agent(id){return (state.data.agents||[]).find(a=>a.id===id)}
 function calculateCommission(amount,type,value){amount=+amount||0;value=+value||0;return type==='percent'?amount*value/100:value}
-function isCommercialClosingEvent(ev){return ev&&['Reserva','Venda'].includes(ev.type)}
-function commercialStatusFromEvent(ev){return ev?.type==='Reserva'?'Reservado':ev?.type==='Venda'?'Vendido':''}
-function eventDerivedStage(ev){
-  if(!ev)return '';
-  if(['Proposta recebida','Contra-proposta enviada'].includes(ev.type))return 'Em negociação';
-  if(ev.type==='Visita')return 'Visitou';
-  if(ev.type==='Reserva')return 'Reserva';
-  if(ev.type==='Venda')return 'Vendido';
-  return '';
-}
-function applyClientEventStage(c,ev){
-  if(!c)return;
-  c.fractions=uniqNum([...(c.fractions||[]),...(ev.fractions||[])]);
-  const stage=eventDerivedStage(ev);
-  if(stage)c.stage=stage;
-}
-function applyReservationEvent(ev){
-  (ev.fractions||[]).forEach(n=>{
-    state.data.statuses[n]='Reservado';
-    if(ev.amount)state.data.salePrices[n]=ev.amount;
-  });
-}
+function isCommercialClosingEvent(ev){return !!ev&&(isReservationEvent(ev)||isSaleEvent(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))}
+function commercialStatusFromEvent(ev){return isReservationEvent(ev)?'Reservado':isSaleEvent(ev)?'Vendido':''}
+function eventDerivedStage(ev){return stageFromEvent(ev)}
+function applyClientEventStage(c){if(c)recalculateResumoCliente(c.id)}
+function applyReservationEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[])}
 function setSaleCommissionForFraction(n,ev){
   state.data.saleCommissions=state.data.saleCommissions||{};
   state.data.saleCommissions[n]={
@@ -717,27 +926,27 @@ function setSaleCommissionForFraction(n,ev){
     date:ev.date
   };
 }
-function applySaleEvent(ev){
-  state.data.saleCommissions=state.data.saleCommissions||{};
-  (ev.fractions||[]).forEach(n=>{
-    state.data.statuses[n]='Vendido';
-    if(ev.amount)state.data.salePrices[n]=ev.amount;
-    setSaleCommissionForFraction(n,ev);
-  });
-}
+function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[])}
 function applyEventBusinessRules(ev){
   state.data.events.push(ev);
   applyClientEventStage(client(ev.clientId),ev);
-  if(ev.type==='Reserva')applyReservationEvent(ev);
-  if(ev.type==='Venda')applySaleEvent(ev);
+  if(isReservationEvent(ev))applyReservationEvent(ev);
+  else if(isSaleEvent(ev))applySaleEvent(ev);
+  else if(isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))reapplyCommercialEffectsForFractions(ev.fractions||[]);
 }
 function eventSortKey(ev,index=0){return`${ev.date||''} ${ev.time||''} ${String(index).padStart(6,'0')}`}
+function commercialEffectForFraction(n){
+  let effect=null;
+  (state.data.events||[]).map((event,index)=>({event,index})).filter(item=>(item.event.fractions||[]).includes(n)).sort((a,b)=>eventSortKey(a.event,a.index).localeCompare(eventSortKey(b.event,b.index))).forEach(({event})=>{
+    if(isReservationEvent(event))effect={status:'Reservado',amount:Number(event.amount)||0,event};
+    else if(isSaleEvent(event))effect={status:'Vendido',amount:Number(event.amount)||0,event};
+    else if(isReservationCancellationEvent(event)&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
+    else if(isAbandonmentEvent(event)&&event.releaseReservation&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
+  });
+  return effect;
+}
 function latestCommercialEventForFraction(n){
-  return (state.data.events||[])
-    .map((ev,index)=>({ev,index}))
-    .filter(item=>isCommercialClosingEvent(item.ev)&&(item.ev.fractions||[]).includes(n))
-    .sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index)))
-    .pop()?.ev||null;
+  return commercialEffectForFraction(n)?.event||null;
 }
 function latestDerivedStageForClient(cid){
   return (state.data.events||[])
@@ -748,48 +957,33 @@ function latestDerivedStageForClient(cid){
 }
 function reapplyClientLinksAfterEventEdit(oldEv,newEv){
   const affected=uniq([oldEv?.clientId,newEv?.clientId]);
-  affected.forEach(cid=>{
-    const c=client(cid);
-    if(!c)return;
-    if(oldEv?.clientId===cid){
-      const stillReferenced=new Set((state.data.events||[]).filter(ev=>ev.clientId===cid).flatMap(ev=>ev.fractions||[]));
-      const oldFractions=oldEv.fractions||[];
-      c.fractions=uniqNum((c.fractions||[]).filter(n=>!oldFractions.includes(n)||stillReferenced.has(n)));
-      const oldStage=eventDerivedStage(oldEv);
-      if(oldStage&&c.stage===oldStage){
-        const latest=latestDerivedStageForClient(cid);
-        c.stage=latest?eventDerivedStage(latest):'Novo lead';
-      }
-    }
-  });
-  applyClientEventStage(client(newEv.clientId),newEv);
+  affected.forEach(cid=>recalculateResumoCliente(cid));
 }
-function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){
+function reapplyCommercialEffectsForFractions(numbers){
   state.data.statuses=state.data.statuses||{};
   state.data.salePrices=state.data.salePrices||{};
   state.data.saleCommissions=state.data.saleCommissions||{};
-  const touched=uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]);
-  touched.forEach(n=>{
-    if(state.data.saleCommissions[n]?.eventId===oldEv.id)delete state.data.saleCommissions[n];
-    const latest=latestCommercialEventForFraction(n);
-    if(latest){
-      state.data.statuses[n]=commercialStatusFromEvent(latest);
-      if(latest.amount){
-        state.data.salePrices[n]=latest.amount;
-      }else if(oldEv.amount&&Number(state.data.salePrices[n])===Number(oldEv.amount)){
-        delete state.data.salePrices[n];
-      }
-      if(latest.type==='Venda'){
-        setSaleCommissionForFraction(n,latest);
-      }else{
-        delete state.data.saleCommissions[n];
-      }
+  state.data.statusEventIds=state.data.statusEventIds||{};
+  state.data.salePriceEventIds=state.data.salePriceEventIds||{};
+  uniqNum(numbers||[]).forEach(n=>{
+    const effect=commercialEffectForFraction(n);
+    const priorStatusSource=state.data.statusEventIds[n];
+    const priorPriceSource=state.data.salePriceEventIds[n];
+    if(effect){
+      state.data.statuses[n]=effect.status;
+      state.data.statusEventIds[n]=effect.event.id;
+      if(effect.amount){state.data.salePrices[n]=effect.amount;state.data.salePriceEventIds[n]=effect.event.id}
+      else if(priorPriceSource){delete state.data.salePrices[n];delete state.data.salePriceEventIds[n]}
+      if(isSaleEvent(effect.event))setSaleCommissionForFraction(n,effect.event);
+      else delete state.data.saleCommissions[n];
       return;
     }
-    if(commercialStatusFromEvent(oldEv)&&state.data.statuses[n]===commercialStatusFromEvent(oldEv))delete state.data.statuses[n];
-    if(oldEv.amount&&Number(state.data.salePrices[n])===Number(oldEv.amount))delete state.data.salePrices[n];
+    if(priorStatusSource){delete state.data.statuses[n];delete state.data.statusEventIds[n]}
+    if(priorPriceSource){delete state.data.salePrices[n];delete state.data.salePriceEventIds[n]}
+    if(state.data.saleCommissions[n]?.eventId)delete state.data.saleCommissions[n];
   });
 }
+function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEffectsForFractions(uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]))}
 function hasCriticalCommercialEventChange(oldEv,newEv){
   if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
   return oldEv.type!==newEv.type ||
@@ -812,6 +1006,8 @@ function createManualStatusEvent(n,oldStatus,newStatus){
   return {id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${oldStatus} para ${newStatus}`};
 }
 function applyManualStatusChange(n,oldStatus,newStatus,{unavailableReason=null,salePriceValue=null}={}){
+  state.data.statusEventIds=state.data.statusEventIds||{};
+  delete state.data.statusEventIds[n];
   state.data.statuses[n]=newStatus;
   if(newStatus==='Indisponível'){
     state.data.unavailableReasons=state.data.unavailableReasons||{};
@@ -982,6 +1178,9 @@ async function deleteMaintenanceSelected(){
 
   const msg=`Eliminar definitivamente:\n- ${clientIds.length} cliente(s)\n- ${agentIds.length} agente(s)\n- ${finalEventIds.size} evento(s)\n\nEsta ação não pode ser desfeita.`;
   if(!await confirmUser(msg,'Confirmar eliminação'))return;
+  const removedEvents=(state.data.events||[]).filter(ev=>finalEventIds.has(ev.id));
+  const affectedFractions=uniqNum(removedEvents.flatMap(ev=>ev.fractions||[]));
+  const affectedClients=uniq(removedEvents.map(ev=>ev.clientId));
 
   if(clientIds.length){
     state.data.clients=(state.data.clients||[]).filter(c=>!clientIds.includes(c.id));
@@ -1010,6 +1209,8 @@ async function deleteMaintenanceSelected(){
     Object.keys(state.data.saleCommissions||{}).forEach(n=>{
       if(finalEventIds.has(state.data.saleCommissions[n]?.eventId))delete state.data.saleCommissions[n];
     });
+    reapplyCommercialEffectsForFractions(affectedFractions);
+    affectedClients.forEach(cid=>recalculateResumoCliente(cid));
   }
 
   save();
@@ -1185,12 +1386,65 @@ function populateAgentSelect(){
   const list=state.data.agents||[];sel.innerHTML='<option value="">Selecionar agente/agência</option>'+list.map(a=>`<option value="${attr(a.id)}">${esc((a.name||'Agente')+(a.agency?' · '+a.agency:''))}</option>`).join('');
 }
 function toggleEventAgentFields(){
-  const isSale=el.eventType?.value==='Venda';
+  const isSale=isSaleEvent({type:el.eventType?.value});
   const fields=document.getElementById('eventAgentFields');if(!fields)return;
   fields.style.display=isSale?'grid':'none';
 }
+function eventRequiresFractions(type){return['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva cancelada','Reserva','Venda concluída','Venda'].includes(type)}
+function collectEventPriceDraft(){
+  const rows=[...(el.eventPriceRows?.querySelectorAll('[data-event-price-row]')||[])];
+  rows.forEach(row=>{
+    const n=Number(row.dataset.eventPriceRow);
+    state.eventPriceDraft=state.eventPriceDraft||{};
+    state.eventPriceDraft[n]={fraction:n,officialPrice:Number(row.dataset.officialPrice)||0,informedPrice:num(row.querySelector('[data-informed-price]')?.value),observation:row.querySelector('[data-price-observation]')?.value.trim()||''};
+  });
+}
+function previousLowerInformedPrice(n,excludeEventId=''){
+  const records=(state.data.events||[]).filter(ev=>ev.id!==excludeEventId).flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n&&Number(item.informedPrice)>0).map(item=>({price:Number(item.informedPrice),date:ev.date||'',client:client(ev.clientId)?.name||'Cliente sem nome'})));
+  const current=finalPrice(getF(n));
+  return records.filter(item=>item.price<current).sort((a,b)=>a.price-b.price)[0]||null;
+}
+function renderEventPriceRows(initialRows=null){
+  if(!el.eventPriceRows)return;
+  if(initialRows){state.eventPriceDraft={};initialRows.forEach(item=>{const n=Number(item.fraction||item.unitId);if(n)state.eventPriceDraft[n]={fraction:n,officialPrice:Number(item.officialPrice)||0,informedPrice:Number(item.informedPrice)||0,observation:safe(item.observation)}})}
+  else collectEventPriceDraft();
+  const selected=getMulti(el.eventFractions).map(Number);
+  el.eventPriceRows.innerHTML=selected.length?selected.map(n=>{
+    const f=getF(n),draft=state.eventPriceDraft?.[n]||{},official=Number(draft.officialPrice)||finalPrice(f),informed=draft.informedPrice===undefined?official:Number(draft.informedPrice),difference=informed-official,previous=previousLowerInformedPrice(n,state.editingEventId);
+    return `<article class="event-price-row" data-event-price-row="${n}" data-official-price="${official}"><div class="event-price-row__title"><div><strong>${esc(f?.name||'Apt. '+n)}</strong><span>Oficial na data: ${money(official)}</span></div><strong class="${difference<0?'price-negative':''}" data-price-difference>${difference?money(difference):money(0)}</strong></div><div class="form-grid"><label class="field"><span>Preço informado</span><input type="number" min="0" step="1000" value="${informed||''}" data-informed-price></label><label class="field"><span>Observação</span><input value="${attr(draft.observation||'')}" data-price-observation></label></div>${previous?`<p class="crm-warning">Atenção: esta fração já teve preço inferior informado. Menor preço: ${money(previous.price)}. Cliente: ${esc(previous.client)}. Data: ${esc(previous.date||'—')}.</p>`:''}</article>`;
+  }).join(''):'<div class="empty-state">Selecione pelo menos uma fração acima.</div>';
+  el.eventPriceRows.querySelectorAll('[data-informed-price]').forEach(input=>input.addEventListener('input',()=>{
+    const row=input.closest('[data-event-price-row]'),difference=num(input.value)-Number(row.dataset.officialPrice),box=row.querySelector('[data-price-difference]');
+    box.textContent=money(difference);box.classList.toggle('price-negative',difference<0);
+  }));
+}
+function toggleEventSpecificFields(){
+  const type=el.eventType?.value||'';
+  toggleEventAgentFields();
+  el.eventPreferenceFields?.classList.toggle('hidden',type!=='Preferências recebidas');
+  el.eventPriceFields?.classList.toggle('hidden',type!=='Preços informados');
+  if(type==='Preços informados')renderEventPriceRows();
+  const amountField=el.eventAmount?.closest('.field');
+  const amountLabel=amountField?.querySelector('span');
+  if(amountLabel)amountLabel.textContent=isSaleEvent({type})?'Preço de venda':isReservationEvent({type})?'Valor da reserva':type.includes('Contra-proposta')||type==='Proposta recebida'?'Valor proposto':'Valor';
+}
 
-function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}</td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=async()=>handleManualStatusSelect(+s.dataset.status,s.value));el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{state.data.salePrices[+i.dataset.salePrice]=num(i.value);save();renderDashboard();renderSales()})}
+function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}<div><button class="ghost-button compact-button" type="button" data-fraction-history="${f.number}">Histórico</button></div></td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=async()=>handleManualStatusSelect(+s.dataset.status,s.value));el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{const n=+i.dataset.salePrice;state.data.salePriceEventIds=state.data.salePriceEventIds||{};delete state.data.salePriceEventIds[n];state.data.salePrices[n]=num(i.value);save();renderDashboard();renderSales()});el.salesTableBody.querySelectorAll('[data-fraction-history]').forEach(btn=>btn.onclick=()=>openFractionHistoryModal(Number(btn.dataset.fractionHistory)))}
+function getHistoricoComercialFracao(unitId){
+  return (state.data.events||[]).filter(ev=>(ev.fractions||[]).includes(unitId)).map(ev=>{
+    const price=(ev.informedPrices||[]).find(item=>Number(item.fraction||item.unitId)===unitId);
+    const official=Number(price?.officialPrice)||0,informed=Number(price?.informedPrice)||0;
+    return{eventId:ev.id,date:ev.date||'',time:ev.time||'',type:ev.type||'Evento',client:client(ev.clientId)?.name||'Sem cliente associado',officialPrice:official,informedPrice:informed,difference:informed&&official?informed-official:0,observation:safe(price?.observation||ev.notes),amount:Number(ev.amount)||0};
+  }).sort((a,b)=>String(b.date+' '+b.time).localeCompare(String(a.date+' '+a.time)));
+}
+function openFractionHistoryModal(unitId){
+  const f=getF(unitId);if(!f)return;
+  document.getElementById('fractionHistoryModal')?.remove();
+  const rows=getHistoricoComercialFracao(unitId),modal=document.createElement('div');
+  modal.id='fractionHistoryModal';modal.className='modal-backdrop';modal.innerHTML=`<div class="modal fraction-history-modal"><button class="modal-close" type="button" data-close-fraction-history>×</button><p class="eyebrow eyebrow--dark">Frações e Estados</p><h2>Histórico Comercial · ${esc(f.name)}</h2><p class="muted">Histórico derivado dos eventos. Não altera preços nem estados.</p>${rows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th class="num-col">Oficial na data</th><th class="num-col">Informado / Valor</th><th class="num-col">Diferença</th><th>Observação</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.date||'—')}</td><td>${esc(row.type)}</td><td>${esc(row.client)}</td><td class="num-col">${row.officialPrice?money(row.officialPrice):'—'}</td><td class="num-col">${row.informedPrice?money(row.informedPrice):row.amount?money(row.amount):'—'}</td><td class="num-col ${row.difference<0?'price-negative':''}">${row.informedPrice&&row.officialPrice?money(row.difference):'—'}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem eventos associados a esta fração.</div>'}<div class="modal-actions"><button class="primary-button" type="button" data-close-fraction-history>Fechar</button></div></div>`;
+  document.body.appendChild(modal);document.body.style.overflow='hidden';
+  modal.querySelectorAll('[data-close-fraction-history]').forEach(btn=>btn.onclick=()=>{modal.remove();document.body.style.overflow=''});
+}
 async function handleManualStatusSelect(n,newStatus){
   const f=getF(n),oldStatus=statusOf(f);
   if(['Reservado','Vendido'].includes(newStatus)){
@@ -1224,7 +1478,15 @@ function openClientModal(cid=''){
   el.clientAgency.value=isEdit?(c.agency||''):'';
   if(aid)syncClientAgentAgency();
   el.clientBudget.value=isEdit?(c.budget||''):'';
-  el.clientStage.value=isEdit?(c.stage||'Novo lead'):'Novo lead';
+  el.clientStage.value=isEdit?normalizeClientStage(c.stage):'Novo Lead';
+  el.clientStage.dataset.original=el.clientStage.value;
+  const preferences=cleanPreferences(isEdit?(c.manualPreferences||c.preferences||{}):{});
+  el.clientTypologyPreference.value=preferences.typology;
+  el.clientFloorPreference.value=preferences.floor;
+  el.clientOrientationPreference.value=preferences.orientation;
+  el.clientPurchaseObjective.value=preferences.objective;
+  el.clientDecisionTime.value=preferences.decisionTime;
+  el.clientPreferenceSummary.value=preferences.summary;
   setMulti(el.clientFractions,isEdit?(c.fractions||[]):[]);
   el.clientNotes.value=isEdit?(c.notes||''):'';
   const title=el.clientModal.querySelector('h2');
@@ -1238,9 +1500,14 @@ function openClientModal(cid=''){
 function closeClientModal(){el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
 async function saveClient(){
   let cid=el.clientId.value||id();
+  const existing=client(cid)||{};
   const selectedAgentId=el.clientAgent?.value||'';
   const selectedAgent=agent(selectedAgentId);
+  const manualPreferences=cleanPreferences({typology:el.clientTypologyPreference.value,floor:el.clientFloorPreference.value,orientation:el.clientOrientationPreference.value,objective:el.clientPurchaseObjective.value,decisionTime:el.clientDecisionTime.value,summary:el.clientPreferenceSummary.value});
+  const selectedStage=normalizeClientStage(el.clientStage.value);
+  const stageChanged=selectedStage!==(el.clientStage.dataset.original||'Novo Lead');
   const c={
+    ...existing,
     id:cid,
     name:el.clientName.value.trim(),
     phone:el.clientPhone.value.trim(),
@@ -1252,14 +1519,21 @@ async function saveClient(){
     agent:selectedAgent?(selectedAgent.name||''):'',
     agency:selectedAgent?(selectedAgent.agency||''):(el.clientAgency.value.trim()),
     budget:num(el.clientBudget.value),
-    stage:el.clientStage.value,
+    manualBudget:num(el.clientBudget.value),
+    stage:selectedStage,
+    stageManual:stageChanged?true:!!existing.stageManual,
+    manualStage:stageChanged?selectedStage:(existing.manualStage||''),
+    manualFractions:getMulti(el.clientFractions).map(Number),
     fractions:getMulti(el.clientFractions).map(Number),
+    manualPreferences,
+    preferences:manualPreferences,
     notes:el.clientNotes.value.trim(),
     updated:new Date().toLocaleString('pt-PT')
   };
   if(!c.name){await notifyUser('Indique o nome do cliente.','Cliente / Lead');return}
   const idx=state.data.clients.findIndex(x=>x.id===cid);
   idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
+  recalculateResumoCliente(cid);
   state.selectedClientId=cid;
   save();
   renderClientSelects();
@@ -1282,9 +1556,11 @@ function openEventModal(eventId='',source=''){
   state.editingEventId=ev?.id||'';
   state.eventEditSource=source||'';
   el.eventClientId.value=ev?(ev.clientId||''):(state.selectedClientId||'');
-  el.eventType.value=ev?(ev.type||'Reunião com cliente'):'Reunião com cliente';
+  if(ev?.type&&![...el.eventType.options].some(option=>option.value===ev.type))el.eventType.add(new Option(ev.type,ev.type));
+  el.eventType.value=ev?(ev.type||'Outro'):'Pedido de informação recebido';
   el.eventDate.value=ev?(ev.date||today()):today();
   el.eventTime.value=ev?(ev.time||''):'';
+  el.eventChannel.value=ev?(ev.channel||''):'';
   el.eventAmount.value=ev?(ev.amount||''):'';
   el.eventInterest.value=ev?(ev.interest||''):'';
   el.eventFollowup.value=ev?(ev.followup||''):'';
@@ -1292,8 +1568,17 @@ function openEventModal(eventId='',source=''){
   setMulti(el.eventFractions,ev?(ev.fractions||[]):[]);
   el.eventObjections.value=ev?(ev.objections||''):'';
   el.eventNotes.value=ev?(ev.notes||''):'';
+  const preferences=cleanPreferences(ev?.preferences||{});
+  el.eventPreferenceTypology.value=preferences.typology;
+  el.eventPreferenceBudget.value=ev?(ev.preferenceBudget||''):'';
+  el.eventPreferenceFloor.value=preferences.floor;
+  el.eventPreferenceOrientation.value=preferences.orientation;
+  el.eventPreferenceObjective.value=preferences.objective;
+  el.eventPreferenceDecisionTime.value=preferences.decisionTime;
+  el.eventPreferenceSummary.value=preferences.summary;
+  state.eventPriceDraft={};
   const wa=document.getElementById('eventWithAgent');
-  if(wa)wa.checked=!!(ev&&ev.withAgent&&ev.type==='Venda');
+  if(wa)wa.checked=!!(ev&&ev.withAgent&&isSaleEvent(ev));
   const agentSel=document.getElementById('eventAgentId');
   if(agentSel)agentSel.value=ev?(ev.agentId||''):'';
   const ct=document.getElementById('eventCommissionType');
@@ -1304,8 +1589,10 @@ function openEventModal(eventId='',source=''){
   if(title)title.textContent=ev?'Editar evento':'Novo evento';
   const saveBtn=document.getElementById('saveEvent');
   if(saveBtn)saveBtn.textContent=ev?'Atualizar evento':'Guardar evento';
-  toggleEventAgentFields();
-  el.eventType.onchange=toggleEventAgentFields;
+  renderEventPriceRows(ev?(ev.informedPrices||[]):[]);
+  toggleEventSpecificFields();
+  el.eventType.onchange=toggleEventSpecificFields;
+  el.eventFractions.onchange=()=>{if(el.eventType.value==='Preços informados')renderEventPriceRows()};
   el.eventModal.classList.remove('hidden');
   document.body.style.overflow='hidden';
 }
@@ -1321,22 +1608,38 @@ function closeEventModal(){
 }
 async function saveEvent(){
   const cid=el.eventClientId.value;
-  if(!cid){await notifyUser('Escolha um cliente.','Evento comercial');return}
+  if(!cid&&el.eventType.value!=='Alteração de estado'){await notifyUser('Escolha um cliente.','Evento comercial');return}
   const frs=getMulti(el.eventFractions).map(Number);
-  if(!frs.length){await notifyUser('Escolha pelo menos uma fração.','Evento comercial');return}
+  const type=el.eventType.value;
+  if(eventRequiresFractions(type)&&!frs.length){await notifyUser('Escolha pelo menos uma fração.','Evento comercial');return}
   const editingId=state.editingEventId||'';
   const returnSource=state.eventEditSource||'';
   const oldEv=editingId?(state.data.events||[]).find(ev=>ev.id===editingId):null;
   if(editingId&&!oldEv){await notifyUser('Não encontrei o evento original. Atualize a página e tente novamente.','Evento comercial');return}
   const ev=buildEventFromForm(cid,frs,editingId);
+  if(type==='Preços informados'&&ev.informedPrices.some(item=>!item.informedPrice)){await notifyUser('Indique o preço informado para cada fração.','Preços informados');return}
+  const reservationCandidates=isAbandonmentEvent(ev)&&!frs.length?state.fractions.map(f=>f.number):frs;
+  const activeReservations=reservationCandidates.filter(n=>{const effect=commercialEffectForFraction(n);return effect?.status==='Reservado'&&effect.event.clientId===cid});
+  if(isReservationCancellationEvent(ev)&&activeReservations.length){
+    if(!await confirmUser(`A reserva será cancelada e ${activeReservations.map(n=>'Apt. '+n).join(', ')} voltará ao estado disponível. Confirmar?`,'Cancelar reserva'))return;
+    ev.releaseReservation=true;
+  }
+  if(isAbandonmentEvent(ev)&&activeReservations.length){
+    ev.releaseReservation=await confirmUser(`Este cliente tem reserva ativa em ${activeReservations.map(n=>'Apt. '+n).join(', ')}. Pretende libertar a reserva ao registar a desistência?`,'Desistência com reserva');
+    if(ev.releaseReservation)ev.fractions=uniqNum([...(ev.fractions||[]),...activeReservations]);
+  }
   if(oldEv){
     const oldSnapshot=JSON.parse(JSON.stringify(oldEv));
     if(hasCriticalCommercialEventChange(oldSnapshot,ev)){
-      const msg='Está a alterar campos críticos de uma Reserva/Venda: tipo, frações, valor, agente ou comissão.\n\nAo confirmar, os estados das frações, preço de reserva/venda e comissão serão recalculados para refletir o evento editado.';
-      if(!await confirmUser(msg,'Atualizar Reserva/Venda'))return;
+      const msg='Está a alterar campos com efeitos comerciais: tipo, frações, valor, agente ou comissão.\n\nAo confirmar, os estados das frações, preço de reserva/venda e comissão serão recalculados para refletir o evento editado.';
+      if(!await confirmUser(msg,'Atualizar evento comercial'))return;
     }
     replaceEventAndReapplyBusinessRules(oldSnapshot,ev);
   }else{
+    if(isReservationEvent(ev)||isSaleEvent(ev)){
+      const action=isSaleEvent(ev)?'venda':'reserva';
+      if(!await confirmUser(`Confirmar ${action} de ${frs.map(n=>'Apt. '+n).join(', ')} para ${client(cid)?.name||'o cliente selecionado'}${ev.amount?' pelo valor de '+money(ev.amount):''}?`,`Confirmar ${action}`))return;
+    }
     applyEventBusinessRules(ev);
   }
   if(returnSource==='events')state.salesSubtab='events';
@@ -1346,12 +1649,16 @@ async function saveEvent(){
   RenderFlow.eventChanged();
 }
 function buildEventFromForm(cid,frs,eventId=''){
-  const withAgent=!!document.getElementById('eventWithAgent')?.checked&&el.eventType.value==='Venda';
+  const existing=eventId?(state.data.events||[]).find(ev=>ev.id===eventId)||{}:{};
+  collectEventPriceDraft();
+  const withAgent=!!document.getElementById('eventWithAgent')?.checked&&isSaleEvent({type:el.eventType.value});
   const commissionType=document.getElementById('eventCommissionType')?.value||'percent';
   const commissionValue=num(document.getElementById('eventCommissionValue')?.value||0);
   const saleAmount=num(el.eventAmount.value);
   const commissionAmount=withAgent?calculateCommission(saleAmount,commissionType,commissionValue):0;
-  return {id:eventId||id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
+  const preferences=cleanPreferences({typology:el.eventPreferenceTypology.value,floor:el.eventPreferenceFloor.value,orientation:el.eventPreferenceOrientation.value,objective:el.eventPreferenceObjective.value,decisionTime:el.eventPreferenceDecisionTime.value,summary:el.eventPreferenceSummary.value});
+  const informedPrices=el.eventType.value==='Preços informados'?frs.map(n=>state.eventPriceDraft?.[n]||{fraction:n,officialPrice:finalPrice(getF(n)),informedPrice:0,observation:''}):[];
+  return {...existing,id:eventId||id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,channel:el.eventChannel.value,amount:saleAmount,interest:el.eventInterest.value,followup:el.eventFollowup.value,followupDate:el.eventFollowupDate.value,fractions:frs,preferences,preferenceBudget:num(el.eventPreferenceBudget.value),informedPrices,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
 }
 function exportPdf(){
   const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)==='Disponível').sort((a,b)=>a.number-b.number);
@@ -1558,9 +1865,9 @@ function filterFractions(fil={}){
 }
 
 function syncProposal(){state.pf={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};renderProposals()}function syncPrice(){state.rf={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};renderPrices()}
-function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const cnt=t=>evs.filter(e=>e.type===t).length;const offers=evs.filter(e=>['Proposta recebida','Contra-proposta enviada','Reserva','Venda'].includes(e.type)&&e.amount).map(e=>e.amount);const last=evs[evs.length-1];return{visits:cnt('Visita'),interested:cnt('Interessado')+cnt('Reunião com cliente'),proposals:cnt('Proposta recebida')+cnt('Contra-proposta enviada')+cnt('Reserva')+cnt('Venda'),lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
+function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
-function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return +state.data.finalPrices[f.number]||SUG[f.number]||f.price}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return +state.data.salePrices[f.number]||0}function historyOf(f){return state.data.priceHistory[f.number]||[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{},priceMigrationKey:d.priceMigrationKey||''}}
+function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return f?(+state.data.finalPrices[f.number]||SUG[f.number]||f.price):0}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return f?(+state.data.salePrices[f.number]||0):0}function historyOf(f){return f?(state.data.priceHistory[f.number]||[]):[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{},statusEventIds:d.statusEventIds||{},salePriceEventIds:d.salePriceEventIds||{},priceMigrationKey:d.priceMigrationKey||'',crmMigrationKey:d.crmMigrationKey||''}}
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
 
 

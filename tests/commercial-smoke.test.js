@@ -26,6 +26,24 @@ includesAll(commercial, [
 ], 'commercial business rules');
 
 includesAll(commercial, [
+  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v1'",
+  'migrateCrmData',
+  'recalculateResumoCliente',
+  'recalculateResumoTodosClientes',
+  'commercialEffectForFraction',
+  'getHistoricoComercialFracao'
+], 'CRM funnel migration and derived summaries');
+
+includesAll(commercial, [
+  'Preços informados',
+  'officialPrice',
+  'informedPrice',
+  'previousLowerInformedPrice',
+  'Reserva cancelada',
+  'Venda concluída'
+], 'structured commercial events');
+
+includesAll(commercial, [
   "statusOf(f)==='Disponível'",
   'presentationPdfLanguage',
   'PT/ENG',
