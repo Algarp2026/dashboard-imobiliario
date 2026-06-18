@@ -29,5 +29,13 @@
 @media(max-width:800px){.crm-form-section__heading,.crm-detail-section__heading,.event-price-row__title{display:block}.crm-preference-grid{grid-template-columns:1fr}.client-summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.client-summary-grid{grid-template-columns:1fr}}
 
+.client-sticky-actions{position:sticky;top:12px;z-index:12;display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;padding:11px 13px;background:rgba(255,255,255,.94);border:1px solid rgba(22,35,61,.1);border-radius:14px;box-shadow:0 10px 26px rgba(16,30,54,.1);backdrop-filter:blur(18px)}
+.client-sticky-actions__context{min-width:150px;padding-left:4px}
+.client-sticky-actions__context span{display:block;color:var(--accent-dark);font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.client-sticky-actions__context strong{display:block;max-width:260px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-size:.92rem}
+.client-sticky-actions__buttons{flex-wrap:nowrap}
+.client-sticky-actions__buttons button{white-space:nowrap}
+@media(max-width:760px){.client-sticky-actions{top:8px;display:block;padding:8px}.client-sticky-actions__context{display:none}.client-sticky-actions__buttons{width:100%;justify-content:flex-start;overflow-x:auto;padding:2px;scrollbar-width:none}.client-sticky-actions__buttons::-webkit-scrollbar{display:none}.client-sticky-actions__buttons .primary-button,.client-sticky-actions__buttons .ghost-button{flex:0 0 auto;padding:10px 14px;font-size:.86rem}}
+
 .ghost-link{display:inline-flex;align-items:center;border-radius:999px;padding:10px 16px;color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(18px)}
 .topbar__actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}

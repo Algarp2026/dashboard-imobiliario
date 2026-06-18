@@ -745,6 +745,7 @@ function ensureSalesManagementTabs(){
   if(clientPanel)clientPanel.dataset.salesView='clients';
   if(fractionsPanel)fractionsPanel.dataset.salesView='fractions';
   if(agentsPanel)agentsPanel.dataset.salesView='agents';
+  if(clientPanel)ensureClientStickyActions(clientPanel);
 
   let eventsPanel=document.getElementById('salesEventsPanel');
   if(!eventsPanel){
@@ -832,6 +833,41 @@ function ensureSalesManagementTabs(){
   renderSalesSubTabs();
 }
 
+function ensureClientStickyActions(clientPanel){
+  let bar=document.getElementById('clientStickyActions');
+  if(!bar){
+    const heading=clientPanel.querySelector('.section-heading');
+    const existingActions=heading?.querySelector('.top-actions');
+    if(!heading||!existingActions)return;
+    bar=document.createElement('div');
+    bar.id='clientStickyActions';
+    bar.className='client-sticky-actions';
+    bar.innerHTML=`<div class="client-sticky-actions__context"><span>Ações</span><strong data-client-sticky-label>Clientes / Leads</strong></div><div class="top-actions client-sticky-actions__buttons"></div>`;
+    const actions=bar.querySelector('.client-sticky-actions__buttons');
+    const newClient=document.getElementById('openClientModal');
+    const addEvent=document.getElementById('openEventModalBtn');
+    if(newClient)actions.appendChild(newClient);
+    if(addEvent){addEvent.textContent='Adicionar Evento';actions.appendChild(addEvent)}
+    const newAgent=document.createElement('button');
+    newAgent.id='clientStickyNewAgent';newAgent.className='ghost-button';newAgent.type='button';newAgent.textContent='Novo Agente';newAgent.onclick=()=>openAgentModal('');
+    const editClient=document.createElement('button');
+    editClient.id='clientStickyEditClient';editClient.className='ghost-button';editClient.type='button';editClient.textContent='Editar Cliente';editClient.onclick=()=>{if(client(state.selectedClientId))openClientModal(state.selectedClientId)};
+    actions.append(newAgent,editClient);
+    if(!existingActions.children.length)existingActions.remove();
+    heading.after(bar);
+  }
+  renderClientActionBar();
+}
+function renderClientActionBar(){
+  const bar=document.getElementById('clientStickyActions');
+  if(!bar)return;
+  const selected=client(state.selectedClientId);
+  const label=bar.querySelector('[data-client-sticky-label]');
+  const edit=document.getElementById('clientStickyEditClient');
+  if(label)label.textContent=selected?(selected.name||'Cliente selecionado'):'Clientes / Leads';
+  if(edit)edit.classList.toggle('hidden',!selected);
+}
+
 function renderSalesSubTabs(){
   const active=state.salesSubtab||'fractions';
   document.querySelectorAll('#salesSubTabs [data-sales-subtab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.salesSubtab===active));
@@ -916,6 +952,7 @@ function clientFractionCommercialRows(c,events){
   });
 }
 function renderClientDetail(){
+  renderClientActionBar();
   const c=client(state.selectedClientId);
   if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}
   recalculateResumoCliente(c.id);
