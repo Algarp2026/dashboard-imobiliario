@@ -26,7 +26,7 @@ includesAll(commercial, [
 ], 'commercial business rules');
 
 includesAll(commercial, [
-  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v1'",
+  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v2'",
   'migrateCrmData',
   'recalculateResumoCliente',
   'recalculateResumoTodosClientes',
