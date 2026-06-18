@@ -26,7 +26,7 @@ includesAll(commercial, [
 ], 'commercial business rules');
 
 includesAll(commercial, [
-  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v2'",
+  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v3'",
   'migrateCrmData',
   'recalculateResumoCliente',
   'recalculateResumoTodosClientes',
@@ -42,6 +42,17 @@ includesAll(commercial, [
   'Reserva cancelada',
   'Venda concluída'
 ], 'structured commercial events');
+
+includesAll(commercial, [
+  'preferencesManuallyEdited',
+  'renderEventSelectedFractionChips',
+  'clearEventFractions'
+], 'editable client preferences and fraction selection');
+
+const eventTypesDeclaration = commercial.match(/const EVENT_TYPES=\[([^\]]+)\]/)?.[1] || '';
+['Contacto efetuado', 'Reunião agendada', 'Reunião realizada', 'Follow-up'].forEach(type => {
+  assert(!eventTypesDeclaration.includes(type), `new event types should not include "${type}"`);
+});
 
 includesAll(commercial, [
   "statusOf(f)==='Disponível'",

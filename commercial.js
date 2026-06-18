@@ -7,9 +7,8 @@ const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:3900
 const UPDATED_INITIAL_PRICES={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
 const STATUS=['Disponível','Reservado','Vendido','Indisponível'];
 const STAGES=['Novo Lead','Qualificado','Apresentado','Em negociação','Reservado','Vendido','Desistiu'];
-const EVENT_TYPES=['Pedido de informação recebido','Contacto efetuado','Preferências recebidas','Reunião agendada','Reunião realizada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Follow-up','Outro'];
-const LEGACY_EVENT_TYPES=['Reunião com cliente','Visita','Interessado','Proposta recebida','Reserva','Venda'];
-const CRM_MIGRATION_KEY='crm-funnel-2026-06-v2';
+const EVENT_TYPES=['Pedido de informação recebido','Preferências recebidas','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Outro'];
+const CRM_MIGRATION_KEY='crm-funnel-2026-06-v3';
 const state={rows:[],fractions:[],tab:'proposals',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
 const RenderFlow={
@@ -56,7 +55,7 @@ function ensureCrmFormFields(){
   }
 
   const eventType=document.getElementById('eventType');
-  if(eventType)eventType.innerHTML=`<optgroup label="Fluxo comercial">${EVENT_TYPES.map(type=>`<option>${esc(type)}</option>`).join('')}</optgroup><optgroup label="Tipos anteriores (compatibilidade)">${LEGACY_EVENT_TYPES.map(type=>`<option>${esc(type)}</option>`).join('')}</optgroup>`;
+  if(eventType)eventType.innerHTML=EVENT_TYPES.map(type=>`<option>${esc(type)}</option>`).join('');
   const eventTime=document.getElementById('eventTime');
   const eventGrid=eventTime?.closest('.form-grid');
   if(eventGrid&&!document.getElementById('eventChannel')){
@@ -100,6 +99,29 @@ function ensureCrmFormFields(){
     prices.innerHTML=`<div class="crm-form-section__heading"><h3>Preços comunicados por fração</h3><p class="muted small">O preço oficial fica guardado como fotografia da data e não é alterado.</p></div><div id="eventPriceNotice"></div><div id="eventPriceRows" class="event-price-rows"></div>`;
     eventFractionsField.after(prices);
   }
+  if(eventFractionsField&&!document.getElementById('clearEventFractions')){
+    const actions=document.createElement('div');
+    actions.className='event-fraction-actions';
+    actions.innerHTML='<button class="ghost-button" id="clearEventFractions" type="button">Limpar frações</button><div id="eventSelectedFractionChips" class="event-selected-fraction-chips"></div>';
+    eventFractionsField.after(actions);
+    actions.querySelector('#clearEventFractions').onclick=()=>{
+      [...eventFractions.options].forEach(option=>{option.selected=false});
+      eventFractions.dispatchEvent(new Event('change'));
+    };
+  }
+}
+function renderEventSelectedFractionChips(){
+  const box=document.getElementById('eventSelectedFractionChips');
+  const clear=document.getElementById('clearEventFractions');
+  if(!box||!el.eventFractions)return;
+  const selected=getMulti(el.eventFractions).map(Number);
+  if(clear)clear.disabled=!selected.length;
+  box.innerHTML=selected.map(n=>`<button class="event-fraction-chip" type="button" data-remove-event-fraction="${n}" aria-label="Remover ${attr(getF(n)?.name||'fração '+n)}">${esc(getF(n)?.name||'Apt. '+n)} <span aria-hidden="true">×</span></button>`).join('');
+  box.querySelectorAll('[data-remove-event-fraction]').forEach(button=>button.onclick=()=>{
+    const option=[...el.eventFractions.options].find(item=>Number(item.value)===Number(button.dataset.removeEventFraction));
+    if(option)option.selected=false;
+    el.eventFractions.dispatchEvent(new Event('change'));
+  });
 }
 function ensurePriceListButton(){
   if(document.getElementById('printPriceListBtn')) return;
@@ -665,6 +687,10 @@ function recalculateResumoCliente(clientId){
       if(next==='Desistiu'||next==='Reservado'||next==='Vendido'||stageRank(next)>stageRank(derivedStage))derivedStage=next||derivedStage;
     }
   });
+  if(c.preferencesManuallyEdited){
+    preferences={...manualPreferences};
+    budget=Number(c.manualBudget)||0;
+  }
 
   const criticalDerived=['Reservado','Vendido','Desistiu'].includes(derivedStage);
   if(criticalDerived)c.stage=derivedStage;
@@ -702,6 +728,7 @@ function migrateCrmData(){
     if(!Array.isArray(c.manualFractions))c.manualFractions=uniqNum(c.fractions||[]);
     if(c.manualBudget===undefined)c.manualBudget=Number(c.budget)||0;
     if(!c.manualPreferences)c.manualPreferences=cleanPreferences(c.preferences||{});
+    if(c.preferencesManuallyEdited===undefined)c.preferencesManuallyEdited=!(state.data.events||[]).some(ev=>ev.clientId===c.id&&ev.type==='Preferências recebidas');
     if(c.manualNextStep===undefined)c.manualNextStep=safe(c.nextStep);
     if(c.manualNextFollowup===undefined)c.manualNextFollowup=safe(c.nextFollowup);
     if(c.stageManual===undefined)c.stageManual=false;
@@ -994,6 +1021,7 @@ function setSaleCommissionForFraction(n,ev){
 function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[])}
 function applyEventBusinessRules(ev){
   state.data.events.push(ev);
+  if(ev.type==='Preferências recebidas'&&client(ev.clientId))client(ev.clientId).preferencesManuallyEdited=false;
   applyClientEventStage(client(ev.clientId),ev);
   if(isReservationEvent(ev))applyReservationEvent(ev);
   else if(isSaleEvent(ev))applySaleEvent(ev);
@@ -1063,6 +1091,7 @@ function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
   state.data.events[idx]=newEv;
+  if(newEv.type==='Preferências recebidas'&&client(newEv.clientId))client(newEv.clientId).preferencesManuallyEdited=false;
   reapplyClientLinksAfterEventEdit(oldEv,newEv);
   reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
   return true;
@@ -1547,7 +1576,7 @@ function openClientModal(cid=''){
   el.clientStage.dataset.original=el.clientStage.value;
   el.clientNextStep.value=isEdit?(c.manualNextStep||c.nextStep||''):'';
   el.clientNextFollowup.value=isEdit?(c.manualNextFollowup||c.nextFollowup||''):'';
-  const preferences=cleanPreferences(isEdit?(c.manualPreferences||c.preferences||{}):{});
+  const preferences=cleanPreferences(isEdit?(c.preferences||c.manualPreferences||{}):{});
   el.clientTypologyPreference.value=preferences.typology;
   el.clientFloorPreference.value=preferences.floor;
   el.clientOrientationPreference.value=preferences.orientation;
@@ -1596,6 +1625,7 @@ async function saveClient(){
     fractions:getMulti(el.clientFractions).map(Number),
     manualPreferences,
     preferences:manualPreferences,
+    preferencesManuallyEdited:true,
     notes:el.clientNotes.value.trim(),
     updated:new Date().toLocaleString('pt-PT')
   };
@@ -1625,6 +1655,7 @@ function openEventModal(eventId='',source=''){
   state.editingEventId=ev?.id||'';
   state.eventEditSource=source||'';
   el.eventClientId.value=ev?(ev.clientId||''):(state.selectedClientId||'');
+  el.eventType.innerHTML=EVENT_TYPES.map(type=>`<option>${esc(type)}</option>`).join('');
   if(ev?.type&&![...el.eventType.options].some(option=>option.value===ev.type))el.eventType.add(new Option(ev.type,ev.type));
   el.eventType.value=ev?(ev.type||'Outro'):'Pedido de informação recebido';
   el.eventDate.value=ev?(ev.date||today()):today();
@@ -1635,6 +1666,7 @@ function openEventModal(eventId='',source=''){
   el.eventFollowup.value=ev?(ev.nextStep||ev.followup||''):'';
   el.eventFollowupDate.value=ev?(ev.followupDate||''):'';
   setMulti(el.eventFractions,ev?(ev.fractions||[]):[]);
+  renderEventSelectedFractionChips();
   el.eventObjections.value=ev?(ev.objections||''):'';
   el.eventNotes.value=ev?(ev.notes||''):'';
   const preferences=cleanPreferences(ev?.preferences||{});
@@ -1661,7 +1693,7 @@ function openEventModal(eventId='',source=''){
   renderEventPriceRows(ev?(ev.informedPrices||[]):[]);
   toggleEventSpecificFields();
   el.eventType.onchange=toggleEventSpecificFields;
-  el.eventFractions.onchange=()=>{if(el.eventType.value==='Preços informados')renderEventPriceRows()};
+  el.eventFractions.onchange=()=>{renderEventSelectedFractionChips();if(el.eventType.value==='Preços informados')renderEventPriceRows()};
   el.eventModal.classList.remove('hidden');
   document.body.style.overflow='hidden';
 }

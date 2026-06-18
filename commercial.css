@@ -26,6 +26,13 @@
 .price-negative{color:var(--danger)!important}
 .crm-warning{margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--warning);background:#fff8ec;color:#7d5315;font-size:.88rem;line-height:1.45}
 .fraction-history-modal{width:min(1180px,100%)}
+.event-fraction-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 0}
+.event-fraction-actions .ghost-button{padding:9px 13px;font-size:.86rem}
+.event-fraction-actions .ghost-button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.event-selected-fraction-chips{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.event-fraction-chip{border:1px solid rgba(30,70,124,.18);border-radius:999px;background:rgba(30,70,124,.07);color:var(--blue);padding:7px 10px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+.event-fraction-chip:hover{background:rgba(30,70,124,.13)}
+.event-fraction-chip span{margin-left:4px;font-size:1rem;line-height:0}
 @media(max-width:800px){.crm-form-section__heading,.crm-detail-section__heading,.event-price-row__title{display:block}.crm-preference-grid{grid-template-columns:1fr}.client-summary-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.client-summary-grid{grid-template-columns:1fr}}
 
