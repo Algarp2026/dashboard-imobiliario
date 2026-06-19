@@ -44,5 +44,15 @@
 .client-sticky-actions__buttons button{white-space:nowrap}
 @media(max-width:760px){.client-sticky-actions{top:8px;display:block;padding:8px}.client-sticky-actions__context{display:none}.client-sticky-actions__buttons{width:100%;justify-content:flex-start;overflow-x:auto;padding:2px;scrollbar-width:none}.client-sticky-actions__buttons::-webkit-scrollbar{display:none}.client-sticky-actions__buttons .primary-button,.client-sticky-actions__buttons .ghost-button{flex:0 0 auto;padding:10px 14px;font-size:.86rem}}
 
+/* Scroll independente da lista lateral de clientes no desktop. */
+#tab-sales .client-layout{align-items:start}
+#tab-sales #clientsList{height:clamp(360px,calc(100dvh - 260px),720px);overflow-y:auto;overscroll-behavior:contain;padding:3px 8px 10px 3px;scrollbar-width:thin;scrollbar-color:rgba(97,113,139,.42) transparent}
+#tab-sales #clientsList::-webkit-scrollbar{width:7px}
+#tab-sales #clientsList::-webkit-scrollbar-track{background:transparent}
+#tab-sales #clientsList::-webkit-scrollbar-thumb{background:rgba(97,113,139,.32);border-radius:7px}
+#tab-sales #clientsList::-webkit-scrollbar-thumb:hover{background:rgba(97,113,139,.52)}
+#tab-sales #clientDetail{min-width:0;align-self:start}
+@media(max-width:1100px){#tab-sales #clientsList{height:auto;max-height:none;overflow-y:visible;overscroll-behavior:auto;padding:0;scrollbar-width:auto}}
+
 .ghost-link{display:inline-flex;align-items:center;border-radius:999px;padding:10px 16px;color:#fff;text-decoration:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(18px)}
 .topbar__actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
