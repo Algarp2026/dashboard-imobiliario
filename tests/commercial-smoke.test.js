@@ -26,7 +26,7 @@ includesAll(commercial, [
 ], 'commercial business rules');
 
 includesAll(commercial, [
-  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v3'",
+  "CRM_MIGRATION_KEY='crm-funnel-2026-06-v4'",
   'migrateCrmData',
   'recalculateResumoCliente',
   'recalculateResumoTodosClientes',
@@ -48,6 +48,17 @@ includesAll(commercial, [
   'renderEventSelectedFractionChips',
   'clearEventFractions'
 ], 'editable client preferences and fraction selection');
+
+includesAll(commercial, [
+  "const CLIENT_ORIGINS=['Website The View','Outdoor / Mupie','Agente','Amigo / Familiar','Outro']",
+  'clientOriginManual',
+  'toggleClientOriginManual',
+  'clientOriginLabel'
+], 'client origin options and manual value');
+
+const clientOriginsDeclaration = commercial.match(/const CLIENT_ORIGINS=\[([^\]]+)\]/)?.[1] || '';
+assert(!clientOriginsDeclaration.includes('Redes sociais'), 'new client origins should not include "Redes sociais"');
+assert(!clientOriginsDeclaration.includes('Portal Imobili'), 'new client origins should not include "Portal Imobiliario"');
 
 const eventTypesDeclaration = commercial.match(/const EVENT_TYPES=\[([^\]]+)\]/)?.[1] || '';
 ['Contacto efetuado', 'Reunião agendada', 'Reunião realizada', 'Follow-up'].forEach(type => {
