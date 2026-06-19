@@ -877,9 +877,11 @@ function ensureClientStickyActions(clientPanel){
     if(addEvent){addEvent.textContent='Adicionar Evento';actions.appendChild(addEvent)}
     const newAgent=document.createElement('button');
     newAgent.id='clientStickyNewAgent';newAgent.className='ghost-button';newAgent.type='button';newAgent.textContent='Novo Agente';newAgent.onclick=()=>openAgentModal('');
+    const printSummary=document.createElement('button');
+    printSummary.id='printClientsSummaryBtn';printSummary.className='ghost-button';printSummary.type='button';printSummary.textContent='Imprimir Resumo de Clientes';printSummary.onclick=openClientsSummaryPdfModal;
     const editClient=document.createElement('button');
     editClient.id='clientStickyEditClient';editClient.className='ghost-button';editClient.type='button';editClient.textContent='Editar Cliente';editClient.onclick=()=>{if(client(state.selectedClientId))openClientModal(state.selectedClientId)};
-    actions.append(newAgent,editClient);
+    actions.append(newAgent,printSummary,editClient);
     if(!existingActions.children.length)existingActions.remove();
     heading.after(bar);
   }
@@ -893,6 +895,113 @@ function renderClientActionBar(){
   const edit=document.getElementById('clientStickyEditClient');
   if(label)label.textContent=selected?(selected.name||'Cliente selecionado'):'Clientes / Leads';
   if(edit)edit.classList.toggle('hidden',!selected);
+}
+
+function clientSummaryFollowupInfo(c){
+  const candidates=sortedClientEvents(c.id).map((ev,index)=>({date:safe(ev.followupDate||(ev.type==='Reunião agendada'?ev.date:'')),step:safe(ev.nextStep||ev.followup),index}));
+  if(c.manualNextFollowup)candidates.push({date:safe(c.manualNextFollowup),step:safe(c.manualNextStep),index:-1});
+  const valid=candidates.filter(item=>/^\d{4}-\d{2}-\d{2}$/.test(item.date));
+  const future=valid.filter(item=>item.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)||a.index-b.index)[0]||null;
+  const overdue=valid.filter(item=>item.date<today()).sort((a,b)=>b.date.localeCompare(a.date)||b.index-a.index)[0]||null;
+  if(future)return{status:'future',date:future.date,step:future.step};
+  if(overdue)return{status:'overdue',date:overdue.date,step:overdue.step};
+  return{status:'none',date:'',step:''};
+}
+function clientSummaryLastContact(c){
+  return sortedClientEvents(c.id).filter(ev=>ev.date&&ev.date<=today()).map(ev=>ev.date).pop()||'';
+}
+function clientSummaryPreferencesText(c){
+  const preferences=cleanPreferences(c.preferences||{}),parts=[];
+  if(preferences.typology)parts.push(preferences.typology);
+  if(preferences.floor)parts.push(preferences.floor);
+  if(preferences.orientation)parts.push(preferences.orientation);
+  if(preferences.objective)parts.push(preferences.objective);
+  if(Number(c.budget)>0)parts.push(`até ${money(c.budget)}`);
+  return parts.join(' · ')||'—';
+}
+function clientSummaryFractionsText(c){
+  const summary=c.commercialSummary||{},prices=new Map((summary.lastInformedPrices||[]).map(item=>[Number(item.fraction),Number(item.informedPrice)||0]));
+  const fractions=uniqNum([...(summary.presentedFractions||[]),...prices.keys()]);
+  return fractions.map(n=>prices.get(n)?`Apt. ${n}: ${money(prices.get(n))}`:`Apt. ${n}`).join(' · ')||'—';
+}
+function clientSummaryAgentLabel(c){
+  const linked=agent(c.agentId),name=linked?.name||c.agent||'',agency=linked?.agency||c.agency||'';
+  return uniq([name,agency,c.origin]).join(' · ')||'—';
+}
+function formatCommercialDate(value){
+  const match=safe(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match?`${match[3]}/${match[2]}/${match[1]}`:'—';
+}
+function clientSummaryShortText(value,max=100){const text=safe(value);return text.length>max?text.slice(0,max-1).trim()+'…':text||'—'}
+function buildClientSummaryRows(options={}){
+  const statuses=new Set(options.statuses||[]),query=norm(options.search||''),agentId=options.agentId||'all',followupFilter=options.followupFilter||'all';
+  const rows=(state.data.clients||[]).filter(c=>statuses.has(normalizeClientStage(c.stage))).filter(c=>!query||norm(c.name).includes(query)).filter(c=>agentId==='all'||c.agentId===agentId).map(c=>{
+    const summary=c.commercialSummary||{},followup=clientSummaryFollowupInfo(c),lastContact=clientSummaryLastContact(c),preferences=cleanPreferences(c.preferences||{});
+    return{
+      client:c.name||'Cliente sem nome',status:normalizeClientStage(c.stage),preferences:clientSummaryPreferencesText(c),fractions:clientSummaryFractionsText(c),
+      lastContact,lastContactLabel:formatCommercialDate(lastContact),followupStatus:followup.status,followupDate:followup.date,
+      followupLabel:followup.status==='overdue'?`Vencido: ${formatCommercialDate(followup.date)}`:followup.date?formatCommercialDate(followup.date):'—',
+      nextStep:safe(summary.nextStep||followup.step||c.manualNextStep)||'—',contact:uniq([c.phone,c.email]).join(' · ')||'—',
+      agentOrigin:clientSummaryAgentLabel(c),note:clientSummaryShortText(preferences.summary)
+    };
+  }).filter(row=>followupFilter==='all'||row.followupStatus===followupFilter);
+  const statusOrder=new Map(STAGES.map((stage,index)=>[stage,index]));
+  rows.sort((a,b)=>{
+    if(options.sort==='name')return a.client.localeCompare(b.client,'pt-PT',{sensitivity:'base'});
+    if(options.sort==='status')return(statusOrder.get(a.status)-statusOrder.get(b.status))||a.client.localeCompare(b.client,'pt-PT');
+    if(options.sort==='lastContact')return Number(!a.lastContact)-Number(!b.lastContact)||(b.lastContact||'').localeCompare(a.lastContact||'')||a.client.localeCompare(b.client,'pt-PT');
+    const group=row=>row.followupStatus==='future'?0:row.followupStatus==='overdue'?1:2;
+    const groupDiff=group(a)-group(b);if(groupDiff)return groupDiff;
+    if(a.followupStatus==='future')return a.followupDate.localeCompare(b.followupDate)||a.client.localeCompare(b.client,'pt-PT');
+    if(a.followupStatus==='overdue')return b.followupDate.localeCompare(a.followupDate)||a.client.localeCompare(b.client,'pt-PT');
+    return a.client.localeCompare(b.client,'pt-PT');
+  });
+  return rows;
+}
+function openClientsSummaryPdfModal(){
+  document.getElementById('clientsSummaryPdfModal')?.remove();
+  const statusOptions=STAGES.map(stage=>[stage,!['Vendido','Desistiu'].includes(stage)]);
+  const columnOptions=[
+    ['client','Cliente',true,true],['status','Estado',true,false],['preferences','Preferências / Interesse',true,false],
+    ['fractions','Frações / últimos preços informados',true,false],['lastContact','Último contacto',true,false],
+    ['nextFollowup','Próximo follow-up',true,false],['nextStep','Próximo passo',true,false],
+    ['contact','Contacto',false,false],['agentOrigin','Agente / Origem',false,false],['note','Nota curta',false,false]
+  ];
+  const agents=(state.data.agents||[]).slice().sort((a,b)=>safe(a.name).localeCompare(safe(b.name),'pt-PT'));
+  const modal=document.createElement('div');modal.id='clientsSummaryPdfModal';modal.className='modal-backdrop';modal.innerHTML=`
+    <div class="modal clients-summary-modal"><button class="modal-close" type="button" data-close-clients-summary>×</button><p class="eyebrow eyebrow--dark">Documento interno</p><h2>Imprimir Resumo de Clientes</h2><p class="muted">Selecione os clientes e a informação a incluir no acompanhamento comercial.</p>
+      <div class="clients-summary-options"><section><h3>Estados do funil</h3><div class="clients-summary-check-grid">${statusOptions.map(([stage,checked])=>`<label class="check-option"><input type="checkbox" value="${attr(stage)}" data-client-summary-status ${checked?'checked':''}><span>${esc(stage)}</span></label>`).join('')}</div></section>
+      <section><h3>Colunas</h3><div class="clients-summary-check-grid">${columnOptions.map(([key,label,checked,required])=>`<label class="check-option"><input type="checkbox" value="${attr(key)}" data-client-summary-column ${checked?'checked':''} ${required?'disabled':''}><span>${esc(label)}${required?' <small>obrigatória</small>':''}</span></label>`).join('')}</div></section></div>
+      <div class="filters-grid clients-summary-filters"><label class="field"><span>Pesquisar cliente</span><input id="clientSummarySearch" type="search" placeholder="Nome do cliente"></label><label class="field"><span>Agente</span><select id="clientSummaryAgent"><option value="all">Todos</option>${agents.map(a=>`<option value="${attr(a.id)}">${esc((a.name||'Agente')+(a.agency?' · '+a.agency:''))}</option>`).join('')}</select></label><label class="field"><span>Próximo follow-up</span><select id="clientSummaryFollowup"><option value="all">Todos</option><option value="future">Com follow-up futuro</option><option value="overdue">Follow-up vencido</option><option value="none">Sem follow-up</option></select></label><label class="field"><span>Ordenar por</span><select id="clientSummarySort"><option value="followup">Próximo follow-up</option><option value="lastContact">Último contacto</option><option value="status">Estado do funil</option><option value="name">Nome</option></select></label></div>
+      <div class="clients-summary-result"><strong data-client-summary-count></strong><span class="muted small">Clientes sem follow-up ficam no fim na ordenação predefinida.</span></div>
+      <div class="modal-actions"><button class="ghost-button" type="button" data-close-clients-summary>Cancelar</button><button class="primary-button" type="button" data-generate-clients-summary>Gerar PDF</button></div></div>`;
+  const style=document.createElement('style');style.textContent=`#clientsSummaryPdfModal .clients-summary-modal{width:min(960px,100%)}#clientsSummaryPdfModal .clients-summary-options{display:grid;grid-template-columns:1fr 1.45fr;gap:16px;margin-top:18px}#clientsSummaryPdfModal .clients-summary-options section{border:1px solid #dfe7f0;border-radius:12px;padding:14px;background:#f8fafc}#clientsSummaryPdfModal h3{margin:0 0 12px;font-size:15px;color:#0e2444}#clientsSummaryPdfModal .clients-summary-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px}#clientsSummaryPdfModal .check-option{display:flex;align-items:flex-start;gap:8px;color:#213652;font-size:14px}#clientsSummaryPdfModal .check-option input{width:16px;height:16px;margin-top:2px}#clientsSummaryPdfModal .check-option small{display:block;color:#6f7f92;font-size:11px}#clientsSummaryPdfModal .clients-summary-filters{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}#clientsSummaryPdfModal .clients-summary-result{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px;padding:11px 13px;border-radius:10px;background:#f1f5f9}@media(max-width:720px){#clientsSummaryPdfModal .clients-summary-options,#clientsSummaryPdfModal .clients-summary-filters{grid-template-columns:1fr}#clientsSummaryPdfModal .clients-summary-check-grid{grid-template-columns:1fr}#clientsSummaryPdfModal .clients-summary-result{display:block}}`;
+  modal.appendChild(style);document.body.appendChild(modal);document.body.style.overflow='hidden';
+  const readOptions=()=>({statuses:[...modal.querySelectorAll('[data-client-summary-status]:checked')].map(input=>input.value),columns:[...modal.querySelectorAll('[data-client-summary-column]:checked')].map(input=>input.value),search:modal.querySelector('#clientSummarySearch').value,agentId:modal.querySelector('#clientSummaryAgent').value,followupFilter:modal.querySelector('#clientSummaryFollowup').value,sort:modal.querySelector('#clientSummarySort').value});
+  const updateCount=()=>{const count=buildClientSummaryRows(readOptions()).length;modal.querySelector('[data-client-summary-count]').textContent=`${count} ${count===1?'cliente incluído':'clientes incluídos'}`};
+  const close=()=>{modal.remove();document.body.style.overflow=''};
+  modal.querySelectorAll('[data-close-clients-summary]').forEach(button=>button.onclick=close);
+  modal.querySelectorAll('input,select').forEach(input=>{input.addEventListener('input',updateCount);input.addEventListener('change',updateCount)});
+  modal.querySelector('[data-generate-clients-summary]').onclick=()=>{const options=readOptions();if(!options.columns.includes('client'))options.columns.unshift('client');const rows=buildClientSummaryRows(options);if(!options.statuses.length){notifyUser('Selecione pelo menos um estado do funil.','Resumo de Clientes');return}if(!rows.length){notifyUser('Não existem clientes para os filtros escolhidos.','Resumo de Clientes');return}close();generateClientsSummaryPdf(rows,options.columns)};
+  updateCount();
+}
+function generateClientsSummaryPdf(rows,columns){
+  const definitions=[
+    {key:'client',label:'Cliente',width:12},{key:'status',label:'Estado',width:9},{key:'preferences',label:'Preferências / Interesse',width:19},
+    {key:'fractions',label:'Frações / últimos preços informados',width:20},{key:'lastContact',label:'Último contacto',width:8},
+    {key:'nextFollowup',label:'Próximo follow-up',width:9},{key:'nextStep',label:'Próximo passo',width:15},
+    {key:'contact',label:'Contacto',width:13},{key:'agentOrigin',label:'Agente / Origem',width:13},{key:'note',label:'Nota curta',width:14}
+  ].filter(definition=>columns.includes(definition.key));
+  const cell=(row,key)=>{
+    if(key==='client')return`<strong>${esc(row.client)}</strong>`;
+    if(key==='status')return`<span class="status-label">${esc(row.status)}</span>`;
+    if(key==='nextFollowup')return`<span class="${row.followupStatus==='overdue'?'overdue':''}">${esc(row.followupLabel)}</span>`;
+    const values={preferences:row.preferences,fractions:row.fractions,lastContact:row.lastContactLabel,nextStep:row.nextStep,contact:row.contact,agentOrigin:row.agentOrigin,note:row.note};
+    return esc(values[key]||'—');
+  };
+  const w=window.open('','_blank');if(!w){notifyUser('Autorize pop-ups para gerar o PDF.','Resumo de Clientes');return}
+  const fontSize=definitions.length>=9?'5.7pt':definitions.length>=7?'6.4pt':'7pt',generatedAt=new Date().toLocaleString('pt-PT');
+  w.document.open();w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Resumo Comercial de Clientes</title><style>@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@600;700&display=swap');@page{size:A4 portrait;margin:9mm 7mm 14mm}*{box-sizing:border-box}body{font-family:'Montserrat',Arial,sans-serif;margin:0;color:#0f2443;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.doc-header{display:flex;justify-content:space-between;gap:10mm;align-items:flex-start;border-bottom:1px solid #d9e1eb;padding-bottom:4mm;margin-bottom:4mm}.eyebrow{margin:0 0 2mm;text-transform:uppercase;letter-spacing:.2em;font-size:7px;font-weight:700;color:#9a7440}h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;font-size:23pt;line-height:1;color:#0e2444}h2{margin:2mm 0 0;font-size:10pt;color:#435675}.meta{margin:0;text-align:right;color:#62738a;font-size:6.8pt;line-height:1.45}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:${fontSize}}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{padding:1.8mm 1.3mm;border-bottom:1px solid #dfe7f0;text-align:left;vertical-align:top;overflow-wrap:anywhere;line-height:1.35}th{background:#f1f5f9;color:#0e2444;font-size:5.6pt;text-transform:uppercase;letter-spacing:.025em}tbody tr:nth-child(even){background:#fafbfd}.status-label{font-weight:700;color:#314866}.overdue{color:#a24a21;font-weight:700}.footer{position:fixed;left:0;right:0;bottom:-9mm;border-top:1px solid #d9e1eb;padding-top:2mm;color:#62738a;font-size:6.6pt}.footer span{float:right}@media print{body{background:#fff}}</style></head><body><header class="doc-header"><div><p class="eyebrow">The View Olhão</p><h1>The View Olhão</h1><h2>Resumo Comercial de Clientes / Leads</h2></div><p class="meta">${rows.length} clientes<br>${esc(generatedAt)}</p></header><table><colgroup>${definitions.map(def=>`<col style="width:${def.width}%">`).join('')}</colgroup><thead><tr>${definitions.map(def=>`<th>${esc(def.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${definitions.map(def=>`<td>${cell(row,def.key)}</td>`).join('')}</tr>`).join('')}</tbody></table><footer class="footer">Documento interno de acompanhamento comercial. Informação sujeita a atualização.<span>The View Olhão</span></footer><script>setTimeout(()=>{window.focus();window.print()},250)</script></body></html>`);w.document.close();
 }
 
 function renderSalesSubTabs(){

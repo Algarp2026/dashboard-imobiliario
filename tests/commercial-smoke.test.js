@@ -64,6 +64,23 @@ includesAll(commercial, [
 ], 'commercial PDF flow');
 
 includesAll(commercial, [
+  'printClientsSummaryBtn',
+  'Imprimir Resumo de Clientes',
+  'openClientsSummaryPdfModal',
+  'generateClientsSummaryPdf',
+  '@page{size:A4 portrait',
+  'Resumo Comercial de Clientes / Leads',
+  'Documento interno de acompanhamento comercial. Informação sujeita a atualização.'
+], 'client summary PDF flow');
+
+const clientSummaryPdfFlow = commercial.slice(
+  commercial.indexOf('function clientSummaryFollowupInfo'),
+  commercial.indexOf('function renderSalesSubTabs')
+);
+assert(clientSummaryPdfFlow.length > 0, 'client summary PDF flow should be isolated');
+assert(!/\bsave\s*\(/.test(clientSummaryPdfFlow), 'client summary PDF must not persist CRM data');
+
+includesAll(commercial, [
   "LOCAL_REMOTE_BACKUP_KEY=KEY+'.backupBeforeRemoteLoad'",
   'backupLocalBeforeRemoteLoad'
 ], 'local backup flow');
