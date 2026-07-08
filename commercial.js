@@ -11,15 +11,15 @@ const EVENT_TYPES=['Pedido de informação recebido','Preferências recebidas','
 const CLIENT_ORIGINS=['Website The View','Outdoor / Mupie','Agente','Amigo / Familiar','Outro'];
 const CRM_MIGRATION_KEY='crm-funnel-2026-06-v4';
 const MAX_COMPARE_FRACTIONS=4;
-const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
+const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
 const RenderFlow={
-  all(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();},
-  priceChanged(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderSales();renderSalesEventsPanel();},
+  all(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();renderFractionHistoryPanel();},
+  priceChanged(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();},
   clientChanged(){renderClientSelects();renderClients();renderClientDetail();renderSalesEventsPanel();renderMaintenanceModalLists();},
   agentChanged(){populateAgentSelect();populateClientAgentSelect(el.clientAgent?.value||'');renderAgents();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();},
-  eventChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();renderSalesEventsPanel();renderMaintenanceModalLists();},
-  salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();}
+  eventChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();renderSalesEventsPanel();renderFractionHistoryPanel();renderMaintenanceModalLists();},
+  salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();renderMaintenanceModalLists();}
 };
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
 function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareFractions','compareNotice','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
@@ -654,7 +654,7 @@ function populate(){
 function switchTab(tab){
   state.tab = tab;
   if(tab==='sales')state.salesSubtab='clients';
-  if(tab==='history')state.salesSubtab='events';
+  if(tab==='history')state.salesSubtab='history';
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-section').forEach(sec=>sec.classList.add('hidden'));
   const target = document.getElementById(tab==='history' ? 'tab-sales' : 'tab-' + tab);
@@ -851,11 +851,35 @@ function ensureSalesManagementTabs(){
   const clientPanel=el.clientsList?el.clientsList.closest('.panel'):null;
   const fractionsPanel=el.salesTableBody?el.salesTableBody.closest('.panel'):null;
   const agentsPanel=document.getElementById('agentsPanel');
+  let fractionHistoryPanel=document.getElementById('fractionHistoryPanel');
 
   if(clientPanel)clientPanel.dataset.salesView='clients';
   if(fractionsPanel)fractionsPanel.dataset.salesView='fractions';
   if(agentsPanel)agentsPanel.dataset.salesView='agents';
   if(clientPanel)ensureClientStickyActions(clientPanel);
+
+  if(!fractionHistoryPanel){
+    fractionHistoryPanel=document.createElement('section');
+    fractionHistoryPanel.className='panel fraction-history-panel';
+    fractionHistoryPanel.id='fractionHistoryPanel';
+    fractionHistoryPanel.dataset.salesView='history';
+    fractionHistoryPanel.innerHTML=`<div class="section-heading">
+      <div><p class="eyebrow eyebrow--dark">Histórico</p><h2>Histórico por Fração</h2><p class="muted">Selecione uma fração para consultar eventos, preços informados, reservas, vendas e alterações de preço oficial associados a essa unidade.</p></div>
+      <div class="top-actions"><button class="ghost-button" type="button" data-open-general-history>Ver histórico geral</button></div>
+    </div>
+    <div class="filters-grid fraction-history-filters">
+      <label class="field"><span>Pesquisar fração</span><input id="fractionHistorySearch" type="search" placeholder="Pesquisar fração, piso ou tipologia..." /></label>
+      <label class="field"><span>Estado da fração</span><select id="fractionHistoryStatus"><option value="all">Todas</option><option value="Disponível">Disponíveis</option><option value="Reservado">Reservadas</option><option value="Vendido">Vendidas</option><option value="Indisponível">Indisponíveis</option></select></label>
+    </div>
+    <div class="fraction-history-layout">
+      <div id="fractionHistoryList" class="fraction-history-list"></div>
+      <div id="fractionHistoryDetail" class="fraction-history-detail"></div>
+    </div>`;
+    tab.appendChild(fractionHistoryPanel);
+    fractionHistoryPanel.querySelector('#fractionHistorySearch').oninput=e=>{state.hf.search=e.target.value;renderFractionHistoryPanel()};
+    fractionHistoryPanel.querySelector('#fractionHistoryStatus').onchange=e=>{state.hf.status=e.target.value;renderFractionHistoryPanel()};
+    fractionHistoryPanel.querySelector('[data-open-general-history]').onclick=()=>{state.salesSubtab='events';state.tab='history';document.querySelectorAll('[data-tab]').forEach(main=>main.classList.toggle('active',main.dataset.tab==='history'));renderSalesSubTabs()};
+  }
 
   let eventsPanel=document.getElementById('salesEventsPanel');
   if(!eventsPanel){
@@ -912,13 +936,14 @@ function ensureSalesManagementTabs(){
     nav.innerHTML=`
       <button class="module-tab active" type="button" data-sales-subtab="clients">Clientes / Leads</button>
       <button class="module-tab" type="button" data-sales-subtab="fractions">Frações e Estados</button>
+      <button class="module-tab" type="button" data-sales-subtab="history">Histórico por Fração</button>
       <button class="module-tab" type="button" data-sales-subtab="agents">Agentes</button>
       <button class="module-tab" type="button" data-sales-subtab="events">Eventos / Histórico</button>
     `;
     tab.insertBefore(nav, quick ? quick.nextSibling : tab.firstChild);
     nav.querySelectorAll('[data-sales-subtab]').forEach(btn=>btn.onclick=()=>{
       state.salesSubtab=btn.dataset.salesSubtab;
-      state.tab=state.salesSubtab==='events'?'history':'sales';
+      state.tab=(state.salesSubtab==='events'||state.salesSubtab==='history')?'history':'sales';
       document.querySelectorAll('[data-tab]').forEach(main=>main.classList.toggle('active',main.dataset.tab===state.tab));
       renderSalesSubTabs();
     });
@@ -935,7 +960,7 @@ function ensureSalesManagementTabs(){
   }
 
   // Ordem visual: clientes primeiro; frações, agentes e histórico continuam preservados.
-  const ordered=[clientPanel,fractionsPanel,agentsPanel,eventsPanel].filter(Boolean);
+  const ordered=[clientPanel,fractionsPanel,fractionHistoryPanel,agentsPanel,eventsPanel].filter(Boolean);
   let anchor=nav.nextSibling;
   ordered.forEach(panel=>{
     if(panel && panel.parentNode===tab){
@@ -1097,6 +1122,7 @@ function renderSalesSubTabs(){
   document.querySelectorAll('#salesSubTabs [data-sales-subtab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.salesSubtab===active));
   document.querySelectorAll('#tab-sales [data-sales-view]').forEach(panel=>panel.classList.toggle('sales-view-hidden',panel.dataset.salesView!==active));
   renderSalesEventsPanel();
+  renderFractionHistoryPanel();
 }
 
 function renderSalesEventsPanel(){
@@ -1129,6 +1155,78 @@ function renderSalesEventsPanel(){
   box.querySelectorAll('[data-edit-event]').forEach(btn=>btn.addEventListener('click',()=>openEventModal(btn.dataset.editEvent,'events')));
 }
 
+function filteredFractionHistoryFractions(){
+  const query=norm(state.hf?.search||''),status=state.hf?.status||'all';
+  return state.fractions.filter(f=>{
+    const st=statusOf(f);
+    if(status!=='all'&&st!==status)return false;
+    if(!query)return true;
+    return norm([f.name,f.number,f.typology,f.floorLabel,f.orientation,st,finalPrice(f)].join(' ')).includes(query);
+  }).sort((a,b)=>a.number-b.number);
+}
+function renderFractionHistoryPanel(){
+  const list=document.getElementById('fractionHistoryList'),detail=document.getElementById('fractionHistoryDetail');
+  if(!list||!detail)return;
+  const search=document.getElementById('fractionHistorySearch'),status=document.getElementById('fractionHistoryStatus');
+  if(search&&search.value!==state.hf.search)search.value=state.hf.search||'';
+  if(status&&status.value!==state.hf.status)status.value=state.hf.status||'all';
+  const fractions=filteredFractionHistoryFractions();
+  const selectedNumber=Number(state.hf.selected);
+  if(!selectedNumber||!fractions.some(f=>f.number===selectedNumber)){
+    state.hf.selected=fractions[0]?.number?String(fractions[0].number):'';
+  }
+  list.innerHTML=fractions.length?fractions.map(f=>`<button class="fraction-history-card ${String(f.number)===String(state.hf.selected)?'active':''}" type="button" data-history-fraction="${f.number}">
+    <strong>${esc(f.name)}</strong>
+    <span>${esc(f.typology)} · ${esc(statusOf(f))} · ${money(finalPrice(f))}</span>
+  </button>`).join(''):'<div class="empty-state">Sem frações para os filtros escolhidos.</div>';
+  list.querySelectorAll('[data-history-fraction]').forEach(button=>button.onclick=()=>{
+    state.hf.selected=button.dataset.historyFraction;
+    renderFractionHistoryPanel();
+  });
+  renderFractionHistoryDetail();
+}
+function renderFractionHistoryDetail(){
+  const detail=document.getElementById('fractionHistoryDetail');
+  if(!detail)return;
+  const f=getF(Number(state.hf.selected));
+  if(!f){detail.innerHTML='<div class="empty-state">Selecione uma fração.</div>';return}
+  const rows=getHistoricoComercialFracao(f.number,{ascending:true});
+  const latest=rows.slice().sort((a,b)=>String(`${b.date||''} ${b.time||''}`).localeCompare(String(`${a.date||''} ${a.time||''}`)))[0]||null;
+  const valueCell=row=>row.informedPrice?money(row.informedPrice):row.amount?money(row.amount):'—';
+  const officialCell=row=>row.officialPrice?money(row.officialPrice):'—';
+  const diffCell=row=>row.hasDifference?money(row.difference):'—';
+  detail.innerHTML=`<div class="fraction-history-detail__header">
+    <div>
+      <span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span>
+      <h3>${esc(f.name)}</h3>
+      <p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p>
+    </div>
+    <div class="fraction-history-summary">
+      <div><span>Preço oficial atual</span><strong>${money(finalPrice(f))}</strong></div>
+      <div><span>Última atualização relevante</span><strong>${latest?`${esc(formatCommercialDate(latest.date))} · ${esc(latest.type)}`:'—'}</strong></div>
+    </div>
+  </div>
+  <div class="fraction-history-meta">
+    <div><span>Tipologia</span><strong>${esc(f.typology||'—')}</strong></div>
+    <div><span>Piso</span><strong>${esc(f.floorLabel||'—')}</strong></div>
+    <div><span>Estado atual</span><strong>${esc(statusOf(f))}</strong></div>
+    <div><span>Eventos ligados</span><strong>${rows.filter(row=>row.source==='event').length}</strong></div>
+  </div>
+  <section class="crm-detail-section">
+    <div class="crm-detail-section__heading"><h3>Histórico comercial da fração</h3></div>
+    ${rows.length?`<div class="table-wrap"><table class="data-table compact-table fraction-history-table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th class="num-col">Valor / Preço informado</th><th class="num-col">Preço oficial na data</th><th class="num-col">Diferença</th><th>Observação</th><th>Ação</th></tr></thead><tbody>${rows.map(row=>`<tr>
+      <td>${esc(formatCommercialDate(row.date))}${row.time?`<div class="muted small">${esc(row.time)}</div>`:''}</td>
+      <td>${esc(row.type)}</td>
+      <td>${esc(row.client||'—')}</td>
+      <td class="num-col">${valueCell(row)}</td>
+      <td class="num-col">${officialCell(row)}</td>
+      <td class="num-col ${row.difference<0?'price-negative':''}">${diffCell(row)}</td>
+      <td>${esc(row.observation||'—')}</td>
+      <td>${row.eventId?`<button class="ghost-button compact-button" type="button" data-edit-history-event="${attr(row.eventId)}">Ver / Editar</button>`:'—'}</td>
+    </tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem eventos ou alterações de preço associados a esta fração.</div>'}
+  </section>`;
+  detail.querySelectorAll('[data-edit-history-event]').forEach(button=>button.onclick=()=>openEventModal(button.dataset.editHistoryEvent,'history'));
+}
 
 function renderAll(){RenderFlow.all();}
 function renderProposals(){const fs=filteredProposal();el.proposalSelectedInfo.textContent=`${[...state.selected].filter(n=>statusOf(getF(n))!=='Vendido').length} selecionadas`;el.proposalGrid.innerHTML=fs.length?fs.map(f=>{const st=statusOf(f),blocked=st!=='Disponível';return`<label class="proposal-card ${blocked?'proposal-card--sold':''}"><input type="checkbox" data-proposal-select="${f.number}" ${state.selected.has(f.number)&&!blocked?'checked':''} ${blocked?'disabled':''}/><div><span class="${badge(st)}">${blocked?st:st}</span><h3>${esc(f.name)}</h3><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p><p><strong>${blocked?st:money(finalPrice(f))}</strong></p><p class="muted small">ABP ${area(f.abp)} · Exterior ${area(f.terrace)} · Total ${area(f.totalArea)}</p></div></label>`}).join(''):'<div class="empty-state">Sem frações.</div>';el.proposalGrid.querySelectorAll('[data-proposal-select]').forEach(x=>x.onchange=()=>{const n=+x.dataset.proposalSelect;x.checked?state.selected.add(n):state.selected.delete(n);renderProposals()})}
@@ -1748,18 +1846,26 @@ function toggleEventSpecificFields(){
 }
 
 function renderSales(){el.salesTableBody.innerHTML=state.fractions.map(f=>{const m=metrics(f.number),c=commissionOf(f.number),st=statusOf(f);return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(f.typology)} · ${esc(f.orientation||'—')}</div></td><td><select data-status="${f.number}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}</td><td class="num-col">${money(finalPrice(f))}</td><td class="num-col"><input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}</td><td class="num-col">${m.visits}</td><td class="num-col">${m.interested}</td><td class="num-col">${m.proposals}</td><td class="num-col">${m.lastOffer?money(m.lastOffer):'—'}</td><td>${esc(m.lastAction||'—')}<div><button class="ghost-button compact-button" type="button" data-fraction-history="${f.number}">Histórico</button></div></td></tr>`}).join('');el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=async()=>handleManualStatusSelect(+s.dataset.status,s.value));el.salesTableBody.querySelectorAll('[data-sale-price]').forEach(i=>i.onchange=()=>{const n=+i.dataset.salePrice;state.data.salePriceEventIds=state.data.salePriceEventIds||{};delete state.data.salePriceEventIds[n];state.data.salePrices[n]=num(i.value);save();renderDashboard();renderSales()});el.salesTableBody.querySelectorAll('[data-fraction-history]').forEach(btn=>btn.onclick=()=>openFractionHistoryModal(Number(btn.dataset.fractionHistory)))}
-function getHistoricoComercialFracao(unitId){
-  return (state.data.events||[]).filter(ev=>(ev.fractions||[]).includes(unitId)).map(ev=>{
+function getHistoricoComercialFracao(unitId,options={}){
+  const eventRows=(state.data.events||[]).filter(ev=>(ev.fractions||[]).includes(unitId)).map(ev=>{
     const price=(ev.informedPrices||[]).find(item=>Number(item.fraction||item.unitId)===unitId);
     const official=Number(price?.officialPrice)||0,informed=Number(price?.informedPrice)||0;
-    return{eventId:ev.id,date:ev.date||'',time:ev.time||'',type:ev.type||'Evento',client:client(ev.clientId)?.name||'Sem cliente associado',officialPrice:official,informedPrice:informed,difference:informed&&official?informed-official:0,observation:safe(price?.observation||ev.notes),amount:Number(ev.amount)||0};
-  }).sort((a,b)=>String(b.date+' '+b.time).localeCompare(String(a.date+' '+a.time)));
+    return{source:'event',eventId:ev.id,date:ev.date||'',time:ev.time||'',type:ev.type||'Evento',client:client(ev.clientId)?.name||'Sem cliente associado',officialPrice:official,informedPrice:informed,amount:Number(ev.amount)||0,difference:informed&&official?informed-official:0,hasDifference:!!(informed&&official),observation:safe(price?.observation||ev.notes)};
+  });
+  const f=getF(unitId);
+  const priceRows=historyOf(f).map((item,index)=>({item,index})).filter(({item,index})=>index>0||Number(item.oldPrice)>0).map(({item})=>{
+    const price=Number(item.price)||0,oldPrice=Number(item.oldPrice)||0;
+    return{source:'price',eventId:'',date:item.date||'',time:'',type:'Alteração de preço oficial',client:'—',officialPrice:price,informedPrice:0,amount:price,difference:oldPrice?price-oldPrice:0,hasDifference:!!oldPrice,observation:safe(item.reason||'Alteração de preço')};
+  });
+  const rows=[...eventRows,...priceRows];
+  const compare=(a,b)=>String(`${a.date||''} ${a.time||''}`).localeCompare(String(`${b.date||''} ${b.time||''}`));
+  return rows.sort(options.ascending?compare:(a,b)=>compare(b,a));
 }
 function openFractionHistoryModal(unitId){
   const f=getF(unitId);if(!f)return;
   document.getElementById('fractionHistoryModal')?.remove();
   const rows=getHistoricoComercialFracao(unitId),modal=document.createElement('div');
-  modal.id='fractionHistoryModal';modal.className='modal-backdrop';modal.innerHTML=`<div class="modal fraction-history-modal"><button class="modal-close" type="button" data-close-fraction-history>×</button><p class="eyebrow eyebrow--dark">Frações e Estados</p><h2>Histórico Comercial · ${esc(f.name)}</h2><p class="muted">Histórico derivado dos eventos. Não altera preços nem estados.</p>${rows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th class="num-col">Oficial na data</th><th class="num-col">Informado / Valor</th><th class="num-col">Diferença</th><th>Observação</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.date||'—')}</td><td>${esc(row.type)}</td><td>${esc(row.client)}</td><td class="num-col">${row.officialPrice?money(row.officialPrice):'—'}</td><td class="num-col">${row.informedPrice?money(row.informedPrice):row.amount?money(row.amount):'—'}</td><td class="num-col ${row.difference<0?'price-negative':''}">${row.informedPrice&&row.officialPrice?money(row.difference):'—'}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem eventos associados a esta fração.</div>'}<div class="modal-actions"><button class="primary-button" type="button" data-close-fraction-history>Fechar</button></div></div>`;
+  modal.id='fractionHistoryModal';modal.className='modal-backdrop';modal.innerHTML=`<div class="modal fraction-history-modal"><button class="modal-close" type="button" data-close-fraction-history>×</button><p class="eyebrow eyebrow--dark">Frações e Estados</p><h2>Histórico Comercial · ${esc(f.name)}</h2><p class="muted">Histórico derivado dos eventos e alterações de preço. Não altera preços nem estados.</p>${rows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th class="num-col">Oficial na data</th><th class="num-col">Informado / Valor</th><th class="num-col">Diferença</th><th>Observação</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${esc(row.date||'—')}</td><td>${esc(row.type)}</td><td>${esc(row.client)}</td><td class="num-col">${row.officialPrice?money(row.officialPrice):'—'}</td><td class="num-col">${row.informedPrice?money(row.informedPrice):row.amount?money(row.amount):'—'}</td><td class="num-col ${row.difference<0?'price-negative':''}">${row.hasDifference?money(row.difference):'—'}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem eventos associados a esta fração.</div>'}<div class="modal-actions"><button class="primary-button" type="button" data-close-fraction-history>Fechar</button></div></div>`;
   document.body.appendChild(modal);document.body.style.overflow='hidden';
   modal.querySelectorAll('[data-close-fraction-history]').forEach(btn=>btn.onclick=()=>{modal.remove();document.body.style.overflow=''});
 }
@@ -1973,6 +2079,7 @@ async function saveEvent(){
     applyEventBusinessRules(ev);
   }
   if(returnSource==='events')state.salesSubtab='events';
+  if(returnSource==='history')state.salesSubtab='history';
   if(returnSource==='client'){state.salesSubtab='clients';state.selectedClientId=ev.clientId}
   save();
   closeEventModal();
