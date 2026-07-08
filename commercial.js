@@ -10,7 +10,8 @@ const STAGES=['Novo Lead','Qualificado','Apresentado','Em negociação','Reserva
 const EVENT_TYPES=['Pedido de informação recebido','Preferências recebidas','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Outro'];
 const CLIENT_ORIGINS=['Website The View','Outdoor / Mupie','Agente','Amigo / Familiar','Outro'];
 const CRM_MIGRATION_KEY='crm-funnel-2026-06-v4';
-const state={rows:[],fractions:[],tab:'proposals',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
+const MAX_COMPARE_FRACTIONS=4;
+const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
 const RenderFlow={
   all(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();},
@@ -21,8 +22,38 @@ const RenderFlow={
   salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();}
 };
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
-function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
-function bind(){ensurePriceListButton();document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderProposals()};document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderProposals()};document.getElementById('exportClientPdf').onclick=exportPdf;document.getElementById('exportAllData').onclick=exportAll;document.getElementById('resetLocalData').onclick=resetLocal;document.getElementById('exportPriceHistory').onclick=exportPriceHistory;['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});el.historyFractionSelect.onchange=renderHistory;el.compareA.onchange=renderCompare;el.compareB.onchange=renderCompare;document.getElementById('openClientModal').onclick=()=>openClientModal('');document.getElementById('closeClientModal').onclick=closeClientModal;document.getElementById('cancelClient').onclick=closeClientModal;document.getElementById('saveClient').onclick=saveClient;document.getElementById('openEventModalBtn').onclick=()=>openEventModal();document.getElementById('closeEventModal').onclick=closeEventModal;document.getElementById('cancelEvent').onclick=closeEventModal;document.getElementById('saveEvent').onclick=saveEvent;el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};el.clientModal.onclick=e=>{if(e.target===el.clientModal)e.stopPropagation()};el.eventModal.onclick=e=>{if(e.target===el.eventModal)e.stopPropagation()};}
+function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareFractions','compareNotice','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
+function bind(){
+  ensurePriceListButton();
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+  const proposalsShortcut=document.getElementById('openProposalsArea');
+  if(proposalsShortcut)proposalsShortcut.onclick=()=>switchTab('proposals');
+  document.getElementById('selectProposalVisible').onclick=()=>{filteredProposal().filter(f=>statusOf(f)==='Disponível').forEach(f=>state.selected.add(f.number));renderProposals()};
+  document.getElementById('clearProposalSelected').onclick=()=>{state.selected.clear();renderProposals()};
+  document.getElementById('exportClientPdf').onclick=exportPdf;
+  document.getElementById('exportAllData').onclick=exportAll;
+  document.getElementById('resetLocalData').onclick=resetLocal;
+  document.getElementById('exportPriceHistory').onclick=exportPriceHistory;
+  ['proposalSearch','proposalTypology','proposalFloor','proposalStatus'].forEach(id=>{el[id].oninput=syncProposal;el[id].onchange=syncProposal});
+  ['priceSearch','priceTypology','priceFloor','priceStatus'].forEach(id=>{el[id].oninput=syncPrice;el[id].onchange=syncPrice});
+  el.historyFractionSelect.onchange=renderHistory;
+  if(el.compareFractions)el.compareFractions.onchange=handleCompareSelection;
+  if(el.compareA)el.compareA.onchange=renderCompare;
+  if(el.compareB)el.compareB.onchange=renderCompare;
+  document.getElementById('openClientModal').onclick=()=>openClientModal('');
+  document.getElementById('closeClientModal').onclick=closeClientModal;
+  document.getElementById('cancelClient').onclick=closeClientModal;
+  document.getElementById('saveClient').onclick=saveClient;
+  document.getElementById('openEventModalBtn').onclick=()=>openEventModal();
+  document.getElementById('closeEventModal').onclick=closeEventModal;
+  document.getElementById('cancelEvent').onclick=closeEventModal;
+  document.getElementById('saveEvent').onclick=saveEvent;
+  el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};
+  el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};
+  el.selectedClient.onchange=()=>{state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};
+  el.clientModal.onclick=e=>{if(e.target===el.clientModal)e.stopPropagation()};
+  el.eventModal.onclick=e=>{if(e.target===el.eventModal)e.stopPropagation()};
+}
 function ensureCrmFormFields(){
   const clientStage=document.getElementById('clientStage');
   if(clientStage)clientStage.innerHTML=STAGES.map(stage=>`<option>${esc(stage)}</option>`).join('');
@@ -597,13 +628,36 @@ async function loadExcel(){
   }
 }
 function parseRow(raw){const development=safe(raw['Empreendimento']),fr=safe(raw['Fração']);if(!development||!fr)return null;const isTheView=norm(development)==='the view',n=isTheView?nat(fr):nat(fr,0),abp=num(raw['ABP']),terr=num(raw['Varanda/Terraço']),tot=num(raw['Área Total'])||abp+terr,price=num(raw['PVP']);return{raw,development,fractionRaw:fr,isTheView,number:n,name:isTheView?fr:`${development} · ${fr}`,typology:pretty(raw['Tipologia']),floorLabel:safe(raw['Piso'])||'—',floor:floor(raw['Piso']),view:num(raw['Vista']),orientation:isTheView?(ORIENT[n]||safe(raw['Orientação'])):safe(raw['Orientação']),abp,terrace:terr,totalArea:tot,price,pricePerSqm:tot?price/tot:0}}
-function populate(){const tys=['all',...uniq(state.fractions.map(f=>f.typology))],fls=['all',...uniq(state.fractions.map(f=>String(f.floorLabel)))],sts=['all',...STATUS];fill(el.proposalTypology,tys,'Todas');fill(el.proposalFloor,fls,'Todos');fill(el.proposalStatus,sts,'Todos');fill(el.priceTypology,tys,'Todas');fill(el.priceFloor,fls,'Todos');fill(el.priceStatus,sts,'Todos');fill(el.historyFractionSelect,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);fill(el.compareA,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);fill(el.compareB,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);if(state.fractions[1])el.compareB.value=String(state.fractions[1].number);fillMulti(el.clientFractions,state.fractions.map(f=>[String(f.number),f.name]));fillMulti(el.eventFractions,state.fractions.map(f=>[String(f.number),f.name]));fill(el.clientStageFilter,['all',...STAGES],'Todos');populateClientAgentSelect();}
+function populate(){
+  const tys=['all',...uniq(state.fractions.map(f=>f.typology))],fls=['all',...uniq(state.fractions.map(f=>String(f.floorLabel)))],sts=['all',...STATUS];
+  fill(el.proposalTypology,tys,'Todas');
+  fill(el.proposalFloor,fls,'Todos');
+  fill(el.proposalStatus,sts,'Todos');
+  fill(el.priceTypology,tys,'Todas');
+  fill(el.priceFloor,fls,'Todos');
+  fill(el.priceStatus,sts,'Todos');
+  fill(el.historyFractionSelect,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);
+  if(el.compareFractions){
+    fillMulti(el.compareFractions,state.fractions.map(f=>[String(f.number),f.name]));
+    [...el.compareFractions.options].slice(0,2).forEach(option=>{option.selected=true});
+  }else{
+    fill(el.compareA,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);
+    fill(el.compareB,state.fractions.map(f=>String(f.number)),null,n=>`Apartamento ${n}`);
+    if(state.fractions[1])el.compareB.value=String(state.fractions[1].number);
+  }
+  fillMulti(el.clientFractions,state.fractions.map(f=>[String(f.number),f.name]));
+  fillMulti(el.eventFractions,state.fractions.map(f=>[String(f.number),f.name]));
+  fill(el.clientStageFilter,['all',...STAGES],'Todos');
+  populateClientAgentSelect();
+}
 
 function switchTab(tab){
   state.tab = tab;
+  if(tab==='sales')state.salesSubtab='clients';
+  if(tab==='history')state.salesSubtab='events';
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-section').forEach(sec=>sec.classList.add('hidden'));
-  const target = document.getElementById('tab-' + tab);
+  const target = document.getElementById(tab==='history' ? 'tab-sales' : 'tab-' + tab);
   if(target) target.classList.remove('hidden');
   renderAll();
 }
@@ -856,13 +910,18 @@ function ensureSalesManagementTabs(){
     nav.id='salesSubTabs';
     nav.className='module-tabs sales-subtabs';
     nav.innerHTML=`
-      <button class="module-tab active" type="button" data-sales-subtab="fractions">Frações e Estados</button>
-      <button class="module-tab" type="button" data-sales-subtab="clients">Clientes / Leads</button>
+      <button class="module-tab active" type="button" data-sales-subtab="clients">Clientes / Leads</button>
+      <button class="module-tab" type="button" data-sales-subtab="fractions">Frações e Estados</button>
       <button class="module-tab" type="button" data-sales-subtab="agents">Agentes</button>
       <button class="module-tab" type="button" data-sales-subtab="events">Eventos / Histórico</button>
     `;
     tab.insertBefore(nav, quick ? quick.nextSibling : tab.firstChild);
-    nav.querySelectorAll('[data-sales-subtab]').forEach(btn=>btn.onclick=()=>{state.salesSubtab=btn.dataset.salesSubtab;renderSalesSubTabs()});
+    nav.querySelectorAll('[data-sales-subtab]').forEach(btn=>btn.onclick=()=>{
+      state.salesSubtab=btn.dataset.salesSubtab;
+      state.tab=state.salesSubtab==='events'?'history':'sales';
+      document.querySelectorAll('[data-tab]').forEach(main=>main.classList.toggle('active',main.dataset.tab===state.tab));
+      renderSalesSubTabs();
+    });
 
     const st=document.createElement('style');
     st.id='salesSubTabsStyle';
@@ -875,8 +934,8 @@ function ensureSalesManagementTabs(){
     document.head.appendChild(st);
   }
 
-  // Ordem visual: primeiro frações, depois clientes, agentes e histórico.
-  const ordered=[fractionsPanel,clientPanel,agentsPanel,eventsPanel].filter(Boolean);
+  // Ordem visual: clientes primeiro; frações, agentes e histórico continuam preservados.
+  const ordered=[clientPanel,fractionsPanel,agentsPanel,eventsPanel].filter(Boolean);
   let anchor=nav.nextSibling;
   ordered.forEach(panel=>{
     if(panel && panel.parentNode===tab){
@@ -885,7 +944,7 @@ function ensureSalesManagementTabs(){
     }
   });
 
-  if(!state.salesSubtab)state.salesSubtab='fractions';
+  if(!state.salesSubtab)state.salesSubtab='clients';
   renderSalesSubTabs();
 }
 
@@ -1034,7 +1093,7 @@ function generateClientsSummaryPdf(rows,columns){
 }
 
 function renderSalesSubTabs(){
-  const active=state.salesSubtab||'fractions';
+  const active=state.salesSubtab||'clients';
   document.querySelectorAll('#salesSubTabs [data-sales-subtab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.salesSubtab===active));
   document.querySelectorAll('#tab-sales [data-sales-view]').forEach(panel=>panel.classList.toggle('sales-view-hidden',panel.dataset.salesView!==active));
   renderSalesEventsPanel();
@@ -1094,7 +1153,34 @@ function renderDecisionAlerts(){if(!el.decisionAlerts)return;const soldBelow=sta
 function renderPrices(){const fs=filteredPrice();el.pricesTableBody.innerHTML=fs.length?fs.map(f=>{const h=historyOf(f),last=h[h.length-1];return`<tr><td><strong>${esc(f.name)}</strong><div class="muted small">${esc(statusOf(f))}</div></td><td>${esc(f.typology)}</td><td>${esc(f.floorLabel)}</td><td>${esc(f.orientation||'—')}</td><td class="num-col">${money(f.price)}</td><td class="num-col"><input type="number" step="1000" data-price="${f.number}" value="${Math.round(finalPrice(f))}"/></td><td><textarea data-price-reason="${f.number}" placeholder="Motivo da alteração"></textarea></td><td><span class="muted small">${h.length} registos</span><br><span class="muted small">Último: ${last?esc(last.date):'—'}</span></td></tr>`}).join(''):'<tr><td colspan="8"><div class="empty-state">Sem frações.</div></td></tr>';el.pricesTableBody.querySelectorAll('[data-price]').forEach(inp=>inp.onchange=()=>{const n=+inp.dataset.price,f=getF(n),old=finalPrice(f),p=num(inp.value);if(!p||p===old)return;const r=document.querySelector(`[data-price-reason="${n}"]`).value.trim();state.data.finalPrices[n]=Math.round(p);state.data.priceHistory[n] ||= [];state.data.priceHistory[n].push({date:today(),price:Math.round(p),oldPrice:Math.round(old),reason:r||'Alteração manual'});save();RenderFlow.priceChanged()})}
 function renderHistory(){const f=getF(+el.historyFractionSelect.value)||state.fractions[0];if(!f)return;const h=historyOf(f);draw(h,f);el.historyList.innerHTML=h.slice().reverse().map(x=>`<div class="history-item"><strong>${esc(x.date)} · ${money(x.price)}</strong><p class="muted">${esc(x.reason||'Sem nota')}</p></div>`).join('')}
 function draw(h,f){const c=el.priceHistoryChart,ctx=c.getContext('2d'),w=c.width,hgt=c.height;ctx.clearRect(0,0,w,hgt);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,hgt);ctx.strokeStyle='#d9e1eb';for(let i=0;i<5;i++){let y=50+i*((hgt-100)/4);ctx.beginPath();ctx.moveTo(60,y);ctx.lineTo(w-30,y);ctx.stroke()}ctx.fillStyle='#16233d';ctx.font='24px sans-serif';ctx.fillText(`Evolução do preço · ${f.name}`,60,34);if(!h.length)return;let vals=h.map(x=>+x.price),mn=Math.min(...vals),mx=Math.max(...vals);if(mn===mx){mn*=.95;mx*=1.05}const L=60,R=30,T=60,B=55,PW=w-L-R,PH=hgt-T-B,x=i=>L+(h.length===1?PW/2:i*PW/(h.length-1)),y=v=>T+(mx-v)*PH/(mx-mn);ctx.strokeStyle='#1e467c';ctx.lineWidth=4;ctx.beginPath();h.forEach((it,i)=>i?ctx.lineTo(x(i),y(it.price)):ctx.moveTo(x(i),y(it.price)));ctx.stroke();h.forEach((it,i)=>{ctx.fillStyle='#b89253';ctx.beginPath();ctx.arc(x(i),y(it.price),7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#61718b';ctx.font='14px sans-serif';ctx.fillText(money(it.price),x(i)-42,y(it.price)-14)})}
-function renderCompare(){const a=getF(+el.compareA.value)||state.fractions[0],b=getF(+el.compareB.value)||state.fractions[1]||a;el.compareResult.innerHTML=[panel(a),panel(b)].join('')}
+function handleCompareSelection(){
+  const selected=[...el.compareFractions.selectedOptions];
+  if(selected.length>MAX_COMPARE_FRACTIONS){
+    selected.slice(MAX_COMPARE_FRACTIONS).forEach(option=>{option.selected=false});
+    showCompareNotice('Pode comparar no máximo 4 frações.');
+  }else{
+    showCompareNotice('');
+  }
+  renderCompare();
+}
+function selectedCompareFractions(){
+  if(el.compareFractions){
+    return [...el.compareFractions.selectedOptions].slice(0,MAX_COMPARE_FRACTIONS).map(option=>getF(+option.value)).filter(Boolean);
+  }
+  const a=getF(+el.compareA.value)||state.fractions[0],b=getF(+el.compareB.value)||state.fractions[1]||a;
+  return [a,b].filter(Boolean);
+}
+function showCompareNotice(text){
+  if(!el.compareNotice)return;
+  el.compareNotice.textContent=text;
+  el.compareNotice.classList.toggle('hidden',!text);
+}
+function renderCompare(){
+  const fs=selectedCompareFractions();
+  if(!fs.length){el.compareResult.innerHTML='<div class="empty-state">Selecione frações para comparar.</div>';return}
+  if(fs.length<2){el.compareResult.innerHTML='<div class="empty-state">Selecione pelo menos 2 frações para comparar.</div>';return}
+  el.compareResult.innerHTML=fs.map(panel).join('');
+}
 function panel(f){return`<article class="compare-panel"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><h3>${esc(f.name)}</h3><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p><table class="compare-table">${row('Preço final',money(finalPrice(f)))}${row('Preço inicial',money(f.price))}${row('Preço venda real',salePrice(f)?money(salePrice(f)):'—')}${row('ABP',area(f.abp))}${row('Exterior',area(f.terrace))}${row('Área total',area(f.totalArea))}${row('€/m² final',f.totalArea?money(Math.round(finalPrice(f)/f.totalArea),0):'—')}</table></article>`}
 function renderClientSelects(){const opts=state.data.clients.map(c=>[c.id,c.name||'Cliente sem nome']);fillMulti(el.selectedClient,opts);fillMulti(el.eventClientId,opts);if(!state.selectedClientId&&state.data.clients[0])state.selectedClientId=state.data.clients[0].id;el.selectedClient.value=state.selectedClientId;el.eventClientId.value=state.selectedClientId;}
 function renderClients(){const s=norm(state.cf.search),st=state.cf.stage;const cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.originManual,c.agent,c.agency,c.notes,c.preferences?.typology,c.preferences?.floor,c.preferences?.orientation,c.preferences?.objective,(c.fractions||[]).join(' ')].join(' ')).includes(s)));el.clientsList.innerHTML=cs.length?cs.map(c=>`<div class="client-card ${c.id===state.selectedClientId?'active':''}" data-client="${c.id}"><div class="section-heading compact"><div><strong>${esc(c.name||'Cliente sem nome')}</strong><p class="muted small">${esc(c.phone||'')} · ${esc(c.email||'')}</p><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span></div><button class="ghost-button" type="button" data-edit-client-card="${c.id}">Editar</button></div></div>`).join(''):'<div class="empty-state">Sem clientes.</div>';el.clientsList.querySelectorAll('[data-client]').forEach(card=>card.onclick=e=>{if(e.target.closest('[data-edit-client-card]'))return;state.selectedClientId=card.dataset.client;el.selectedClient.value=state.selectedClientId;renderClients();renderClientDetail()});el.clientsList.querySelectorAll('[data-edit-client-card]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();state.selectedClientId=btn.dataset.editClientCard;el.selectedClient.value=state.selectedClientId;openClientModal(state.selectedClientId)})}

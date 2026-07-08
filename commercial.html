@@ -13,7 +13,7 @@
     <div class="hero__overlay"></div>
     <nav class="topbar">
       <div class="brand-pill"><span class="brand-dot"></span><span>The View · Gestão Comercial</span></div>
-      <div class="topbar__actions"><a class="ghost-link" href="index.html">← Centro de decisão</a><div class="status-pill" id="dataStatus">A carregar dados…</div></div>
+      <div class="topbar__actions"><a class="ghost-link" href="comparador.html">Ir para Comparador</a><div class="status-pill" id="dataStatus">A carregar dados…</div></div>
     </nav>
     <div class="hero__content">
       <p class="eyebrow">The View Olhão</p>
@@ -28,24 +28,25 @@
     <section class="panel">
       <div class="section-heading compact">
         <div>
-          <p class="eyebrow eyebrow--dark">Painel</p>
-          <h2>Área comercial simplificada</h2>
+          <p class="eyebrow eyebrow--dark">Versão Comercial</p>
+          <h2>Clientes como centro da gestão</h2>
         </div>
         <div class="top-actions">
+          <button class="ghost-button" id="openProposalsArea" type="button">PDF Proposta Cliente</button>
           <button class="ghost-button" id="exportAllData" type="button">Exportar dados</button>
           <button class="ghost-button danger" id="resetLocalData" type="button">Repor dados locais</button>
         </div>
       </div>
       <nav class="module-tabs">
-        <button class="module-tab active" data-tab="proposals">Propostas Clientes</button>
-        <button class="module-tab" data-tab="dashboard">Dashboard Comercial</button>
-        <button class="module-tab" data-tab="prices">Definições de preços finais e histórico</button>
+        <button class="module-tab active" data-tab="sales">Clientes / Leads</button>
         <button class="module-tab" data-tab="compare">Comparador de Frações</button>
-        <button class="module-tab" data-tab="sales">Gerenciamento de Vendas e Propostas</button>
+        <button class="module-tab" data-tab="history">Histórico</button>
+        <button class="module-tab" data-tab="prices">Definição de Preços</button>
+        <button class="module-tab" data-tab="dashboard">Dashboard Comercial</button>
       </nav>
     </section>
 
-    <section id="tab-proposals" class="tab-section active">
+    <section id="tab-proposals" class="tab-section hidden">
       <section class="panel">
         <div class="section-heading">
           <div>
@@ -84,7 +85,7 @@
     <section id="tab-prices" class="tab-section hidden">
       <section class="panel">
         <div class="section-heading">
-          <div><p class="eyebrow eyebrow--dark">Preços finais</p><h2>Definições e histórico</h2><p class="muted">Cada alteração de preço fica registada localmente com data e motivo.</p></div>
+          <div><p class="eyebrow eyebrow--dark">Preços finais</p><h2>Definição de Preços</h2><p class="muted">Cada alteração de preço final fica registada localmente com data e motivo.</p></div>
           <button class="ghost-button" id="exportPriceHistory" type="button">Exportar histórico</button>
         </div>
         <div class="filters-grid four">
@@ -104,13 +105,16 @@
 
     <section id="tab-compare" class="tab-section hidden">
       <section class="panel">
-        <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Comparador de Frações</p><h2>Comparar duas frações</h2></div></div>
-        <div class="compare-controls"><label class="field"><span>Fração A</span><select id="compareA"></select></label><label class="field"><span>Fração B</span><select id="compareB"></select></label></div>
+        <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Comparador de Frações</p><h2>Comparar 2 a 4 frações</h2></div></div>
+        <div class="compare-controls compare-controls--multi">
+          <label class="field"><span>Frações a comparar</span><select id="compareFractions" multiple size="8"></select><small class="field__hint">Selecione entre 2 e 4 frações.</small></label>
+          <div id="compareNotice" class="compare-notice hidden">Pode comparar no máximo 4 frações.</div>
+        </div>
         <div id="compareResult" class="compare-result"></div>
       </section>
     </section>
 
-    <section id="tab-sales" class="tab-section hidden">
+    <section id="tab-sales" class="tab-section active">
       <section class="panel">
         <div class="section-heading">
           <div><p class="eyebrow eyebrow--dark">Clientes / Leads</p><h2>Ficha do cliente e linha do tempo</h2><p class="muted">Crie o cliente uma vez. Depois adicione eventos, visitas, propostas e follow-ups ligados a esse cliente.</p></div>
