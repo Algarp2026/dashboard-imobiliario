@@ -867,12 +867,14 @@ function ensureSalesManagementTabs(){
       <div><p class="eyebrow eyebrow--dark">Histórico</p><h2>Histórico por Fração</h2><p class="muted">Selecione uma fração para consultar eventos, preços informados, reservas, vendas e alterações de preço oficial associados a essa unidade.</p></div>
       <div class="top-actions"><button class="ghost-button" type="button" data-open-general-history>Ver histórico geral</button></div>
     </div>
-    <div class="filters-grid fraction-history-filters">
-      <label class="field"><span>Pesquisar fração</span><input id="fractionHistorySearch" type="search" placeholder="Pesquisar fração, piso ou tipologia..." /></label>
-      <label class="field"><span>Estado da fração</span><select id="fractionHistoryStatus"><option value="all">Todas</option><option value="Disponível">Disponíveis</option><option value="Reservado">Reservadas</option><option value="Vendido">Vendidas</option><option value="Indisponível">Indisponíveis</option></select></label>
-    </div>
     <div class="fraction-history-layout">
-      <div id="fractionHistoryList" class="fraction-history-list"></div>
+      <aside class="fraction-history-sidebar">
+        <div class="filters-grid fraction-history-filters">
+          <label class="field"><span>Pesquisar fração</span><input id="fractionHistorySearch" type="search" placeholder="Pesquisar fração..." /></label>
+          <label class="field"><span>Estado da fração</span><select id="fractionHistoryStatus"><option value="all">Todas</option><option value="Disponível">Disponíveis</option><option value="Reservado">Reservadas</option><option value="Vendido">Vendidas</option><option value="Indisponível">Indisponíveis</option></select></label>
+        </div>
+        <div id="fractionHistoryList" class="fraction-history-list"></div>
+      </aside>
       <div id="fractionHistoryDetail" class="fraction-history-detail"></div>
     </div>`;
     tab.appendChild(fractionHistoryPanel);
@@ -1175,10 +1177,14 @@ function renderFractionHistoryPanel(){
   if(!selectedNumber||!fractions.some(f=>f.number===selectedNumber)){
     state.hf.selected=fractions[0]?.number?String(fractions[0].number):'';
   }
-  list.innerHTML=fractions.length?fractions.map(f=>`<button class="fraction-history-card ${String(f.number)===String(state.hf.selected)?'active':''}" type="button" data-history-fraction="${f.number}">
-    <strong>${esc(f.name)}</strong>
-    <span>${esc(f.typology)} · ${esc(statusOf(f))} · ${money(finalPrice(f))}</span>
-  </button>`).join(''):'<div class="empty-state">Sem frações para os filtros escolhidos.</div>';
+  list.innerHTML=fractions.length?fractions.map(f=>{
+    const rows=getHistoricoComercialFracao(f.number),st=statusOf(f),eventCount=rows.filter(row=>row.source==='event').length;
+    return `<button class="fraction-history-card ${String(f.number)===String(state.hf.selected)?'active':''}" type="button" data-history-fraction="${f.number}">
+    <span class="fraction-history-card__top"><strong>${esc(f.name)}</strong><span class="${badge(st)}">${esc(st)}</span></span>
+    <span class="fraction-history-card__meta">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</span>
+    <span class="fraction-history-card__footer"><span>${money(finalPrice(f))}</span><small>${eventCount} ${eventCount===1?'evento':'eventos'}</small></span>
+  </button>`;
+  }).join(''):'<div class="empty-state">Sem frações para os filtros escolhidos.</div>';
   list.querySelectorAll('[data-history-fraction]').forEach(button=>button.onclick=()=>{
     state.hf.selected=button.dataset.historyFraction;
     renderFractionHistoryPanel();
@@ -1192,6 +1198,7 @@ function renderFractionHistoryDetail(){
   if(!f){detail.innerHTML='<div class="empty-state">Selecione uma fração.</div>';return}
   const rows=getHistoricoComercialFracao(f.number,{ascending:true});
   const latest=rows.slice().sort((a,b)=>String(`${b.date||''} ${b.time||''}`).localeCompare(String(`${a.date||''} ${a.time||''}`)))[0]||null;
+  const lowInformed=lowestInformedPriceBelowCurrent(f,rows);
   const valueCell=row=>row.informedPrice?money(row.informedPrice):row.amount?money(row.amount):'—';
   const officialCell=row=>row.officialPrice?money(row.officialPrice):'—';
   const diffCell=row=>row.hasDifference?money(row.difference):'—';
@@ -1207,25 +1214,36 @@ function renderFractionHistoryDetail(){
     </div>
   </div>
   <div class="fraction-history-meta">
-    <div><span>Tipologia</span><strong>${esc(f.typology||'—')}</strong></div>
-    <div><span>Piso</span><strong>${esc(f.floorLabel||'—')}</strong></div>
+    <div><span>Preço atual</span><strong>${money(finalPrice(f))}</strong></div>
     <div><span>Estado atual</span><strong>${esc(statusOf(f))}</strong></div>
     <div><span>Eventos ligados</span><strong>${rows.filter(row=>row.source==='event').length}</strong></div>
+    <div><span>Última atividade</span><strong>${latest?esc(formatCommercialDate(latest.date)):'—'}</strong></div>
   </div>
+  <div class="fraction-history-property-grid">
+    <div><span>Tipologia</span><strong>${esc(f.typology||'—')}</strong></div>
+    <div><span>Piso</span><strong>${esc(f.floorLabel||'—')}</strong></div>
+    <div><span>Orientação</span><strong>${esc(f.orientation||'—')}</strong></div>
+    <div><span>Preço inicial</span><strong>${money(f.price)}</strong></div>
+  </div>
+  ${lowInformed?`<div class="fraction-history-alert"><div><span>Atenção comercial</span><strong>Esta fração já teve preço inferior informado.</strong></div><dl><div><dt>Menor preço informado</dt><dd>${money(lowInformed.informedPrice)}</dd></div><div><dt>Cliente</dt><dd>${esc(lowInformed.client||'—')}</dd></div><div><dt>Data</dt><dd>${esc(formatCommercialDate(lowInformed.date))}</dd></div><div><dt>Diferença face ao preço atual</dt><dd class="price-negative">${money(lowInformed.informedPrice-finalPrice(f))}</dd></div></dl></div>`:''}
   <section class="crm-detail-section">
     <div class="crm-detail-section__heading"><h3>Histórico comercial da fração</h3></div>
-    ${rows.length?`<div class="table-wrap"><table class="data-table compact-table fraction-history-table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th class="num-col">Valor / Preço informado</th><th class="num-col">Preço oficial na data</th><th class="num-col">Diferença</th><th>Observação</th><th>Ação</th></tr></thead><tbody>${rows.map(row=>`<tr>
+    ${rows.length?`<div class="fraction-history-table-card"><div class="table-wrap"><table class="data-table compact-table fraction-history-table"><thead><tr><th>Data</th><th>Tipo</th><th>Cliente</th><th class="num-col">Valor / Preço informado</th><th class="num-col">Preço oficial na data</th><th class="num-col">Diferença</th><th>Observação</th><th>Ação</th></tr></thead><tbody>${rows.map(row=>`<tr>
       <td>${esc(formatCommercialDate(row.date))}${row.time?`<div class="muted small">${esc(row.time)}</div>`:''}</td>
-      <td>${esc(row.type)}</td>
+      <td><span class="badge badge--neutral">${esc(row.type)}</span></td>
       <td>${esc(row.client||'—')}</td>
       <td class="num-col">${valueCell(row)}</td>
       <td class="num-col">${officialCell(row)}</td>
       <td class="num-col ${row.difference<0?'price-negative':''}">${diffCell(row)}</td>
       <td>${esc(row.observation||'—')}</td>
       <td>${row.eventId?`<button class="ghost-button compact-button" type="button" data-edit-history-event="${attr(row.eventId)}">Ver / Editar</button>`:'—'}</td>
-    </tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem eventos ou alterações de preço associados a esta fração.</div>'}
+    </tr>`).join('')}</tbody></table></div></div>`:'<div class="empty-state">Ainda não existem eventos ou alterações de preço associados a esta fração.</div>'}
   </section>`;
   detail.querySelectorAll('[data-edit-history-event]').forEach(button=>button.onclick=()=>openEventModal(button.dataset.editHistoryEvent,'history'));
+}
+function lowestInformedPriceBelowCurrent(f,rows){
+  const current=finalPrice(f);
+  return rows.filter(row=>row.source==='event'&&row.informedPrice&&row.informedPrice<current).sort((a,b)=>a.informedPrice-b.informedPrice||String(a.date).localeCompare(String(b.date)))[0]||null;
 }
 
 function renderAll(){RenderFlow.all();}
