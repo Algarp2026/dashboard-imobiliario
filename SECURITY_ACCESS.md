@@ -33,20 +33,27 @@ No mesmo projeto, a protecao da Vercel tende a proteger o projeto/deployment con
 - Nao confiar em esconder elementos com CSS/JavaScript como seguranca real.
 - Nao deixar `config.js` e `commercial.js` carregarem antes da autenticacao em qualquer solucao temporaria.
 
-## Fallback temporario, se nao houver plano Vercel adequado
+## Fallback implementado sem Vercel Pro
 
-Uma barreira frontend pode ser criada apenas como obstaculo basico, usando hash e carregamento tardio dos scripts comerciais, mas isto nao e seguranca forte:
+Como Password Protection da Vercel pode exigir plano/add-on pago, este repositorio inclui uma barreira propria para a versao comercial usando:
 
-- o codigo continua publico;
-- o hash pode ser analisado;
-- a protecao pode ser contornada por alguem tecnico;
-- nao protege diretamente o Apps Script se o URL for conhecido.
+- `middleware.ts`: bloqueia a entrega de `/`, `index.html`, `commercial.html`, `commercial.js`, `commercial.css` e `config.js` sem sessao valida.
+- `access.html`: pagina publica de login, sem carregar `config.js` nem `commercial.js`.
+- `api/access.js`: valida a password no servidor e cria cookie `HttpOnly`.
+- `api/logout.js`: limpa o cookie e volta para o login.
 
-Para dados reais de clientes, usar Deployment Protection ou mover o CRM para uma area autenticada de verdade.
+A password nao fica no codigo. Configure no Vercel:
+
+1. Abrir `Settings` > `Environment Variables`.
+2. Criar `COMMERCIAL_ACCESS_PASSWORD` com uma password forte.
+3. Criar `COMMERCIAL_ACCESS_SECRET` com um segredo longo e aleatorio para assinar a sessao.
+4. Aplicar em Production e redeploy.
+
+Esta solucao e melhor do que password no frontend porque impede o browser de receber `config.js` e `commercial.js` antes do acesso. Ainda assim, e uma barreira inicial, nao substitui uma solucao completa de identidade e autorizacao.
 
 ## Apps Script
 
-Mesmo com o Vercel protegido, o Google Apps Script deve ser revisto numa fase seguinte. Se o Web App estiver publico e aceitar `action=load`, quem descobrir o URL pode tentar ler a base `Store!B2`.
+Mesmo com esta barreira, o Google Apps Script deve ser revisto numa fase seguinte. Se o Web App estiver publico e aceitar `action=load`, quem descobrir o URL pode tentar ler a base `Store!B2`.
 
 Recomendacao futura:
 
@@ -57,8 +64,8 @@ Recomendacao futura:
 ## Checklist de teste
 
 1. Abrir a pagina principal em janela anonima.
-2. Confirmar que a Vercel pede autenticacao/password antes de mostrar qualquer conteudo.
-3. Confirmar que `index.html`, `config.js` e `commercial.js` nao sao entregues sem autenticacao.
+2. Confirmar que aparece `access.html` antes de mostrar qualquer conteudo comercial.
+3. Confirmar que `index.html`, `config.js` e `commercial.js` redirecionam para login sem sessao.
 4. Entrar com credencial valida.
 5. Confirmar que Clientes / Leads carrega normalmente.
 6. Confirmar que Google Sheets sync continua ativo.

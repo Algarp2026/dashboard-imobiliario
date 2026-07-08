@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The View · Acesso Comercial</title>
+  <style>
+    :root{--bg:#f2f4f7;--text:#16233d;--muted:#61718b;--accent:#b89253;--line:rgba(22,35,61,.12);--danger:#b23c2e}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,rgba(7,17,35,.76),rgba(7,17,35,.34)),url("Olhao_Ext_Piscina_Web.jpg") center/cover;color:var(--text)}
+    .access-card{width:min(460px,100%);border:1px solid rgba(255,255,255,.64);border-radius:24px;background:rgba(255,255,255,.94);box-shadow:0 28px 70px rgba(10,19,37,.28);padding:28px;backdrop-filter:blur(20px)}
+    .eyebrow{margin:0 0 10px;text-transform:uppercase;letter-spacing:.22em;font-size:.74rem;font-weight:800;color:#8e6a34}
+    h1{margin:0 0 10px;font-size:2rem;line-height:1.05}
+    p{margin:0;color:var(--muted);line-height:1.6}
+    form{display:grid;gap:14px;margin-top:22px}
+    label{display:grid;gap:8px;font-weight:700;color:var(--muted)}
+    input{width:100%;min-height:52px;border:1px solid var(--line);border-radius:15px;padding:13px 15px;font:inherit;color:var(--text);background:#fff}
+    button,a{border-radius:999px;font:inherit}
+    button{border:0;min-height:50px;padding:13px 18px;cursor:pointer;color:#fff;background:linear-gradient(135deg,#192946,#2a426b);box-shadow:0 14px 30px rgba(25,41,70,.22)}
+    button:disabled{opacity:.62;cursor:not-allowed}
+    .secondary-link{display:inline-flex;margin-top:14px;color:var(--text);text-decoration:none;font-weight:700}
+    .message{min-height:22px;font-size:.94rem}
+    .message.error{color:var(--danger)}
+    .message.ok{color:#177d57}
+  </style>
+</head>
+<body>
+  <main class="access-card">
+    <p class="eyebrow">The View Olhão</p>
+    <h1>Acesso Comercial</h1>
+    <p>Esta área contém dados comerciais e dados pessoais de clientes/leads. Introduza a password de acesso para continuar.</p>
+    <form id="accessForm">
+      <label>
+        <span>Password</span>
+        <input id="password" name="password" type="password" autocomplete="current-password" required autofocus />
+      </label>
+      <button id="submitButton" type="submit">Entrar</button>
+      <div id="message" class="message" role="status" aria-live="polite"></div>
+    </form>
+    <a class="secondary-link" href="comparador.html">Ir para Comparador público</a>
+  </main>
+  <script>
+    const form = document.getElementById('accessForm');
+    const password = document.getElementById('password');
+    const button = document.getElementById('submitButton');
+    const message = document.getElementById('message');
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next') || '/';
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      button.disabled = true;
+      message.className = 'message';
+      message.textContent = 'A validar acesso...';
+      try {
+        const response = await fetch('/api/access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: password.value })
+        });
+        if (!response.ok) throw new Error(response.status === 503 ? 'Acesso ainda não configurado.' : 'Password inválida.');
+        message.className = 'message ok';
+        message.textContent = 'Acesso autorizado.';
+        window.location.assign(next.startsWith('/') ? next : '/');
+      } catch (error) {
+        message.className = 'message error';
+        message.textContent = error.message || 'Não foi possível validar o acesso.';
+        button.disabled = false;
+        password.select();
+      }
+    });
+  </script>
+</body>
+</html>
