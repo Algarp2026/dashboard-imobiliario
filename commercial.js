@@ -10,6 +10,61 @@ const STAGES=['Novo Lead','Qualificado','Apresentado','Em negociação','Reserva
 const EVENT_TYPES=['Pedido de informação recebido','Preferências recebidas','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Outro'];
 const CLIENT_ORIGINS=['Website The View','Outdoor / Mupie','Agente','Amigo / Familiar','Outro'];
 const CRM_MIGRATION_KEY='crm-funnel-2026-06-v4';
+const MAJUCA_IMPORT_KEY='majuca_import_v1';
+const MAJUCA_IMPORT_SOURCE='Lista Majuca — importação histórica';
+const MAJUCA_HISTORICAL_NOTE='Importação histórica da Lista Majuca — data original do contacto não informada.';
+const MAJUCA_IMPORT_RECORDS=[
+  {id:'teresa-salero',name:'Teresa Salero',role:'Comprador/lead',notes:['Contacto proveniente da Lista Majuca.']},
+  {id:'colega-teresa-salero',name:'Colega de Teresa Salero',role:'Contacto a confirmar',reference:'Teresa Salero',notes:['Nome ainda não informado.']},
+  {id:'pedro-marcelino',name:'Pedro Marcelino',role:'Comprador/lead'},
+  {id:'toze-rato',name:'Tozé Rato',role:'Comprador/lead'},
+  {id:'rui-linot',name:'Rui Linot',role:'Comprador/lead'},
+  {id:'emmanuel',name:'Emmanuel',role:'Comprador/lead'},
+  {id:'vasco-vieira',name:'Vasco Vieira',role:'Comprador/lead ou intermediário, por confirmar',notes:['Não confundir com Cliente de Vasco Vieira.']},
+  {id:'cliente-vasco-vieira',name:'Cliente de Vasco Vieira',role:'Comprador/lead',reference:'Vasco Vieira',notes:['Nome do comprador ainda não informado.']},
+  {id:'mascote',name:'Mascote',role:'Comprador/lead ou intermediário, por confirmar',aliases:['Mascote e amigo']},
+  {id:'amigo-mascote',name:'Amigo de Mascote',role:'Comprador/lead',reference:'Mascote',notes:['Nome ainda não informado.']},
+  {id:'bicho',name:'Bicho',role:'Intermediário ou contacto, por confirmar',notes:['A lista indica que possui dois clientes.']},
+  {id:'cliente-1-bicho',name:'Cliente 1 de Bicho',role:'Comprador/lead',reference:'Bicho',notes:['Nome ainda não informado.']},
+  {id:'cliente-2-bicho',name:'Cliente 2 de Bicho',role:'Comprador/lead',reference:'Bicho',notes:['Nome ainda não informado.']},
+  {id:'raquel-iad',name:'Raquel — IAD',role:'Intermediário/agência',notes:['Possui dois clientes com orçamento até €500.000.','Não atribuir €500.000 como orçamento pessoal de Raquel.']},
+  {id:'cliente-1-raquel-iad',name:'Cliente 1 de Raquel IAD',role:'Comprador/lead',reference:'Raquel — IAD',budget:500000,notes:['Nome ainda não informado.']},
+  {id:'cliente-2-raquel-iad',name:'Cliente 2 de Raquel IAD',role:'Comprador/lead',reference:'Raquel — IAD',budget:500000,notes:['Nome ainda não informado.']},
+  {id:'artur-casas-sotavento',name:'Artur Casas Sotavento',role:'Comprador/lead ou intermediário, por confirmar',notes:['Manter exatamente esta identificação.']},
+  {id:'irma-pina',name:'Irmã do Pina',role:'Comprador/lead',notes:['Nome ainda não informado.']},
+  {id:'domitilia',name:'Domitília',role:'Comprador/lead'},
+  {id:'chaves',name:'Chaves',role:'Comprador/lead ou contacto, por confirmar',notes:['Não fundir automaticamente com João Chaves.']},
+  {id:'paulo-castelo',name:'Paulo Castelo',role:'Comprador/lead'},
+  {id:'contactos-braga-feira',name:'Contactos de Braga da Feira',role:'Grupo de compradores/contactos',notes:['Texto original da lista: “Gajos de Braga da Feira”.']},
+  {id:'agencia-vilamoura',name:'Agência imobiliária de Vilamoura',role:'Agência/intermediário',notes:['Nome comercial da agência ainda não informado.']},
+  {id:'rui-salero',name:'Rui Salero',phone:'927574428',role:'Comprador/lead'},
+  {id:'joao-chaves',name:'João Chaves',role:'Comprador/lead ou intermediário, por confirmar',notes:['Não fundir com “Chaves”.']},
+  {id:'maria-carmo',name:'Maria do Carmo',role:'Comprador/lead'},
+  {id:'sobrinha-durao',name:'Sobrinha do Durão',role:'Comprador/lead',notes:['Nome ainda não informado.','Texto original: “Durão sobrinha”.']},
+  {id:'joao-goncalves-playa',name:'João Gonçalves do Playa',role:'Comprador/lead ou contacto, por confirmar'},
+  {id:'luis-claro-pai',name:'Luís Claro e pai',role:'Grupo de compradores/lead',aliases:['Luís Claro','Luis Claro'],notes:['A lista também repetia posteriormente “Luís Claro”.','Não criar um segundo registo.']},
+  {id:'miguel-santana',name:'Miguel Santana',phone:'919844701',role:'Comprador/lead',reference:'João',notes:['Texto original: “contacto João”.']},
+  {id:'hugo-urbano',name:'Hugo Urbano',email:'hugo.urbano@vinicom.pt',phone:'967037235',role:'Comprador/lead'},
+  {id:'isidoro-gago',name:'Isidoro Gago',phone:'969272285',role:'Comprador/lead',notes:['Quantidade pretendida: 1 ou 2 apartamentos.','Senhor da Fuseta.','Interessado em um ou dois apartamentos.','Não inventar tipologia, orçamento ou frações.']},
+  {id:'franco',name:'Franco',role:'Comprador/lead',nationality:'Italiano',reference:'Cátia Pilar',typology:'T2',budget:700000,fractions:[24,26,31,33],aliases:['Franco italiano','Italiano Franco','Italiano Franco — Cátia Pilar','Italiano Franco - Cátia Pilar','Italiano Franco - Catia Pilar'],notes:['Também aparecia na lista como “Italiano Franco”.','É um único cliente.']},
+  {id:'carlos-metelo',name:'Carlos Metelo',phone:'966578483',role:'Comprador/lead',notes:['Texto original da lista: “Enviou e-mail; Alberto iria.”','Guardar como observação a confirmar.','Não fundir com o outro Carlos associado a Cátia Pilar.']},
+  {id:'sr-sabino',name:'Sr. Sabino',phone:'923222433',role:'Comprador/lead',typology:'T2',floor:'Rés-do-chão',notes:['T2, preferencialmente no rés-do-chão.']},
+  {id:'manuel-coito',name:'Manuel Coito',role:'Comprador/lead',typology:'T1',objective:'Revenda/investimento',notes:['Pretende receber preço de opções com vista e sem vista.']},
+  {id:'ivo-anastacio',name:'Ivo Anastácio',role:'Comprador/lead',notes:['Aparecia duas vezes na lista original.','Criar somente um registo.']},
+  {id:'philippe-pereira',name:'Philippe Pereira',email:'philippepereira99@gmail.com',role:'Comprador/lead',notes:['A lista indica apenas que tem interesse.','Nome inferido diretamente do endereço de email; nome a confirmar.','Não inventar tipologia, orçamento ou frações.']},
+  {id:'eng-fernando-encarnacao',name:'Eng. Fernando Encarnação',role:'Comprador/lead ou contacto, por confirmar'},
+  {id:'sergio-vicente',name:'Sérgio Vicente',role:'Intermediário',notes:['Possui dois compradores.','Referiu que não haveria nada abaixo de €400.000.','Não colocar automaticamente €400.000 como orçamento dos compradores.']},
+  {id:'comprador-1-sergio-vicente',name:'Comprador 1 de Sérgio Vicente',role:'Comprador/lead',reference:'Sérgio Vicente',notes:['Nome e requisitos ainda não informados.']},
+  {id:'comprador-2-sergio-vicente',name:'Comprador 2 de Sérgio Vicente',role:'Comprador/lead',reference:'Sérgio Vicente',notes:['Nome e requisitos ainda não informados.']},
+  {id:'rosimary',name:'Rosimary',role:'Comprador/lead',notes:['Pretende conhecer os preços disponíveis.']},
+  {id:'paulo-cavaco',name:'Paulo Cavaco',role:'Comprador/lead'},
+  {id:'catia-pilar',name:'Cátia Pilar',role:'Intermediário',notes:['Intermediária associada a Franco, Carlos e aos clientes holandeses.','Não contar automaticamente Cátia como compradora.']},
+  {id:'carlos-cliente-catia-pilar',name:'Carlos — cliente de Cátia Pilar',role:'Comprador/lead',reference:'Cátia Pilar',budget:650000,budgetMin:550000,budgetMax:650000,typology:'T1 ou T2',floor:'3.º ou 4.º piso',notes:['Nome completo ainda não informado.','Não fundir com Carlos Metelo.']},
+  {id:'clientes-holandeses-catia-pilar',name:'Clientes holandeses de Cátia Pilar',role:'Grupo de compradores/lead',reference:'Cátia Pilar',budget:650000,fractions:[14,21,26],notes:['Ainda pretendem analisar/ver as frações 14, 21 e 26.','A lista utiliza o plural “holandeses”; não inventar a quantidade nem nomes individuais.']},
+  {id:'rui-fernandes',name:'Rui Fernandes',role:'Comprador/lead ou contacto, por confirmar',notes:['Pai de Matheus Fernandes.']},
+  {id:'holandes-comprou-padinha',name:'Holandês que comprou Padinha',role:'Contacto a confirmar',notes:['Identificação provisória exatamente baseada na lista original.','Não inventar nome, telefone ou email.']},
+  {id:'ibericatrio',name:'Ibéricatrio',role:'Comprador/lead, empresa ou intermediário, por confirmar',notes:['Manter exatamente esta identificação até confirmação.']}
+];
 const MAX_COMPARE_FRACTIONS=4;
 const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
 const el={};
@@ -816,6 +871,183 @@ function recalculateResumoCliente(clientId){
   return before!==JSON.stringify(c);
 }
 function recalculateResumoTodosClientes(){return(state.data.clients||[]).reduce((changed,c)=>recalculateResumoCliente(c.id)||changed,false)}
+function majucaClientId(record){return`majuca-${record.id}`}
+function majucaEventId(record){return`majuca-event-${record.id}`}
+function normalizedPhone(v){return safe(v).replace(/\D/g,'')}
+function appendUniqueNote(c,text){
+  text=safe(text);
+  if(!text)return false;
+  if(norm(c.notes||'').includes(norm(text)))return false;
+  c.notes=[safe(c.notes),text].filter(Boolean).join('\n\n');
+  return true;
+}
+function majucaNoteLines(record){
+  const lines=[
+    MAJUCA_HISTORICAL_NOTE,
+    `Origem: ${MAJUCA_IMPORT_SOURCE}.`,
+    `Papel: ${record.role}.`
+  ];
+  if(record.reference)lines.push(`Origem/referência: ${record.reference}.`);
+  if(record.budgetMin||record.budgetMax)lines.push(`Orçamento indicado: ${record.budgetMin?money(record.budgetMin):'—'} a ${record.budgetMax?money(record.budgetMax):'—'}.`);
+  else if(record.budget)lines.push(`Orçamento indicado: ${money(record.budget)}.`);
+  if((record.fractions||[]).length)lines.push(`Frações de interesse indicadas: ${(record.fractions||[]).map(n=>'Apt. '+n).join(', ')}.`);
+  if(record.typology)lines.push(`Tipologia pretendida: ${record.typology}.`);
+  if(record.floor)lines.push(`Piso preferido: ${record.floor}.`);
+  if(record.objective)lines.push(`Finalidade/objetivo: ${record.objective}.`);
+  (record.notes||[]).forEach(note=>lines.push(note));
+  return lines;
+}
+function majucaClientNotes(record){return majucaNoteLines(record).join('\n')}
+function majucaPreferences(record){
+  return cleanPreferences({
+    typology:record.typology||'',
+    floor:record.floor||'',
+    orientation:'',
+    objective:record.objective||'',
+    decisionTime:'',
+    summary:''
+  });
+}
+function hasMajucaSource(c){
+  return norm([c.origin,c.originManual,c.notes,c.majucaImportId].join(' ')).includes('lista majuca')||!!c.majucaImportId;
+}
+function findMajucaClientMatch(record){
+  const clients=state.data.clients||[];
+  if(record.email){
+    const email=norm(record.email);
+    const found=clients.find(c=>norm(c.email)===email);
+    if(found)return found;
+  }
+  if(record.phone){
+    const phone=normalizedPhone(record.phone);
+    const found=clients.find(c=>phone&&normalizedPhone(c.phone)===phone);
+    if(found)return found;
+  }
+  const names=[record.name,...(record.aliases||[])].map(norm).filter(Boolean);
+  const byName=clients.find(c=>names.includes(norm(c.name)));
+  if(byName)return byName;
+  const stableId=majucaClientId(record);
+  return clients.find(c=>c.id===stableId||c.majucaImportId===record.id);
+}
+function fillEmptyClientField(c,key,value){
+  if(value==null||value==='')return false;
+  if(safe(c[key]))return false;
+  c[key]=String(value);
+  return true;
+}
+function isMajucaAliasName(name,record){
+  const current=norm(name);
+  return !!current&&(record.aliases||[]).some(alias=>norm(alias)===current);
+}
+function mergeMajucaRecordIntoClient(c,record,{isNew=false}={}){
+  const before=JSON.stringify(c);
+  const alreadyHadMajucaSource=hasMajucaSource(c);
+  c.id=c.id||majucaClientId(record);
+  c.majucaImportId=record.id;
+  c.majucaImportKey=MAJUCA_IMPORT_KEY;
+  if(!safe(c.name)||isMajucaAliasName(c.name,record))c.name=record.name;
+  fillEmptyClientField(c,'phone',record.phone||'');
+  fillEmptyClientField(c,'email',record.email||'');
+  fillEmptyClientField(c,'nationality',record.nationality||'');
+  if(!safe(c.origin))c.origin=MAJUCA_IMPORT_SOURCE;
+  else if(!alreadyHadMajucaSource)appendUniqueNote(c,`Origem adicional: ${MAJUCA_IMPORT_SOURCE}.`);
+  if(c.originManual===undefined)c.originManual='';
+  const budget=Number(record.budget||record.budgetMax)||0;
+  if(budget&&!Number(c.budget))c.budget=budget;
+  if(budget&&!Number(c.manualBudget))c.manualBudget=budget;
+  const fractions=uniqNum([...(c.manualFractions||c.fractions||[]),...(record.fractions||[])]);
+  c.manualFractions=fractions;
+  c.fractions=fractions;
+  const preferences=cleanPreferences(c.manualPreferences||c.preferences||{});
+  const incoming=majucaPreferences(record);
+  Object.keys(incoming).forEach(key=>{if(incoming[key]&&!preferences[key])preferences[key]=incoming[key]});
+  c.manualPreferences=preferences;
+  c.preferences=cleanPreferences({...cleanPreferences(c.preferences||{}),...Object.fromEntries(Object.entries(preferences).filter(([,value])=>value))});
+  if(hasPreferenceData(incoming))c.preferencesManuallyEdited=true;
+  if(c.manualNextStep===undefined)c.manualNextStep='';
+  if(c.manualNextFollowup===undefined)c.manualNextFollowup='';
+  if(!c.stage)c.stage='Novo Lead';
+  if(c.stageManual===undefined)c.stageManual=false;
+  if(!c.manualStage)c.manualStage='';
+  if(!c.legacyStageFallback)c.legacyStageFallback=normalizeClientStage(c.stage);
+  appendUniqueNote(c,majucaClientNotes(record));
+  if(isNew)c.createdByMigration=MAJUCA_IMPORT_KEY;
+  c.updated=new Date().toLocaleString('pt-PT');
+  return before!==JSON.stringify(c);
+}
+function ensureMajucaEvent(c,record){
+  state.data.events=state.data.events||[];
+  const eventId=majucaEventId(record);
+  const existing=state.data.events.find(ev=>ev.id===eventId||(ev.majucaImportId===record.id&&ev.clientId===c.id&&ev.type==='Pedido de informação recebido'));
+  if(existing)return false;
+  const preferences=majucaPreferences(record);
+  state.data.events.push({
+    id:eventId,
+    clientId:c.id,
+    type:'Pedido de informação recebido',
+    date:'',
+    time:'',
+    channel:MAJUCA_IMPORT_SOURCE,
+    amount:0,
+    interest:record.typology||'',
+    nextStep:'',
+    followup:'',
+    followupDate:'',
+    fractions:uniqNum(record.fractions||[]),
+    preferences,
+    preferenceBudget:Number(record.budget||record.budgetMax)||0,
+    informedPrices:[],
+    objections:'',
+    notes:majucaNoteLines(record).join('\n'),
+    withAgent:false,
+    agentId:'',
+    commissionType:'',
+    commissionValue:0,
+    commissionAmount:0,
+    historicalImport:true,
+    dateUnknown:true,
+    importedAt:new Date().toISOString(),
+    majucaImportId:record.id,
+    majucaImportKey:MAJUCA_IMPORT_KEY
+  });
+  return true;
+}
+function backupBeforeMajucaImport(){
+  try{
+    const backupKey=KEY+'.backupBeforeMajucaImport.v1';
+    if(localStorage.getItem(backupKey))return;
+    localStorage.setItem(backupKey,JSON.stringify({
+      createdAt:new Date().toISOString(),
+      reason:'Backup automático antes da importação histórica da Lista Majuca',
+      data:normalizeData(state.data)
+    }));
+  }catch(err){
+    console.warn('Falha ao criar backup antes da importação Majuca',err);
+  }
+}
+function applyMajucaImportMigration(){
+  state.data.clients=state.data.clients||[];
+  state.data.events=state.data.events||[];
+  if(state.data.majucaImportKey===MAJUCA_IMPORT_KEY)return false;
+  backupBeforeMajucaImport();
+  let changed=false;
+  const summary={key:MAJUCA_IMPORT_KEY,canonical:MAJUCA_IMPORT_RECORDS.length,created:0,associated:0,updated:0,eventsCreated:0,skippedDuplicates:['Ivo Anastácio','Luís Claro','Mascote e amigo','Italiano Franco — Cátia Pilar']};
+  MAJUCA_IMPORT_RECORDS.forEach(record=>{
+    let c=findMajucaClientMatch(record);
+    const isNew=!c;
+    if(!c){
+      c={id:majucaClientId(record),name:record.name,phone:'',email:'',nif:'',nationality:'',origin:MAJUCA_IMPORT_SOURCE,originManual:'',agentId:'',agent:'',agency:'',budget:0,manualBudget:0,stage:'Novo Lead',stageManual:false,manualStage:'',manualNextStep:'',manualNextFollowup:'',manualFractions:[],fractions:[],manualPreferences:emptyPreferences(),preferences:emptyPreferences(),preferencesManuallyEdited:true,notes:''};
+      state.data.clients.push(c);
+      summary.created+=1;
+      changed=true;
+    }else summary.associated+=1;
+    if(mergeMajucaRecordIntoClient(c,record,{isNew})){summary.updated+=1;changed=true}
+    if(ensureMajucaEvent(c,record)){summary.eventsCreated+=1;changed=true}
+  });
+  state.data.majucaImportKey=MAJUCA_IMPORT_KEY;
+  state.data.majucaImportSummary={...summary,completedAt:new Date().toISOString()};
+  return true;
+}
 function migrateCrmData(){
   let changed=state.data.crmMigrationKey!==CRM_MIGRATION_KEY;
   state.data.statusEventIds=state.data.statusEventIds||{};
@@ -846,6 +1078,7 @@ function migrateCrmData(){
     if(ev.preferences)ev.preferences=cleanPreferences(ev.preferences);
     if(original!==JSON.stringify(ev))changed=true;
   });
+  if(applyMajucaImportMigration())changed=true;
   state.data.crmMigrationKey=CRM_MIGRATION_KEY;
   if(recalculateResumoTodosClientes())changed=true;
   state.fractions.forEach(f=>{
@@ -2531,7 +2764,31 @@ function filterFractions(fil={}){
 function syncProposal(){state.pf={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};renderProposals()}function syncPrice(){state.rf={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};renderPrices()}
 function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
-function getF(n){return state.fractions.find(f=>f.number===n)}function client(id){return state.data.clients.find(c=>c.id===id)}function finalPrice(f){return f?(+state.data.finalPrices[f.number]||SUG[f.number]||f.price):0}function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}function salePrice(f){return f?(+state.data.salePrices[f.number]||0):0}function historyOf(f){return f?(state.data.priceHistory[f.number]||[]):[]}function normalizeData(d={}){return{finalPrices:d.finalPrices||{},statuses:d.statuses||{},salePrices:d.salePrices||{},priceHistory:d.priceHistory||{},clients:d.clients||[],events:d.events||[],agents:d.agents||[],saleCommissions:d.saleCommissions||{},unavailableReasons:d.unavailableReasons||{},statusEventIds:d.statusEventIds||{},salePriceEventIds:d.salePriceEventIds||{},priceMigrationKey:d.priceMigrationKey||'',crmMigrationKey:d.crmMigrationKey||''}}
+function getF(n){return state.fractions.find(f=>f.number===n)}
+function client(id){return state.data.clients.find(c=>c.id===id)}
+function finalPrice(f){return f?(+state.data.finalPrices[f.number]||SUG[f.number]||f.price):0}
+function statusOf(f){return f?state.data.statuses[f.number]||'Disponível':'Disponível'}
+function salePrice(f){return f?(+state.data.salePrices[f.number]||0):0}
+function historyOf(f){return f?(state.data.priceHistory[f.number]||[]):[]}
+function normalizeData(d={}){
+  return {
+    finalPrices:d.finalPrices||{},
+    statuses:d.statuses||{},
+    salePrices:d.salePrices||{},
+    priceHistory:d.priceHistory||{},
+    clients:d.clients||[],
+    events:d.events||[],
+    agents:d.agents||[],
+    saleCommissions:d.saleCommissions||{},
+    unavailableReasons:d.unavailableReasons||{},
+    statusEventIds:d.statusEventIds||{},
+    salePriceEventIds:d.salePriceEventIds||{},
+    priceMigrationKey:d.priceMigrationKey||'',
+    crmMigrationKey:d.crmMigrationKey||'',
+    majucaImportKey:d.majucaImportKey||'',
+    majucaImportSummary:d.majucaImportSummary||null
+  };
+}
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
 
 
@@ -2665,7 +2922,9 @@ function mergeCommercialData(remoteData={},localData={}){
     statusEventIds:{...remote.statusEventIds,...local.statusEventIds},
     salePriceEventIds:{...remote.salePriceEventIds,...local.salePriceEventIds},
     priceMigrationKey:local.priceMigrationKey||remote.priceMigrationKey,
-    crmMigrationKey:local.crmMigrationKey||remote.crmMigrationKey
+    crmMigrationKey:local.crmMigrationKey||remote.crmMigrationKey,
+    majucaImportKey:local.majucaImportKey||remote.majucaImportKey,
+    majucaImportSummary:local.majucaImportSummary||remote.majucaImportSummary
   });
 }
 function backupLocalBeforeRemoteLoad(localData, remoteData){
