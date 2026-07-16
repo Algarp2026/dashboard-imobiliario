@@ -28,7 +28,7 @@
   <main class="access-card">
     <p class="eyebrow">The View Olhão</p>
     <h1>Acesso Comercial</h1>
-    <p>Esta área contém dados comerciais e dados pessoais de clientes/leads. Introduza a password de acesso para continuar.</p>
+    <p>Esta área contém dados comerciais e dados pessoais de clientes/leads. A proteção por password está temporariamente desativada.</p>
     <form id="accessForm">
       <label>
         <span>Password</span>
@@ -46,8 +46,18 @@
     const message = document.getElementById('message');
     const params = new URLSearchParams(window.location.search);
     const next = params.get('next') || '/';
+    const accessEnabled = false;
 
-    form.addEventListener('submit', async event => {
+    if (!accessEnabled) {
+      form.innerHTML = `
+        <div class="message ok">Protecao temporariamente desativada. Pode entrar sem password.</div>
+        <button type="button" data-open-commercial>Entrar na Versao Comercial</button>
+      `;
+      form.querySelector('[data-open-commercial]').addEventListener('click', () => {
+        window.location.assign(next.startsWith('/') ? next : '/');
+      });
+    } else {
+      form.addEventListener('submit', async event => {
       event.preventDefault();
       button.disabled = true;
       message.className = 'message';
@@ -68,7 +78,8 @@
         button.disabled = false;
         password.select();
       }
-    });
+      });
+    }
   </script>
 </body>
 </html>
