@@ -1,6 +1,6 @@
 "use strict";
 (()=>{
-const KEY='theView.crmCommercial.v2',LOCAL_REMOTE_BACKUP_KEY=KEY+'.backupBeforeRemoteLoad',CONFIG=window.THE_VIEW_CONFIG||{},REMOTE_URL=(CONFIG.GOOGLE_SHEETS_WEBAPP_URL||'').trim();
+const KEY='theView.crmCommercial.v2',LOCAL_REMOTE_BACKUP_KEY=KEY+'.backupBeforeRemoteLoad',LOCAL_PENDING_SYNC_KEY=KEY+'.pendingSync',CONFIG=window.THE_VIEW_CONFIG||{},REMOTE_URL=(CONFIG.GOOGLE_SHEETS_WEBAPP_URL||'').trim();
 const PLANT_MAP={"1": {"image": "plantas/planta-apartamento-01.jpg", "pdf": "plantas/planta-apartamento-01.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_01.pdf"}, "2": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "10": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "17": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "24": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "31": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "3": {"image": "plantas/planta-apartamento-03.jpg", "pdf": "plantas/planta-apartamento-03.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_03.pdf"}, "4": {"image": "plantas/planta-apartamento-04.jpg", "pdf": "plantas/planta-apartamento-04.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_04.pdf"}, "5": {"image": "plantas/planta-apartamento-05.jpg", "pdf": "plantas/planta-apartamento-05.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_05.pdf"}, "6": {"image": "plantas/planta-apartamento-06.jpg", "pdf": "plantas/planta-apartamento-06.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_06.pdf"}, "7": {"image": "plantas/planta-apartamento-07-15.jpg", "pdf": "plantas/planta-apartamento-07-15.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf"}, "15": {"image": "plantas/planta-apartamento-07-15.jpg", "pdf": "plantas/planta-apartamento-07-15.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf"}, "8": {"image": "plantas/planta-apartamento-08.jpg", "pdf": "plantas/planta-apartamento-08.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_08.pdf"}, "9": {"image": "plantas/planta-apartamento-09-16.jpg", "pdf": "plantas/planta-apartamento-09-16.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf"}, "16": {"image": "plantas/planta-apartamento-09-16.jpg", "pdf": "plantas/planta-apartamento-09-16.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf"}, "11": {"image": "plantas/planta-apartamento-11.jpg", "pdf": "plantas/planta-apartamento-11.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_11.pdf"}, "12": {"image": "plantas/planta-apartamento-12.jpg", "pdf": "plantas/planta-apartamento-12.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_12.pdf"}, "13": {"image": "plantas/planta-apartamento-13.jpg", "pdf": "plantas/planta-apartamento-13.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_13.pdf"}, "14": {"image": "plantas/planta-apartamento-14.jpg", "pdf": "plantas/planta-apartamento-14.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_14.pdf"}, "18": {"image": "plantas/planta-apartamento-18.jpg", "pdf": "plantas/planta-apartamento-18.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_18.pdf"}, "19": {"image": "plantas/planta-apartamento-19.jpg", "pdf": "plantas/planta-apartamento-19.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_19.pdf"}, "20": {"image": "plantas/planta-apartamento-20.jpg", "pdf": "plantas/planta-apartamento-20.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_20.pdf"}, "21": {"image": "plantas/planta-apartamento-21.jpg", "pdf": "plantas/planta-apartamento-21.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_21.pdf"}, "22": {"image": "plantas/planta-apartamento-22.jpg", "pdf": "plantas/planta-apartamento-22.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_22.pdf"}, "23": {"image": "plantas/planta-apartamento-23-30.jpg", "pdf": "plantas/planta-apartamento-23-30.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf"}, "30": {"image": "plantas/planta-apartamento-23-30.jpg", "pdf": "plantas/planta-apartamento-23-30.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf"}, "25": {"image": "plantas/planta-apartamento-25.jpg", "pdf": "plantas/planta-apartamento-25.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_25.pdf"}, "26": {"image": "plantas/planta-apartamento-26.jpg", "pdf": "plantas/planta-apartamento-26.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_26.pdf"}, "27": {"image": "plantas/planta-apartamento-27.jpg", "pdf": "plantas/planta-apartamento-27.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_27.pdf"}, "28": {"image": "plantas/planta-apartamento-28.jpg", "pdf": "plantas/planta-apartamento-28.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_28.pdf"}, "29": {"image": "plantas/planta-apartamento-29.jpg", "pdf": "plantas/planta-apartamento-29.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_29.pdf"}, "32": {"image": "plantas/planta-apartamento-32.jpg", "pdf": "plantas/planta-apartamento-32.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_32.pdf"}, "33": {"image": "plantas/planta-apartamento-33.jpg", "pdf": "plantas/planta-apartamento-33.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_33.pdf"}, "34": {"image": "plantas/planta-apartamento-34.jpg", "pdf": "plantas/planta-apartamento-34.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_34.pdf"}, "35": {"image": "plantas/planta-apartamento-35.jpg", "pdf": "plantas/planta-apartamento-35.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_35.pdf"}, "36": {"image": "plantas/planta-apartamento-36.jpg", "pdf": "plantas/planta-apartamento-36.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_36.pdf"}, "37": {"image": "plantas/planta-apartamento-37.jpg", "pdf": "plantas/planta-apartamento-37.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_37.pdf"}, "38": {"image": "plantas/planta-apartamento-38.jpg", "pdf": "plantas/planta-apartamento-38.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_38.pdf"}, "39": {"image": "plantas/planta-apartamento-39.jpg", "pdf": "plantas/planta-apartamento-39.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_39.pdf"}};
 const ORIENT={1:'Sul/Este',2:'Sul/Oeste',3:'Oeste',4:'Oeste',5:'Oeste',6:'Este/Oeste',7:'Este',8:'Este',9:'Sul/Este',10:'Sul/Oeste',11:'Oeste',12:'Oeste',13:'Oeste',14:'Este/Oeste',15:'Este',16:'Sul/Este',17:'Sul/Oeste',18:'Oeste',19:'Oeste',20:'Oeste',21:'Este/Oeste',22:'Este',23:'Sul/Este',24:'Sul/Oeste',25:'Oeste',26:'Este/Oeste',27:'Oeste',28:'Este/Oeste',29:'Este',30:'Sul/Este',31:'Sul/Oeste',32:'Oeste',33:'Este/Oeste',34:'Este/Oeste',35:'Este/Oeste',36:'Sul/Este',37:'Sul/Oeste',38:'Oeste',39:'Este/Oeste'};
 const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
@@ -25,6 +25,7 @@ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded'
 function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareFractions','compareNotice','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientInitialRequestFields','clientInitialRequestDate','clientInitialRequestTime','clientInitialRequestChannel','clientInitialRequestNotes','clientSkipInitialRequest','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
 function bind(){
   ensurePriceListButton();
+  window.addEventListener('pagehide',flushPendingSyncOnUnload);
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
   const proposalsShortcut=document.getElementById('openProposalsArea');
   if(proposalsShortcut)proposalsShortcut.onclick=()=>switchTab('proposals');
@@ -2567,6 +2568,7 @@ async function loadRemoteData(){
 
   const localData = loadDataLocal();
   const localHasData = hasBusinessData(localData);
+  const localPending = hasPendingLocalSync();
 
   const j = await loadRemoteJsonp();
   if(j && j.ok && j.data){
@@ -2584,6 +2586,14 @@ async function loadRemoteData(){
 
     if(remoteHasData){
       backupLocalBeforeRemoteLoad(localData, remoteData);
+      if(localPending && localHasData && JSON.stringify(localData)!==JSON.stringify(remoteData)){
+        const mergedData = mergeCommercialData(remoteData, localData);
+        state.data = mergedData;
+        saveLocalOnly();
+        setStatus('Dados locais pendentes preservados · a reenviar para Google Sheets');
+        return {shouldSave:JSON.stringify(mergedData)!==JSON.stringify(remoteData)};
+      }
+      if(localPending)clearPendingLocalSync();
       state.data = remoteData;
       saveLocalOnly();
       setStatus('Dados sincronizados com Google Sheets');
@@ -2603,6 +2613,61 @@ let saveTimer=null;
 function saveLocalOnly(){
   localStorage.setItem(KEY, JSON.stringify(state.data));
 }
+function markPendingLocalSync(){
+  try{
+    localStorage.setItem(LOCAL_PENDING_SYNC_KEY,JSON.stringify({
+      createdAt:new Date().toISOString(),
+      clients:(state.data.clients||[]).length,
+      events:(state.data.events||[]).length,
+      agents:(state.data.agents||[]).length
+    }));
+  }catch(err){
+    console.warn('Falha ao marcar sincronização local pendente',err);
+  }
+}
+function hasPendingLocalSync(){
+  try{return !!localStorage.getItem(LOCAL_PENDING_SYNC_KEY)}catch{return false}
+}
+function clearPendingLocalSync(){
+  try{localStorage.removeItem(LOCAL_PENDING_SYNC_KEY)}catch{}
+}
+function mergeById(remoteItems=[],localItems=[]){
+  const map=new Map();
+  (remoteItems||[]).forEach(item=>{if(item?.id)map.set(item.id,item)});
+  (localItems||[]).forEach(item=>{if(item?.id)map.set(item.id,{...(map.get(item.id)||{}),...item})});
+  return [...map.values()];
+}
+function mergeHistoryByFraction(remoteHistory={},localHistory={}){
+  const merged={...remoteHistory};
+  Object.entries(localHistory||{}).forEach(([key,items])=>{
+    const seen=new Set((merged[key]||[]).map(item=>JSON.stringify(item)));
+    merged[key]=[...(merged[key]||[])];
+    (items||[]).forEach(item=>{
+      const sig=JSON.stringify(item);
+      if(!seen.has(sig)){seen.add(sig);merged[key].push(item)}
+    });
+  });
+  return merged;
+}
+function mergeCommercialData(remoteData={},localData={}){
+  const remote=normalizeData(remoteData),local=normalizeData(localData);
+  return normalizeData({
+    ...remote,
+    finalPrices:{...remote.finalPrices,...local.finalPrices},
+    statuses:{...remote.statuses,...local.statuses},
+    salePrices:{...remote.salePrices,...local.salePrices},
+    priceHistory:mergeHistoryByFraction(remote.priceHistory,local.priceHistory),
+    clients:mergeById(remote.clients,local.clients),
+    events:mergeById(remote.events,local.events),
+    agents:mergeById(remote.agents,local.agents),
+    saleCommissions:{...remote.saleCommissions,...local.saleCommissions},
+    unavailableReasons:{...remote.unavailableReasons,...local.unavailableReasons},
+    statusEventIds:{...remote.statusEventIds,...local.statusEventIds},
+    salePriceEventIds:{...remote.salePriceEventIds,...local.salePriceEventIds},
+    priceMigrationKey:local.priceMigrationKey||remote.priceMigrationKey,
+    crmMigrationKey:local.crmMigrationKey||remote.crmMigrationKey
+  });
+}
 function backupLocalBeforeRemoteLoad(localData, remoteData){
   try{
     const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
@@ -2618,14 +2683,30 @@ function backupLocalBeforeRemoteLoad(localData, remoteData){
 }
 function save(){
   saveLocalOnly();
+  markPendingLocalSync();
   if(REMOTE_URL){
     clearTimeout(saveTimer);
     saveTimer=setTimeout(syncRemote,300);
   }
 }
+function remotePayload(){
+  return JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()});
+}
+function flushPendingSyncOnUnload(){
+  if(!REMOTE_URL||!hasPendingLocalSync())return;
+  try{
+    const payload=remotePayload();
+    if(navigator.sendBeacon){
+      const blob=new Blob([payload],{type:'text/plain;charset=utf-8'});
+      navigator.sendBeacon(REMOTE_URL,blob);
+    }
+  }catch(err){
+    console.warn('Falha ao enviar sincronização pendente ao sair',err);
+  }
+}
 async function syncRemote(){
   if(!REMOTE_URL) return;
-  const payload = JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()});
+  const payload = remotePayload();
 
   try{
     setStatus('A guardar no Google Sheets…');
