@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <title>The View · Acesso Comercial</title>
   <style>
     :root{--bg:#f2f4f7;--text:#16233d;--muted:#61718b;--accent:#b89253;--line:rgba(22,35,61,.12);--danger:#b23c2e}
@@ -41,6 +43,8 @@
   </main>
   <script>
     const form = document.getElementById('accessForm');
+    const accessPageVersion = 'protected-2026-07-16';
+    document.documentElement.dataset.accessVersion = accessPageVersion;
     const password = document.getElementById('password');
     const button = document.getElementById('submitButton');
     const message = document.getElementById('message');
