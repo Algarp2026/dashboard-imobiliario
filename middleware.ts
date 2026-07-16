@@ -1,6 +1,6 @@
 const COOKIE_NAME = "tv_commercial_access";
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 8;
-const COMMERCIAL_ACCESS_ENABLED = false;
+const COMMERCIAL_ACCESS_ENABLED = true;
 
 export const config = {
   matcher: [
