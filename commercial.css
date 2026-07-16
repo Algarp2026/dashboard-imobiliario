@@ -33,7 +33,15 @@
 .event-fraction-chip{border:1px solid rgba(30,70,124,.18);border-radius:999px;background:rgba(30,70,124,.07);color:var(--blue);padding:7px 10px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
 .event-fraction-chip:hover{background:rgba(30,70,124,.13)}
 .event-fraction-chip span{margin-left:4px;font-size:1rem;line-height:0}
+.duplicate-client-modal{width:min(680px,100%)}
+.duplicate-client-card{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0;padding:12px;border:1px solid var(--line);border-radius:18px;background:rgba(244,247,251,.75)}
+.duplicate-client-card>div{border-radius:14px;background:#fff;padding:14px;box-shadow:0 8px 22px rgba(16,30,54,.06)}
+.duplicate-client-card span,.duplicate-client-card small{display:block;color:var(--muted)}
+.duplicate-client-card span{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.duplicate-client-card strong{display:block;margin:6px 0 4px;color:var(--text)}
+.duplicate-client-actions{align-items:center}
 @media(max-width:800px){.crm-form-section__heading,.crm-detail-section__heading,.event-price-row__title{display:block}.crm-preference-grid{grid-template-columns:1fr}.client-summary-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.duplicate-client-card{grid-template-columns:1fr}.duplicate-client-actions{justify-content:flex-start}.duplicate-client-actions .primary-button,.duplicate-client-actions .ghost-button{width:100%}}
 @media(max-width:520px){.client-summary-grid{grid-template-columns:1fr}}
 
 .client-sticky-actions{position:sticky;top:12px;z-index:12;display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px;padding:11px 13px;background:rgba(255,255,255,.94);border:1px solid rgba(22,35,61,.1);border-radius:14px;box-shadow:0 10px 26px rgba(16,30,54,.1);backdrop-filter:blur(18px)}

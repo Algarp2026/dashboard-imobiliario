@@ -22,7 +22,7 @@ const RenderFlow={
   salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();renderMaintenanceModalLists();}
 };
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
-function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareFractions','compareNotice','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
+function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareFractions','compareNotice','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientInitialRequestFields','clientInitialRequestDate','clientInitialRequestTime','clientInitialRequestChannel','clientInitialRequestNotes','clientSkipInitialRequest','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
 function bind(){
   ensurePriceListButton();
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
@@ -81,6 +81,21 @@ function ensureCrmFormFields(){
 
   const clientFractions=document.getElementById('clientFractions');
   const clientFractionsField=clientFractions?.closest('.field');
+  if(clientFractionsField&&!document.getElementById('clientInitialRequestFields')){
+    const section=document.createElement('section');
+    section.id='clientInitialRequestFields';
+    section.className='crm-form-section client-initial-request-section';
+    section.innerHTML=`<div class="crm-form-section__heading"><h3>Pedido inicial</h3><p class="muted small">Ao criar o cliente, pode registar tamb&eacute;m o primeiro pedido no hist&oacute;rico comercial.</p></div>
+      <div class="form-grid">
+        <label class="field"><span>Data do pedido</span><input id="clientInitialRequestDate" type="date"></label>
+        <label class="field"><span>Hora</span><input id="clientInitialRequestTime" type="time"></label>
+        <label class="field"><span>Canal / origem do pedido</span><select id="clientInitialRequestChannel"><option>Website The View</option><option>Outdoor</option><option>Mupie</option><option>Agente</option><option>Amigo</option><option>Familiar</option><option>Telefone</option><option>WhatsApp</option><option>Email</option><option>Presencial</option><option>Outro</option></select></label>
+        <label class="field"><span>Observa&ccedil;&atilde;o inicial</span><textarea id="clientInitialRequestNotes" placeholder="Ex.: Pedido recebido por WhatsApp, quer receber valores de T2."></textarea></label>
+      </div>
+      <p class="muted small initial-request-hint">As fra&ccedil;&otilde;es, tipologia, or&ccedil;amento e agente respons&aacute;vel usam os campos da pr&oacute;pria ficha do cliente.</p>
+      <label class="toggle-pill initial-request-skip"><input id="clientSkipInitialRequest" type="checkbox" /> <span>Criar apenas a ficha do cliente, sem registar pedido inicial</span></label>`;
+    clientFractionsField.parentElement.insertBefore(section,clientFractionsField);
+  }
   if(clientFractionsField&&!document.getElementById('clientPreferenceFields')){
     const section=document.createElement('section');
     section.id='clientPreferenceFields';
@@ -1135,6 +1150,7 @@ function renderSalesEventsPanel(){
     const c=client(ev.clientId);
     const fr=(ev.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—';
     const ag=ev.agentId?agent(ev.agentId):null;
+    const commercialDetails=eventRequestDetailsHtml(ev);
     return `<div class="event-item">
       <div class="section-heading compact">
         <div>
@@ -1148,6 +1164,7 @@ function renderSalesEventsPanel(){
       </div>
       ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
       ${ev.channel?`<p class="muted small">Canal: ${esc(ev.channel)}</p>`:''}
+      ${commercialDetails}
       ${(ev.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(ev.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
       ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
       ${ev.objections?`<p><strong>Objeções:</strong> ${esc(ev.objections)}</p>`:''}
@@ -1330,7 +1347,7 @@ function renderClientDetail(){
     <section class="crm-detail-section"><div class="crm-detail-section__heading"><h3>Resumo Comercial</h3></div><div class="kpi-grid client-summary-grid"><article class="kpi-card"><span>Orçamento</span><strong>${c.budget?money(c.budget):'—'}</strong></article><article class="kpi-card"><span>Frações apresentadas</span><strong>${(summary.presentedFractions||[]).length}</strong><small>${esc((summary.presentedFractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</small></article><article class="kpi-card"><span>Último contacto</span><strong class="compact-value">${esc(summary.lastContact||'—')}</strong></article><article class="kpi-card"><span>Próximo follow-up</span><strong class="compact-value">${esc(summary.nextFollowup||'—')}</strong></article><article class="kpi-card"><span>Próximo passo</span><strong class="compact-value">${esc(summary.nextStep||'—')}</strong></article></div>${informed?`<p class="crm-inline-summary"><strong>Últimos preços informados:</strong> ${esc(informed)}</p>`:''}</section>
     <section class="crm-detail-section"><h3>Preferências</h3><div class="crm-preference-grid">${[['Tipologia',prefs.typology],['Piso',prefs.floor],['Orientação',prefs.orientation],['Objetivo',prefs.objective],['Prazo de decisão',prefs.decisionTime],['Resumo',prefs.summary]].map(([label,value])=>`<div><span>${esc(label)}</span><strong>${esc(value||'—')}</strong></div>`).join('')}</div></section>
     <section class="crm-detail-section"><h3>Frações e Preços</h3>${fractionRows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Fração</th><th>Estado com cliente</th><th class="num-col">Preço informado</th><th>Data</th><th>Observação</th></tr></thead><tbody>${fractionRows.map(row=>`<tr><td>Apt. ${row.fraction}</td><td>${esc(row.status)}</td><td class="num-col">${row.informedPrice?money(row.informedPrice):'—'}</td><td>${esc(row.date||'—')}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem frações associadas.</div>'}</section>
-    <section class="crm-detail-section"><h3>Histórico</h3><div class="timeline">${evs.length?evs.map(e=>`<div class="timeline-item"><div class="section-heading compact"><div><strong>${esc(e.date||'')} ${esc(e.time||'')} · ${esc(e.type)}</strong><p class="muted">Frações: ${esc((e.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</p></div><button class="ghost-button" type="button" data-edit-client-event="${attr(e.id)}">Ver / Editar</button></div>${e.channel?`<p class="muted small">Canal: ${esc(e.channel)}</p>`:''}${e.amount?`<p><strong>Valor:</strong> ${money(e.amount)}</p>`:''}${(e.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(e.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}${e.notes?`<p>${esc(e.notes)}</p>`:''}${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}</div>`).join(''):'<div class="empty-state">Sem eventos para este cliente.</div>'}</div></section>
+    <section class="crm-detail-section"><h3>Histórico</h3><div class="timeline">${evs.length?evs.map(e=>`<div class="timeline-item"><div class="section-heading compact"><div><strong>${esc(e.date||'')} ${esc(e.time||'')} · ${esc(e.type)}</strong><p class="muted">Frações: ${esc((e.fractions||[]).map(n=>'Apt. '+n).join(', ')||'—')}</p></div><button class="ghost-button" type="button" data-edit-client-event="${attr(e.id)}">Ver / Editar</button></div>${e.channel?`<p class="muted small">Canal: ${esc(e.channel)}</p>`:''}${eventRequestDetailsHtml(e)}${e.amount?`<p><strong>Valor:</strong> ${money(e.amount)}</p>`:''}${(e.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(e.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}${e.notes?`<p>${esc(e.notes)}</p>`:''}${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}</div>`).join(''):'<div class="empty-state">Sem eventos para este cliente.</div>'}</div></section>
     <section class="crm-detail-section"><h3>Notas</h3><p class="muted">${esc(c.notes||'Sem notas livres.')}</p></section>`;
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
   el.clientDetail.querySelector('[data-add-client-event]')?.addEventListener('click',()=>openEventModal('','client'));
@@ -1490,6 +1507,127 @@ function clientAgentIdFromClient(c={}){
   const name=norm(c.agent||''), agency=norm(c.agency||'');
   const a=(state.data.agents||[]).find(x=>(name&&norm(x.name||'')===name)||(agency&&norm(x.agency||'')===agency));
   return a?a.id:'';
+}
+function currentTimeValue(){
+  const d=new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function clientPhoneDigits(v){return safe(v).replace(/\D/g,'')}
+function sameClientPhone(a,b){
+  const x=clientPhoneDigits(a),y=clientPhoneDigits(b);
+  return x.length>=5&&y.length>=5&&(x===y||x.endsWith(y)||y.endsWith(x));
+}
+function findPotentialDuplicateClient(candidate={},excludeId=''){
+  const email=norm(candidate.email),name=norm(candidate.name);
+  const clients=(state.data.clients||[]).filter(c=>c.id!==excludeId);
+  if(email){
+    const found=clients.find(c=>norm(c.email)===email);
+    if(found)return{client:found,reason:'email'};
+  }
+  const phoneFound=clients.find(c=>sameClientPhone(c.phone,candidate.phone));
+  if(phoneFound)return{client:phoneFound,reason:'contacto'};
+  if(name){
+    const found=clients.find(c=>norm(c.name)===name);
+    if(found)return{client:found,reason:'nome'};
+  }
+  return null;
+}
+function chooseDuplicateClientAction(duplicate,candidate={},reason=''){
+  return new Promise(resolve=>{
+    const existing=document.getElementById('duplicateClientModal');
+    if(existing)existing.remove();
+    const previousOverflow=document.body.style.overflow;
+    const modal=document.createElement('div');
+    modal.id='duplicateClientModal';
+    modal.className='modal-backdrop';
+    modal.style.zIndex='170';
+    modal.innerHTML=`<div class="modal duplicate-client-modal">
+      <button class="modal-close" type="button" data-duplicate-action="">&times;</button>
+      <p class="eyebrow eyebrow--dark">Clientes / Leads</p>
+      <h2>Poss&iacute;vel cliente duplicado</h2>
+      <p class="muted">Foi encontrado um cliente existente com o mesmo ${esc(reason||'dado principal')}. Escolha como pretende continuar.</p>
+      <div class="duplicate-client-card">
+        <div><span>Cliente existente</span><strong>${esc(duplicate?.name||'Cliente sem nome')}</strong><small>${esc([duplicate?.phone,duplicate?.email].filter(Boolean).join(' · ')||'Sem contacto registado')}</small></div>
+        <div><span>Novo registo</span><strong>${esc(candidate?.name||'Cliente sem nome')}</strong><small>${esc([candidate?.phone,candidate?.email].filter(Boolean).join(' · ')||'Sem contacto indicado')}</small></div>
+      </div>
+      <div class="modal-actions duplicate-client-actions">
+        <button class="ghost-button" type="button" data-duplicate-action="">Cancelar</button>
+        <button class="ghost-button" type="button" data-duplicate-action="open-existing">Abrir cliente existente</button>
+        <button class="ghost-button danger" type="button" data-duplicate-action="create-duplicate">Criar nova ficha mesmo assim</button>
+        <button class="primary-button" type="button" data-duplicate-action="add-request">Registar pedido no cliente existente</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    document.body.style.overflow='hidden';
+    const close=value=>{
+      modal.remove();
+      document.body.style.overflow=previousOverflow;
+      resolve(value);
+    };
+    modal.querySelectorAll('[data-duplicate-action]').forEach(btn=>btn.addEventListener('click',()=>close(btn.dataset.duplicateAction||'')));
+    modal.addEventListener('click',e=>{if(e.target===modal)close('')});
+    modal.addEventListener('keydown',e=>{if(e.key==='Escape')close('')});
+  });
+}
+function buildInitialRequestEvent(clientId,c={}){
+  const selectedAgentId=el.clientAgent?.value||c.agentId||'';
+  const selectedAgent=agent(selectedAgentId);
+  const preferences=cleanPreferences({
+    typology:el.clientTypologyPreference?.value||c.preferences?.typology||'',
+    floor:el.clientFloorPreference?.value||c.preferences?.floor||'',
+    orientation:el.clientOrientationPreference?.value||c.preferences?.orientation||'',
+    objective:el.clientPurchaseObjective?.value||c.preferences?.objective||'',
+    decisionTime:el.clientDecisionTime?.value||c.preferences?.decisionTime||'',
+    summary:el.clientPreferenceSummary?.value||c.preferences?.summary||''
+  });
+  return {
+    id:id(),
+    clientId,
+    type:EVENT_TYPES[0],
+    date:el.clientInitialRequestDate?.value||today(),
+    time:el.clientInitialRequestTime?.value||currentTimeValue(),
+    channel:el.clientInitialRequestChannel?.value||clientOriginLabel(c),
+    amount:0,
+    interest:preferences.typology||'',
+    nextStep:'',
+    followup:'',
+    followupDate:'',
+    fractions:el.clientFractions?getMulti(el.clientFractions).map(Number):uniqNum(c.fractions||[]),
+    preferences,
+    preferenceBudget:num(el.clientBudget?.value||c.budget||0),
+    informedPrices:[],
+    objections:'',
+    notes:el.clientInitialRequestNotes?.value.trim()||'',
+    withAgent:false,
+    agentId:'',
+    commissionType:'',
+    commissionValue:0,
+    commissionAmount:0,
+    initialRequest:true,
+    responsibleAgentId:selectedAgentId,
+    responsibleName:selectedAgent?(selectedAgent.name||selectedAgent.agency||''):safe(c.agent||c.agency||'')
+  };
+}
+function eventResponsibleLabel(ev={}){
+  const a=agent(ev.responsibleAgentId||'');
+  return safe(a?.name||a?.agency||ev.responsibleName||'');
+}
+function eventRequestDetailsHtml(ev={}){
+  const prefs=cleanPreferences(ev.preferences||{});
+  const bits=[
+    prefs.typology?`Tipologia: ${prefs.typology}`:'',
+    ev.preferenceBudget?`Orçamento: ${money(ev.preferenceBudget)}`:'',
+    prefs.floor?`Piso: ${prefs.floor}`:'',
+    prefs.orientation?`Orientação: ${prefs.orientation}`:'',
+    prefs.objective?`Objetivo: ${prefs.objective}`:'',
+    prefs.decisionTime?`Prazo: ${prefs.decisionTime}`:'',
+    prefs.summary?`Resumo: ${prefs.summary}`:''
+  ].filter(Boolean);
+  const responsible=eventResponsibleLabel(ev);
+  return [
+    bits.length?`<p class="muted small">Detalhes comerciais: ${esc(bits.join(' · '))}</p>`:'',
+    responsible?`<p class="muted small">Responsável: ${esc(responsible)}</p>`:''
+  ].join('');
 }
 function ensureEventClientQuickCreate(){
   const field=el.eventClientId?.parentElement;
@@ -1926,6 +2064,14 @@ function openClientModal(cid=''){
   el.clientStage.dataset.original=el.clientStage.value;
   el.clientNextStep.value=isEdit?(c.manualNextStep||c.nextStep||''):'';
   el.clientNextFollowup.value=isEdit?(c.manualNextFollowup||c.nextFollowup||''):'';
+  el.clientInitialRequestFields?.classList.toggle('hidden',isEdit);
+  if(!isEdit){
+    if(el.clientInitialRequestDate)el.clientInitialRequestDate.value=today();
+    if(el.clientInitialRequestTime)el.clientInitialRequestTime.value=currentTimeValue();
+    if(el.clientInitialRequestChannel)el.clientInitialRequestChannel.value='Website The View';
+    if(el.clientInitialRequestNotes)el.clientInitialRequestNotes.value='';
+    if(el.clientSkipInitialRequest)el.clientSkipInitialRequest.checked=!!state.pendingEventClientCreation;
+  }
   const preferences=cleanPreferences(isEdit?(c.preferences||c.manualPreferences||{}):{});
   el.clientTypologyPreference.value=preferences.typology;
   el.clientFloorPreference.value=preferences.floor;
@@ -1936,15 +2082,18 @@ function openClientModal(cid=''){
   setMulti(el.clientFractions,isEdit?(c.fractions||[]):[]);
   el.clientNotes.value=isEdit?(c.notes||''):'';
   const title=el.clientModal.querySelector('h2');
-  if(title)title.textContent=isEdit?'Editar ficha do cliente':'Novo cliente';
+  if(title)title.textContent=isEdit?'Editar ficha do cliente':'Novo cliente / pedido de informação';
   const saveBtn=document.getElementById('saveClient');
-  if(saveBtn)saveBtn.textContent=isEdit?'Atualizar cliente':'Guardar cliente';
+  const updateSaveLabel=()=>{if(saveBtn)saveBtn.textContent=isEdit?'Atualizar cliente':(el.clientSkipInitialRequest?.checked?'Guardar cliente':'Guardar cliente e pedido')};
+  updateSaveLabel();
+  if(el.clientSkipInitialRequest)el.clientSkipInitialRequest.onchange=updateSaveLabel;
   el.clientModal.classList.remove('hidden');
   el.clientModal.style.zIndex='50';
   document.body.style.overflow='hidden';
 }
 function closeClientModal(){el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
 async function saveClient(){
+  const isNew=!el.clientId.value;
   let cid=el.clientId.value||id();
   const existing=client(cid)||{};
   const selectedAgentId=el.clientAgent?.value||'';
@@ -1983,9 +2132,67 @@ async function saveClient(){
     updated:new Date().toLocaleString('pt-PT')
   };
   if(!c.name){await notifyUser('Indique o nome do cliente.','Cliente / Lead');return}
-  const idx=state.data.clients.findIndex(x=>x.id===cid);
-  idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
-  recalculateResumoCliente(cid);
+  if(isNew){
+    const duplicate=findPotentialDuplicateClient(c);
+    if(duplicate){
+      const action=await chooseDuplicateClientAction(duplicate.client,c,duplicate.reason);
+      if(!action)return;
+      if(action==='open-existing'){
+        state.selectedClientId=duplicate.client.id;
+        renderClientSelects();
+        if(state.pendingEventClientCreation&&el.eventClientId){
+          el.eventClientId.value=duplicate.client.id;
+          state.pendingEventClientCreation=false;
+        }
+        closeClientModal();
+        RenderFlow.clientChanged();
+        return;
+      }
+      if(action==='add-request'){
+        const clientsBefore=JSON.parse(JSON.stringify(state.data.clients||[]));
+        const eventsBefore=JSON.parse(JSON.stringify(state.data.events||[]));
+        try{
+          state.data.clients=state.data.clients||[];
+          state.data.events=state.data.events||[];
+          applyEventBusinessRules(buildInitialRequestEvent(duplicate.client.id,c));
+          recalculateResumoCliente(duplicate.client.id);
+        }catch(err){
+          state.data.clients=clientsBefore;
+          state.data.events=eventsBefore;
+          console.error('Falha ao registar pedido inicial em cliente existente',err);
+          await notifyUser('Nao foi possivel registar o pedido inicial. Nenhum dado foi alterado.','Cliente / Lead');
+          return;
+        }
+        state.selectedClientId=duplicate.client.id;
+        save();
+        renderClientSelects();
+        if(state.pendingEventClientCreation&&el.eventClientId){
+          el.eventClientId.value=duplicate.client.id;
+          state.pendingEventClientCreation=false;
+        }
+        closeClientModal();
+        RenderFlow.clientChanged();
+        return;
+      }
+    }
+  }
+  const initialEvent=isNew&&!(el.clientSkipInitialRequest?.checked)?buildInitialRequestEvent(cid,c):null;
+  const clientsBefore=JSON.parse(JSON.stringify(state.data.clients||[]));
+  const eventsBefore=JSON.parse(JSON.stringify(state.data.events||[]));
+  try{
+    state.data.clients=state.data.clients||[];
+    state.data.events=state.data.events||[];
+    const idx=state.data.clients.findIndex(x=>x.id===cid);
+    idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
+    if(initialEvent)applyEventBusinessRules(initialEvent);
+    else recalculateResumoCliente(cid);
+  }catch(err){
+    state.data.clients=clientsBefore;
+    state.data.events=eventsBefore;
+    console.error('Falha ao guardar cliente',err);
+    await notifyUser('Nao foi possivel guardar o cliente. Nenhum dado foi alterado.','Cliente / Lead');
+    return;
+  }
   state.selectedClientId=cid;
   save();
   renderClientSelects();
