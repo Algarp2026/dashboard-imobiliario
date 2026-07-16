@@ -1,5 +1,6 @@
 const COOKIE_NAME = "tv_commercial_access";
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 8;
+const COMMERCIAL_ACCESS_ENABLED = false;
 
 export const config = {
   matcher: [
@@ -13,6 +14,8 @@ export const config = {
 };
 
 export default async function middleware(request: Request) {
+  if (!COMMERCIAL_ACCESS_ENABLED) return;
+
   if (await hasValidSession(request)) return;
 
   const url = new URL(request.url);
