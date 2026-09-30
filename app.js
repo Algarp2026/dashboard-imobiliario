@@ -252,6 +252,7 @@
     const direct = compMatches(f,'direct');
     const indirect = compMatches(f,'indirect');
     const broad = compMatches(f,'broad');
+    const strategic = strategicBenchmarks(f);
     const internal = internalComparables(f);
     const plantFamily = state.fractions.filter(other => other.number !== f.number && plantFamilyKey(other) === plantFamilyKey(f));
     const external = [...new Set([...direct,...indirect,...broad])];
@@ -290,6 +291,10 @@
           <div><h4>Concorrência interna</h4><p>${plantFamily.length ? `${plantFamily.length} frações da mesma família de planta. Referências técnicas de ${money(Math.min(...plantFamily.map(x=>x.recommendedPrice || x.price)))} a ${money(Math.max(...plantFamily.map(x=>x.recommendedPrice || x.price)))}.` : 'Sem outra fração da mesma família de planta; ver tipologia, área e pisos próximos na tabela.'}</p></div>
           <div><h4>Concorrência externa</h4><p>${direct.length} diretos, ${indirect.length} indiretos e ${broad.length} pouco concorrentes. ${historical} históricos; ${lowQuality} com qualidade de dados baixa.</p></div>
         </div>
+      </section>
+      <section class="fraction-analysis__section"><h3>Benchmarks estratégicos</h3>
+        <p class="muted small">Referências de posicionamento, selecionadas por atualidade, tipologia, segmento e qualidade dos dados; não exigem o mesmo piso.</p>
+        <div class="strategic-comps">${strategic.length ? strategic.map(strategicItem).join('') : '<p class="muted small">Sem referências estratégicas suficientemente atuais e relevantes.</p>'}</div>
       </section>
       <section class="fraction-analysis__section"><h3>Concorrência externa</h3>
         <p class="muted small">Diretos = mesma tipologia comparável, piso e vista. Indiretos = mesma tipologia e piso. Pouco concorrentes = mesma tipologia e piso ± 1. Segmento, peso, camada, qualidade e data ajudam a avaliar cada referência.</p>
@@ -340,13 +345,64 @@
     return 'Por classificar';
   }
 
+  function selectDiverseComparables(rows, maxTotal=6, maxPerDevelopment=2) {
+    const selected = [];
+    const counts = new Map();
+    for (const row of rows) {
+      const key = normalize(row.development);
+      if ((counts.get(key) || 0) >= maxPerDevelopment) continue;
+      selected.push(row);
+      counts.set(key, (counts.get(key) || 0) + 1);
+      if (selected.length === maxTotal) break;
+    }
+    return selected;
+  }
+
+  function strategicBenchmarks(f) {
+    const temporalWeight = year => year >= 2026 ? 1 : year === 2025 ? .6 : year === 2024 ? .2 : .05;
+    const qualityWeight = quality => ({alta:1,media:.85,baixa:.6})[normalize(quality)] || .55;
+    const layerWeight = layer => ({a:1,b:.8,c:.55})[normalize(layer).charAt(0)] || .55;
+    const targetSegment = f.analysisSegment || externalSegment(f);
+    const scored = filteredCompetitors().filter(c => c.comparableTypology === f.comparableTypology && c.price > 0)
+      .map(c => {
+        const status = normalize(c.status);
+        const activeWeight = status === 'ativo' ? 1 : status === 'a validar' ? .35 : .15;
+        const segmentWeight = externalSegment(c) === targetSegment ? 1 : targetSegment === 'Standard' ? .8 : .55;
+        const typeWeight = c.typology === f.typology ? 1 : .85;
+        const score = c.weight * temporalWeight(c.referenceYear) * activeWeight * typeWeight *
+          segmentWeight * layerWeight(c.compsetLayer) * qualityWeight(c.dataQuality);
+        return { row:c, score };
+      })
+      .filter(entry => entry.score >= .25)
+      .sort((a,b) => b.score-a.score || b.row.referenceYear-a.row.referenceYear || a.row.price-b.row.price);
+    const ranked = scored.map(entry => entry.row);
+    const firstPerDevelopment = selectDiverseComparables(ranked, 6, 1);
+    const remaining = ranked.filter(row => !firstPerDevelopment.includes(row));
+    return selectDiverseComparables([...firstPerDevelopment, ...remaining], 6, 2);
+  }
+
+  function strategicItem(r) {
+    const details = [r.fractionRaw, r.typology, r.floorLabel !== '—' ? `Piso ${r.floorLabel}` : ''].filter(Boolean);
+    const areas = [r.abp > 0 ? `ABP ${area(r.abp)}` : '', r.totalArea > 0 ? `Área total ${area(r.totalArea)}` : ''].filter(Boolean);
+    const sqmArea = r.abp > 0 ? r.abp : r.totalArea;
+    const sqmLabel = r.abp > 0 ? '€/m² interior' : '€/m² total';
+    const context = [r.status !== '—' ? r.status : '', r.segment, r.compsetLayer, r.referenceYear || '',
+      r.weight > 0 ? `Peso ${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(r.weight)}` : '',
+      r.dataQuality ? `Qualidade ${r.dataQuality}` : ''].filter(Boolean);
+    return `<article class="comp-block strategic-comp"><div class="comp-item"><div><strong>${esc(r.development)}</strong>
+      <small>${esc(details.join(' · '))}</small>
+      ${areas.length ? `<small>${esc(areas.join(' · '))}</small>` : ''}
+      <small>${esc(context.join(' · '))}</small></div>
+      <div class="num-col"><strong>${money(r.price)}</strong>${sqmArea > 0 ? `<small>${money(Math.round(r.price / sqmArea),0)} ${sqmLabel}</small>` : ''}</div></div></article>`;
+  }
+
   function compBlock(title, rows, targetSegment) {
-    return `<div class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length ? rows.slice(0,6).map(r=>{
+    return `<div class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length ? selectDiverseComparables(rows).map(r=>{
       const segment = externalSegment(r);
       return `<div class="comp-item"><div><strong>${esc(r.development)}</strong><small>${esc(r.fractionRaw)} · ${esc(r.typology)} · Piso ${esc(r.floorLabel)} · Vista ${r.view||'—'}</small>
         <small><span class="comp-segment ${segment===targetSegment?'comp-segment--match':''}">${esc(segment)}${segment===targetSegment?' · mesmo segmento':''}</span> · ${esc(r.segment || 'Segmento não indicado')}</small>
         <small>${esc(r.status)} · ${r.referenceYear || 'Ano n/d'} · ${esc(r.compsetLayer || 'Camada n/d')} · Peso ${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(r.weight)} · Qualidade ${esc(r.dataQuality || 'n/d')}</small>
-      </div><div class="num-col"><strong>${money(r.price)}</strong><small>${money(Math.round(r.pricePerSqm),0)} /m²</small></div></div>`;
+      </div><div class="num-col"><strong>${money(r.price)}</strong>${r.totalArea > 0 ? `<small>${money(Math.round(r.pricePerSqm),0)} /m² total</small>` : ''}</div></div>`;
     }).join('') : '<p class="muted small">Sem concorrentes encontrados.</p>'}</div>`;
   }
 
