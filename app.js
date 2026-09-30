@@ -193,7 +193,16 @@
       pricePerSqm: totalArea ? price / totalArea : 0,
       referenceYear: parseNum(raw['Ano Referência']),
       status: safe(raw['Status']) || '—',
-      weight: parseNum(raw['Peso comparável']) || 0
+      weight: parseNum(raw['Peso comparável']) || 0,
+      compsetLayer: safe(raw['Camada compset']),
+      dataQuality: safe(raw['Qualidade dados']),
+      segment: safe(raw['Segmento']),
+      recommendedPrice: Number(raw['Preço Recomendado']) > 0 ? Number(raw['Preço Recomendado']) : null,
+      analysisVersion: safe(raw['Versão Análise']),
+      recommendationConfidence: safe(raw['Confiança Recomendação']),
+      technicalReason: safe(raw['Justificação Técnica']),
+      analysisSegment: safe(raw['Segmento Análise']),
+      analysisAvailability: safe(raw['Disponibilidade Análise'])
     };
   }
 
@@ -227,9 +236,9 @@
 
   function cardHtml(f) {
     return `<article class="fraction-card">
-      <div class="fraction-card__top"><div><h3>${esc(f.name)}</h3><p class="muted small">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p></div><span class="badge badge--accent">Vista ${f.view || '—'}</span></div>
+      <div class="fraction-card__top"><div><h3>${esc(f.name)}</h3><p class="muted small">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p>${f.analysisAvailability ? `<span class="badge badge--warning">${esc(f.analysisAvailability)}</span>` : ''}</div><span class="badge badge--accent">Vista ${f.view || '—'}</span></div>
       <div class="fraction-card__metrics">
-        <div class="metric-box"><span>Preço</span><strong>${money(f.price)}</strong></div>
+        <div class="metric-box"><span>Preço base</span><strong>${money(f.price)}</strong></div>
         <div class="metric-box"><span>€/m²</span><strong>${money(Math.round(f.pricePerSqm),0)}</strong></div>
         <div class="metric-box"><span>ABP</span><strong>${area(f.abp)}</strong></div>
         <div class="metric-box"><span>Área total</span><strong>${area(f.totalArea)}</strong></div>
@@ -243,13 +252,49 @@
     const direct = compMatches(f,'direct');
     const indirect = compMatches(f,'indirect');
     const broad = compMatches(f,'broad');
-    els.fractionModalContent.innerHTML = `<div class="modal-grid">
-      <section><p class="eyebrow eyebrow--dark">Fração</p><h2 id="modalTitle">${esc(f.name)}</h2><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p>
-        <div class="cards-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px">
-          ${metric('Preço',money(f.price))}${metric('€/m²',money(Math.round(f.pricePerSqm),0))}${metric('ABP',area(f.abp))}${metric('Área total',area(f.totalArea))}
-        </div></section>
-      <section><p class="eyebrow eyebrow--dark">Concorrência</p><h3>Comparação simplificada</h3><p class="muted small">Diretos = mesma tipologia comparável + piso + vista. Indiretos = mesma tipologia + piso. Pouco concorrente = mesma tipologia + piso ± 1.</p>
-      <div class="comps-list">${compBlock('Diretos',direct)}${compBlock('Indiretos',indirect)}${compBlock('Pouco concorrente',broad)}</div></section>
+    const internal = internalComparables(f);
+    const plantFamily = state.fractions.filter(other => other.number !== f.number && plantFamilyKey(other) === plantFamilyKey(f));
+    const external = [...new Set([...direct,...indirect,...broad])];
+    const historical = external.filter(c => normalize(c.status) === 'historico').length;
+    const lowQuality = external.filter(c => normalize(c.dataQuality) === 'baixa').length;
+    const delta = f.recommendedPrice == null ? null : f.recommendedPrice - f.price;
+    const difference = delta == null ? '—' : f.price ? signedMoney(delta) + ' / ' + signedPercent(delta / f.price) : signedMoney(delta);
+    els.fractionModalContent.innerHTML = `<div class="fraction-analysis">
+      <header class="fraction-analysis__head"><p class="eyebrow eyebrow--dark">Fração</p><h2 id="modalTitle">${esc(f.name)}</h2><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p>
+        ${f.analysisAvailability ? `<span class="badge badge--warning">${esc(f.analysisAvailability)}</span>` : ''}
+      </header>
+      <section class="fraction-analysis__section"><h3>Análise técnica</h3>
+        <div class="technical-metrics">
+          ${metric('Preço base',money(f.price))}
+          ${metric('Preço recomendado',f.recommendedPrice == null ? '—' : money(f.recommendedPrice))}
+          ${metric('Diferença',difference)}
+          ${metric('Confiança',f.recommendationConfidence || '—')}
+          ${metric('Versão da análise',analysisVersionLabel(f.analysisVersion))}
+          ${metric('Segmento',f.analysisSegment || '—')}
+        </div>
+      </section>
+      <section class="fraction-analysis__section"><h3>Concorrência interna</h3>
+        <div class="internal-comps-scroll"><table class="data-table internal-comps-table"><thead><tr>
+          <th>Fração</th><th>Piso</th><th>Tipologia</th><th>Orientação</th><th class="num-col">ABP</th><th class="num-col">Exterior</th><th class="num-col">Preço base</th><th class="num-col">Recomendado</th>
+        </tr></thead><tbody>${internal.map(other => `<tr class="${other.number===f.number?'internal-comp-current':''}">
+          <td><strong>${esc(other.name)}</strong>${other.analysisAvailability ? `<small class="internal-comp-availability">${esc(other.analysisAvailability)}</small>` : ''}</td>
+          <td>${esc(other.floorLabel)}</td><td>${esc(other.typology)}</td><td>${esc(other.orientation || '—')}</td>
+          <td class="num-col">${area(other.abp)}</td><td class="num-col">${area(other.terrace)}</td>
+          <td class="num-col">${money(other.price)}</td><td class="num-col"><strong>${other.recommendedPrice == null ? '—' : money(other.recommendedPrice)}</strong></td>
+        </tr>`).join('')}</tbody></table></div>
+      </section>
+      <section class="fraction-analysis__section"><h3>Porque este preço?</h3>
+        <p class="analysis-justification">${esc(f.technicalReason || 'Sem justificação técnica registada.')}</p>
+        <div class="analysis-reasons">
+          <div><h4>Características da fração</h4><p>${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')} · ABP ${area(f.abp)} · Exterior ${area(f.terrace)}.</p></div>
+          <div><h4>Concorrência interna</h4><p>${plantFamily.length ? `${plantFamily.length} frações da mesma família de planta. Referências técnicas de ${money(Math.min(...plantFamily.map(x=>x.recommendedPrice || x.price)))} a ${money(Math.max(...plantFamily.map(x=>x.recommendedPrice || x.price)))}.` : 'Sem outra fração da mesma família de planta; ver tipologia, área e pisos próximos na tabela.'}</p></div>
+          <div><h4>Concorrência externa</h4><p>${direct.length} diretos, ${indirect.length} indiretos e ${broad.length} pouco concorrentes. ${historical} históricos; ${lowQuality} com qualidade de dados baixa.</p></div>
+        </div>
+      </section>
+      <section class="fraction-analysis__section"><h3>Concorrência externa</h3>
+        <p class="muted small">Diretos = mesma tipologia comparável, piso e vista. Indiretos = mesma tipologia e piso. Pouco concorrentes = mesma tipologia e piso ± 1. Segmento, peso, camada, qualidade e data ajudam a avaliar cada referência.</p>
+        <div class="comps-list comps-list--analysis">${compBlock('Diretos',direct,f.analysisSegment)}${compBlock('Indiretos',indirect,f.analysisSegment)}${compBlock('Pouco concorrentes',broad,f.analysisSegment)}</div>
+      </section>
     </div>`;
     els.fractionModal.classList.remove('hidden');
     document.body.style.overflow='hidden';
@@ -257,8 +302,52 @@
 
   function closeModal() { els.fractionModal.classList.add('hidden'); document.body.style.overflow=''; }
 
-  function compBlock(title, rows) {
-    return `<div class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length ? rows.slice(0,6).map(r=>`<div class="comp-item"><div><strong>${esc(r.development)}</strong><small>${esc(r.fractionRaw)} · ${esc(r.typology)} · Piso ${esc(r.floorLabel)} · Vista ${r.view||'—'}</small></div><div class="num-col"><strong>${money(r.price)}</strong><small>${money(Math.round(r.pricePerSqm),0)} /m²</small></div></div>`).join('') : '<p class="muted small">Sem concorrentes encontrados.</p>'}</div>`;
+  function plantFamilyKey(f) {
+    return PLANT_MAP[f.number]?.pdf || PLANT_MAP[f.number]?.image || String(f.number);
+  }
+
+  function internalComparables(f) {
+    const rank = other => {
+      const samePlant = plantFamilyKey(other) === plantFamilyKey(f);
+      const sameType = other.typology === f.typology;
+      return (samePlant ? 10000 : 0) +
+        (sameType ? 1000 : other.comparableTypology === f.comparableTypology ? 500 : 0) +
+        (other.orientation === f.orientation ? 250 : 0) +
+        Math.max(0,100 - Math.abs(other.totalArea - f.totalArea) * 2) +
+        Math.max(0,20 - Math.abs(other.floor - f.floor) * 4);
+    };
+    const nearby = state.fractions.filter(other => other.number !== f.number)
+      .sort((a,b) => rank(b)-rank(a) || Math.abs(a.floor-f.floor)-Math.abs(b.floor-f.floor) || a.number-b.number)
+      .slice(0,5);
+    return [...nearby,f].sort((a,b) => a.floor-b.floor || a.number-b.number);
+  }
+
+  function analysisVersionLabel(version) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(version)) return version || '—';
+    const label = new Intl.DateTimeFormat('pt-PT',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(version + '-01T12:00:00Z')).replace(' de ',' ');
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
+  function signedMoney(value) { return (value > 0 ? '+' : '') + money(value); }
+  function signedPercent(value) {
+    return (value > 0 ? '+' : '') + new Intl.NumberFormat('pt-PT',{style:'percent',minimumFractionDigits:1,maximumFractionDigits:1}).format(value);
+  }
+
+  function externalSegment(c) {
+    const segment = normalize(c.segment);
+    if (/premium|waterfront|marina/.test(segment)) return 'Premium';
+    if (/standard|benchmark local/.test(segment)) return 'Standard';
+    return 'Por classificar';
+  }
+
+  function compBlock(title, rows, targetSegment) {
+    return `<div class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length ? rows.slice(0,6).map(r=>{
+      const segment = externalSegment(r);
+      return `<div class="comp-item"><div><strong>${esc(r.development)}</strong><small>${esc(r.fractionRaw)} · ${esc(r.typology)} · Piso ${esc(r.floorLabel)} · Vista ${r.view||'—'}</small>
+        <small><span class="comp-segment ${segment===targetSegment?'comp-segment--match':''}">${esc(segment)}${segment===targetSegment?' · mesmo segmento':''}</span> · ${esc(r.segment || 'Segmento não indicado')}</small>
+        <small>${esc(r.status)} · ${r.referenceYear || 'Ano n/d'} · ${esc(r.compsetLayer || 'Camada n/d')} · Peso ${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(r.weight)} · Qualidade ${esc(r.dataQuality || 'n/d')}</small>
+      </div><div class="num-col"><strong>${money(r.price)}</strong><small>${money(Math.round(r.pricePerSqm),0)} /m²</small></div></div>`;
+    }).join('') : '<p class="muted small">Sem concorrentes encontrados.</p>'}</div>`;
   }
 
   function renderCommercialAll() {
