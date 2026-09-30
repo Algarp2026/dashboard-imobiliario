@@ -5,11 +5,21 @@ const COMMERCIAL_ACCESS_ENABLED = true;
 export const config = {
   matcher: [
     "/",
+    "/index",
     "/index.html",
+    "/commercial",
     "/commercial.html",
     "/commercial.js",
     "/commercial.css",
-    "/config.js"
+    "/config.js",
+    "/comparador",
+    "/comparador.html",
+    "/app.js",
+    "/data.json",
+    "/data.xlsx",
+    "/data.xls",
+    "/precos_iniciais_atualizados.json",
+    "/google_apps_script.gs"
   ]
 };
 

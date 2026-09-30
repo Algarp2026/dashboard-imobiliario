@@ -1,4 +1,4 @@
-# The View - Acesso a Versao Comercial
+# The View - Acesso Interno
 
 Este projeto guarda dados comerciais e dados pessoais de clientes/leads. A protecao da versao comercial nao deve depender de uma password escrita no JavaScript, porque qualquer segredo no frontend fica visivel ou contornavel no browser.
 
@@ -16,12 +16,12 @@ Configuracao recomendada:
 4. Para proteger a pagina principal em producao, escolher um escopo que proteja o dominio de producao, idealmente `All Deployments`.
 5. Guardar e testar em janela anonima antes de partilhar o link.
 
-## Comparador publico
+## Comparador interno
 
-Se a antiga Versao Comparador tiver de continuar publica, a solucao mais limpa e separar em outro projeto/domino da Vercel, por exemplo:
+O Comparador deste repositorio tambem contem precos recomendados, minimos e argumentos internos. Por isso, usa agora a mesma sessao da Versao Comercial. Se um comparador publico for necessario no futuro, a solucao mais limpa e separar uma versao sem estes dados em outro projeto/domino da Vercel, por exemplo:
 
 - Projeto privado: versao comercial, com Deployment Protection ativo.
-- Projeto publico: `comparador.html`/comparador, sem dados comerciais.
+- Projeto publico: comparador reduzido, sem dados internos ou comerciais.
 
 No mesmo projeto, a protecao da Vercel tende a proteger o projeto/deployment conforme o escopo escolhido. Evitar tentar resolver isto com uma password no frontend.
 
@@ -35,9 +35,9 @@ No mesmo projeto, a protecao da Vercel tende a proteger o projeto/deployment con
 
 ## Fallback implementado sem Vercel Pro
 
-Como Password Protection da Vercel pode exigir plano/add-on pago, este repositorio inclui uma barreira propria para a versao comercial usando:
+Como Password Protection da Vercel pode exigir plano/add-on pago, este repositorio inclui uma barreira propria para as areas internas usando:
 
-- `middleware.ts`: bloqueia a entrega de `/`, `index.html`, `commercial.html`, `commercial.js`, `commercial.css` e `config.js` sem sessao valida.
+- `middleware.ts`: bloqueia a entrega das paginas comercial e comparador, dos respetivos scripts e dos ficheiros de dados internos (`data.json`, `data.xlsx`, precos iniciais e Apps Script) sem sessao valida.
 - `access.html`: pagina publica de login, sem carregar `config.js` nem `commercial.js`.
 - `api/access.js`: valida a password no servidor e cria cookie `HttpOnly`.
 - `api/logout.js`: limpa o cookie e volta para o login.
@@ -70,4 +70,4 @@ Recomendacao futura:
 5. Confirmar que Clientes / Leads carrega normalmente.
 6. Confirmar que Google Sheets sync continua ativo.
 7. Confirmar que PDFs e comparador comercial continuam a funcionar.
-8. Confirmar o comportamento pretendido para `comparador.html`: protegido no mesmo projeto ou publico em projeto separado.
+8. Confirmar que `comparador.html`, `app.js`, `data.json` e `data.xlsx` tambem redirecionam para login sem sessao.

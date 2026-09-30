@@ -26,6 +26,7 @@ ANALYSIS = (
     "Preço Recomendado", "Versão Análise", "Confiança Recomendação",
     "Justificação Técnica", "Segmento Análise", "Disponibilidade Análise",
 )
+OPTIONAL_COLUMNS = ("Classe vista comparável",)
 
 
 def dados_path(archive):
@@ -105,7 +106,7 @@ def read_dados(archive):
             if header == "Data de atualização" and isinstance(value, (int, float)):
                 date = date_base + timedelta(days=value)
                 value = date.date().isoformat() if date.time() == datetime.min.time() else date.isoformat()
-            if value is not None or header not in ANALYSIS:
+            if value is not None or header not in ANALYSIS + OPTIONAL_COLUMNS:
                 record[header] = value
         rows.append((int(xml_row.get("r")), record))
     return headers, rows, sheet
@@ -216,6 +217,68 @@ def reconcile(source, baseline, output):
     print(f"Excel reconciliado: {output} ({len(entries)} registos)")
 
 
+def add_prestige_view_class(workbook):
+    field = OPTIONAL_COLUMNS[0]
+    with zipfile.ZipFile(workbook) as archive:
+        headers, entries, sheet = read_dados(archive)
+        if field in headers:
+            raise ValueError(f"A coluna {field} já existe.")
+        prestige = [(number, row) for number, row in entries
+                    if row.get("Empreendimento") == "Prestige V"]
+        if len(prestige) != 8 or any(row.get("Vista") is not None for _, row in prestige):
+            raise ValueError("Esperados 8 registos Prestige V com Vista factual vazia.")
+
+        column = column_name(len(headers) + 1)
+        header_row = sheet.find(f"{Q('sheetData')}/{Q('row')}")
+        put_value(header_row, column, field, 70)
+        rows_by_number = {int(row.get("r")): row for row in sheet.findall(f"{Q('sheetData')}/{Q('row')}")}
+        for number, _ in prestige:
+            put_value(rows_by_number[number], column, 4)
+
+        cols = sheet.find(Q("cols"))
+        if cols is not None:
+            ET.SubElement(cols, Q("col"), {"min": str(len(headers) + 1),
+                                             "max": str(len(headers) + 1),
+                                             "width": "25", "customWidth": "1"})
+        table_path = "xl/tables/table1.xml"
+        table = ET.fromstring(archive.read(table_path))
+        if table.get("name") != "DadosCompset":
+            raise ValueError("A tabela DadosCompset não foi encontrada.")
+        table_ref = f"A1:{column}{max(number for number, _ in entries)}"
+        table.set("ref", table_ref)
+        table_filter = table.find(Q("autoFilter"))
+        if table_filter is not None:
+            table_filter.set("ref", table_ref)
+        columns = table.find(Q("tableColumns"))
+        columns.set("count", str(len(headers) + 1))
+        ET.SubElement(columns, Q("tableColumn"), {"id": str(len(headers) + 1), "name": field})
+        changes = {dados_path(archive): ET.tostring(sheet, encoding="utf-8", xml_declaration=True),
+                   table_path: ET.tostring(table, encoding="utf-8", xml_declaration=True)}
+
+        with tempfile.NamedTemporaryFile(dir=workbook.parent, suffix=".xlsx", delete=False) as tmp:
+            temp_path = Path(tmp.name)
+        try:
+            with zipfile.ZipFile(temp_path, "w") as result:
+                for item in archive.infolist():
+                    result.writestr(item, changes.get(item.filename, archive.read(item.filename)))
+            with zipfile.ZipFile(temp_path) as check:
+                _, generated, _ = read_dados(check)
+                if len(generated) != len(entries):
+                    raise ValueError("A alteração mudou o número de registos.")
+                for (_, before), (_, after) in zip(entries, generated):
+                    expected = {**before, **({field: 4} if before["Empreendimento"] == "Prestige V" else {})}
+                    if after != expected:
+                        raise ValueError("A alteração modificou outro dado da folha Dados.")
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+    try:
+        os.replace(temp_path, workbook)
+    finally:
+        temp_path.unlink(missing_ok=True)
+    print(f"Adicionada {field} a 8 registos Prestige V em {workbook}")
+
+
 def generate(workbook, output):
     with zipfile.ZipFile(workbook) as archive:
         _, entries, _ = read_dados(archive)
@@ -248,13 +311,17 @@ def verify(workbook, output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Gerar data.json a partir da folha Dados do Excel")
     parser.add_argument("--reconcile", type=Path, help="Excel anexo a migrar (operação única)")
+    parser.add_argument("--add-prestige-view-class", action="store_true",
+                        help="Adicionar Classe vista comparável aos 8 Prestige V (operação única)")
     parser.add_argument("--baseline-json", type=Path, default=ROOT / "data.json")
     parser.add_argument("--check", action="store_true", help="Verificar sem escrever ficheiros")
     args = parser.parse_args()
-    if args.reconcile and args.check:
-        parser.error("--reconcile e --check não podem ser usados em conjunto")
+    if sum(bool(value) for value in (args.reconcile, args.add_prestige_view_class, args.check)) > 1:
+        parser.error("--reconcile, --add-prestige-view-class e --check são exclusivos")
     if args.reconcile:
         reconcile(args.reconcile, args.baseline_json, ROOT / "data.xlsx")
+    elif args.add_prestige_view_class:
+        add_prestige_view_class(ROOT / "data.xlsx")
     elif args.check:
         verify(ROOT / "data.xlsx", ROOT / "data.json")
     else:

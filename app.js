@@ -179,7 +179,8 @@
     const typology = prettyTypology(raw['Tipologia']);
     const floorLabel = safe(raw['Piso']) || '—';
     const floor = parseFloor(raw['Piso']);
-    const view = parseNum(raw['Vista']);
+    const view = parseOptionalNumber(raw['Vista']);
+    const comparableViewClass = parseOptionalNumber(raw['Classe vista comparável']);
     const abp = parseNum(raw['ABP']);
     const terrace = parseNum(raw['Varanda/Terraço']);
     const totalArea = parseNum(raw['Área Total']) || (abp + terrace);
@@ -189,7 +190,7 @@
       raw, development, fractionRaw, isTheView, number,
       name: isTheView ? fractionRaw : `${development} · ${fractionRaw}`,
       typology, comparableTypology: comparableTypology(typology),
-      floor, floorLabel, view, orientation, abp, terrace, totalArea, price,
+      floor, floorLabel, view, comparableViewClass, orientation, abp, terrace, totalArea, price,
       pricePerSqm: totalArea ? price / totalArea : 0,
       referenceYear: parseNum(raw['Ano Referência']),
       status: safe(raw['Status']) || '—',
@@ -297,7 +298,7 @@
         <div class="strategic-comps">${strategic.length ? strategic.map(strategicItem).join('') : '<p class="muted small">Sem referências estratégicas suficientemente atuais e relevantes.</p>'}</div>
       </section>
       <section class="fraction-analysis__section"><h3>Concorrência externa</h3>
-        <p class="muted small">Diretos = mesma tipologia comparável, piso e vista. Indiretos = mesma tipologia e piso. Pouco concorrentes = mesma tipologia e piso ± 1. Segmento, peso, camada, qualidade e data ajudam a avaliar cada referência.</p>
+        <p class="muted small">Diretos = mesma tipologia comparável, piso e classe comparável de vista (ou vista factual). Indiretos = mesma tipologia e piso. Pouco concorrentes = mesma tipologia e piso ± 1. Segmento, peso, camada, qualidade e data ajudam a avaliar cada referência.</p>
         <div class="comps-list comps-list--analysis">${compBlock('Diretos',direct,f.analysisSegment)}${compBlock('Indiretos',indirect,f.analysisSegment)}${compBlock('Pouco concorrentes',broad,f.analysisSegment)}</div>
       </section>
     </div>`;
@@ -363,7 +364,7 @@
     const qualityWeight = quality => ({alta:1,media:.85,baixa:.6})[normalize(quality)] || .55;
     const layerWeight = layer => ({a:1,b:.8,c:.55})[normalize(layer).charAt(0)] || .55;
     const targetSegment = f.analysisSegment || externalSegment(f);
-    const scored = filteredCompetitors().filter(c => c.comparableTypology === f.comparableTypology && c.price > 0)
+    const scored = state.competitors.filter(c => c.comparableTypology === f.comparableTypology && c.price > 0)
       .map(c => {
         const status = normalize(c.status);
         const activeWeight = status === 'ativo' ? 1 : status === 'a validar' ? .35 : .15;
@@ -399,7 +400,8 @@
   function compBlock(title, rows, targetSegment) {
     return `<div class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length ? selectDiverseComparables(rows).map(r=>{
       const segment = externalSegment(r);
-      return `<div class="comp-item"><div><strong>${esc(r.development)}</strong><small>${esc(r.fractionRaw)} · ${esc(r.typology)} · Piso ${esc(r.floorLabel)} · Vista ${r.view||'—'}</small>
+      const viewDetails = `Vista ${r.view||'—'}${r.comparableViewClass == null ? '' : ` · Classe comparável de vista: ${r.comparableViewClass}`}`;
+      return `<div class="comp-item"><div><strong>${esc(r.development)}</strong><small>${esc(r.fractionRaw)} · ${esc(r.typology)} · Piso ${esc(r.floorLabel)} · ${esc(viewDetails)}</small>
         <small><span class="comp-segment ${segment===targetSegment?'comp-segment--match':''}">${esc(segment)}${segment===targetSegment?' · mesmo segmento':''}</span> · ${esc(r.segment || 'Segmento não indicado')}</small>
         <small>${esc(r.status)} · ${r.referenceYear || 'Ano n/d'} · ${esc(r.compsetLayer || 'Camada n/d')} · Peso ${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(r.weight)} · Qualidade ${esc(r.dataQuality || 'n/d')}</small>
       </div><div class="num-col"><strong>${money(r.price)}</strong>${r.totalArea > 0 ? `<small>${money(Math.round(r.pricePerSqm),0)} /m² total</small>` : ''}</div></div>`;
@@ -640,6 +642,11 @@
     return state.competitors.filter(c => state.compare.development==='all'||c.development===state.compare.development);
   }
 
+  function comparableView(row) {
+    if (Number.isFinite(row.comparableViewClass)) return row.comparableViewClass;
+    return Number.isFinite(row.view) ? row.view : null;
+  }
+
   function filteredCommercialFractions() {
     const s = normalize(state.filters.search);
     return state.fractions.filter(f => {
@@ -652,7 +659,7 @@
 
   function compMatches(f, mode) {
     return filteredCompetitors().filter(c => c.comparableTypology === f.comparableTypology).filter(c => {
-      if (mode==='direct') return c.floor===f.floor && c.view===f.view;
+      if (mode==='direct') return c.floor===f.floor && comparableView(f)!==null && comparableView(c)===comparableView(f);
       if (mode==='indirect') return c.floor===f.floor;
       return c.floor!==null && f.floor!==null && Math.abs(c.floor-f.floor)<=1;
     }).sort((a,b)=>(b.weight-a.weight)||(b.referenceYear-a.referenceYear)||(a.pricePerSqm-b.pricePerSqm));
@@ -660,8 +667,9 @@
 
   function getFraction(n) { return state.fractions.find(f=>f.number===n); }
   function defaultDecision(f) { return DEFAULT_DECISIONS[f.number] || {state:'Manter', proposedNow:f.price, min:Math.round(f.price*.98), classification:'A validar', argument:'Sem argumento comercial definido.', approval:false}; }
-  function suggestedPrice(f) { return defaultDecision(f).proposedNow || f.price; }
-  function finalPrice(f) { return Number(state.commercialData.finalPrices[f.number]) || suggestedPrice(f); }
+  function suggestedPrice(f) { return f.recommendedPrice || defaultDecision(f).proposedNow || f.price; }
+  // Keep the legacy commercial fallback separate from the technical recommendation.
+  function finalPrice(f) { return Number(state.commercialData.finalPrices[f.number]) || defaultDecision(f).proposedNow || f.price; }
   function minimumPrice(f) { return Number(state.commercialData.minimumPrices[f.number]) || defaultDecision(f).min || Math.round(finalPrice(f)*.97); }
   function commercialStatus(f) { return state.commercialData.statuses[f.number] || defaultDecision(f).state || DEFAULT_STATUS; }
   function classification(f) { return state.commercialData.classifications[f.number] || defaultDecision(f).classification || 'A validar'; }
@@ -722,10 +730,15 @@
     const n = Number(s.replace(/[^0-9.-]/g,''));
     return isFinite(n) ? n : 0;
   }
+  function parseOptionalNumber(v) {
+    if (v == null || safe(v) === '') return null;
+    const n = Number(safe(v).replace(',','.'));
+    return Number.isFinite(n) ? n : null;
+  }
   function parseFloor(v) { if (typeof v==='number') return v; const s=safe(v).toUpperCase(); if(!s) return null; if(['R/C','RC','0'].includes(s)) return 0; const m=s.match(/-?\d+/); return m ? Number(m[0]) : null; }
   function naturalNumber(s, fallback=null) { const m=safe(s).match(/\d+/); return m ? Number(m[0]) : fallback; }
   function prettyTypology(v) { return safe(v).replace(/\s+/g,' ').replace(/DUPLEX/i,'Duplex').replace(/DUP$/i,'Duplex'); }
-  function comparableTypology(t) { let s=normalize(t).replace(/\s+/g,'').replace(/duplex/g,'').replace(/g$/,''); if(s==='t1+1')return't2'; if(s==='t2+1')return't3'; return s; }
+  function comparableTypology(t) { let s=normalize(t).replace(/[\s_-]*duplex\b/g,'').replace(/[\s_-]+/g,'').replace(/g$/,''); if(s==='t1+1')return't2'; if(s==='t2+1')return't3'; return s; }
   function safe(v) { return v==null ? '' : String(v).trim(); }
   function normalize(v) { return safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
   function unique(values) { return [...new Set(values.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'pt-PT',{numeric:true,sensitivity:'base'})); }
