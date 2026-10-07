@@ -190,7 +190,7 @@
       raw, development, fractionRaw, isTheView, number,
       name: isTheView ? fractionRaw : `${development} · ${fractionRaw}`,
       typology, comparableTypology: comparableTypology(typology),
-      floor, floorLabel, view, comparableViewClass, orientation, abp, terrace, totalArea, price,
+      floor, floorLabel, view, comparableViewClass, orientation, parking: safe(raw['Garagem']), abp, terrace, totalArea, price,
       pricePerSqm: totalArea ? price / totalArea : 0,
       referenceYear: parseNum(raw['Ano Referência']),
       status: safe(raw['Status']) || '—',
@@ -244,6 +244,7 @@
         <div class="metric-box"><span>ABP</span><strong>${area(f.abp)}</strong></div>
         <div class="metric-box"><span>Área total</span><strong>${area(f.totalArea)}</strong></div>
       </div>
+      <p class="muted small">Estacionamento: ${esc(f.parking || '—')}</p>
       <div class="fraction-card__actions"><button class="inline-button" data-open-fraction="${f.number}" type="button">Ver detalhe e comps →</button></div>
     </article>`;
   }
@@ -263,6 +264,7 @@
     const difference = delta == null ? '—' : f.price ? signedMoney(delta) + ' / ' + signedPercent(delta / f.price) : signedMoney(delta);
     els.fractionModalContent.innerHTML = `<div class="fraction-analysis">
       <header class="fraction-analysis__head"><p class="eyebrow eyebrow--dark">Fração</p><h2 id="modalTitle">${esc(f.name)}</h2><p class="muted">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p>
+        <p class="muted small">Estacionamento: ${esc(f.parking || '—')}</p>
         ${f.analysisAvailability ? `<span class="badge badge--warning">${esc(f.analysisAvailability)}</span>` : ''}
       </header>
       <section class="fraction-analysis__section"><h3>Análise técnica</h3>
