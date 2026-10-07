@@ -113,3 +113,86 @@
 .fraction-history-table th{background:#f1f5f9}
 .fraction-history-table td{padding-top:14px;padding-bottom:14px}
 @media(max-width:1100px){.fraction-history-layout,.fraction-history-meta,.fraction-history-property-grid,.fraction-history-alert dl{grid-template-columns:1fr}.fraction-history-sidebar{position:relative;top:auto}.fraction-history-list{max-height:none;overflow:visible;padding:0}.fraction-history-detail__header{display:block}.fraction-history-summary{min-width:0;margin-top:14px}}
+
+/* Read-only fraction drawer and contextual commercial navigation. */
+.ux-unit-reference{display:inline-flex;align-items:center;gap:9px;min-width:0}
+.ux-unit-reference input[type=checkbox]{width:17px;height:17px;min-width:17px;accent-color:var(--accent-dark);cursor:pointer}
+.ux-unit-link,.ux-text-button,.ux-sort-button{border:0;background:none;color:inherit;padding:0;font:inherit;cursor:pointer;text-align:left}
+.ux-unit-link{font-weight:800;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:4px}
+.ux-unit-link:hover{text-decoration-color:var(--accent-dark)}
+.ux-text-button{font-size:.84rem;color:var(--blue);padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.ux-text-button[aria-pressed=true]{color:var(--success);font-weight:800}
+.ux-sort-button{display:inline-flex;align-items:center;gap:7px;font-weight:700;text-transform:inherit;font-size:inherit}
+.ux-sort-button span{font-size:1rem;color:var(--accent-dark)}
+.ux-unit-link:focus-visible,.ux-text-button:focus-visible,.ux-sort-button:focus-visible,.ux-close:focus-visible,.ux-selection-chip:focus-visible,.ux-action-list button:focus-visible,.ux-client-result:focus-visible{outline:2px solid var(--accent-dark);outline-offset:4px}
+.ux-filter-status{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:.84rem;min-height:30px;flex-wrap:wrap}
+.ux-current-price input{font-weight:800;color:var(--text);background:#f3f8f5;border-color:rgba(23,125,87,.25)}
+.ux-base-price{color:var(--muted);font-size:.9rem}
+.ux-recommended-price{font-weight:700}
+.ux-tools{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:14px 0 18px}
+.ux-global-search{position:relative;width:min(520px,100%);margin-left:auto}
+.ux-global-search .field input{min-height:44px;padding:10px 13px}
+.ux-global-search .field>span{font-size:.8rem}
+.ux-search-results{position:absolute;top:calc(100% + 6px);right:0;width:100%;max-height:420px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 28px rgba(16,30,54,.12);padding:12px;z-index:18}
+.ux-search-results h3{font-size:.8rem;color:var(--muted);margin:12px 8px 6px}
+.ux-search-results button,.ux-client-result,.ux-action-list button{display:flex;flex-direction:column;gap:4px;width:100%;padding:11px 8px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text);text-align:left;font:inherit;cursor:pointer}
+.ux-search-results button:hover,.ux-client-result:hover,.ux-action-list button:hover{background:#f6f8fb}
+.ux-search-results button span,.ux-client-result span,.ux-action-list button span{font-size:.82rem;color:var(--muted);line-height:1.45}
+.ux-drawer-backdrop{position:fixed;inset:0;z-index:20;background:rgba(10,19,37,.32);display:flex;justify-content:flex-end;overflow:hidden}
+.ux-drawer{height:100dvh;width:min(500px,100%);max-width:100%;overflow:auto;overscroll-behavior:contain;background:#fff;box-shadow:-12px 0 36px rgba(16,30,54,.16);padding:0 26px 26px;animation:ux-drawer-in .16s ease-out;letter-spacing:0}
+.ux-drawer-header{position:sticky;top:0;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;background:#fff;padding:24px 0 16px;border-bottom:1px solid var(--line)}
+.ux-drawer-header h2{margin:12px 0 6px;font-size:24px;line-height:1.2;overflow-wrap:anywhere}
+.ux-drawer-header p{margin:0;font-size:.92rem}
+.ux-close{flex:0 0 36px;width:36px;height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text);font-size:24px;line-height:1;cursor:pointer}
+.ux-price-summary{padding:20px 0;border-bottom:1px solid var(--line)}
+.ux-label{display:block;color:var(--muted);font-size:.78rem;font-weight:700}
+.ux-price-current{display:block;margin:7px 0 14px;font-size:28px;line-height:1.2;color:var(--text);overflow-wrap:anywhere}
+.ux-price-recommended{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:.86rem}
+.ux-price-recommended span{color:var(--muted)}
+.ux-price-difference{display:flex;gap:12px;justify-content:flex-end;margin-top:7px;font-size:.84rem;color:var(--success);font-weight:700}
+.ux-secondary-prices{display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 0}
+.ux-secondary-prices dt,.ux-characteristics dt{font-size:.78rem;color:var(--muted);margin-bottom:5px}
+.ux-secondary-prices dd,.ux-characteristics dd{margin:0;font-size:.9rem;font-weight:600;overflow-wrap:anywhere}
+.ux-drawer-section{padding:20px 0;border-bottom:1px solid var(--line)}
+.ux-drawer-section h3{margin:0 0 16px;font-size:1rem}
+.ux-characteristics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0}
+.ux-characteristics .ux-wide,.ux-characteristics>div:last-child:nth-child(odd){grid-column:1/-1}
+.ux-related-clients{margin-top:18px;font-size:.86rem}
+.ux-related-clients summary,.ux-financial-details summary{cursor:pointer;font-weight:700;padding:8px 0;color:var(--text)}
+.ux-drawer-actions{display:flex;flex-wrap:wrap;gap:9px;padding-top:20px}
+.ux-drawer-actions button{padding:11px 14px;font-size:.82rem}
+.ux-comparison-bar{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:16;width:min(840px,calc(100% - 32px));display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 18px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.97);box-shadow:0 10px 36px rgba(16,30,54,.17);backdrop-filter:blur(12px)}
+.ux-comparison-units{min-width:0;font-size:.82rem}
+.ux-comparison-units>div{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ux-selection-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:#f5f7fb;color:var(--text);font:inherit;cursor:pointer;font-size:.8rem}
+.ux-selection-chip span{font-size:16px;line-height:1}
+.ux-comparison-actions{display:flex;gap:8px;flex:0 0 auto}
+.ux-comparison-actions button{padding:11px 15px;font-size:.85rem;white-space:nowrap}
+.ux-comparison-actions button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+body.ux-comparison-active{padding-bottom:135px}
+.ux-toast{position:fixed;bottom:148px;left:50%;transform:translateX(-50%);z-index:25;max-width:calc(100% - 32px);padding:11px 16px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(16,30,54,.16);font-size:.85rem;color:var(--text)}
+#dashboardKpis,#decisionAlerts{display:block}
+.ux-operational-kpis .kpi-card{border-radius:8px}
+.ux-operational-kpis .kpi-card strong{font-size:24px;overflow-wrap:anywhere}
+.ux-financial-details{margin:18px 0}
+.ux-financial-details .kpi-grid{margin-top:12px}
+.ux-operational-actions{margin:24px 0}
+.ux-operational-actions>h3{font-size:1.2rem;margin:0 0 18px}
+.ux-action-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.ux-action-groups>section{min-width:0;border-top:1px solid var(--line);padding-top:14px}
+.ux-action-groups h4{display:flex;justify-content:space-between;gap:12px;margin:0 0 10px;font-size:.95rem}
+.ux-action-groups h4>span{color:var(--muted)}
+.ux-action-list{max-height:285px;overflow:auto;scrollbar-width:thin}
+.ux-action-list button strong{font-size:.88rem;overflow-wrap:anywhere}
+.ux-proposal-price>span{display:block;color:var(--muted);font-size:.76rem}
+.ux-proposal-price>strong{font-size:22px}
+.ux-proposal-recommended{font-size:.82rem;font-weight:600}
+.ux-proposal-recommended>span{color:var(--muted);font-size:.78rem;font-weight:400}
+.compare-panel .ux-price-summary{margin-top:12px}
+.compare-panel .ux-price-current{font-size:24px}
+.compare-panel .ux-price-recommended{flex-wrap:wrap;font-size:.8rem}
+@keyframes ux-drawer-in{from{transform:translateX(24px);opacity:.7}to{transform:translateX(0);opacity:1}}
+@media(min-width:1101px){#pricesTableBody td:first-child,#salesTableBody td:first-child{position:sticky;left:0;z-index:1;background:#fff;min-width:190px}#pricesTableBody tr:hover td:first-child,#salesTableBody tr:hover td:first-child{background:#f4f7fb}#pricesTableBody .ux-unit-reference,#salesTableBody .ux-unit-reference{white-space:nowrap}}
+@media(max-width:760px){.ux-tools{flex-direction:column;align-items:stretch}.ux-global-search{width:100%;margin:0}.ux-action-groups{grid-template-columns:1fr}.ux-drawer{padding:0 18px 24px}.ux-comparison-bar{width:calc(100% - 20px);display:block;padding:12px;max-height:210px;overflow:auto}.ux-comparison-actions{justify-content:flex-end;margin-top:10px}body.ux-comparison-active{padding-bottom:195px}.ux-toast{bottom:220px}.ux-price-current{font-size:26px}.ux-operational-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.ux-operational-kpis{grid-template-columns:1fr}.ux-drawer-header h2{font-size:22px}}
+@media(prefers-reduced-motion:reduce){.ux-drawer{animation:none}}
