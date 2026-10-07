@@ -20,7 +20,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(source.slice(0,end)+
-  'globalThis.uxTest={state,el,commercialUx,parseRow,fractionPriceSummary,fractionPriceMarkup,fractionReference,relatedFractionClients,operationalCommercialSummary,operationalActionsMarkup,sortedUxFractions,toggleQuickComparison,captureCommercialContext,persistCommercialContext};'+source.slice(end),context);
+  'globalThis.uxTest={state,el,commercialUx,parseRow,fractionPriceSummary,fractionPriceMarkup,fractionReference,relatedFractionClients,relatedClientFractions,compatibleClientFractions,clientCompatibilityCriteria,clientTimelineItem,fractionContextHistory,fractionDecisionMarkup,salesColumnDefinitions,displayMoney,operationalCommercialSummary,operationalActionsMarkup,sortedUxFractions,toggleQuickComparison,captureCommercialContext,persistCommercialContext};'+source.slice(end),context);
 const app=context.uxTest;
 app.state.rows=rows.map(app.parseRow);
 app.state.fractions=app.state.rows.filter(row=>row.isTheView);
@@ -53,6 +53,27 @@ assert.match(app.fractionPriceMarkup(fraction),/Preço Comercial Atual/);
 assert.match(app.fractionReference(fraction,true),/data-ux-select="24"/);
 assert.deepEqual(Array.from(app.relatedFractionClients(24),c=>c.id),['ux-active']);
 assert.equal(app.fractionPriceSummary({...fraction,raw:{}}).recommended,null);
+assert.equal(app.displayMoney(750000),'750.000 €');
+assert.equal(app.displayMoney(7514),'7.514 €');
+assert.equal(app.displayMoney(99.74,2),'99,74 €');
+assert.deepEqual(Array.from(app.salesColumnDefinitions().filter(column=>column.default),column=>column.key),['number','typology','floor','totalArea','current','recommended','status']);
+assert.equal(app.compatibleClientFractions({preferences:{},budget:0}),null);
+assert.equal(app.compatibleClientFractions({preferences:{typology:'T2',floor:'piso alto'},budget:800000}),null);
+assert.equal(app.compatibleClientFractions({preferences:{typology:'talvez T2'},budget:800000}),null);
+const matches=app.compatibleClientFractions({preferences:{typology:'T2',floor:'≥ 2'},budget:800000});
+assert.ok(matches.length>0);
+assert.ok(matches.every(f=>f.typology==='T2'&&f.floor>=2&&app.fractionPriceSummary(f).current<=800000&&![30,36].includes(f.number)));
+const combined=app.compatibleClientFractions({preferences:{typology:'T1+1',floor:'1 a 3'},budget:500000});
+assert.ok(combined.every(f=>f.typology==='T1+1'&&f.floor>=1&&f.floor<=3));
+assert.ok(!app.compatibleClientFractions({preferences:{typology:'T2+1'},budget:2000000}).some(f=>f.number===30));
+assert.deepEqual(Array.from(app.relatedClientFractions(app.state.data.clients[0]),f=>f.number),[24]);
+assert.match(app.clientTimelineItem(app.state.data.events[0]),/Contra-proposta recebida/);
+assert.match(app.clientTimelineItem({...app.state.data.events[0],fractions:[99],date:''}),/Apt\. 99/);
+assert.match(app.clientTimelineItem({...app.state.data.events[0],date:''}),/Data não registada/);
+assert.match(app.fractionContextHistory(fraction),/700\.000 € → 750\.000 €/);
+assert.match(app.fractionContextHistory(fraction),/01\/09\/2026/);
+assert.match(app.fractionDecisionMarkup(fraction),/Ver análise detalhada/);
+assert.ok(!app.fractionContextHistory(fraction).includes('Preço recomendado alterado'));
 
 const operational=app.operationalCommercialSummary();
 assert.equal(operational.available.length,37);
