@@ -7,7 +7,9 @@ const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:3900
 const UPDATED_INITIAL_PRICES={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
 const STATUS=['Disponível','Reservado','Vendido','Indisponível'];
 const STAGES=['Novo Lead','Qualificado','Apresentado','Em negociação','Reservado','Vendido','Desistiu'];
-const EVENT_TYPES=['Pedido de informação recebido','Preferências recebidas','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Outro'];
+const EVENT_TYPES=['Pedido de informação recebido','Preferências recebidas','Apresentação comercial','Documentação enviada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência','Outro'];
+const EVENT_CHANNELS=['Reunião','Telefone','WhatsApp','Email','Presencial','PDF','Outro'];
+const PRESENTATION_FORMATS=['Presencial — fora da obra','Videoconferência','Telefone','Outro'];
 const CLIENT_ORIGINS=['Website The View','Outdoor / Mupie','Agente','Amigo / Familiar','Outro'];
 const CRM_MIGRATION_KEY='crm-funnel-2026-06-v4';
 const MAJUCA_IMPORT_KEY='majuca_import_v1';
@@ -179,7 +181,7 @@ function ensureCrmFormFields(){
   if(eventGrid&&!document.getElementById('eventChannel')){
     const channel=document.createElement('label');
     channel.className='field';
-    channel.innerHTML='<span>Canal</span><select id="eventChannel"><option value=""></option><option>Reunião</option><option>Telefone</option><option>WhatsApp</option><option>Email</option><option>Presencial</option><option>PDF</option><option>Outro</option></select>';
+    channel.innerHTML=`<span>Canal</span><select id="eventChannel">${eventChannelOptions('')}</select>`;
     eventTime.closest('.field').after(channel);
   }
   const eventFollowup=document.getElementById('eventFollowup');
@@ -826,7 +828,7 @@ function sortedClientEvents(clientId){
   return (state.data.events||[]).map((ev,index)=>({ev,index})).filter(item=>item.ev.clientId===clientId).sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index))).map(item=>item.ev);
 }
 function eventFractionsPresented(ev){
-  return ['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva','Venda concluída','Venda','Visita','Reunião com cliente'].includes(ev.type);
+  return ['Apresentação comercial','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva','Venda concluída','Venda','Visita','Reunião com cliente'].includes(ev.type);
 }
 function recalculateResumoCliente(clientId){
   const c=client(clientId);
@@ -1158,7 +1160,7 @@ function ensureSalesManagementTabs(){
     eventsPanel.id='salesEventsPanel';
     eventsPanel.dataset.salesView='events';
     eventsPanel.innerHTML=`<div class="section-heading">
-      <div><p class="eyebrow eyebrow--dark">Eventos / Histórico</p><h2>Histórico comercial</h2><p class="muted">Consulta geral de visitas, propostas, reservas, vendas, follow-ups e alterações de estado.</p></div>
+      <div><p class="eyebrow eyebrow--dark">Eventos / Histórico</p><h2>Histórico comercial</h2><p class="muted">Apresentações comerciais, documentação, propostas, reservas, vendas e registos históricos.</p></div>
       <div class="top-actions"><button class="primary-button" id="salesEventsNewEvent" type="button">Adicionar evento</button><button class="ghost-button" id="salesEventsExport" type="button">Exportar eventos</button></div>
     </div>
     <div id="salesEventsList" class="events-list"></div>`;
@@ -1421,7 +1423,7 @@ function renderSalesEventsPanel(){
         </div>
       </div>
       ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
-      ${ev.channel?`<p class="muted small">Canal: ${esc(ev.channel)}</p>`:''}
+      ${eventChannelDetailsHtml(ev)}
       ${commercialDetails}
       ${(ev.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(ev.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
       ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
@@ -1550,13 +1552,13 @@ function renderDashboard(){
     kpi('Vendidas',sold.length,'Total vendidas'),
     kpi('Indisponíveis',unavailable.length,'Bloqueadas manualmente')
   ].join('');
-  const operational=operationalCommercialSummary();
+  const operational=operationalCommercialSummary(),activity=commercialInteractionCounts();
   el.dashboardKpis.innerHTML=`<div class="kpi-grid ux-operational-kpis">${[
     kpi('Frações disponíveis',operational.available.length,'Estado comercial atual'),
     kpi('Valor comercial disponível',money(operational.availableValue),'Preços comerciais atuais'),
     kpi('Clientes ativos',operational.active.length,'Exclui vendidos e desistências'),
     kpi('Negociações em curso',operational.negotiations.length,'Clientes em negociação')
-  ].join('')}</div><details class="ux-financial-details"><summary>Resumo de vendas e receitas</summary><div class="kpi-grid">${financial}</div></details>`;
+  ].join('')}</div><p class="muted small" id="commercialActivitySummary"><strong>${activity.presentations}</strong> ${activity.presentations===1?'apresentação comercial registada':'apresentações comerciais registadas'} · <strong>${activity.documentation}</strong> ${activity.documentation===1?'envio de documentação registado':'envios de documentação registados'}</p><details class="ux-financial-details"><summary>Resumo de vendas e receitas</summary><div class="kpi-grid">${financial}</div></details>`;
   renderDecisionAlerts();
 }
 
@@ -1692,7 +1694,7 @@ function renderClientDetail(){
   el.clientDetail.innerHTML=`<nav class="ux-breadcrumb" aria-label="Localização">Clientes <span aria-hidden="true">›</span> ${esc(c.name||'Cliente sem nome')}</nav><div class="section-heading client-detail-header"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:'<span>Sem telefone</span>'}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:'<span>Sem email</span>'}</p><p class="muted small">Origem: ${esc(clientOriginLabel(c))} · Agente: ${esc(associatedAgent?.name||c.agent||c.agency||'Sem agente')}</p></div><button class="ghost-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar cliente</button></div>
     <dl class="ux-client-facts">${[['Tipologia pretendida',prefs.typology||'—'],['Piso pretendido',prefs.floor||'—'],['Orçamento',c.budget?money(c.budget):'—'],['Último contacto',formatCommercialDate(summary.lastContact)],['Frações apresentadas',(summary.presentedFractions||[]).length]].map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
     <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação</span><strong>${esc(nextStep||'Sem próxima ação definida')}${followup.status==='future'?` · ${esc(formatCommercialDate(followup.date))}`:''}</strong></div><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button></section>
-    <div class="ux-client-secondary-actions"><button class="ghost-button" type="button" data-ux-client-action="proposal">${uxIcon('file-text')}Criar proposta</button><button class="ghost-button" type="button" data-ux-client-action="associate">${uxIcon('link')}Associar fração</button><button class="ghost-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar nota</button></div>
+    <div class="ux-client-secondary-actions"><button class="ghost-button" type="button" data-ux-client-action="presentation">${uxIcon('presentation')}Registar apresentação</button><button class="ghost-button" type="button" data-ux-client-action="documentation">${uxIcon('send')}Registar envio de documentação</button><button class="ghost-button" type="button" data-ux-client-action="proposal">${uxIcon('file-text')}Criar proposta</button><button class="ghost-button" type="button" data-ux-client-action="associate">${uxIcon('link')}Associar fração</button><button class="ghost-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar nota</button></div>
     ${informed?`<p class="crm-inline-summary"><strong>Últimos preços informados:</strong> ${esc(informed)}</p>`:''}
     <section class="crm-detail-section"><h3>Frações relacionadas <span class="muted small">${related.length}</span></h3>${clientFractionTiles(related,'Ainda não existem frações associadas.')}</section>
     ${compatible===null?'':`<section class="crm-detail-section"><h3>Frações compatíveis <span class="muted small">${compatible.length}</span></h3><p class="muted small">Disponíveis · ${esc(clientCompatibilityLabel(c))}</p>${clientFractionTiles(compatible,'Nenhuma fração disponível corresponde às preferências registadas.')}</section>`}
@@ -1742,7 +1744,7 @@ function clientTimelineItem(e){
   return`<article class="timeline-item"><div class="ux-timeline-heading"><div><time>${esc(formatTimelineDate(e.date,e.time))}</time><h4>${esc(e.type||'Evento')}</h4></div><button class="ghost-button compact-button" type="button" data-edit-client-event="${attr(e.id)}">${uxIcon('pencil')}Ver / Editar</button></div>
     ${fractions.length?`<div class="ux-timeline-fractions">${fractions.join('')}</div>`:''}${e.amount?`<p><strong>${money(e.amount)}</strong></p>`:''}
     ${(e.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(e.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}
-    ${e.notes?`<p class="ux-event-notes">${esc(e.notes)}</p>`:''}${e.channel?`<p class="muted small">${esc(e.channel)}</p>`:''}${eventRequestDetailsHtml(e)}
+    ${e.notes?`<p class="ux-event-notes">${esc(e.notes)}</p>`:''}${eventChannelDetailsHtml(e)}${eventRequestDetailsHtml(e)}
     ${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}${e.nextStep||e.followup||e.followupDate?`<p class="muted small">Próximo passo: ${esc(e.nextStep||e.followup||'—')}${e.followupDate?` · ${esc(formatCommercialDate(e.followupDate))}`:''}</p>`:''}${e.interest?`<p class="muted small">Interesse: ${esc(e.interest)}</p>`:''}${e.agentId?`<p class="muted small">Agente: ${esc(agent(e.agentId)?.name||'—')}</p>`:''}${e.commissionAmount?`<p class="muted small">Comissão: ${money(e.commissionAmount)}</p>`:''}</article>`;
 }
 function formatTimelineDate(date,time=''){
@@ -2392,8 +2394,28 @@ function renderEventPriceRows(initialRows=null){
     box.textContent=money(difference);box.classList.toggle('price-negative',difference<0);
   }));
 }
+function isCommercialPresentationEvent(ev){return ev?.type==='Apresentação comercial'}
+function commercialInteractionCounts(){return{presentations:(state.data.events||[]).filter(isCommercialPresentationEvent).length,documentation:(state.data.events||[]).filter(ev=>ev.type==='Documentação enviada').length}}
+// Presentation format uses the existing channel field; old records need no migration.
+function eventChannelOptions(type,value='',preserveExisting=false){
+  const presentation=isCommercialPresentationEvent({type}),options=presentation?PRESENTATION_FORMATS:EVENT_CHANNELS;
+  const legacy=preserveExisting&&value&&!options.includes(value)?`<option value="${attr(value)}">${esc(value)} (registado)</option>`:'';
+  return`<option value="">${presentation?'Selecionar formato':''}</option>${options.map(option=>`<option value="${attr(option)}">${esc(option)}</option>`).join('')}${legacy}`;
+}
+function configureEventChannel(type,value=el.eventChannel?.value||'',preserveExisting=false){
+  const input=el.eventChannel;if(!input)return;
+  const presentation=isCommercialPresentationEvent({type});
+  input.innerHTML=eventChannelOptions(type,value,preserveExisting);
+  input.value=[...input.options].some(option=>option.value===value)?value:'';
+  input.required=presentation;
+  const label=input.closest('.field')?.querySelector('span');
+  if(label)label.textContent=presentation?'Formato da apresentação':'Canal';
+}
+function eventChannelDetailsHtml(ev){return ev?.channel?`<p class="muted small">${isCommercialPresentationEvent(ev)?'Formato da apresentação':'Canal'}: ${esc(ev.channel)}</p>`:''}
 function toggleEventSpecificFields(){
   const type=el.eventType?.value||'';
+  const existing=(state.data.events||[]).find(ev=>ev.id===state.editingEventId);
+  configureEventChannel(type,el.eventChannel?.value||'',existing?.type===type&&existing.channel===el.eventChannel?.value);
   toggleEventAgentFields();
   el.eventPreferenceFields?.classList.toggle('hidden',type!=='Preferências recebidas');
   el.eventPriceFields?.classList.toggle('hidden',type!=='Preços informados');
@@ -2401,13 +2423,18 @@ function toggleEventSpecificFields(){
   const amountField=el.eventAmount?.closest('.field');
   const amountLabel=amountField?.querySelector('span');
   if(amountLabel)amountLabel.textContent=isSaleEvent({type})?'Preço de venda':isReservationEvent({type})?'Valor da reserva':type.includes('Contra-proposta')||type==='Proposta recebida'?'Valor proposto':'Valor';
+  const notesLabel=el.eventNotes?.closest('.field')?.querySelector('span');
+  if(notesLabel)notesLabel.textContent=type==='Documentação enviada'?'Documentação enviada / observações':'Notas';
+  if(el.eventNotes)el.eventNotes.placeholder=type==='Documentação enviada'?'Ex.: Plantas dos Apt. 22 e 24 e mapa de acabamentos enviados por email.':isCommercialPresentationEvent({type})?'Ex.: Frações apresentadas, dúvidas e interesse demonstrado.':'';
+  const fractionsLabel=el.eventFractions?.closest('.field')?.querySelector('span');
+  if(fractionsLabel)fractionsLabel.textContent=isCommercialPresentationEvent({type})?'Frações apresentadas (opcional)':type==='Documentação enviada'?'Frações relacionadas (opcional)':'Frações associadas';
 }
 
 function salesColumnDefinitions(){return[
   {key:'number',label:'Fração',default:true,required:true},{key:'typology',label:'Tipologia',default:true},{key:'floor',label:'Piso',default:true},
   {key:'totalArea',label:'Área total',default:true},{key:'current',label:'Preço atual',default:true},{key:'recommended',label:'Recomendado',default:true},{key:'status',label:'Estado',default:true},
   {key:'orientation',label:'Orientação'},{key:'parking',label:'Estacionamento'},{key:'sqm',label:'€/m²'},{key:'sale',label:'Preço reserva/venda'},
-  {key:'visits',label:'Visitas'},{key:'interested',label:'Interessados'},{key:'proposals',label:'Propostas'},{key:'lastOffer',label:'Última proposta'},{key:'lastAction',label:'Última ação'}
+  {key:'presentations',label:'Apresentações comerciais'},{key:'visits',label:'Visitas históricas'},{key:'interested',label:'Interessados'},{key:'proposals',label:'Propostas'},{key:'lastOffer',label:'Última proposta'},{key:'lastAction',label:'Última ação'}
 ]}
 function selectedSalesColumns(){return new Set(commercialUx.columns||salesColumnDefinitions().filter(column=>column.default).map(column=>column.key))}
 function ensureSalesTableControls(){
@@ -2437,7 +2464,7 @@ function renderSales(){
       status:`<select data-status="${f.number}" aria-label="Estado de ${attr(f.name)}">${STATUS.map(s=>`<option ${s===st?'selected':''}>${esc(s)}</option>`).join('')}</select>${st==='Indisponível'&&state.data.unavailableReasons?.[f.number]?`<div class="muted small">${esc(state.data.unavailableReasons[f.number])}</div>`:''}`,
       orientation:esc(f.orientation||'—'),parking:esc(f.parking||'—'),sqm:f.totalArea?`${money(Math.round(finalPrice(f)/f.totalArea))}/m²`:'—',
       sale:`<input type="number" step="1000" data-sale-price="${f.number}" value="${salePrice(f)||''}" placeholder="€" aria-label="Preço reserva/venda de ${attr(f.name)}"/>${c.amount?`<div class="muted small">Comissão: ${money(c.amount)}<br>Líquido: ${money((salePrice(f)||finalPrice(f))-c.amount)}</div>`:''}`,
-      visits:m.visits,interested:m.interested,proposals:m.proposals,lastOffer:m.lastOffer?money(m.lastOffer):'—',lastAction:`${esc(m.lastAction||'—')}<div><button class="ghost-button compact-button" type="button" data-fraction-history="${f.number}">Histórico</button></div>`};
+      presentations:m.presentations,visits:m.visits,interested:m.interested,proposals:m.proposals,lastOffer:m.lastOffer?money(m.lastOffer):'—',lastAction:`${esc(m.lastAction||'—')}<div><button class="ghost-button compact-button" type="button" data-fraction-history="${f.number}">Histórico</button></div>`};
     return`<tr>${columns.map(column=>`<td data-column="${column.key}" ${selected.has(column.key)?'':'hidden'}>${cells[column.key]}</td>`).join('')}</tr>`;
   }).join(''):`<tr><td colspan="${selected.size}">${fractionEmptyState('sales')}</td></tr>`;
   el.salesTableBody.querySelectorAll('[data-status]').forEach(s=>s.onchange=async()=>handleManualStatusSelect(+s.dataset.status,s.value));
@@ -2664,7 +2691,7 @@ function openEventModal(eventId='',source=''){
   el.eventType.value=ev?(ev.type||'Outro'):'Pedido de informação recebido';
   el.eventDate.value=ev?(ev.date||today()):today();
   el.eventTime.value=ev?(ev.time||''):'';
-  el.eventChannel.value=ev?(ev.channel||''):'';
+  configureEventChannel(el.eventType.value,ev?.channel||'',true);
   el.eventAmount.value=ev?(ev.amount||''):'';
   el.eventInterest.value=ev?(ev.interest||''):'';
   el.eventFollowup.value=ev?(ev.nextStep||ev.followup||''):'';
@@ -2721,6 +2748,9 @@ async function saveEvent(){
   const returnSource=state.eventEditSource||'';
   const oldEv=editingId?(state.data.events||[]).find(ev=>ev.id===editingId):null;
   if(editingId&&!oldEv){await notifyUser('Não encontrei o evento original. Atualize a página e tente novamente.','Evento comercial');return}
+  if(isCommercialPresentationEvent({type})&&!PRESENTATION_FORMATS.includes(el.eventChannel.value)&&!(isCommercialPresentationEvent(oldEv)&&oldEv.channel&&oldEv.channel===el.eventChannel.value)){
+    await notifyUser('Escolha o formato da apresentação comercial.','Apresentação comercial');el.eventChannel.focus();return;
+  }
   const ev=buildEventFromForm(cid,frs,editingId);
   if(type==='Preços informados'&&ev.informedPrices.some(item=>!item.informedPrice)){await notifyUser('Indique o preço informado para cada fração.','Preços informados');return}
   const reservationCandidates=isAbandonmentEvent(ev)&&!frs.length?state.fractions.map(f=>f.number):frs;
@@ -3147,7 +3177,7 @@ function returnToCommercialContext(){
 }
 function sortedUxFractions(fractions,key){
   const sort=commercialUx.sort[key];if(!sort)return fractions;
-  const value=f=>sort.field==='current'?finalPrice(f):sort.field==='recommended'?recommendedPriceOf(f):sort.field==='status'?statusOf(f):sort.field==='sqm'?(f.totalArea?finalPrice(f)/f.totalArea:null):sort.field==='sale'?salePrice(f):['visits','interested','proposals','lastOffer','lastAction'].includes(sort.field)?metrics(f.number)[sort.field]:f[sort.field];
+  const value=f=>sort.field==='current'?finalPrice(f):sort.field==='recommended'?recommendedPriceOf(f):sort.field==='status'?statusOf(f):sort.field==='sqm'?(f.totalArea?finalPrice(f)/f.totalArea:null):sort.field==='sale'?salePrice(f):['presentations','visits','interested','proposals','lastOffer','lastAction'].includes(sort.field)?metrics(f.number)[sort.field]:f[sort.field];
   return fractions.slice().sort((a,b)=>{const av=value(a),bv=value(b);if(av==null)return bv==null?a.number-b.number:1;if(bv==null)return-1;const difference=typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'pt-PT',{numeric:true});return difference*sort.direction||a.number-b.number});
 }
 function renderUxFilterStatus(key,fractions){
@@ -3303,6 +3333,11 @@ function openClientUxAction(action){
   const c=client(state.selectedClientId);if(!c)return;
   if(action==='proposal'){openContextPresentation(relatedClientFractions(c).map(f=>f.number));return}
   if(action==='contact'){openClientContact();return}
+  if(action==='presentation'||action==='documentation'){
+    openEventModal('','client');el.eventType.value=action==='presentation'?'Apresentação comercial':'Documentação enviada';toggleEventSpecificFields();
+    const modal=el.eventModal.querySelector('.modal');if(modal)modal.scrollTop=0;
+    el.eventType.focus({preventScroll:true});return;
+  }
   if(action==='note'){openEventModal('','client');el.eventType.value='Outro';toggleEventSpecificFields();el.eventNotes.focus();return}
   openClientModal(c.id);(action==='associate'?el.clientFractions:el.clientNextStep)?.focus();
 }
@@ -3370,7 +3405,7 @@ function filterFractions(fil={}){
 
 function syncProposal(){const next={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};if(Object.keys(next).every(key=>next[key]===state.pf[key]))return;state.pf=next;renderProposals()}
 function syncPrice(){const next={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};if(Object.keys(next).every(key=>next[key]===state.rf[key]))return;state.rf=next;renderPrices()}
-function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
+function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCommercialPresentationEvent).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
 function getF(n){return state.fractions.find(f=>f.number===n)}
 function client(id){return state.data.clients.find(c=>c.id===id)}

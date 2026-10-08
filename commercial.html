@@ -18,7 +18,7 @@
     <div class="hero__content">
       <p class="eyebrow">The View Olhão</p>
       <h1>Gestão Comercial</h1>
-      <p>Clientes, visitas, propostas, preços finais e controlo de vendas.</p>
+      <p>Clientes, apresentações comerciais, documentação, propostas e controlo de vendas.</p>
     </div>
   </header>
 
@@ -117,7 +117,7 @@
     <section id="tab-sales" class="tab-section active">
       <section class="panel">
         <div class="section-heading">
-          <div><p class="eyebrow eyebrow--dark">Clientes / Leads</p><h2>Ficha do cliente e linha do tempo</h2><p class="muted">Crie o cliente uma vez. Depois adicione eventos, visitas, propostas e follow-ups ligados a esse cliente.</p></div>
+          <div><p class="eyebrow eyebrow--dark">Clientes / Leads</p><h2>Ficha do cliente e linha do tempo</h2><p class="muted">Contactos, qualificação, apresentações comerciais, documentação e negociação.</p></div>
           <div class="top-actions"><button class="primary-button" id="openClientModal" type="button">Novo Cliente</button><button class="primary-button" id="openEventModalBtn" type="button">+ Adicionar evento</button></div>
         </div>
         <div class="filters-grid three">
@@ -133,7 +133,7 @@
 
       <section class="panel">
         <div class="section-heading"><div><p class="eyebrow eyebrow--dark">Estado das frações</p><h2>Disponível, reservado ou vendido</h2></div></div>
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Estado</th><th class="num-col">Preço final</th><th class="num-col">Preço reserva/venda</th><th class="num-col">Visitas</th><th class="num-col">Interessados</th><th class="num-col">Propostas</th><th class="num-col">Última proposta</th><th>Última ação</th></tr></thead><tbody id="salesTableBody"></tbody></table></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Estado</th><th class="num-col">Preço final</th><th class="num-col">Preço reserva/venda</th><th class="num-col">Apresentações comerciais</th><th class="num-col">Interessados</th><th class="num-col">Propostas</th><th class="num-col">Última proposta</th><th>Última ação</th></tr></thead><tbody id="salesTableBody"></tbody></table></div>
       </section>
     </section>
   </main>
@@ -161,12 +161,12 @@
   <div id="eventModal" class="modal-backdrop hidden"><div class="modal"><button class="modal-close" id="closeEventModal" type="button">×</button><p class="eyebrow eyebrow--dark">Evento comercial</p><h2>Novo evento</h2>
     <div class="form-grid">
       <label class="field"><span>Cliente</span><select id="eventClientId"></select></label>
-      <label class="field"><span>Tipo</span><select id="eventType"><option>Reunião com cliente</option><option>Visita</option><option>Interessado</option><option>Proposta recebida</option><option>Contra-proposta enviada</option><option>Reserva</option><option>Venda</option><option>Follow-up</option></select></label>
+      <label class="field"><span>Tipo</span><select id="eventType"><option>Pedido de informação recebido</option><option>Preferências recebidas</option><option>Apresentação comercial</option><option>Documentação enviada</option><option>Frações apresentadas</option><option>Preços informados</option><option>Contra-proposta recebida</option><option>Contra-proposta enviada</option><option>Reserva efetuada</option><option>Reserva cancelada</option><option>Venda concluída</option><option>Desistência</option><option>Outro</option></select></label>
       <label class="field"><span>Data</span><input id="eventDate" type="date" /></label>
       <label class="field"><span>Hora</span><input id="eventTime" type="time" /></label>
       <label class="field"><span>Valor proposto / venda</span><input id="eventAmount" type="number" min="0" step="1000" /></label>
       <label class="field"><span>Interesse 1 a 5</span><select id="eventInterest"><option></option><option>1 — Sem interesse</option><option>2 — Interesse baixo</option><option>3 — Interesse moderado</option><option>4 — Interesse elevado</option><option>5 — Muito interessado</option></select></label>
-      <label class="field"><span>Follow-up</span><select id="eventFollowup"><option></option><option>Telefonema</option><option>Email</option><option>2ª Visita</option><option>Proposta</option><option>Nenhum</option></select></label>
+      <label class="field"><span>Próximo passo sugerido</span><input id="eventFollowup" placeholder="Ex.: Acompanhar apresentação comercial" /></label>
       <label class="field"><span>Data follow-up</span><input id="eventFollowupDate" type="date" /></label>
     </div>
     <label class="field"><span>Frações relacionadas</span><select id="eventFractions" multiple size="8"></select></label>
