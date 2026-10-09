@@ -75,11 +75,11 @@ const COMMERCIAL_UI_KEY='theView.commercialUi.v1';
 const COMMERCIAL_PREFS_KEY='theView.commercialPreferences.v1';
 const RenderFlow={
   all(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();ensureSalesManagementTabs();renderFractionHistoryPanel();},
-  priceChanged(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();},
+  priceChanged(){renderProposals();renderDashboard();renderPrices();renderHistory();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();refreshClientRecommendations();},
   clientChanged(){renderClientSelects();renderClients();renderClientDetail();renderSalesEventsPanel();renderMaintenanceModalLists();renderDashboard();},
   agentChanged(){populateAgentSelect();populateClientAgentSelect(el.clientAgent?.value||'');renderAgents();renderSales();renderSalesEventsPanel();renderMaintenanceModalLists();},
   eventChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderClientSelects();renderClients();renderClientDetail();renderSales();ensureAgentsPanel();renderAgents();renderSalesEventsPanel();renderFractionHistoryPanel();renderMaintenanceModalLists();},
-  salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();renderMaintenanceModalLists();}
+  salesChanged(){renderProposals();renderDashboard();renderPrices();renderCompare();renderSales();renderSalesEventsPanel();renderFractionHistoryPanel();renderMaintenanceModalLists();refreshClientRecommendations();}
 };
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init)}else{init()}
 function init(){ensureCrmFormFields();['dataStatus','globalErrorBox','proposalIncludePlants','proposalSearch','proposalTypology','proposalFloor','proposalStatus','proposalSelectedInfo','proposalGrid','dashboardKpis','priceSearch','priceTypology','priceFloor','priceStatus','pricesTableBody','historyFractionSelect','priceHistoryChart','historyList','compareA','compareB','compareFractions','compareNotice','compareResult','clientSearch','clientStageFilter','selectedClient','clientsList','clientDetail','salesTableBody','clientModal','closeClientModal','clientId','clientName','clientPhone','clientEmail','clientNif','clientNationality','clientOrigin','clientOriginManual','clientAgent','clientAgency','clientBudget','clientStage','clientNextStep','clientNextFollowup','clientInitialRequestFields','clientInitialRequestDate','clientInitialRequestTime','clientInitialRequestChannel','clientInitialRequestNotes','clientSkipInitialRequest','clientFractions','clientNotes','clientTypologyPreference','clientFloorPreference','clientOrientationPreference','clientPurchaseObjective','clientDecisionTime','clientPreferenceSummary','eventModal','closeEventModal','eventClientId','eventType','eventDate','eventTime','eventAmount','eventInterest','eventFollowup','eventFollowupDate','eventFractions','eventObjections','eventNotes','eventChannel','eventPreferenceFields','eventPreferenceTypology','eventPreferenceBudget','eventPreferenceFloor','eventPreferenceOrientation','eventPreferenceObjective','eventPreferenceDecisionTime','eventPreferenceSummary','eventPriceFields','eventPriceRows','eventPriceNotice'].forEach(id=>el[id]=document.getElementById(id));bind();loadExcel();}
@@ -1689,15 +1689,18 @@ function renderClientDetail(){
   const chronological=sortedClientEvents(c.id),evs=chronological.slice().reverse(),summary=c.commercialSummary||{},prefs=cleanPreferences(c.preferences||{}),fractionRows=clientFractionCommercialRows(c,chronological);
   const associatedAgent=agent(c.agentId);
   const informed=(summary.lastInformedPrices||[]).map(item=>`Apt. ${item.fraction}: ${money(item.informedPrice)}`).join(' · ');
-  const related=relatedClientFractions(c),compatible=compatibleClientFractions(c),followup=clientSummaryFollowupInfo(c);
-  const nextStep=followup.status==='future'?(followup.step||summary.nextStep||'Contactar'):(summary.nextStep||'');
+  const recommendation=commercialClientRecommendation(c),related=relatedClientFractions(c),followup=clientSummaryFollowupInfo(c);
+  const compatible=recommendation?(recommendation.matching.known?recommendation.matching.matches.map(item=>getF(item.number)).filter(Boolean):null):compatibleClientFractions(c);
+  const defined=recommendation?.manual,nextStep=defined?.step||(followup.status==='future'?(followup.step||summary.nextStep||'Contactar'):(summary.nextStep||''));
+  const definedDate=defined?.date|| (followup.status==='future'?followup.date:'');
   el.clientDetail.innerHTML=`<nav class="ux-breadcrumb" aria-label="Localização">Clientes <span aria-hidden="true">›</span> ${esc(c.name||'Cliente sem nome')}</nav><div class="section-heading client-detail-header"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:'<span>Sem telefone</span>'}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:'<span>Sem email</span>'}</p><p class="muted small">Origem: ${esc(clientOriginLabel(c))} · Agente: ${esc(associatedAgent?.name||c.agent||c.agency||'Sem agente')}</p></div><button class="ghost-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar cliente</button></div>
     <dl class="ux-client-facts">${[['Tipologia pretendida',prefs.typology||'—'],['Piso pretendido',prefs.floor||'—'],['Orçamento',c.budget?money(c.budget):'—'],['Último contacto',formatCommercialDate(summary.lastContact)],['Frações apresentadas',(summary.presentedFractions||[]).length]].map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
-    <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação</span><strong>${esc(nextStep||'Sem próxima ação definida')}${followup.status==='future'?` · ${esc(formatCommercialDate(followup.date))}`:''}</strong></div><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button></section>
+    <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação definida${defined?.status==='overdue'?' · Prazo vencido':''}</span><strong>${esc(nextStep||'Sem próxima ação definida')}${definedDate?` · ${esc(formatCommercialDate(definedDate))}`:''}</strong></div><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button></section>
+    <div id="clientRecommendation">${clientRecommendationMarkup(recommendation)}</div>
     <div class="ux-client-secondary-actions"><button class="ghost-button" type="button" data-ux-client-action="presentation">${uxIcon('presentation')}Registar apresentação</button><button class="ghost-button" type="button" data-ux-client-action="documentation">${uxIcon('send')}Registar envio de documentação</button><button class="ghost-button" type="button" data-ux-client-action="proposal">${uxIcon('file-text')}Criar proposta</button><button class="ghost-button" type="button" data-ux-client-action="associate">${uxIcon('link')}Associar fração</button><button class="ghost-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar nota</button></div>
     ${informed?`<p class="crm-inline-summary"><strong>Últimos preços informados:</strong> ${esc(informed)}</p>`:''}
     <section class="crm-detail-section"><h3>Frações relacionadas <span class="muted small">${related.length}</span></h3>${clientFractionTiles(related,'Ainda não existem frações associadas.')}</section>
-    ${compatible===null?'':`<section class="crm-detail-section"><h3>Frações compatíveis <span class="muted small">${compatible.length}</span></h3><p class="muted small">Disponíveis · ${esc(clientCompatibilityLabel(c))}</p>${clientFractionTiles(compatible,'Nenhuma fração disponível corresponde às preferências registadas.')}</section>`}
+    ${compatible===null?'':`<section class="crm-detail-section"><h3>Frações compatíveis <span class="muted small">${compatible.length}</span></h3><p class="muted small">Disponíveis · ${esc([prefs.typology,(Number(c.budgetMax)||Number(c.budget))?`até ${money(Number(c.budgetMax)||Number(c.budget))}`:''].filter(Boolean).join(' · '))}</p>${clientFractionTiles(compatible,'Nenhuma fração disponível corresponde à tipologia e ao investimento registados.',recommendation?.matching.matches)}</section>`}
     <section class="crm-detail-section"><h3>Preferências</h3><div class="crm-preference-grid">${[['Tipologia',prefs.typology],['Piso',prefs.floor],['Orientação',prefs.orientation],['Objetivo',prefs.objective],['Prazo de decisão',prefs.decisionTime],['Resumo',prefs.summary]].map(([label,value])=>`<div><span>${esc(label)}</span><strong>${esc(value||'—')}</strong></div>`).join('')}</div></section>
     <section class="crm-detail-section"><h3>Frações e Preços</h3>${fractionRows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Fração</th><th>Estado com cliente</th><th class="num-col">Preço informado</th><th>Data</th><th>Observação</th></tr></thead><tbody>${fractionRows.map(row=>`<tr><td>${getF(row.fraction)?fractionReference(getF(row.fraction)):`Apt. ${row.fraction}`}</td><td>${esc(row.status)}</td><td class="num-col">${row.informedPrice?money(row.informedPrice):'—'}</td><td>${esc(row.date||'—')}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Ainda não existem frações associadas.</div>'}</section>
     <section class="crm-detail-section"><h3>Timeline de interações <span class="muted small">${evs.length}</span></h3><div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<div class="empty-state"><strong>Sem interações registadas</strong><button class="ghost-button" type="button" data-ux-client-action="contact">Registar contacto</button></div>'}</div></section>
@@ -1712,9 +1715,9 @@ function relatedClientFractions(c){
   const numbers=uniqNum([...(c.fractions||[]),...(c.manualFractions||[]),...(c.commercialSummary?.presentedFractions||[]),...sortedClientEvents(c.id).flatMap(ev=>ev.fractions||[])]);
   return numbers.map(getF).filter(Boolean);
 }
-function clientFractionTiles(fractions,empty){
+function clientFractionTiles(fractions,empty,preferences=[]){
   const money=displayMoney;
-  return fractions.length?`<div class="ux-client-fractions">${fractions.map(f=>`<button type="button" data-ux-open="${f.number}"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><strong>Apt. ${f.number}</strong><span>${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span><b>${money(finalPrice(f))}</b></button>`).join('')}</div>`:`<p class="muted small">${esc(empty)}</p>`;
+  return fractions.length?`<div class="ux-client-fractions">${fractions.map(f=>{const preferred=(preferences||[]).find(item=>item.number===f.number)?.preferred||[];return`<button type="button" data-ux-open="${f.number}"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><strong>Apt. ${f.number}</strong><span>${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span><b>${money(finalPrice(f))}</b>${preferred.length?`<span class="muted small">Preferências coincidentes: ${esc(preferred.join(' · '))}</span>`:''}</button>`}).join('')}</div>`:`<p class="muted small">${esc(empty)}</p>`;
 }
 function clientCompatibilityCriteria(c){
   const p=cleanPreferences(c.preferences||{}),type=norm(p.typology),floorText=norm(p.floor).replace(/[º°]/g,'').replace(/\.(?=\s|$)/g,'').replace(/pisos?/g,'').trim();
@@ -1754,7 +1757,8 @@ function formatTimelineDate(date,time=''){
 }
 function openClientContact(){
   if(!client(state.selectedClientId)){notifyUser('Selecione um cliente para registar o contacto.','Registar contacto');return}
-  openEventModal('','client');el.eventChannel.value='Telefone';
+  openEventModal('','client');el.eventType.value='Outro';toggleEventSpecificFields();el.eventChannel.value='Telefone';
+  const modal=el.eventModal.querySelector('.modal');if(modal)modal.scrollTop=0;el.eventChannel.focus({preventScroll:true});
 }
 
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
@@ -3227,7 +3231,48 @@ function operationalActionsMarkup(){
     ['Revisões de preço','revisions',summary.revisions.map(f=>`<button type="button" data-ux-open="${f.number}"><strong>Apt. ${f.number} · ${money(finalPrice(f))}</strong><span>Recomendado ${money(recommendedPriceOf(f))} · ${priceDifferenceText(recommendedPriceOf(f)-finalPrice(f))}</span></button>`)]
   ];
   const management=state.fractions.filter(f=>norm(f.raw?.['Ação recomendada'])==='rever gerencia');if(management.length)groups.push(['Rever gerência','management',management.map(f=>`<button type="button" data-ux-open="${f.number}"><strong>Apt. ${f.number}</strong><span>${esc(f.raw['Justificação Técnica']||'Rever gerência')}</span></button>`)]);
-  return`<section class="ux-operational-actions"><h3>Ações necessárias</h3><div class="ux-action-groups">${groups.map(([title,key,items])=>`<section><h4><button class="ux-text-button" type="button" data-ux-operational="${key}">${esc(title)}</button> <span>${items.length}</span></h4><div class="ux-action-list">${items.length?items.join(''):'<p class="muted small">Sem pendências nesta categoria.</p>'}</div></section>`).join('')}</div></section>`;
+  return commercialRecommendationQueueMarkup()+`<section class="ux-operational-actions"><h3>Consultas comerciais</h3><div class="ux-action-groups">${groups.map(([title,key,items])=>`<section><h4><button class="ux-text-button" type="button" data-ux-operational="${key}">${esc(title)}</button> <span>${items.length}</span></h4><div class="ux-action-list">${items.length?items.join(''):'<p class="muted small">Sem pendências nesta categoria.</p>'}</div></section>`).join('')}</div></section>`;
+}
+function commercialRecommendationInput(){
+  return{clients:state.data.clients||[],events:state.data.events||[],priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
+}
+function commercialClientRecommendation(c){
+  const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return null;
+  return engine.recommendClient(c,engine.buildContext(commercialRecommendationInput()));
+}
+function recommendationPriorityMarkup(priority){return`<span class="ux-priority ux-priority--${priority==='Alta'?'high':priority==='Média'?'medium':'low'}">Prioridade ${esc(priority.toLowerCase())}</span>`}
+function recommendationItemMarkup(rec,secondary=false){
+  const icons={contact:'phone',edit:'pencil',plan:'calendar-clock',presentation:'presentation',matches:'building-2',alternatives:'building-2',fractions:'building-2',event:'history'};
+  const references=(rec.reference.fractions||[]).map(getF).filter(Boolean);
+  return`<article class="ux-recommendation-item${secondary?' ux-recommendation-item--secondary':''}" data-recommendation-code="${attr(rec.code)}"><header><h4>${esc(rec.alreadyDefined?'Próxima ação já definida':rec.action)}</h4>${recommendationPriorityMarkup(rec.priority)}</header><p>${esc(rec.reason)}</p>${references.length?`<div class="ux-recommendation-references">${references.slice(0,4).map(f=>fractionReference(f)).join('')}${references.length>4?`<span class="muted small">+${references.length-4}</span>`:''}</div>`:''}<div class="ux-recommendation-actions">${rec.quickActions.map(action=>`<button class="ghost-button compact-button" type="button" ${action.id==='event'&&rec.reference.eventId?`data-ux-edit-event="${attr(rec.reference.eventId)}"`:`data-ux-recommendation-action="${attr(action.id)}"`} title="${attr(action.label)}">${uxIcon(icons[action.id]||'arrow-right')}${esc(action.label)}</button>`).join('')}</div><div class="ux-recommendation-options hidden"></div></article>`;
+}
+function clientRecommendationMarkup(value){
+  if(!value)return'';
+  const message=value.status==='waiting'&&value.manual?.status==='future'?'Aguardar a próxima ação definida.':value.message;
+  return`<section class="ux-client-recommendation" aria-label="Recomendação do sistema"><h3>Próxima ação recomendada</h3>${value.primary?recommendationItemMarkup(value.primary):`<p class="muted small">${esc(message)}</p>`}${value.secondary.length?`<details class="ux-recommendation-secondary"><summary>Outras sugestões (${value.secondary.length})</summary>${value.secondary.map(rec=>recommendationItemMarkup(rec,true)).join('')}</details>`:''}</section>`;
+}
+function refreshClientRecommendations(){
+  const container=document.getElementById('clientRecommendation'),c=client(state.selectedClientId);if(!container||!c)return;
+  container.innerHTML=clientRecommendationMarkup(commercialClientRecommendation(c));renderUxIcons();
+}
+function commercialRecommendationQueueMarkup(){
+  const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return'';
+  const report=engine.evaluate(commercialRecommendationInput()),priority=commercialUx.recommendationPriority||'all';
+  const queue=report.queue.filter(item=>priority==='all'||item.recommendation.primary.priority===priority);
+  return`<section id="commercialRecommendationQueue" class="ux-recommendation-queue"><header><h3>Atenção comercial</h3><span class="muted small">${queue.length} ${queue.length===1?'cliente':'clientes'}</span></header><div class="ux-recommendation-filters" role="group" aria-label="Filtrar por prioridade">${[['all','Todas'],['Alta','Alta'],['Média','Média'],['Baixa','Baixa']].map(([key,label])=>`<button type="button" data-ux-recommendation-filter="${attr(key)}" aria-pressed="${priority===key}">${esc(label)} <span>${key==='all'?report.counts.all:report.counts[key]}</span></button>`).join('')}</div><div class="ux-recommendation-list">${queue.length?queue.map(({client:c,recommendation:{primary:rec,manual}})=>`<button type="button" data-ux-client="${attr(c.id)}" class="ux-recommendation-row" aria-label="Abrir cliente ${attr(c.name||'Cliente sem nome')}: ${attr(rec.action)}"><span class="ux-recommendation-row-heading"><strong>${esc(c.name||'Cliente sem nome')}</strong>${recommendationPriorityMarkup(rec.priority)}</span><b>${esc(rec.code.startsWith('manual-')?manual?.step||rec.action:rec.action)}${(rec.reference.fractions||[]).length?` · ${esc(rec.reference.fractions.slice(0,3).map(n=>`Apt. ${n}`).join(', '))}`:''}</b><span class="muted small">${esc(rec.reason)}</span><span class="ux-recommendation-open">Abrir cliente ${uxIcon('arrow-up-right')}</span></button>`).join(''):'<p class="muted small">Sem recomendações nesta prioridade.</p>'}</div></section>`;
+}
+function openRecommendationAction(button){
+  const c=client(state.selectedClientId);if(!c)return;
+  const value=commercialClientRecommendation(c),rec=[value?.primary,...(value?.secondary||[])].find(rec=>rec?.code===button.closest('[data-recommendation-code]')?.dataset.recommendationCode);
+  if(!rec)return;
+  const action=button.dataset.uxRecommendationAction;
+  if(action==='contact'){openClientContact();return}
+  if(action==='edit'){openClientModal(c.id);return}
+  if(action==='plan'||action==='presentation'){openClientUxAction(action);return}
+  const numbers=action==='alternatives'?rec.reference.alternatives:action==='matches'?value.matching.matches.map(f=>f.number):rec.reference.fractions;
+  const fractions=(numbers||[]).map(getF).filter(Boolean),options=button.closest('[data-recommendation-code]').querySelector('.ux-recommendation-options');
+  if(action==='fractions'&&fractions.length===1){openFractionDrawer(fractions[0].number,button);return}
+  options.innerHTML=clientFractionTiles(fractions,'Não existem opções confirmadas para esta recomendação.',value.matching.matches);options.classList.remove('hidden');renderUxIcons();
 }
 function openOperationalCategory(key){
   if(['revisions','management'].includes(key)){contextualCommercialNavigation('prices',()=>{commercialUx.priceFocus=key==='management'?'management':'revisions';state.rf={search:'',typology:'all',floor:'all',status:'all'};el.priceSearch.value='';['priceTypology','priceFloor','priceStatus'].forEach(id=>el[id].value='all')});return}
@@ -3355,7 +3400,7 @@ function bindCommercialUx(){
   document.getElementById('globalCommercialSearch').onkeydown=commercialSearchKey;
   document.getElementById('globalCommercialSearch').onfocus=()=>{if(document.getElementById('globalCommercialSearch').value)renderGlobalCommercialSearch()};
   document.addEventListener('click',event=>{
-    const button=event.target.closest('[data-ux-open],[data-ux-toggle],[data-ux-remove],[data-ux-clear],[data-ux-compare],[data-ux-compare-remove],[data-ux-close],[data-ux-history],[data-ux-prices],[data-ux-client],[data-ux-clear-filter],[data-ux-clear-one],[data-ux-sort],[data-ux-sidebar],[data-ux-client-action],[data-ux-client-list],[data-ux-export],[data-ux-edit-event],[data-ux-operational]');
+    const button=event.target.closest('[data-ux-open],[data-ux-toggle],[data-ux-remove],[data-ux-clear],[data-ux-compare],[data-ux-compare-remove],[data-ux-close],[data-ux-history],[data-ux-prices],[data-ux-client],[data-ux-clear-filter],[data-ux-clear-one],[data-ux-sort],[data-ux-sidebar],[data-ux-client-action],[data-ux-client-list],[data-ux-export],[data-ux-edit-event],[data-ux-operational],[data-ux-recommendation-filter],[data-ux-recommendation-action]');
     if(!button){if(!event.target.closest('.ux-global-search'))closeCommercialSearch();return}
     event.preventDefault();event.stopPropagation();
     const data=button.dataset;
@@ -3374,6 +3419,8 @@ function bindCommercialUx(){
     else if(data.uxSort){const previous=commercialUx.sort[data.uxSort];commercialUx.sort[data.uxSort]={field:data.sortField,direction:previous?.field===data.sortField?-previous.direction:1};data.uxSort==='prices'?renderPrices():renderSales()}
     else if('uxSidebar'in data){commercialUx.collapsed=!commercialUx.collapsed;saveCommercialPreferences()}
     else if(data.uxClientAction)openClientUxAction(data.uxClientAction);
+    else if(data.uxRecommendationAction)openRecommendationAction(button);
+    else if(data.uxRecommendationFilter){commercialUx.recommendationPriority=data.uxRecommendationFilter;const queue=document.getElementById('commercialRecommendationQueue');if(queue)queue.outerHTML=commercialRecommendationQueueMarkup()}
     else if(data.uxClientList){if(data.uxClientList==='new')openClientModal('');else{commercialUx.clientFocus='';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all';renderClients()}}
     else if(data.uxEditEvent){closeFractionDrawer();openEventModal(data.uxEditEvent,state.tab==='history'?'history':state.tab==='sales'&&state.salesSubtab==='clients'?'client':'')}
     else if(data.uxExport){const menu=button.closest('.ux-export-menu');if(menu)menu.open=false;if(data.uxExport==='proposal')contextualCommercialNavigation('proposals');else if(data.uxExport==='comparison-proposal')openContextPresentation(selectedCompareFractions().map(f=>f.number));

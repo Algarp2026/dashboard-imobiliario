@@ -359,3 +359,28 @@ body:has(.ux-app-shell) .modal-close{width:38px;height:38px;border-radius:8px}
 @media(max-width:760px){.ux-app-header{flex-direction:column}}
 @media(max-width:1100px) and (min-width:761px){.ux-sidebar-brand{display:none}}
 body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#fff}
+.ux-recommendation-queue{padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--line)}
+.ux-recommendation-queue>header,.ux-recommendation-item>header,.ux-recommendation-row-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ux-recommendation-queue h3,.ux-client-recommendation h3{margin:0 0 12px;font-size:16px;letter-spacing:0}
+.ux-recommendation-filters{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 12px}
+.ux-recommendation-filters button{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;min-height:36px}
+.ux-recommendation-filters button[aria-pressed=true]{border-color:#cadfd5;background:#eef5f1;color:#245b45;font-weight:700}
+.ux-recommendation-filters button span{font-variant-numeric:tabular-nums;min-width:18px;text-align:center}
+.ux-recommendation-list{max-height:390px;overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain}
+.ux-recommendation-row{display:flex;flex-direction:column;gap:7px;width:100%;padding:15px 8px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;color:var(--text);cursor:pointer;overflow-wrap:anywhere}
+.ux-recommendation-row:hover{background:#f6f8f7}
+.ux-recommendation-row strong{font-size:14px}.ux-recommendation-row>b{font-size:13px;font-weight:600}.ux-recommendation-row .muted{font-size:12px;line-height:1.5}
+.ux-priority{display:inline-flex;align-items:center;font-size:11px;line-height:1.4;font-weight:600;padding:4px 7px;border-radius:4px;letter-spacing:0;white-space:nowrap}
+.ux-priority--high{color:#943b32;background:#faeeeb}.ux-priority--medium{color:#765616;background:#f8f3e7}.ux-priority--low{color:#46615d;background:#edf3f1}
+.ux-recommendation-open{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#245b45}
+.ux-client-recommendation{margin-bottom:18px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.ux-recommendation-item h4{font-size:15px;line-height:1.45;margin:0;overflow-wrap:anywhere}
+.ux-recommendation-item p{font-size:13px;color:var(--muted);line-height:1.65;margin:10px 0;overflow-wrap:anywhere}
+.ux-recommendation-references{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.ux-recommendation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.ux-recommendation-actions .compact-button{font-size:12px;padding:8px 10px;display:inline-flex;align-items:center;gap:7px;min-height:36px;max-width:100%;white-space:normal}
+.ux-recommendation-secondary{margin-top:16px}.ux-recommendation-secondary>summary{font-size:12px;color:var(--muted);cursor:pointer}
+.ux-recommendation-item--secondary{padding-top:16px;margin-top:16px;border-top:1px solid var(--line)}
+.ux-recommendation-options{margin-top:14px}
+.ux-recommendation-filters button:focus-visible,.ux-recommendation-row:focus-visible{outline:2px solid #28765b;outline-offset:-2px}
+@media(max-width:760px){.ux-recommendation-row-heading{align-items:flex-start}.ux-recommendation-item>header{display:block}.ux-recommendation-item .ux-priority{margin-top:8px}.ux-recommendation-row{padding:14px 4px}.ux-recommendation-list{max-height:430px}}
