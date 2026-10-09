@@ -4,6 +4,11 @@ const path=require('node:path');
 const vm=require('node:vm');
 const engine=require('../commercial-recommendations.js');
 const root=path.resolve(__dirname,'..');
+for(const page of ['index.html','commercial.html']){
+  const html=fs.readFileSync(path.join(root,page),'utf8');
+  assert.equal((html.match(/<script src="commercial-recommendations\.js" defer><\/script>/g)||[]).length,1,page+' must load the recommendation engine exactly once');
+  assert.match(html,/<script src="commercial-recommendations\.js" defer><\/script>\s*<script src="config\.js" defer><\/script>\s*<script src="commercial\.js" defer><\/script>/,page+' must load the engine before configuration and the commercial application');
+}
 const source=fs.readFileSync(path.join(root,'commercial.js'),'utf8');
 const rows=JSON.parse(fs.readFileSync(path.join(root,'data.json'),'utf8'));
 let writes=0,requests=0;
