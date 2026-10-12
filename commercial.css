@@ -385,6 +385,48 @@ body:has(.ux-app-shell) .modal-close{width:38px;height:38px;border-radius:8px}
 .ux-app-shell .client-sticky-actions{top:var(--commercial-header-height,68px)}
 .ux-app-shell #clientDetail{scroll-margin-top:calc(var(--commercial-header-height,68px) + 80px)}
 @media(max-width:760px){.ux-app-header{flex-direction:column}}
+.ux-app-shell #clientDetail{padding:0;border:1px solid var(--line);border-radius:8px;background:#fff;align-self:start;min-width:0}
+.ux-client-workspace{min-width:0}
+.ux-client-workspace__top{position:sticky;top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 12px);z-index:10;background:rgba(255,255,255,.98);border-bottom:1px solid var(--line);padding:16px 20px 0;border-radius:8px 8px 0 0}
+.ux-client-workspace__top .ux-breadcrumb{margin-bottom:8px;font-size:11px}
+.ux-client-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ux-app-shell .ux-client-title h2{font-size:20px;margin:0;line-height:1.3;overflow-wrap:anywhere;min-width:0}
+.ux-client-title .badge{flex-shrink:0;font-size:11px}
+.ux-client-workspace__top .ux-client-contact{font-size:11px;gap:6px 14px;margin:10px 0 14px;line-height:1.5}
+.ux-client-tabs{display:flex;gap:3px;overflow-x:auto;scrollbar-width:thin;min-width:0}
+.ux-client-tabs>button{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1 0 auto;border:0;border-bottom:3px solid transparent;background:transparent;padding:12px 9px;font:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.ux-client-tabs>button[aria-selected=true]{border-bottom-color:#28765b;color:#20553f;background:#f0f7f3}
+.ux-client-tabs>button:hover{background:#f5f7f8}.ux-client-tabs .lucide{width:15px;height:15px}
+.ux-client-workspace__content{padding:20px;min-width:0}
+#clientDetail [data-client-panel][hidden]{display:none!important}
+#clientDetail [data-client-panel]{min-width:0;outline-offset:4px}
+#clientDetail .crm-detail-section__heading{align-items:center;flex-wrap:wrap;margin-bottom:14px}
+#clientDetail h3{font-size:16px;margin:0}#clientDetail h4{font-size:13px;margin:0 0 8px}
+#clientDetail .ux-client-facts{margin:12px 0 20px;gap:16px}
+#clientDetail #clientMatchingDetails{margin:0}#clientDetail #clientMatchingDetails>summary{color:var(--text);font-size:14px;padding:0 0 12px}
+.ux-client-section{border-top:1px solid var(--line);padding:18px 0 0;margin-top:18px;min-width:0}
+.ux-client-section .ux-client-secondary-actions{margin-bottom:0}
+.ux-client-observations p{font-size:13px;line-height:1.6;white-space:pre-line;overflow-wrap:anywhere;color:var(--muted)}
+#clientDetail .ux-next-action{padding:12px;margin:16px 0;align-items:flex-start}
+#clientDetail .ux-next-action p{grid-column:2;margin:0;font-size:12px;line-height:1.6}
+#clientDetail .ux-client-fractions{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line)}
+#clientDetail .ux-client-fractions>button{flex:1 0 160px;max-width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px}
+#clientDetail .ux-suggested-fractions{display:flex;flex-direction:column;gap:0;max-height:440px}
+#clientDetail .ux-suggested-fractions>article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:14px 0;background:transparent}
+#clientDetail .ux-suggested-fractions header{grid-column:1;justify-content:flex-start}
+#clientDetail .ux-suggested-fractions b{grid-row:1;grid-column:2;text-align:right;align-self:center;font-size:14px}
+#clientDetail .ux-suggested-fractions p{grid-column:1}
+#clientDetail .ux-suggested-fractions footer{grid-column:2;grid-row:2/5;flex-direction:column;justify-content:flex-end;align-items:flex-end;margin:0}
+.ux-client-negotiation{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.ux-client-negotiation .field{flex:1;min-width:200px}
+.ux-client-negotiation .field span{font-size:12px}.ux-client-negotiation .field select{min-height:40px;font-size:13px;border-radius:6px;padding:8px}
+.ux-client-recent{list-style:none;padding:0;margin:0}
+.ux-client-recent li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
+.ux-client-recent li:last-child{border-bottom:0}.ux-client-recent time{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+.ux-client-recent p{font-size:12px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere;margin:6px 0 0}
+.ux-client-recent .ux-icon-button{flex:0 0 auto;align-self:flex-start}
+@media(max-width:1100px){.ux-client-workspace__top{padding:14px 14px 0}.ux-client-workspace__content{padding:16px}.ux-client-tabs>button{font-size:11px;padding:11px 8px}}
+@media(max-width:760px){.ux-client-title{align-items:flex-start;flex-wrap:wrap}.ux-app-shell .ux-client-title h2{font-size:18px}.ux-client-tabs>button{flex:0 0 auto}.ux-client-workspace__content{padding:14px}.ux-client-workspace__top{padding:12px 12px 0}.ux-client-workspace__top .ux-client-contact{margin:8px 0 10px}#clientDetail .ux-suggested-fractions>article{grid-template-columns:1fr;gap:8px}#clientDetail .ux-suggested-fractions b,#clientDetail .ux-suggested-fractions footer{grid-column:1;grid-row:auto;text-align:left;align-items:center}#clientDetail .ux-suggested-fractions footer{flex-direction:row;justify-content:space-between}#clientDetail .ux-next-action .top-actions{justify-content:flex-start}#clientDetail .ux-client-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){#tab-sales .client-sticky-actions__context{display:none}#tab-sales .client-sticky-actions__buttons{flex-wrap:nowrap;width:100%;justify-content:flex-start}#tab-sales .client-sticky-actions__buttons>button{flex-shrink:0;white-space:nowrap}}
 @media(max-width:1100px) and (min-width:761px){.ux-sidebar-brand{display:none}}
 body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#fff}
 .ux-recommendation-queue{padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--line)}
