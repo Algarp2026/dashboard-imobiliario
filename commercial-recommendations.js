@@ -40,6 +40,9 @@
   function isContact(event){
     return CONTACT_TYPES.has(event.type)||(event.type==='Outro'&&['telefone','whatsapp','email','presencial','reuniao','videoconferencia'].includes(norm(event.channel)));
   }
+  function lastContactDate(client,context){
+    return (context.byClient.get(client.id)||[]).filter(row=>isContact(row.event)&&row.day!==null&&row.day<=context.day&&row.stamp!==null&&(!text(row.event.time)||row.stamp<=context.now)).pop()?.event.date||'';
+  }
   function buildContext(input={}){
     const settings={...DEFAULTS,...input.settings};
     for(const key of ['firstContactDays','documentationDays','presentationDays','proposalDays','inactiveDays','undatedActionDays','contactIntervalHours','secondaryLimit']){
@@ -217,5 +220,5 @@
     const counts={all:queue.length,Alta:0,'Média':0,Baixa:0};queue.forEach(item=>counts[item.recommendation.primary.priority]++);
     return{clients,queue,counts};
   }
-  return Object.freeze({DEFAULTS,buildContext,followupInfo,recommendClient,matchingFractions,evaluate});
+  return Object.freeze({DEFAULTS,buildContext,followupInfo,lastContactDate,recommendClient,matchingFractions,evaluate});
 });

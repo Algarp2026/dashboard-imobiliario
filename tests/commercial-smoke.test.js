@@ -80,7 +80,10 @@ includesAll(commercial, [
   'openClientsSummaryPdfModal',
   'generateClientsSummaryPdf',
   '@page{size:A4 portrait',
-  'Resumo Comercial de Clientes / Leads',
+  'Relatórios de Clientes',
+  'Relatório de Acompanhamento Comercial',
+  'Resumo de Gestão',
+  'Listagem de Clientes',
   'Documento interno de acompanhamento comercial. Informação sujeita a atualização.'
 ], 'client summary PDF flow');
 
