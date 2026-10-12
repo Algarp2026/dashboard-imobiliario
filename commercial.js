@@ -184,9 +184,16 @@ function ensureCrmFormFields(){
   }
   document.querySelectorAll('#clientModal .field').forEach(field=>{
     const input=field.querySelector('input,select,textarea'),name=input?.id||'';
-    field.dataset.clientScope=field.closest('#clientPreferenceFields')||['clientBudget','clientBudgetMin','clientBudgetMax'].includes(name)?'preferences':['clientName','clientPhone','clientEmail','clientOrigin','clientOriginManual'].includes(name)?'identity':name==='clientAgent'?'agent':'full';
+    field.dataset.clientScope=field.closest('#clientPreferenceFields')||['clientBudget','clientBudgetMin','clientBudgetMax'].includes(name)?'preferences':['clientName','clientPhone','clientEmail','clientOrigin','clientOriginManual'].includes(name)?'identity':name==='clientAgent'?'agent':['clientNif','clientNationality','clientAgency','clientNotes'].includes(name)?'additional':['clientNextStep','clientNextFollowup'].includes(name)?'plan':name==='clientStage'?'stage':name==='clientFractions'?'associate':'full';
   });
   ['clientPreferenceFields','clientInitialRequestFields'].forEach((name,index)=>{const section=document.getElementById(name);if(section)section.dataset.clientScope=index?'full':'preferences'});
+  const clientModal=document.getElementById('clientModal');
+  if(clientModal&&!document.getElementById('clientAdditionalFields')){
+    const details=document.createElement('details');details.id='clientAdditionalFields';details.dataset.clientScope='additional-section';details.className='crm-client-additional';
+    details.innerHTML='<summary>Dados adicionais</summary><div class="form-grid"></div><p id="clientLegacyAgent" class="muted small hidden"></p>';
+    clientModal.querySelector('.modal-actions').before(details);
+    ['clientNif','clientNationality','clientAgency','clientNotes'].forEach(name=>{const field=document.getElementById(name)?.closest('.field');if(field)details.querySelector('.form-grid').appendChild(field)});
+  }
   document.getElementById('clientName')?.setAttribute('aria-required','true');
 
   const eventType=document.getElementById('eventType');
@@ -271,6 +278,11 @@ function toggleClientOriginManual(){
   input?.closest('.field')?.classList.toggle('hidden',select?.value!=='Outro');
   const modal=el.clientModal||document.getElementById('clientModal');
   if(modal)modal.dataset.agentOrigin=String(select?.value==='Agente');
+  const agentField=(el.clientAgent||document.getElementById('clientAgent'))?.closest('.field');
+  if(agentField){
+    if(select?.value==='Agente')input?.closest('.field')?.after(agentField);
+    else document.getElementById('clientAgency')?.closest('.field')?.before(agentField);
+  }
   if(modal?.dataset.clientMode==='quick'&&select?.value!=='Agente'&&el.clientAgent){el.clientAgent.value='';syncClientAgentAgency()}
 }
 function clientOriginLabel(c){
@@ -1714,7 +1726,7 @@ function renderClientDetail(){
     <section class="crm-detail-section ux-client-area" aria-label="Acompanhamento comercial"><h3>Acompanhamento comercial</h3>
     <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação definida · ${esc(actionLabel)}</span><strong>${esc(nextStep||'Sem próxima ação definida')}${definedDate?` · ${esc(formatCommercialDate(definedDate))}`:''}</strong></div><nav class="top-actions" aria-label="Ações de acompanhamento"><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button>${followup.status!=='none'?`<button class="ux-text-button" type="button" data-ux-client-action="complete">${uxIcon('check')}Concluir ação</button>`:''}</nav></section>
     <div id="clientRecommendation">${clientRecommendationMarkup(recommendation)}</div>
-    <div class="ux-client-secondary-actions"><button class="ghost-button" type="button" data-ux-client-action="presentation">${uxIcon('presentation')}Registar apresentação comercial</button><button class="ghost-button" type="button" data-ux-client-action="documentation">${uxIcon('send')}Registar envio de documentação</button><button class="ghost-button" type="button" data-ux-client-action="proposal">${uxIcon('file-text')}Criar proposta</button><button class="ghost-button" type="button" data-ux-client-action="associate">${uxIcon('link')}Associar fração</button><button class="ghost-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar nota</button></div>
+    <div class="ux-client-secondary-actions"><button class="ghost-button" type="button" data-ux-client-action="presentation">${uxIcon('presentation')}Registar apresentação comercial</button><button class="ghost-button" type="button" data-ux-client-action="documentation">${uxIcon('send')}Registar envio de documentação</button><button class="ghost-button" type="button" data-ux-client-action="proposal">${uxIcon('file-text')}Criar proposta</button><button class="ghost-button" type="button" data-ux-client-action="associate">${uxIcon('link')}Associar fração</button><button class="ghost-button" type="button" data-ux-client-action="stage">${uxIcon('tag')}Atualizar estado comercial</button><button class="ghost-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar nota</button></div>
     <div class="ux-preparation-heading"><h4>Frações selecionadas para apresentar <span class="muted small">${preparation.length}</span></h4><button class="ghost-button compact-button" type="button" data-ux-client-action="select-presentation">${uxIcon('list-checks')}Selecionar frações para apresentar</button></div>
     ${clientFractionTiles(preparation,'Ainda não existem frações selecionadas para apresentação.')}
     <details class="ux-client-details ux-matching-details" ${!preparation.length?'open':''}><summary>Frações recomendadas${compatible===null?'':` (${compatible.length})`}</summary>${compatible===null?'<p class="muted small">Registe as preferências do cliente para identificar frações compatíveis.</p>':clientSuggestedFractionTiles(compatible,recommendation?.matching.matches)}</details>
@@ -2600,12 +2612,14 @@ async function completeClientNextAction(){
   record[action.source==='client'?'manualNextActionCompletedAt':'nextActionCompletedAt']=new Date().toISOString();
   recalculateResumoCliente(c.id);save();RenderFlow.clientChanged();
 }
-function openClientModal(cid='',mode='full'){
+function openClientModal(cid='',mode='identity'){
   state.definingNextAction=false;
   ensureClientAgentSelect();
   populateClientAgentSelect();
   const isEdit=!!cid;
+  mode=['identity','preferences','plan','associate','stage'].includes(mode)?mode:'identity';
   el.clientModal.dataset.clientMode=isEdit?mode:'quick';
+  document.getElementById('clientAdditionalFields').open=false;
   const c=isEdit?(client(cid)||{}):{};
   const aid=isEdit?clientAgentIdFromClient(c):'';
   el.clientId.value=isEdit?(c.id||''):'';
@@ -2619,7 +2633,10 @@ function openClientModal(cid='',mode='full'){
   toggleClientOriginManual();
   if(el.clientAgent)el.clientAgent.value=aid;
   el.clientAgency.value=isEdit?(c.agency||''):'';
-  if(aid)syncClientAgentAgency();
+  if(aid&&!c.agency)syncClientAgentAgency();
+  const legacyAgent=document.getElementById('clientLegacyAgent');
+  legacyAgent.textContent=c.agent?`Agente registado: ${c.agent}`:'';
+  legacyAgent.classList.toggle('hidden',!!agent(aid)||!c.agent);
   el.clientBudget.value=isEdit?(c.budget||''):'';
   document.getElementById('clientBudgetMin').value=isEdit?(c.budgetMin||''):'';
   document.getElementById('clientBudgetMax').value=isEdit?(c.budgetMax||''):'';
@@ -2643,23 +2660,26 @@ function openClientModal(cid='',mode='full'){
   if(preferences.objective&&el.clientPurchaseObjective.value!==preferences.objective){el.clientPurchaseObjective.add(new Option(preferences.objective,preferences.objective));el.clientPurchaseObjective.value=preferences.objective}
   el.clientDecisionTime.value=preferences.decisionTime;
   el.clientPreferenceSummary.value=preferences.summary;
-  setMulti(el.clientFractions,isEdit?(c.fractions||[]):[]);
+  setMulti(el.clientFractions,isEdit?(c.manualFractions||c.fractions||[]):[]);
   el.clientNotes.value=isEdit?(c.notes||''):'';
   const title=el.clientModal.querySelector('h2');
-  if(title)title.textContent=isEdit?(mode==='preferences'?'Preferências do cliente':'Editar ficha do cliente'):'Novo cliente';
+  const titles={identity:'Editar cliente',preferences:'Preferências do cliente',plan:'Definir próxima ação',associate:'Frações de interesse',stage:'Atualizar estado comercial'};
+  if(title)title.textContent=isEdit?titles[mode]:'Novo cliente';
   const saveBtn=document.getElementById('saveClient');
-  const updateSaveLabel=()=>{if(saveBtn)saveBtn.textContent=isEdit?(mode==='preferences'?'Guardar preferências':'Atualizar cliente'):'Guardar cliente'};
+  const updateSaveLabel=()=>{if(saveBtn)saveBtn.textContent=isEdit?(mode==='identity'?'Guardar alterações':mode==='preferences'?'Guardar preferências':mode==='plan'?'Guardar próxima ação':mode==='stage'?'Guardar estado':'Guardar frações'):'Guardar cliente'};
   updateSaveLabel();
   if(el.clientSkipInitialRequest)el.clientSkipInitialRequest.onchange=updateSaveLabel;
   el.clientModal.classList.remove('hidden');
   el.clientModal.style.zIndex='50';
   document.body.style.overflow='hidden';
   el.clientModal.querySelector('.modal').scrollTop=0;
-  (mode==='preferences'?el.clientTypologyPreference:el.clientName).focus({preventScroll:true});
+  state.clientFormSnapshot=readClientEditValues();
+  ({preferences:el.clientTypologyPreference,plan:el.clientNextStep,associate:el.clientFractions,stage:el.clientStage}[mode]||el.clientName).focus({preventScroll:true});
 }
-function closeClientModal(){state.definingNextAction=false;state.pendingEventClientCreation=false;el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
+function closeClientModal(){state.definingNextAction=false;state.pendingEventClientCreation=false;state.clientFormSnapshot=null;el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
 async function saveClient(){
   if(el.clientModal.dataset.clientMode==='preferences'){await saveClientPreferences();return}
+  if(el.clientId.value){await saveClientEdit();return}
   const isNew=!el.clientId.value;
   let cid=el.clientId.value||id();
   const existing=client(cid)||{};
@@ -2779,6 +2799,33 @@ async function saveClient(){
     state.salesSubtab='clients';commercialUx.clientFocus='';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all';
   });
   commercialUxToast(isNew?'Cliente criado e guardado.':'Cliente atualizado.');
+}
+function readClientEditValues(){
+  return{name:el.clientName.value.trim(),phone:el.clientPhone.value.trim(),email:el.clientEmail.value.trim(),origin:el.clientOrigin.value,originManual:el.clientOriginManual.value.trim(),nif:el.clientNif.value.trim(),nationality:el.clientNationality.value.trim(),agentId:el.clientAgent.value,agency:el.clientAgency.value.trim(),notes:el.clientNotes.value.trim(),manualNextStep:el.clientNextStep.value.trim(),manualNextFollowup:el.clientNextFollowup.value,stage:el.clientStage.value,manualFractions:uniqNum(getMulti(el.clientFractions))};
+}
+function clientEditPatch(before,values,mode){
+  const fields={identity:['name','phone','email','origin','originManual','nif','nationality','agentId','agency','notes'],plan:['manualNextStep','manualNextFollowup'],stage:['stage'],associate:['manualFractions']}[mode]||[];
+  // Compare with the opened form, not the stored record: legacy display fallbacks must not become edits.
+  return Object.fromEntries(fields.filter(key=>Object.hasOwn(before,key)&&JSON.stringify(before[key])!==JSON.stringify(values[key])).map(key=>[key,values[key]]));
+}
+async function saveClientEdit(){
+  const c=client(el.clientId.value);if(!c){await notifyUser('Não encontrei o cliente original. Reabra a ficha e tente novamente.','Cliente / Lead');return}
+  const mode=el.clientModal.dataset.clientMode,values=readClientEditValues(),patch=clientEditPatch(state.clientFormSnapshot||{},values,mode);
+  if(Object.hasOwn(patch,'name')&&!patch.name){await notifyUser('Indique o nome do cliente.','Cliente / Lead');return}
+  if(Object.hasOwn(patch,'agentId')){
+    const selectedAgent=agent(patch.agentId);
+    if(patch.agentId&&!selectedAgent){await notifyUser('Selecione um agente existente.','Cliente / Lead');return}
+    Object.assign(patch,{agent:selectedAgent?.name||'',agency:selectedAgent?.agency||''});
+  }
+  if(mode==='plan'){
+    const redefine=state.definingNextAction&&state.nextActionFormSignature===clientNonActionFormSignature()&&clientSummaryFollowupInfo(c).reviewReason==='legacy';
+    Object.assign(patch,nextActionMetadata(c,values.manualNextStep,values.manualNextFollowup,'client',undefined,redefine));
+  }
+  if(Object.hasOwn(patch,'stage'))Object.assign(patch,{stage:normalizeClientStage(patch.stage),stageManual:true,manualStage:normalizeClientStage(patch.stage)});
+  if(!Object.keys(patch).length){closeClientModal();return}
+  Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT')});
+  if(mode!=='identity')recalculateResumoCliente(c.id);
+  save();closeClientModal();RenderFlow.clientChanged();commercialUxToast(mode==='identity'?'Dados do cliente atualizados.':'Acompanhamento atualizado.');
 }
 function clientInvestmentInterval(existing){
   const min=num(document.getElementById('clientBudgetMin').value),max=num(document.getElementById('clientBudgetMax').value),budget=num(el.clientBudget.value);
@@ -3511,7 +3558,7 @@ function openClientUxAction(action){
     el.eventType.focus({preventScroll:true});return;
   }
   if(action==='note'){openEventModal('','client');el.eventType.value='Outro';toggleEventSpecificFields();el.eventNotes.focus();return}
-  openClientModal(c.id);
+  openClientModal(c.id,['plan','associate','stage'].includes(action)?action:'identity');
   if(action==='plan'){
     state.definingNextAction=true;
     state.nextActionFormSignature=clientNonActionFormSignature();

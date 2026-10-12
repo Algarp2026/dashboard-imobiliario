@@ -266,8 +266,16 @@ body:has(.ux-app-shell) .topbar{padding-top:24px;padding-bottom:24px}
 .ux-client-fractions>button:hover{border-color:#28765b;background:#f6faf7}
 .ux-client-fractions strong{font-size:14px}.ux-client-fractions>button>span:not(.badge){font-size:12px;color:var(--muted)}
 .ux-client-fractions b{font-size:15px}
-#clientModal[data-client-mode="quick"] [data-client-scope="full"],#clientModal[data-client-mode="quick"] [data-client-scope="preferences"],#clientModal[data-client-mode="quick"][data-agent-origin="false"] [data-client-scope="agent"],#clientModal[data-client-mode="preferences"] [data-client-scope="full"],#clientModal[data-client-mode="preferences"] [data-client-scope="identity"],#clientModal[data-client-mode="preferences"] [data-client-scope="agent"]{display:none}
-#clientModal[data-client-mode="quick"] .modal{max-width:560px}
+#clientModal [data-client-scope]{display:none}
+#clientModal[data-client-mode="quick"] [data-client-scope="identity"],#clientModal[data-client-mode="quick"][data-agent-origin="true"] [data-client-scope="agent"],#clientModal[data-client-mode="identity"] [data-client-scope="identity"],#clientModal[data-client-mode="identity"] [data-client-scope="agent"],#clientModal[data-client-mode="identity"] [data-client-scope="additional"],#clientModal[data-client-mode="preferences"] .field[data-client-scope="preferences"],#clientModal[data-client-mode="plan"] [data-client-scope="plan"],#clientModal[data-client-mode="stage"] [data-client-scope="stage"],#clientModal[data-client-mode="associate"] [data-client-scope="associate"]{display:flex}
+#clientModal[data-client-mode="identity"] [data-client-scope="additional-section"],#clientModal[data-client-mode="preferences"] #clientPreferenceFields{display:block}
+#clientModal[data-client-mode="quick"] .modal,#clientModal[data-client-mode="identity"] .modal,#clientModal[data-client-mode="associate"] .modal{max-width:560px}
+#clientModal[data-client-mode="plan"] .modal,#clientModal[data-client-mode="stage"] .modal{max-width:480px}
+#clientModal[data-client-mode="preferences"] .modal{max-width:720px}
+.crm-client-additional{margin:16px 0;border-top:1px solid var(--line)}
+.crm-client-additional:not([open])>:not(summary){display:none!important}
+.crm-client-additional>summary{padding:14px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.crm-client-additional .field:has(#clientNotes){grid-column:1/-1}
 .ux-client-area>h3{margin-bottom:16px}
 .ux-client-details{margin:14px 0}
 .ux-client-details>summary{cursor:pointer;padding:10px 0;font-size:13px;font-weight:600;color:var(--muted)}
