@@ -387,7 +387,8 @@ body:has(.ux-app-shell) .modal-close{width:38px;height:38px;border-radius:8px}
 @media(max-width:760px){.ux-app-header{flex-direction:column}}
 .ux-app-shell #clientDetail{padding:0;border:1px solid var(--line);border-radius:8px;background:#fff;align-self:start;min-width:0}
 .ux-client-workspace{min-width:0}
-.ux-client-workspace__top{position:sticky;top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 12px);z-index:10;background:rgba(255,255,255,.98);border-bottom:1px solid var(--line);padding:16px 20px 0;border-radius:8px 8px 0 0}
+.ux-client-workspace__top{position:sticky;top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 12px);z-index:10;background:#fff;border-bottom:1px solid var(--line);padding:16px 20px 0;border-radius:8px 8px 0 0}
+.ux-app-shell #clientDetail{scroll-margin-top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 12px)}
 .ux-client-workspace__top .ux-breadcrumb{margin-bottom:8px;font-size:11px}
 .ux-client-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ux-app-shell .ux-client-title h2{font-size:20px;margin:0;line-height:1.3;overflow-wrap:anywhere;min-width:0}
@@ -400,6 +401,7 @@ body:has(.ux-app-shell) .modal-close{width:38px;height:38px;border-radius:8px}
 .ux-client-workspace__content{padding:20px;min-width:0}
 #clientDetail [data-client-panel][hidden]{display:none!important}
 #clientDetail [data-client-panel]{min-width:0;outline-offset:4px}
+#clientDetail details:not([open])>:not(summary){display:none!important}
 #clientDetail .crm-detail-section__heading{align-items:center;flex-wrap:wrap;margin-bottom:14px}
 #clientDetail h3{font-size:16px;margin:0}#clientDetail h4{font-size:13px;margin:0 0 8px}
 #clientDetail .ux-client-facts{margin:12px 0 20px;gap:16px}
@@ -423,7 +425,7 @@ body:has(.ux-app-shell) .modal-close{width:38px;height:38px;border-radius:8px}
 .ux-client-recent li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px}
 .ux-client-recent li:last-child{border-bottom:0}.ux-client-recent time{display:block;font-size:11px;color:var(--muted);margin-top:5px}
 .ux-client-recent p{font-size:12px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere;margin:6px 0 0}
-.ux-client-recent .ux-icon-button{flex:0 0 auto;align-self:flex-start}
+.ux-client-recent li>div{min-width:0;overflow-wrap:anywhere}.ux-client-recent li>button{flex:0 0 auto;align-self:flex-start}
 @media(max-width:1100px){.ux-client-workspace__top{padding:14px 14px 0}.ux-client-workspace__content{padding:16px}.ux-client-tabs>button{font-size:11px;padding:11px 8px}}
 @media(max-width:760px){.ux-client-title{align-items:flex-start;flex-wrap:wrap}.ux-app-shell .ux-client-title h2{font-size:18px}.ux-client-tabs>button{flex:0 0 auto}.ux-client-workspace__content{padding:14px}.ux-client-workspace__top{padding:12px 12px 0}.ux-client-workspace__top .ux-client-contact{margin:8px 0 10px}#clientDetail .ux-suggested-fractions>article{grid-template-columns:1fr;gap:8px}#clientDetail .ux-suggested-fractions b,#clientDetail .ux-suggested-fractions footer{grid-column:1;grid-row:auto;text-align:left;align-items:center}#clientDetail .ux-suggested-fractions footer{flex-direction:row;justify-content:space-between}#clientDetail .ux-next-action .top-actions{justify-content:flex-start}#clientDetail .ux-client-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){#tab-sales .client-sticky-actions__context{display:none}#tab-sales .client-sticky-actions__buttons{flex-wrap:nowrap;width:100%;justify-content:flex-start}#tab-sales .client-sticky-actions__buttons>button{flex-shrink:0;white-space:nowrap}}
