@@ -12,7 +12,7 @@ let requests = 0;
 const context = {
   console,
   document: {readyState:'loading', addEventListener(){}},
-  window: {THE_VIEW_CONFIG:{}, addEventListener(){}},
+  window: {THE_VIEW_CONFIG:{}, THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'), addEventListener(){}},
   localStorage: {
     getItem(key){return storage.get(key) || null},
     setItem(key,value){storage.set(key,value)}

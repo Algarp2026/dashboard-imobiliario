@@ -4,7 +4,7 @@
   if(typeof module==='object'&&module.exports)module.exports=engine;
   else root.THE_VIEW_RECOMMENDATIONS=engine;
 })(typeof window==='object'?window:globalThis,function(){
-  const DEFAULTS=Object.freeze({firstContactDays:1,documentationDays:3,presentationDays:3,proposalDays:4,inactiveDays:10,contactIntervalHours:48,timeZone:'Europe/Lisbon',secondaryLimit:2});
+  const DEFAULTS=Object.freeze({firstContactDays:1,documentationDays:3,presentationDays:3,proposalDays:4,inactiveDays:10,undatedActionDays:3,contactIntervalHours:48,timeZone:'Europe/Lisbon',secondaryLimit:2});
   const PRIORITIES={Alta:0,'Média':1,Baixa:2};
   const CONTACT_TYPES=new Set(['Preferências recebidas','Apresentação comercial','Documentação enviada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Proposta enviada','Reserva','Reserva efetuada','Reserva cancelada','Venda','Venda concluída','Desistência','Contacto efetuado','Follow-up','Interessado','Visita','Reunião realizada','Reunião com cliente']);
   const ADVANCED_TYPES=new Set(['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída','Visita','Reunião realizada','Reunião com cliente']);
@@ -42,7 +42,7 @@
   }
   function buildContext(input={}){
     const settings={...DEFAULTS,...input.settings};
-    for(const key of ['firstContactDays','documentationDays','presentationDays','proposalDays','inactiveDays','contactIntervalHours','secondaryLimit']){
+    for(const key of ['firstContactDays','documentationDays','presentationDays','proposalDays','inactiveDays','undatedActionDays','contactIntervalHours','secondaryLimit']){
       if(!Number.isFinite(settings[key])||settings[key]<0)settings[key]=DEFAULTS[key];
     }
     const now=input.now instanceof Date?input.now.getTime():Date.parse(text(input.now));
@@ -58,7 +58,7 @@
       byClient.get(event.clientId).push(row);
     });
     byClient.forEach(rows=>rows.sort((a,b)=>(a.day??-Infinity)-(b.day??-Infinity)||(a.stamp??0)-(b.stamp??0)||a.index-b.index));
-    return{settings,now,today,day,byClient,fractions:input.fractions||[],priceHistory:input.priceHistory||{}};
+    return{settings,now,today,day,formatter,byClient,fractions:input.fractions||[],priceHistory:input.priceHistory||{}};
   }
   function floorPreference(value){
     const floor=norm(value).replace(/[º°]/g,'').replace(/\.(?=\s|$)/g,'').replace(/pisos?/g,'').trim();
@@ -85,15 +85,48 @@
     return{known:true,matches};
   }
   function manualAction(client,rows,context){
-    const plans=rows.map(row=>({date:text(row.event.followupDate||(row.event.type==='Reunião agendada'?row.event.date:'')),step:text(row.event.nextStep||row.event.followup),eventId:row.event.id||'',source:'event',index:row.index}));
+    const completed=record=>!!text(record.nextActionCompletedAt)||record.followupCompleted===true||['concluido','concluida','completed','cancelado','cancelada','cancelled'].includes(norm(record.nextActionStatus));
+    const plans=rows.map(row=>({date:text(row.event.followupDate||(row.event.type==='Reunião agendada'?row.event.date:'')),step:text(row.event.nextStep||row.event.followup),definedAt:text(row.event.nextActionDefinedAt),completed:completed(row.event),eventId:row.event.id||'',source:'event',index:row.index,row})).filter(plan=>plan.date||plan.step);
     const ownDate=text(client.manualNextFollowup??client.nextFollowup),ownStep=text(client.manualNextStep??client.nextStep);
-    if(ownDate||ownStep)plans.push({date:ownDate,step:ownStep,eventId:'',source:'client',index:-1});
-    const valid=plans.filter(plan=>dateDay(plan.date)!==null);
+    if(ownDate||ownStep)plans.push({date:ownDate,step:ownStep,definedAt:text(client.manualNextActionDefinedAt),completed:!!text(client.manualNextActionCompletedAt)||client.manualNextActionCompleted===true,eventId:'',source:'client',index:-1});
+    const definitionStamp=plan=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(plan.definedAt)&&dateDay(plan.definedAt.slice(0,10))!==null?Date.parse(plan.definedAt):NaN;
+    const own=plans.find(plan=>plan.source==='client'),ownStamp=own?definitionStamp(own):NaN;
+    // An explicit new manual plan supersedes older event snapshots without deleting them.
+    const current=plans.filter(plan=>{
+      if(plan.source==='client'||!Number.isFinite(ownStamp)||ownStamp>context.now)return true;
+      const stamp=definitionStamp(plan);
+      if(Number.isFinite(stamp))return stamp>ownStamp;
+      return plan.row.stamp===null||plan.row.day>context.day||plan.row.stamp>ownStamp;
+    });
+    // A later recorded contact can satisfy a historical event follow-up, not a manual plan.
+    const satisfied=plan=>plan.source==='event'&&dateDay(plan.date)!==null&&rows.some(row=>isContact(row.event)&&row.day>dateDay(plan.date)&&row.day<=context.day&&row.stamp!==null&&(!text(row.event.time)||row.stamp<=context.now)&&row.stamp>(Number.isFinite(definitionStamp(plan))?definitionStamp(plan):plan.row.stamp??Infinity));
+    const valid=current.filter(plan=>!plan.completed&&!satisfied(plan)&&dateDay(plan.date)!==null);
     const future=valid.filter(plan=>plan.date>=context.today).sort((a,b)=>a.date.localeCompare(b.date)||a.index-b.index)[0];
-    const overdue=valid.filter(plan=>plan.date<context.today&&(plan.source==='client'||!rows.some(row=>isContact(row.event)&&row.day>dateDay(plan.date)&&row.day<=context.day))).sort((a,b)=>b.date.localeCompare(a.date)||a.index-b.index)[0];
-    const selected=future||overdue;
-    if(selected)return{...selected,status:selected.date<context.today?'overdue':selected.date===context.today?'today':'future'};
-    return ownStep?{date:'',step:ownStep,source:'client',eventId:'',status:'undated'}:null;
+    const overdue=valid.filter(plan=>plan.date<context.today).sort((a,b)=>b.date.localeCompare(a.date)||a.index-b.index)[0];
+    let selected=future||overdue;
+    if(!selected){
+      const latest=current.slice().sort((a,b)=>{
+        const first=definitionStamp(a),second=definitionStamp(b);
+        if(Number.isFinite(first)&&Number.isFinite(second)&&first!==second)return first-second;
+        return Number(a.source==='client')-Number(b.source==='client')||a.index-b.index;
+      }).pop();
+      if(!latest||latest.completed||satisfied(latest)||!latest.step)return null;
+      selected=latest;
+    }
+    const stamp=definitionStamp(selected);
+    const p=Number.isFinite(stamp)&&stamp<=context.now?dateInZone(stamp,context.formatter):null;
+    const definedDay=p?dateDay(`${p.year}-${p.month}-${p.day}`):null;
+    const age=definedDay===null?null:context.day-definedDay;
+    const status=dateDay(selected.date)===null?'undated':selected.date<context.today?'overdue':selected.date===context.today?'today':'future';
+    const {row,completed:finished,...plan}=selected;
+    return{...plan,date:status==='undated'?'':selected.date,status,age,needsReview:status==='undated'&&age!==null&&age>=context.settings.undatedActionDays};
+  }
+  function followupInfo(client,context){
+    const manual=context.day===null?null:manualAction(client,context.byClient.get(client.id)||[],context);
+    if(!manual)return{status:'none',date:'',step:'',label:'Sem ação',needsReview:false};
+    const status=manual.status==='today'?'future':manual.status;
+    const label=status==='overdue'?'Vencido':status==='future'?'Agendado':manual.needsReview?'Sem data — necessita revisão':'Sem data';
+    return{...manual,status,label};
   }
   function result(client,context,values={}){return{clientId:client.id,primary:null,secondary:[],manual:null,status:'clear',message:'Sem ação adicional necessária neste momento.',matching:matchingFractions(client,context),...values}}
   function recommendClient(client,context){
@@ -122,6 +155,7 @@
     }
     if(manual?.status==='overdue')add('manual-overdue','Cumprir próxima ação definida',`O prazo definido para ${manual.date.split('-').reverse().join('/')} está vencido.`,'Alta','acompanhamento',0,{eventId:manual.eventId,date:manual.date},[contactAction(),{id:'plan',label:'Rever próxima ação'}],'contact');
     if(manual?.status==='today')add('manual-today','Cumprir próxima ação definida','Existe uma próxima ação definida para hoje.','Média','acompanhamento',1,{eventId:manual.eventId,date:manual.date},[contactAction(),{id:'plan',label:'Rever próxima ação'}],'contact');
+    if(manual?.needsReview)add('manual-undated','Definir prazo de acompanhamento','Existe uma próxima ação comercial sem data definida há pelo menos 3 dias.','Média','acompanhamento',2,{eventId:manual.eventId},[{id:'plan',label:'Definir próxima ação'}],'plan');
     const scheduled=rows.some(row=>isContact(row.event)&&row.stamp!==null&&(row.day>context.day||text(row.event.time)&&row.stamp>context.now));
     const future=manual?.status==='future'||scheduled,recent=last&&context.now-last.stamp<context.settings.contactIntervalHours*3600000;
     // Only confirmed stock changes bypass a future agreement. No contact is sent.
@@ -176,5 +210,5 @@
     const counts={all:queue.length,Alta:0,'Média':0,Baixa:0};queue.forEach(item=>counts[item.recommendation.primary.priority]++);
     return{clients,queue,counts};
   }
-  return Object.freeze({DEFAULTS,buildContext,recommendClient,matchingFractions,evaluate});
+  return Object.freeze({DEFAULTS,buildContext,followupInfo,recommendClient,matchingFractions,evaluate});
 });

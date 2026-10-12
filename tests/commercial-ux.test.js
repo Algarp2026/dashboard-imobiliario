@@ -13,7 +13,7 @@ const bar = {innerHTML:'',classList:{toggle(){}}};
 const context = {
   console,
   document:{readyState:'loading',addEventListener(){},querySelector(){return null},querySelectorAll(){return []},getElementById(id){return id==='quickComparisonBar'?bar:null},body:{style:{},classList:{toggle(){}}}},
-  window:{THE_VIEW_CONFIG:{},addEventListener(){}},
+  window:{THE_VIEW_CONFIG:{},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'),addEventListener(){}},
   localStorage:{getItem(){return null},setItem(){businessWrites++},removeItem(){businessWrites++}},
   sessionStorage:{getItem(key){return uiStorage.get(key)||null},setItem(key,value){uiStorage.set(key,value)}},
   fetch(){requests++;throw new Error('Unexpected network request')}

@@ -876,18 +876,14 @@ function recalculateResumoCliente(clientId){
   c.preferences=preferences;
   c.budget=budget;
   c.fractions=uniqNum([...linkedFractions]);
-  const followups=events.map((ev,index)=>({ev,date:ev.followupDate||(ev.type==='Reunião agendada'?ev.date:''),step:safe(ev.nextStep||ev.followup),index}));
-  if(c.manualNextFollowup)followups.push({ev:null,date:c.manualNextFollowup,step:safe(c.manualNextStep),index:-1});
-  const futureFollowups=followups.filter(item=>item.date&&item.date>=today()).sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.index-b.index);
   const lastContact=events.slice().reverse().find(ev=>ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
-  const nextFollowup=futureFollowups[0]||null;
-  const latestEventStep=events.slice().reverse().find(ev=>safe(ev.nextStep||ev.followup));
+  const nextAction=clientSummaryFollowupInfo(c);
   c.commercialSummary={
     presentedFractions:uniqNum([...presented]),
     lastInformedPrices:[...latestPrices.values()].sort((a,b)=>a.fraction-b.fraction),
     lastContact,
-    nextFollowup:nextFollowup?.date||'',
-    nextStep:nextFollowup?.step||safe(latestEventStep?.nextStep||latestEventStep?.followup)||safe(c.manualNextStep)||(nextFollowup?.ev?.type==='Reunião agendada'?'Reunião agendada':'')
+    nextFollowup:nextAction.status==='future'?nextAction.date:'',
+    nextStep:nextAction.step||(nextAction.status==='future'?'Contactar':'')
   };
   return before!==JSON.stringify(c);
 }
@@ -1082,6 +1078,7 @@ function migrateCrmData(){
     if(c.preferencesManuallyEdited===undefined)c.preferencesManuallyEdited=!(state.data.events||[]).some(ev=>ev.clientId===c.id&&ev.type==='Preferências recebidas');
     if(c.manualNextStep===undefined)c.manualNextStep=safe(c.nextStep);
     if(c.manualNextFollowup===undefined)c.manualNextFollowup=safe(c.nextFollowup);
+    if((c.manualNextStep||c.manualNextFollowup)&&c.manualNextActionDefinedAt===undefined)c.manualNextActionDefinedAt='';
     if(c.originManual===undefined)c.originManual='';
     if(c.stageManual===undefined)c.stageManual=false;
     if(!c.manualStage)c.manualStage='';
@@ -1095,6 +1092,7 @@ function migrateCrmData(){
     ev.fractions=uniqNum(ev.fractions||[]);
     if(ev.nextStep===undefined)ev.nextStep=safe(ev.followup);
     if(ev.followup===undefined)ev.followup=safe(ev.nextStep);
+    if((ev.nextStep||ev.followupDate)&&ev.nextActionDefinedAt===undefined)ev.nextActionDefinedAt='';
     if(!Array.isArray(ev.informedPrices))ev.informedPrices=[];
     if(ev.preferences)ev.preferences=cleanPreferences(ev.preferences);
     if(original!==JSON.stringify(ev))changed=true;
@@ -1285,15 +1283,11 @@ function renderClientActionBar(){
   if(edit)edit.classList.toggle('hidden',!selected);
 }
 
-function clientSummaryFollowupInfo(c){
-  const candidates=sortedClientEvents(c.id).map((ev,index)=>({date:safe(ev.followupDate||(ev.type==='Reunião agendada'?ev.date:'')),step:safe(ev.nextStep||ev.followup),index}));
-  if(c.manualNextFollowup)candidates.push({date:safe(c.manualNextFollowup),step:safe(c.manualNextStep),index:-1});
-  const valid=candidates.filter(item=>/^\d{4}-\d{2}-\d{2}$/.test(item.date));
-  const future=valid.filter(item=>item.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)||a.index-b.index)[0]||null;
-  const overdue=valid.filter(item=>item.date<today()).sort((a,b)=>b.date.localeCompare(a.date)||b.index-a.index)[0]||null;
-  if(future)return{status:'future',date:future.date,step:future.step};
-  if(overdue)return{status:'overdue',date:overdue.date,step:overdue.step};
-  return{status:'none',date:'',step:''};
+function clientSummaryFollowupContext(){
+  return window.THE_VIEW_RECOMMENDATIONS?.buildContext({events:state.data.events||[],now:new Date().toISOString()});
+}
+function clientSummaryFollowupInfo(c,context=clientSummaryFollowupContext()){
+  return context?window.THE_VIEW_RECOMMENDATIONS.followupInfo(c,context):{status:'none',date:'',step:'',label:'Sem ação',needsReview:false};
 }
 function clientSummaryLastContact(c){
   return sortedClientEvents(c.id).filter(ev=>ev.date&&ev.date<=today()).map(ev=>ev.date).pop()||'';
@@ -1323,22 +1317,23 @@ function formatCommercialDate(value){
 function clientSummaryShortText(value,max=100){const text=safe(value);return text.length>max?text.slice(0,max-1).trim()+'…':text||'—'}
 function buildClientSummaryRows(options={}){
   const statuses=new Set(options.statuses||[]),query=norm(options.search||''),agentId=options.agentId||'all',followupFilter=options.followupFilter||'all';
+  const followupContext=clientSummaryFollowupContext();
   const rows=(state.data.clients||[]).filter(c=>statuses.has(normalizeClientStage(c.stage))).filter(c=>!query||norm(c.name).includes(query)).filter(c=>agentId==='all'||c.agentId===agentId).map(c=>{
-    const summary=c.commercialSummary||{},followup=clientSummaryFollowupInfo(c),lastContact=clientSummaryLastContact(c),preferences=cleanPreferences(c.preferences||{});
+    const followup=clientSummaryFollowupInfo(c,followupContext),lastContact=clientSummaryLastContact(c),preferences=cleanPreferences(c.preferences||{});
     return{
       client:c.name||'Cliente sem nome',status:normalizeClientStage(c.stage),preferences:clientSummaryPreferencesText(c),fractions:clientSummaryFractionsText(c),
-      lastContact,lastContactLabel:formatCommercialDate(lastContact),followupStatus:followup.status,followupDate:followup.date,
-      followupLabel:followup.status==='overdue'?`Vencido: ${formatCommercialDate(followup.date)}`:followup.date?formatCommercialDate(followup.date):'—',
-      nextStep:safe(summary.nextStep||followup.step||c.manualNextStep)||'—',contact:uniq([c.phone,c.email]).join(' · ')||'—',
+      lastContact,lastContactLabel:formatCommercialDate(lastContact),followupStatus:followup.status,followupDate:followup.date,followupNeedsReview:followup.needsReview,
+      followupLabel:followup.label+(followup.date?`: ${formatCommercialDate(followup.date)}`:''),
+      nextStep:safe(followup.step)||'—',contact:uniq([c.phone,c.email]).join(' · ')||'—',
       agentOrigin:clientSummaryAgentLabel(c),note:clientSummaryShortText(preferences.summary)
     };
-  }).filter(row=>followupFilter==='all'||row.followupStatus===followupFilter);
+  }).filter(row=>followupFilter==='all'||followupFilter==='undated-review'&&row.followupStatus==='undated'&&row.followupNeedsReview||row.followupStatus===followupFilter);
   const statusOrder=new Map(STAGES.map((stage,index)=>[stage,index]));
   rows.sort((a,b)=>{
     if(options.sort==='name')return a.client.localeCompare(b.client,'pt-PT',{sensitivity:'base'});
     if(options.sort==='status')return(statusOrder.get(a.status)-statusOrder.get(b.status))||a.client.localeCompare(b.client,'pt-PT');
     if(options.sort==='lastContact')return Number(!a.lastContact)-Number(!b.lastContact)||(b.lastContact||'').localeCompare(a.lastContact||'')||a.client.localeCompare(b.client,'pt-PT');
-    const group=row=>row.followupStatus==='future'?0:row.followupStatus==='overdue'?1:2;
+    const group=row=>row.followupStatus==='overdue'?0:row.followupNeedsReview?1:row.followupStatus==='future'?2:row.followupStatus==='undated'?3:4;
     const groupDiff=group(a)-group(b);if(groupDiff)return groupDiff;
     if(a.followupStatus==='future')return a.followupDate.localeCompare(b.followupDate)||a.client.localeCompare(b.client,'pt-PT');
     if(a.followupStatus==='overdue')return b.followupDate.localeCompare(a.followupDate)||a.client.localeCompare(b.client,'pt-PT');
@@ -1360,8 +1355,8 @@ function openClientsSummaryPdfModal(){
     <div class="modal clients-summary-modal"><button class="modal-close" type="button" data-close-clients-summary>×</button><p class="eyebrow eyebrow--dark">Documento interno</p><h2>Imprimir Resumo de Clientes</h2><p class="muted">Selecione os clientes e a informação a incluir no acompanhamento comercial.</p>
       <div class="clients-summary-options"><section><h3>Estados do funil</h3><div class="clients-summary-check-grid">${statusOptions.map(([stage,checked])=>`<label class="check-option"><input type="checkbox" value="${attr(stage)}" data-client-summary-status ${checked?'checked':''}><span>${esc(stage)}</span></label>`).join('')}</div></section>
       <section><h3>Colunas</h3><div class="clients-summary-check-grid">${columnOptions.map(([key,label,checked,required])=>`<label class="check-option"><input type="checkbox" value="${attr(key)}" data-client-summary-column ${checked?'checked':''} ${required?'disabled':''}><span>${esc(label)}${required?' <small>obrigatória</small>':''}</span></label>`).join('')}</div></section></div>
-      <div class="filters-grid clients-summary-filters"><label class="field"><span>Pesquisar cliente</span><input id="clientSummarySearch" type="search" placeholder="Nome do cliente"></label><label class="field"><span>Agente</span><select id="clientSummaryAgent"><option value="all">Todos</option>${agents.map(a=>`<option value="${attr(a.id)}">${esc((a.name||'Agente')+(a.agency?' · '+a.agency:''))}</option>`).join('')}</select></label><label class="field"><span>Próximo follow-up</span><select id="clientSummaryFollowup"><option value="all">Todos</option><option value="future">Com follow-up futuro</option><option value="overdue">Follow-up vencido</option><option value="none">Sem follow-up</option></select></label><label class="field"><span>Ordenar por</span><select id="clientSummarySort"><option value="followup">Próximo follow-up</option><option value="lastContact">Último contacto</option><option value="status">Estado do funil</option><option value="name">Nome</option></select></label></div>
-      <div class="clients-summary-result"><strong data-client-summary-count></strong><span class="muted small">Clientes sem follow-up ficam no fim na ordenação predefinida.</span></div>
+      <div class="filters-grid clients-summary-filters"><label class="field"><span>Pesquisar cliente</span><input id="clientSummarySearch" type="search" placeholder="Nome do cliente"></label><label class="field"><span>Agente</span><select id="clientSummaryAgent"><option value="all">Todos</option>${agents.map(a=>`<option value="${attr(a.id)}">${esc((a.name||'Agente')+(a.agency?' · '+a.agency:''))}</option>`).join('')}</select></label><label class="field"><span>Próximo follow-up</span><select id="clientSummaryFollowup"><option value="all">Todos</option><option value="future">Agendado</option><option value="overdue">Vencido</option><option value="undated">Sem data</option><option value="undated-review">Sem data — necessita revisão</option><option value="none">Sem ação</option></select></label><label class="field"><span>Ordenar por</span><select id="clientSummarySort"><option value="followup">Próximo follow-up</option><option value="lastContact">Último contacto</option><option value="status">Estado do funil</option><option value="name">Nome</option></select></label></div>
+      <div class="clients-summary-result"><strong data-client-summary-count></strong><span class="muted small">Ações vencidas e sem prazo por rever primeiro; clientes sem ação no fim.</span></div>
       <div class="modal-actions"><button class="ghost-button" type="button" data-close-clients-summary>Cancelar</button><button class="primary-button" type="button" data-generate-clients-summary>Gerar PDF</button></div></div>`;
   const style=document.createElement('style');style.textContent=`#clientsSummaryPdfModal .clients-summary-modal{width:min(960px,100%)}#clientsSummaryPdfModal .clients-summary-options{display:grid;grid-template-columns:1fr 1.45fr;gap:16px;margin-top:18px}#clientsSummaryPdfModal .clients-summary-options section{border:1px solid #dfe7f0;border-radius:12px;padding:14px;background:#f8fafc}#clientsSummaryPdfModal h3{margin:0 0 12px;font-size:15px;color:#0e2444}#clientsSummaryPdfModal .clients-summary-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px}#clientsSummaryPdfModal .check-option{display:flex;align-items:flex-start;gap:8px;color:#213652;font-size:14px}#clientsSummaryPdfModal .check-option input{width:16px;height:16px;margin-top:2px}#clientsSummaryPdfModal .check-option small{display:block;color:#6f7f92;font-size:11px}#clientsSummaryPdfModal .clients-summary-filters{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}#clientsSummaryPdfModal .clients-summary-result{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px;padding:11px 13px;border-radius:10px;background:#f1f5f9}@media(max-width:720px){#clientsSummaryPdfModal .clients-summary-options,#clientsSummaryPdfModal .clients-summary-filters{grid-template-columns:1fr}#clientsSummaryPdfModal .clients-summary-check-grid{grid-template-columns:1fr}#clientsSummaryPdfModal .clients-summary-result{display:block}}`;
   modal.appendChild(style);document.body.appendChild(modal);document.body.style.overflow='hidden';
@@ -1691,11 +1686,11 @@ function renderClientDetail(){
   const informed=(summary.lastInformedPrices||[]).map(item=>`Apt. ${item.fraction}: ${money(item.informedPrice)}`).join(' · ');
   const recommendation=commercialClientRecommendation(c),related=relatedClientFractions(c),followup=clientSummaryFollowupInfo(c);
   const compatible=recommendation?(recommendation.matching.known?recommendation.matching.matches.map(item=>getF(item.number)).filter(Boolean):null):compatibleClientFractions(c);
-  const defined=recommendation?.manual,nextStep=defined?.step||(followup.status==='future'?(followup.step||summary.nextStep||'Contactar'):(summary.nextStep||''));
-  const definedDate=defined?.date|| (followup.status==='future'?followup.date:'');
+  const nextStep=followup.step||(followup.status==='future'||followup.status==='overdue'?'Contactar':''),definedDate=followup.date;
+  const actionLabel=followup.needsReview?'Ação sem prazo — necessita revisão':followup.label;
   el.clientDetail.innerHTML=`<nav class="ux-breadcrumb" aria-label="Localização">Clientes <span aria-hidden="true">›</span> ${esc(c.name||'Cliente sem nome')}</nav><div class="section-heading client-detail-header"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:'<span>Sem telefone</span>'}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:'<span>Sem email</span>'}</p><p class="muted small">Origem: ${esc(clientOriginLabel(c))} · Agente: ${esc(associatedAgent?.name||c.agent||c.agency||'Sem agente')}</p></div><button class="ghost-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar cliente</button></div>
     <dl class="ux-client-facts">${[['Tipologia pretendida',prefs.typology||'—'],['Piso pretendido',prefs.floor||'—'],['Orçamento',c.budget?money(c.budget):'—'],['Último contacto',formatCommercialDate(summary.lastContact)],['Frações apresentadas',(summary.presentedFractions||[]).length]].map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
-    <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação definida${defined?.status==='overdue'?' · Prazo vencido':''}</span><strong>${esc(nextStep||'Sem próxima ação definida')}${definedDate?` · ${esc(formatCommercialDate(definedDate))}`:''}</strong></div><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button></section>
+    <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação definida · ${esc(actionLabel)}</span><strong>${esc(nextStep||'Sem próxima ação definida')}${definedDate?` · ${esc(formatCommercialDate(definedDate))}`:''}</strong></div><nav class="top-actions" aria-label="Ações de acompanhamento"><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button>${followup.status!=='none'?`<button class="ux-text-button" type="button" data-ux-client-action="complete">${uxIcon('check')}Concluir ação</button>`:''}</nav></section>
     <div id="clientRecommendation">${clientRecommendationMarkup(recommendation)}</div>
     <div class="ux-client-secondary-actions"><button class="ghost-button" type="button" data-ux-client-action="presentation">${uxIcon('presentation')}Registar apresentação</button><button class="ghost-button" type="button" data-ux-client-action="documentation">${uxIcon('send')}Registar envio de documentação</button><button class="ghost-button" type="button" data-ux-client-action="proposal">${uxIcon('file-text')}Criar proposta</button><button class="ghost-button" type="button" data-ux-client-action="associate">${uxIcon('link')}Associar fração</button><button class="ghost-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar nota</button></div>
     ${informed?`<p class="crm-inline-summary"><strong>Últimos preços informados:</strong> ${esc(informed)}</p>`:''}
@@ -2515,6 +2510,22 @@ async function handleManualStatusSelect(n,newStatus){
   save();
   RenderFlow.salesChanged();
 }
+function nextActionMetadata(existing,step,date,source,now=new Date().toISOString()){
+  const isClient=source==='client',definedKey=isClient?'manualNextActionDefinedAt':'nextActionDefinedAt',completedKey=isClient?'manualNextActionCompletedAt':'nextActionCompletedAt';
+  const oldStep=safe(isClient?(existing.manualNextStep??existing.nextStep):(existing.nextStep||existing.followup));
+  const oldDate=safe(isClient?(existing.manualNextFollowup??existing.nextFollowup):existing.followupDate);
+  if(safe(step)===oldStep&&safe(date)===oldDate)return{};
+  return{[definedKey]:safe(step)||safe(date)?now:'',[completedKey]:''};
+}
+async function completeClientNextAction(){
+  const c=client(state.selectedClientId);if(!c)return;
+  const action=clientSummaryFollowupInfo(c);if(action.status==='none')return;
+  if(!await confirmUser('Marcar esta próxima ação como concluída? A descrição, a data e o histórico serão preservados.','Concluir ação'))return;
+  const record=action.source==='client'?c:state.data.events.find(ev=>ev.id===action.eventId&&ev.clientId===c.id);
+  if(!record)return;
+  record[action.source==='client'?'manualNextActionCompletedAt':'nextActionCompletedAt']=new Date().toISOString();
+  recalculateResumoCliente(c.id);save();RenderFlow.clientChanged();
+}
 function openClientModal(cid=''){
   ensureClientAgentSelect();
   populateClientAgentSelect();
@@ -2536,8 +2547,8 @@ function openClientModal(cid=''){
   el.clientBudget.value=isEdit?(c.budget||''):'';
   el.clientStage.value=isEdit?normalizeClientStage(c.stage):'Novo Lead';
   el.clientStage.dataset.original=el.clientStage.value;
-  el.clientNextStep.value=isEdit?(c.manualNextStep||c.nextStep||''):'';
-  el.clientNextFollowup.value=isEdit?(c.manualNextFollowup||c.nextFollowup||''):'';
+  el.clientNextStep.value=isEdit?(c.manualNextStep??c.nextStep??''):'';
+  el.clientNextFollowup.value=isEdit?(c.manualNextFollowup??c.nextFollowup??''):'';
   el.clientInitialRequestFields?.classList.toggle('hidden',isEdit);
   if(!isEdit){
     if(el.clientInitialRequestDate)el.clientInitialRequestDate.value=today();
@@ -2597,6 +2608,7 @@ async function saveClient(){
     manualStage:stageChanged?selectedStage:(existing.manualStage||''),
     manualNextStep:el.clientNextStep.value.trim(),
     manualNextFollowup:el.clientNextFollowup.value,
+    ...nextActionMetadata(existing,el.clientNextStep.value,el.clientNextFollowup.value,'client'),
     manualFractions:getMulti(el.clientFractions).map(Number),
     fractions:getMulti(el.clientFractions).map(Number),
     manualPreferences,
@@ -2800,7 +2812,7 @@ function buildEventFromForm(cid,frs,eventId=''){
   const preferences=cleanPreferences({typology:el.eventPreferenceTypology.value,floor:el.eventPreferenceFloor.value,orientation:el.eventPreferenceOrientation.value,objective:el.eventPreferenceObjective.value,decisionTime:el.eventPreferenceDecisionTime.value,summary:el.eventPreferenceSummary.value});
   const informedPrices=el.eventType.value==='Preços informados'?frs.map(n=>state.eventPriceDraft?.[n]||{fraction:n,officialPrice:finalPrice(getF(n)),informedPrice:0,observation:''}):[];
   const nextStep=el.eventFollowup.value.trim();
-  return {...existing,id:eventId||id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,channel:el.eventChannel.value,amount:saleAmount,interest:el.eventInterest.value,nextStep,followup:nextStep,followupDate:el.eventFollowupDate.value,fractions:frs,preferences,preferenceBudget:num(el.eventPreferenceBudget.value),informedPrices,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
+  return {...existing,...nextActionMetadata(existing,nextStep,el.eventFollowupDate.value,'event'),id:eventId||id(),clientId:cid,type:el.eventType.value,date:el.eventDate.value||today(),time:el.eventTime.value,channel:el.eventChannel.value,amount:saleAmount,interest:el.eventInterest.value,nextStep,followup:nextStep,followupDate:el.eventFollowupDate.value,fractions:frs,preferences,preferenceBudget:num(el.eventPreferenceBudget.value),informedPrices,objections:el.eventObjections.value.trim(),notes:el.eventNotes.value.trim(),withAgent,agentId:withAgent?(document.getElementById('eventAgentId')?.value||''):'',commissionType:withAgent?commissionType:'',commissionValue:withAgent?commissionValue:0,commissionAmount};
 }
 function exportPdf(){
   const fs=state.fractions.filter(f=>state.selected.has(f.number)&&statusOf(f)==='Disponível').sort((a,b)=>a.number-b.number);
@@ -3376,6 +3388,7 @@ function openContextPresentation(numbers){
 }
 function openClientUxAction(action){
   const c=client(state.selectedClientId);if(!c)return;
+  if(action==='complete'){completeClientNextAction();return}
   if(action==='proposal'){openContextPresentation(relatedClientFractions(c).map(f=>f.number));return}
   if(action==='contact'){openClientContact();return}
   if(action==='presentation'||action==='documentation'){
@@ -3384,7 +3397,13 @@ function openClientUxAction(action){
     el.eventType.focus({preventScroll:true});return;
   }
   if(action==='note'){openEventModal('','client');el.eventType.value='Outro';toggleEventSpecificFields();el.eventNotes.focus();return}
-  openClientModal(c.id);(action==='associate'?el.clientFractions:el.clientNextStep)?.focus();
+  openClientModal(c.id);
+  if(action==='plan'){
+    const followup=clientSummaryFollowupInfo(c);
+    if(followup.source==='event'){el.clientNextStep.value=followup.step;el.clientNextFollowup.value=followup.date}
+    (followup.needsReview?el.clientNextFollowup:el.clientNextStep)?.focus();return;
+  }
+  (action==='associate'?el.clientFractions:el.clientNextStep)?.focus();
 }
 function bindCommercialUx(){
   if(document.getElementById('quickComparisonBar'))return;
