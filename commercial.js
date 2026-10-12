@@ -68,7 +68,7 @@ const MAJUCA_IMPORT_RECORDS=[
   {id:'ibericatrio',name:'Ibéricatrio',role:'Comprador/lead, empresa ou intermediário, por confirmar',notes:['Manter exatamente esta identificação até confirmação.']}
 ];
 const MAX_COMPARE_FRACTIONS=4;
-const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,data:loadDataLocal()};
+const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,definingNextAction:false,nextActionFormSignature:'',data:loadDataLocal()};
 const el={};
 const commercialUx={comparison:new Set(),drawerFraction:null,returnContext:null,scroll:{},sort:{},priceReasonDrafts:{},salesFilters:{search:'',typology:'all',floor:'all',status:'all'},searchIndex:-1,ready:false,timer:null};
 const COMMERCIAL_UI_KEY='theView.commercialUi.v1';
@@ -830,7 +830,7 @@ function sortedClientEvents(clientId){
 function eventFractionsPresented(ev){
   return ['Apresentação comercial','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva','Venda concluída','Venda','Visita','Reunião com cliente'].includes(ev.type);
 }
-function recalculateResumoCliente(clientId){
+function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   const c=client(clientId);
   if(!c)return false;
   const before=JSON.stringify(c);
@@ -878,16 +878,17 @@ function recalculateResumoCliente(clientId){
   c.fractions=uniqNum([...linkedFractions]);
   const lastContact=events.slice().reverse().find(ev=>ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
   const nextAction=clientSummaryFollowupInfo(c);
+  const previousSummary=c.commercialSummary||{};
   c.commercialSummary={
     presentedFractions:uniqNum([...presented]),
     lastInformedPrices:[...latestPrices.values()].sort((a,b)=>a.fraction-b.fraction),
     lastContact,
-    nextFollowup:nextAction.status==='future'?nextAction.date:'',
-    nextStep:nextAction.step||(nextAction.status==='future'?'Contactar':'')
+    nextFollowup:preserveNextAction&&Object.hasOwn(previousSummary,'nextFollowup')?previousSummary.nextFollowup:nextAction.status==='future'?nextAction.date:'',
+    nextStep:preserveNextAction&&Object.hasOwn(previousSummary,'nextStep')?previousSummary.nextStep:nextAction.step||(nextAction.status==='future'?'Contactar':'')
   };
   return before!==JSON.stringify(c);
 }
-function recalculateResumoTodosClientes(){return(state.data.clients||[]).reduce((changed,c)=>recalculateResumoCliente(c.id)||changed,false)}
+function recalculateResumoTodosClientes(options){return(state.data.clients||[]).reduce((changed,c)=>recalculateResumoCliente(c.id,options)||changed,false)}
 function majucaClientId(record){return`majuca-${record.id}`}
 function majucaEventId(record){return`majuca-event-${record.id}`}
 function normalizedPhone(v){return safe(v).replace(/\D/g,'')}
@@ -1078,7 +1079,6 @@ function migrateCrmData(){
     if(c.preferencesManuallyEdited===undefined)c.preferencesManuallyEdited=!(state.data.events||[]).some(ev=>ev.clientId===c.id&&ev.type==='Preferências recebidas');
     if(c.manualNextStep===undefined)c.manualNextStep=safe(c.nextStep);
     if(c.manualNextFollowup===undefined)c.manualNextFollowup=safe(c.nextFollowup);
-    if((c.manualNextStep||c.manualNextFollowup)&&c.manualNextActionDefinedAt===undefined)c.manualNextActionDefinedAt='';
     if(c.originManual===undefined)c.originManual='';
     if(c.stageManual===undefined)c.stageManual=false;
     if(!c.manualStage)c.manualStage='';
@@ -1092,14 +1092,13 @@ function migrateCrmData(){
     ev.fractions=uniqNum(ev.fractions||[]);
     if(ev.nextStep===undefined)ev.nextStep=safe(ev.followup);
     if(ev.followup===undefined)ev.followup=safe(ev.nextStep);
-    if((ev.nextStep||ev.followupDate)&&ev.nextActionDefinedAt===undefined)ev.nextActionDefinedAt='';
     if(!Array.isArray(ev.informedPrices))ev.informedPrices=[];
     if(ev.preferences)ev.preferences=cleanPreferences(ev.preferences);
     if(original!==JSON.stringify(ev))changed=true;
   });
   if(applyMajucaImportMigration())changed=true;
   state.data.crmMigrationKey=CRM_MIGRATION_KEY;
-  if(recalculateResumoTodosClientes())changed=true;
+  if(recalculateResumoTodosClientes({preserveNextAction:true}))changed=true;
   state.fractions.forEach(f=>{
     const effect=commercialEffectForFraction(f.number);
     if(effect&&statusOf(f)===effect.status&&!state.data.statusEventIds[f.number]){
@@ -1680,14 +1679,13 @@ function renderClientDetail(){
   renderClientActionBar();
   const c=client(state.selectedClientId);
   if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}
-  recalculateResumoCliente(c.id);
   const chronological=sortedClientEvents(c.id),evs=chronological.slice().reverse(),summary=c.commercialSummary||{},prefs=cleanPreferences(c.preferences||{}),fractionRows=clientFractionCommercialRows(c,chronological);
   const associatedAgent=agent(c.agentId);
   const informed=(summary.lastInformedPrices||[]).map(item=>`Apt. ${item.fraction}: ${money(item.informedPrice)}`).join(' · ');
   const recommendation=commercialClientRecommendation(c),related=relatedClientFractions(c),followup=clientSummaryFollowupInfo(c);
   const compatible=recommendation?(recommendation.matching.known?recommendation.matching.matches.map(item=>getF(item.number)).filter(Boolean):null):compatibleClientFractions(c);
   const nextStep=followup.step||(followup.status==='future'||followup.status==='overdue'?'Contactar':''),definedDate=followup.date;
-  const actionLabel=followup.needsReview?'Ação sem prazo — necessita revisão':followup.label;
+  const actionLabel=followup.label;
   el.clientDetail.innerHTML=`<nav class="ux-breadcrumb" aria-label="Localização">Clientes <span aria-hidden="true">›</span> ${esc(c.name||'Cliente sem nome')}</nav><div class="section-heading client-detail-header"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2>${esc(c.name||'Cliente sem nome')}</h2><p class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:'<span>Sem telefone</span>'}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:'<span>Sem email</span>'}</p><p class="muted small">Origem: ${esc(clientOriginLabel(c))} · Agente: ${esc(associatedAgent?.name||c.agent||c.agency||'Sem agente')}</p></div><button class="ghost-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar cliente</button></div>
     <dl class="ux-client-facts">${[['Tipologia pretendida',prefs.typology||'—'],['Piso pretendido',prefs.floor||'—'],['Orçamento',c.budget?money(c.budget):'—'],['Último contacto',formatCommercialDate(summary.lastContact)],['Frações apresentadas',(summary.presentedFractions||[]).length]].map(([label,value])=>`<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
     <section class="ux-next-action"><div>${uxIcon('calendar-clock')}<span>Próxima ação definida · ${esc(actionLabel)}</span><strong>${esc(nextStep||'Sem próxima ação definida')}${definedDate?` · ${esc(formatCommercialDate(definedDate))}`:''}</strong></div><nav class="top-actions" aria-label="Ações de acompanhamento"><button class="ux-text-button" type="button" data-ux-client-action="plan">Definir próxima ação</button>${followup.status!=='none'?`<button class="ux-text-button" type="button" data-ux-client-action="complete">${uxIcon('check')}Concluir ação</button>`:''}</nav></section>
@@ -2510,11 +2508,14 @@ async function handleManualStatusSelect(n,newStatus){
   save();
   RenderFlow.salesChanged();
 }
-function nextActionMetadata(existing,step,date,source,now=new Date().toISOString()){
+function clientNonActionFormSignature(){
+  return JSON.stringify([...el.clientModal.querySelectorAll('input[id],select[id],textarea[id]')].filter(input=>!['clientNextStep','clientNextFollowup'].includes(input.id)).map(input=>[input.id,input.type==='checkbox'?input.checked:input.multiple?[...input.selectedOptions].map(option=>option.value):input.value]));
+}
+function nextActionMetadata(existing,step,date,source,now=new Date().toISOString(),redefine=false){
   const isClient=source==='client',definedKey=isClient?'manualNextActionDefinedAt':'nextActionDefinedAt',completedKey=isClient?'manualNextActionCompletedAt':'nextActionCompletedAt';
   const oldStep=safe(isClient?(existing.manualNextStep??existing.nextStep):(existing.nextStep||existing.followup));
   const oldDate=safe(isClient?(existing.manualNextFollowup??existing.nextFollowup):existing.followupDate);
-  if(safe(step)===oldStep&&safe(date)===oldDate)return{};
+  if(safe(step)===oldStep&&safe(date)===oldDate&&!redefine)return{};
   return{[definedKey]:safe(step)||safe(date)?now:'',[completedKey]:''};
 }
 async function completeClientNextAction(){
@@ -2527,6 +2528,7 @@ async function completeClientNextAction(){
   recalculateResumoCliente(c.id);save();RenderFlow.clientChanged();
 }
 function openClientModal(cid=''){
+  state.definingNextAction=false;
   ensureClientAgentSelect();
   populateClientAgentSelect();
   const isEdit=!!cid;
@@ -2576,7 +2578,7 @@ function openClientModal(cid=''){
   el.clientModal.style.zIndex='50';
   document.body.style.overflow='hidden';
 }
-function closeClientModal(){el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
+function closeClientModal(){state.definingNextAction=false;el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
 async function saveClient(){
   const isNew=!el.clientId.value;
   let cid=el.clientId.value||id();
@@ -2608,7 +2610,7 @@ async function saveClient(){
     manualStage:stageChanged?selectedStage:(existing.manualStage||''),
     manualNextStep:el.clientNextStep.value.trim(),
     manualNextFollowup:el.clientNextFollowup.value,
-    ...nextActionMetadata(existing,el.clientNextStep.value,el.clientNextFollowup.value,'client'),
+    ...nextActionMetadata(existing,el.clientNextStep.value,el.clientNextFollowup.value,'client',undefined,state.definingNextAction&&state.nextActionFormSignature===clientNonActionFormSignature()&&clientSummaryFollowupInfo(existing).reviewReason==='legacy'),
     manualFractions:getMulti(el.clientFractions).map(Number),
     fractions:getMulti(el.clientFractions).map(Number),
     manualPreferences,
@@ -3399,6 +3401,8 @@ function openClientUxAction(action){
   if(action==='note'){openEventModal('','client');el.eventType.value='Outro';toggleEventSpecificFields();el.eventNotes.focus();return}
   openClientModal(c.id);
   if(action==='plan'){
+    state.definingNextAction=true;
+    state.nextActionFormSignature=clientNonActionFormSignature();
     const followup=clientSummaryFollowupInfo(c);
     if(followup.source==='event'){el.clientNextStep.value=followup.step;el.clientNextFollowup.value=followup.date}
     (followup.needsReview?el.clientNextFollowup:el.clientNextStep)?.focus();return;

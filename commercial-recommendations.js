@@ -8,7 +8,7 @@
   const PRIORITIES={Alta:0,'Média':1,Baixa:2};
   const CONTACT_TYPES=new Set(['Preferências recebidas','Apresentação comercial','Documentação enviada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Proposta enviada','Reserva','Reserva efetuada','Reserva cancelada','Venda','Venda concluída','Desistência','Contacto efetuado','Follow-up','Interessado','Visita','Reunião realizada','Reunião com cliente']);
   const ADVANCED_TYPES=new Set(['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída','Visita','Reunião realizada','Reunião com cliente']);
-  const CLOSED_STAGES=new Set(['vendido','desistiu','desistencia','perdido','encerrado','concluido','sem interesse']);
+  const CLOSED_STAGES=new Set(['vendido','desistiu','desistente','desistencia','perdido','encerrado','concluido','sem interesse']);
   const CLOSED_PROPOSALS=new Set(['aceite','aceita','accepted','recusada','recusado','declined','concluida','concluido','closed','cancelada','cancelado','cancelled']);
   const text=value=>String(value??'').trim();
   const norm=value=>text(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -85,21 +85,25 @@
     return{known:true,matches};
   }
   function manualAction(client,rows,context){
-    const completed=record=>!!text(record.nextActionCompletedAt)||record.followupCompleted===true||['concluido','concluida','completed','cancelado','cancelada','cancelled'].includes(norm(record.nextActionStatus));
-    const plans=rows.map(row=>({date:text(row.event.followupDate||(row.event.type==='Reunião agendada'?row.event.date:'')),step:text(row.event.nextStep||row.event.followup),definedAt:text(row.event.nextActionDefinedAt),completed:completed(row.event),eventId:row.event.id||'',source:'event',index:row.index,row})).filter(plan=>plan.date||plan.step);
+    if(CLOSED_STAGES.has(norm(client.stage))||client.archived===true||client.archivedAt)return null;
+    const resolvedStatus=value=>['concluido','concluida','completed','cancelado','cancelada','cancelled','canceled','substituido','substituida','replaced','superseded'].includes(norm(value));
+    const completed=record=>!!text(record.nextActionCompletedAt||record.nextActionCancelledAt)||record.followupCompleted===true||resolvedStatus(record.nextActionStatus);
+    const plans=rows.map(row=>({date:text(row.event.followupDate||(row.event.type==='Reunião agendada'?row.event.date:'')),step:text(row.event.nextStep||row.event.followup),definedAt:text(row.event.nextActionDefinedAt),completed:completed(row.event),confirmedPending:row.event.followupPending===true||['pendente','pending','ativa','ativo'].includes(norm(row.event.nextActionStatus)),eventId:row.event.id||'',source:'event',index:row.index,row})).filter(plan=>plan.date||plan.step);
     const ownDate=text(client.manualNextFollowup??client.nextFollowup),ownStep=text(client.manualNextStep??client.nextStep);
-    if(ownDate||ownStep)plans.push({date:ownDate,step:ownStep,definedAt:text(client.manualNextActionDefinedAt),completed:!!text(client.manualNextActionCompletedAt)||client.manualNextActionCompleted===true,eventId:'',source:'client',index:-1});
+    if(ownDate||ownStep)plans.push({date:ownDate,step:ownStep,definedAt:text(client.manualNextActionDefinedAt),completed:!!text(client.manualNextActionCompletedAt||client.manualNextActionCancelledAt)||client.manualNextActionCompleted===true||resolvedStatus(client.manualNextActionStatus),confirmedPending:true,eventId:'',source:'client',index:-1});
     const definitionStamp=plan=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(plan.definedAt)&&dateDay(plan.definedAt.slice(0,10))!==null?Date.parse(plan.definedAt):NaN;
     const own=plans.find(plan=>plan.source==='client'),ownStamp=own?definitionStamp(own):NaN;
-    // An explicit new manual plan supersedes older event snapshots without deleting them.
+    const newEventPlan=plans.some(plan=>plan.source==='event'&&Number.isFinite(definitionStamp(plan))&&definitionStamp(plan)<=context.now);
+    // Explicit new definitions supersede older snapshots without deleting them.
     const current=plans.filter(plan=>{
-      if(plan.source==='client'||!Number.isFinite(ownStamp)||ownStamp>context.now)return true;
+      if(plan.source==='client')return !(dateDay(plan.date)===null&&!Number.isFinite(ownStamp)&&newEventPlan);
+      if(!Number.isFinite(ownStamp)||ownStamp>context.now)return true;
       const stamp=definitionStamp(plan);
       if(Number.isFinite(stamp))return stamp>ownStamp;
       return plan.row.stamp===null||plan.row.day>context.day||plan.row.stamp>ownStamp;
     });
     // A later recorded contact can satisfy a historical event follow-up, not a manual plan.
-    const satisfied=plan=>plan.source==='event'&&dateDay(plan.date)!==null&&rows.some(row=>isContact(row.event)&&row.day>dateDay(plan.date)&&row.day<=context.day&&row.stamp!==null&&(!text(row.event.time)||row.stamp<=context.now)&&row.stamp>(Number.isFinite(definitionStamp(plan))?definitionStamp(plan):plan.row.stamp??Infinity));
+    const satisfied=plan=>plan.source==='event'&&rows.some(row=>row.day<=context.day&&row.stamp!==null&&(!text(row.event.time)||row.stamp<=context.now)&&row.stamp>(Number.isFinite(definitionStamp(plan))?definitionStamp(plan):plan.row.stamp??Infinity)&&(plan.eventId&&row.event.completedNextActionEventId===plan.eventId||dateDay(plan.date)!==null&&isContact(row.event)&&row.day>dateDay(plan.date)));
     const valid=current.filter(plan=>!plan.completed&&!satisfied(plan)&&dateDay(plan.date)!==null);
     const future=valid.filter(plan=>plan.date>=context.today).sort((a,b)=>a.date.localeCompare(b.date)||a.index-b.index)[0];
     const overdue=valid.filter(plan=>plan.date<context.today).sort((a,b)=>b.date.localeCompare(a.date)||a.index-b.index)[0];
@@ -111,6 +115,8 @@
         return Number(a.source==='client')-Number(b.source==='client')||a.index-b.index;
       }).pop();
       if(!latest||latest.completed||satisfied(latest)||!latest.step)return null;
+      // An old event snapshot alone is not evidence of a currently pending action.
+      if(latest.source==='event'&&dateDay(latest.date)===null&&!Number.isFinite(definitionStamp(latest))&&!latest.confirmedPending)return null;
       selected=latest;
     }
     const stamp=definitionStamp(selected);
@@ -118,8 +124,9 @@
     const definedDay=p?dateDay(`${p.year}-${p.month}-${p.day}`):null;
     const age=definedDay===null?null:context.day-definedDay;
     const status=dateDay(selected.date)===null?'undated':selected.date<context.today?'overdue':selected.date===context.today?'today':'future';
-    const {row,completed:finished,...plan}=selected;
-    return{...plan,date:status==='undated'?'':selected.date,status,age,needsReview:status==='undated'&&age!==null&&age>=context.settings.undatedActionDays};
+    const reviewReason=status!=='undated'?'':!Number.isFinite(stamp)?'legacy':age!==null&&age>=context.settings.undatedActionDays?'elapsed':'';
+    const {row,completed:finished,confirmedPending,...plan}=selected;
+    return{...plan,date:status==='undated'?'':selected.date,status,age,reviewReason,needsReview:!!reviewReason};
   }
   function followupInfo(client,context){
     const manual=context.day===null?null:manualAction(client,context.byClient.get(client.id)||[],context);
@@ -155,7 +162,7 @@
     }
     if(manual?.status==='overdue')add('manual-overdue','Cumprir próxima ação definida',`O prazo definido para ${manual.date.split('-').reverse().join('/')} está vencido.`,'Alta','acompanhamento',0,{eventId:manual.eventId,date:manual.date},[contactAction(),{id:'plan',label:'Rever próxima ação'}],'contact');
     if(manual?.status==='today')add('manual-today','Cumprir próxima ação definida','Existe uma próxima ação definida para hoje.','Média','acompanhamento',1,{eventId:manual.eventId,date:manual.date},[contactAction(),{id:'plan',label:'Rever próxima ação'}],'contact');
-    if(manual?.needsReview)add('manual-undated','Definir prazo de acompanhamento','Existe uma próxima ação comercial sem data definida há pelo menos 3 dias.','Média','acompanhamento',2,{eventId:manual.eventId},[{id:'plan',label:'Definir próxima ação'}],'plan');
+    if(manual?.needsReview)add('manual-undated','Definir prazo de acompanhamento',manual.reviewReason==='legacy'?'Existe uma próxima ação comercial sem data definida que necessita de revisão.':'Existe uma próxima ação comercial sem data definida há pelo menos 3 dias.','Média','acompanhamento',2,{eventId:manual.eventId},[{id:'plan',label:'Definir próxima ação'}],'plan');
     const scheduled=rows.some(row=>isContact(row.event)&&row.stamp!==null&&(row.day>context.day||text(row.event.time)&&row.stamp>context.now));
     const future=manual?.status==='future'||scheduled,recent=last&&context.now-last.stamp<context.settings.contactIntervalHours*3600000;
     // Only confirmed stock changes bypass a future agreement. No contact is sent.
