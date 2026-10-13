@@ -1,0 +1,17 @@
+{
+  "clients": [
+    {"id":"google-test-client-1","name":"Cliente ficticio 1","phone":"","email":"client1@example.test","origin":"Outro","originManual":"Fixture isolada","stage":"Novo Lead","preferences":{},"fractions":[],"notes":"Dados exclusivamente ficticios."},
+    {"id":"google-test-client-2","name":"Cliente ficticio 2","phone":"","email":"client2@example.test","origin":"Outro","stage":"Qualificado","preferences":{"typology":"T2","floor":"3","orientation":"Sul","objective":"Investimento","decisionTime":"30 dias","summary":"Preferencias ficticias."},"fractions":[18]}
+  ],
+  "events": [{"id":"google-test-event-1","clientId":"google-test-client-2","type":"Apresentação comercial","date":"2026-10-13","channel":"Telefone","fractions":[18],"notes":"Evento historico ficticio."}],
+  "agents": [{"id":"google-test-agent-1","name":"Agente ficticio","agency":"Agencia ficticia","email":"agent@example.test"}],
+  "finalPrices": {},
+  "statuses": {},
+  "salePrices": {},
+  "priceHistory": {},
+  "saleCommissions": {},
+  "unavailableReasons": {},
+  "statusEventIds": {},
+  "salePriceEventIds": {},
+  "testFixture": {"version":1,"purpose":"isolated-google-test-only"}
+}

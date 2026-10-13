@@ -136,14 +136,12 @@ test('Metadata survives local storage, conservative merge and Apps Script Store 
   const before=clone(app.state.data);app.saveLocalOnly();assert.deepEqual(clone(app.loadDataLocal()),before);
   const stale=clone(before);delete stale.clients[0].manualNextActionDefinedAt;delete stale.events[0].nextActionDefinedAt;
   const merged=app.mergeCommercialData(before,stale);assert.equal(merged.clients[0].manualNextActionDefinedAt,now);assert.equal(merged.events[0].nextActionDefinedAt,now);
-  const values={},sheet={getRange(address){return{getValue(){return values[address]||''},setValue(value){values[address]=value;return this}}}};
-  const backend={console,LockService:{getDocumentLock(){return{waitLock(){},releaseLock(){}}}},ContentService:{MimeType:{JSON:'json',JAVASCRIPT:'js'},createTextOutput(text){return{text,setMimeType(){return this}}}}};
-  vm.createContext(backend);vm.runInContext(fs.readFileSync(path.join(root,'google_apps_script.gs'),'utf8'),backend);
-  backend.getStoreSheet_=()=>sheet;backend.backupStoreBeforeSave_=()=>{};backend.mirrorAll_=()=>{};
-  assert.equal(JSON.parse(backend.doPost({parameter:{payload:app.remotePayload()}}).text).ok,true);
-  assert.deepEqual(JSON.parse(values.B2),before);
-  assert.deepEqual(JSON.parse(backend.doGet(undefined).text).data,before);
-  assert.equal(JSON.parse(backend.doPost({postData:{contents:app.remotePayload()}}).text).ok,true);
+  const store=require('./helpers/apps-script-store.js')(app.normalizeData());
+  assert.equal(store.write({data:before,baseRevision:store.revision,requestId:'followups-test'}).ok,true);
+  assert.deepEqual(store.data,before);
+  assert.deepEqual(clone(store.read().data),before);
+  assert.equal(JSON.parse(store.context.doPost({parameter:{payload:app.remotePayload()}}).body).ok,false);
+  assert.equal(JSON.parse(store.context.doPost({postData:{contents:app.remotePayload()}}).body).ok,false);
   assert.equal(requests,0);
 });
 test('Legacy completion and cancellation markers suppress follow-up alerts without changing records',()=>{
