@@ -16,12 +16,12 @@ module.exports = async function commercialData(request,response) {
       if (!body || !['save','recover'].includes(body.action)||!store.validStore(body.data,true)||JSON.stringify(body).length>1000000||typeof body.baseRevision!=='string'||!store.REVISION.test(body.baseRevision)||typeof body.requestId!=='string'||! /^[\w-]{8,100}$/.test(body.requestId)) return response.status(400).json({ok:false,code:'INVALID_PAYLOAD'});
       if (body.action==='save'&&!store.validTicket(request,body.baseRevision,header(request,'x-crm-read-ticket'))) return response.status(403).json({ok:false,code:'READ_REQUIRED'});
       const saved=await store.callStore(body.action==='recover'?'crmRecover':'crmWrite',{data:body.data,baseRevision:body.baseRevision,requestId:body.requestId});
-      if (saved.requestId!==body.requestId||saved.revision!==createHash('sha256').update(store.serializedStore(body.data)).digest('hex')) throw store.failure('INVALID_SOURCE_RESPONSE');
-      return response.status(200).json({ok:true,revision:saved.revision,confirmedAt:saved.confirmedAt,updatedAt:saved.updatedAt||'',readTicket:store.ticket(request,saved.revision),canWrite:store.writeEnabled(),source:'shared',protocol:saved.protocol});
+      if (saved.persisted!==true||saved.requestId!==body.requestId||saved.revision!==createHash('sha256').update(store.serializedStore(body.data)).digest('hex')) throw store.failure('INVALID_SOURCE_RESPONSE');
+      return response.status(200).json({ok:true,persisted:true,requestId:saved.requestId,revision:saved.revision,confirmedAt:saved.confirmedAt,updatedAt:saved.updatedAt||'',readTicket:store.ticket(request,saved.revision),canWrite:store.writeEnabled()&&saved.canWrite===true,source:'shared',protocol:saved.protocol});
     }
     const loaded=await store.callStore('crmRead');
     if (!store.validStore(loaded.data)) throw store.failure('INVALID_SOURCE_RESPONSE');
-    return response.status(200).json({ok:true,data:loaded.data,revision:loaded.revision,confirmedAt:loaded.confirmedAt,updatedAt:loaded.updatedAt||'',readTicket:store.ticket(request,loaded.revision),canWrite:store.writeEnabled(),source:'shared',protocol:loaded.protocol});
+    return response.status(200).json({ok:true,data:loaded.data,revision:loaded.revision,confirmedAt:loaded.confirmedAt,updatedAt:loaded.updatedAt||'',readTicket:store.ticket(request,loaded.revision),canWrite:store.writeEnabled()&&loaded.canWrite===true,source:'shared',protocol:loaded.protocol});
   } catch(error) {
     return response.status(error instanceof SyntaxError?400:error.status||502).json({ok:false,code:error instanceof SyntaxError?'INVALID_PAYLOAD':error.code||'SOURCE_UNAVAILABLE'});
   }

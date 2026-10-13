@@ -2,6 +2,8 @@
 
 ## Estado Da Entrega
 
+A segunda fase encontra-se documentada em `COMMERCIAL_SYNC_PHASE2.md`. Essa fase reforca recibos de escrita, recuperacao, permissao de escrita na fonte, capacidade preventiva de Store e os metadados offline dos tres PDFs. As evidencias anteriores abaixo continuam a referir-se a primeira fase; nao sao uma validacao Google real.
+
 Branch: `codex/fix-commercial-auth-sync`. Implementacao local, sem push, deploy, alteracao de permissoes Google ou escrita na folha de producao.
 
 A ligacao Google real ainda depende de configuracao e autorizacao do administrador. Os testes usam exclusivamente dados ficticios e um Apps Script/Spreadsheet simulados. Nao declarar a sincronizacao de producao validada.
@@ -77,7 +79,7 @@ O administrador deve:
 2. Configurar o mesmo projeto Google Cloud standard para o Apps Script e o cliente OAuth; ativar Apps Script API.
 3. Autorizar os scopes efetivamente usados pelo projeto, incluindo Sheets e identificacao da identidade executante. Rever a lista "Project OAuth scopes" do Apps Script; nao acrescentar Drive/Gmail se o projeto nao os utiliza.
 4. Criar o cliente OAuth e obter uma autorizacao offline para a identidade dedicada, por um fluxo de consentimento administrativo seguro. Guardar o refresh token diretamente no gestor de segredos/Vercel; nao colocar valores no chat, URLs, historico de terminal, Git ou logs. Um consentimento em modo Testing pode ter limitacoes de duracao; rever a configuracao Google.
-5. Configurar as Script Properties: `CRM_SPREADSHEET_ID` (folha de testes), `CRM_ENVIRONMENT=test`, `CRM_API_CALLER_EMAIL` (identidade dedicada).
+5. Configurar as Script Properties: `CRM_SPREADSHEET_ID` (folha de testes), `CRM_ENVIRONMENT=test`, `CRM_API_CALLER_EMAIL` (identidade dedicada), `CRM_API_WRITES_ENABLED=false` durante a validacao inicial de leitura. A escrita exige a propriedade exatamente `true`, alem dos dois gates do servidor.
 6. Preparar `Store!B2` com a fixture completa numa copia de testes. A leitura nao cria nem inicializa a folha automaticamente.
 7. Publicar o projeto de testes como **API Executable**, limitado a identidade autorizada. Usar o ID dessa publicacao em `CRM_GOOGLE_DEPLOYMENT_ID`, nao a URL `/exec`. Nunca usar `devMode=true` no servidor.
 8. Configurar as variaveis abaixo exclusivamente no ambiente de testes/Preview, com segredos e fontes diferentes de producao.
