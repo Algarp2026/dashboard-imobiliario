@@ -1,6 +1,7 @@
 "use strict";
 (()=>{
 const KEY='theView.crmCommercial.v2',LOCAL_REMOTE_BACKUP_KEY=KEY+'.backupBeforeRemoteLoad',LOCAL_PENDING_SYNC_KEY=KEY+'.pendingSync',CONFIG=window.THE_VIEW_CONFIG||{},REMOTE_URL=(CONFIG.GOOGLE_SHEETS_WEBAPP_URL||'').trim();
+const LOCAL_SYNC_META_KEY=KEY+'.syncMeta.v1',LOCAL_SYNC_REQUEST_KEY=KEY+'.pendingWrite.v1',COMMERCIAL_DATA_API='/api/commercial-data';
 const PLANT_MAP={"1": {"image": "plantas/planta-apartamento-01.jpg", "pdf": "plantas/planta-apartamento-01.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_01.pdf"}, "2": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "10": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "17": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "24": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "31": {"image": "plantas/planta-apartamento-02-10-17-24-31.jpg", "pdf": "plantas/planta-apartamento-02-10-17-24-31.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_02, 10, 17, 24 e 31.pdf"}, "3": {"image": "plantas/planta-apartamento-03.jpg", "pdf": "plantas/planta-apartamento-03.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_03.pdf"}, "4": {"image": "plantas/planta-apartamento-04.jpg", "pdf": "plantas/planta-apartamento-04.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_04.pdf"}, "5": {"image": "plantas/planta-apartamento-05.jpg", "pdf": "plantas/planta-apartamento-05.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_05.pdf"}, "6": {"image": "plantas/planta-apartamento-06.jpg", "pdf": "plantas/planta-apartamento-06.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_06.pdf"}, "7": {"image": "plantas/planta-apartamento-07-15.jpg", "pdf": "plantas/planta-apartamento-07-15.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf"}, "15": {"image": "plantas/planta-apartamento-07-15.jpg", "pdf": "plantas/planta-apartamento-07-15.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_07 e 15.pdf"}, "8": {"image": "plantas/planta-apartamento-08.jpg", "pdf": "plantas/planta-apartamento-08.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_08.pdf"}, "9": {"image": "plantas/planta-apartamento-09-16.jpg", "pdf": "plantas/planta-apartamento-09-16.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf"}, "16": {"image": "plantas/planta-apartamento-09-16.jpg", "pdf": "plantas/planta-apartamento-09-16.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_09 e 16.pdf"}, "11": {"image": "plantas/planta-apartamento-11.jpg", "pdf": "plantas/planta-apartamento-11.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_11.pdf"}, "12": {"image": "plantas/planta-apartamento-12.jpg", "pdf": "plantas/planta-apartamento-12.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_12.pdf"}, "13": {"image": "plantas/planta-apartamento-13.jpg", "pdf": "plantas/planta-apartamento-13.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_13.pdf"}, "14": {"image": "plantas/planta-apartamento-14.jpg", "pdf": "plantas/planta-apartamento-14.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_14.pdf"}, "18": {"image": "plantas/planta-apartamento-18.jpg", "pdf": "plantas/planta-apartamento-18.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_18.pdf"}, "19": {"image": "plantas/planta-apartamento-19.jpg", "pdf": "plantas/planta-apartamento-19.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_19.pdf"}, "20": {"image": "plantas/planta-apartamento-20.jpg", "pdf": "plantas/planta-apartamento-20.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_20.pdf"}, "21": {"image": "plantas/planta-apartamento-21.jpg", "pdf": "plantas/planta-apartamento-21.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_21.pdf"}, "22": {"image": "plantas/planta-apartamento-22.jpg", "pdf": "plantas/planta-apartamento-22.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_22.pdf"}, "23": {"image": "plantas/planta-apartamento-23-30.jpg", "pdf": "plantas/planta-apartamento-23-30.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf"}, "30": {"image": "plantas/planta-apartamento-23-30.jpg", "pdf": "plantas/planta-apartamento-23-30.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_23 e 30.pdf"}, "25": {"image": "plantas/planta-apartamento-25.jpg", "pdf": "plantas/planta-apartamento-25.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_25.pdf"}, "26": {"image": "plantas/planta-apartamento-26.jpg", "pdf": "plantas/planta-apartamento-26.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_26.pdf"}, "27": {"image": "plantas/planta-apartamento-27.jpg", "pdf": "plantas/planta-apartamento-27.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_27.pdf"}, "28": {"image": "plantas/planta-apartamento-28.jpg", "pdf": "plantas/planta-apartamento-28.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_28.pdf"}, "29": {"image": "plantas/planta-apartamento-29.jpg", "pdf": "plantas/planta-apartamento-29.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_29.pdf"}, "32": {"image": "plantas/planta-apartamento-32.jpg", "pdf": "plantas/planta-apartamento-32.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_32.pdf"}, "33": {"image": "plantas/planta-apartamento-33.jpg", "pdf": "plantas/planta-apartamento-33.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_33.pdf"}, "34": {"image": "plantas/planta-apartamento-34.jpg", "pdf": "plantas/planta-apartamento-34.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_34.pdf"}, "35": {"image": "plantas/planta-apartamento-35.jpg", "pdf": "plantas/planta-apartamento-35.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_35.pdf"}, "36": {"image": "plantas/planta-apartamento-36.jpg", "pdf": "plantas/planta-apartamento-36.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_36.pdf"}, "37": {"image": "plantas/planta-apartamento-37.jpg", "pdf": "plantas/planta-apartamento-37.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_37.pdf"}, "38": {"image": "plantas/planta-apartamento-38.jpg", "pdf": "plantas/planta-apartamento-38.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_38.pdf"}, "39": {"image": "plantas/planta-apartamento-39.jpg", "pdf": "plantas/planta-apartamento-39.pdf", "source": "Planta_THE VIEW OLHAO_Apartamento_39.pdf"}};
 const ORIENT={1:'Sul/Este',2:'Sul/Oeste',3:'Oeste',4:'Oeste',5:'Oeste',6:'Este/Oeste',7:'Este',8:'Este',9:'Sul/Este',10:'Sul/Oeste',11:'Oeste',12:'Oeste',13:'Oeste',14:'Este/Oeste',15:'Este',16:'Sul/Este',17:'Sul/Oeste',18:'Oeste',19:'Oeste',20:'Oeste',21:'Este/Oeste',22:'Este',23:'Sul/Este',24:'Sul/Oeste',25:'Oeste',26:'Este/Oeste',27:'Oeste',28:'Este/Oeste',29:'Este',30:'Sul/Este',31:'Sul/Oeste',32:'Oeste',33:'Este/Oeste',34:'Este/Oeste',35:'Este/Oeste',36:'Sul/Este',37:'Sul/Oeste',38:'Oeste',39:'Este/Oeste'};
 const SUG={1:545000,2:600000,3:390000,4:475000,5:450000,6:615000,7:535000,8:390000,9:800000,10:620000,11:400000,12:440000,13:420000,14:600000,15:580000,16:900000,17:640000,18:425000,19:360000,20:410000,21:560000,22:600000,23:850000,24:700000,25:440000,26:630000,27:440000,28:500000,29:485000,30:950000,31:720000,32:455000,33:570000,34:645000,35:555000,36:1450000,37:1000000,38:470000,39:1000000};
@@ -71,6 +72,7 @@ const MAX_COMPARE_FRACTIONS=4;
 const CLIENT_DETAIL_TABS=[['data','Dados','user-round'],['preferences','Preferências','sliders-horizontal'],['fractions','Frações','building-2'],['followup','Acompanhamento','messages-square'],['summary','Resumo','clipboard-list']];
 const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,definingNextAction:false,nextActionFormSignature:'',data:loadDataLocal()};
 const el={};
+const sharedSync={phase:'loading',initialized:false,verified:false,revision:'',ticket:'',base:null,remote:null,lastConfirmedAt:readSyncMeta()?.lastConfirmedAt||'',canWrite:false,busy:false,dirty:hasPendingLocalSync()||hasUnconfirmedLocalData(state.data),generation:0,error:''};
 const commercialUx={comparison:new Set(),drawerFraction:null,returnContext:null,scroll:{},sort:{},priceReasonDrafts:{},salesFilters:{search:'',typology:'all',floor:'all',status:'all'},searchIndex:-1,ready:false,timer:null};
 const COMMERCIAL_UI_KEY='theView.commercialUi.v1';
 const COMMERCIAL_PREFS_KEY='theView.commercialPreferences.v1';
@@ -698,24 +700,18 @@ async function loadExcel(){
 
     if(!state.fractions.length) throw new Error('Não encontrei frações The View.');
 
-    let remoteLoaded=!REMOTE_URL;
-    let shouldSyncAfterLoad=false;
-    setStatus(REMOTE_URL ? `${state.fractions.length} frações carregadas · a sincronizar Google Sheets…` : `${state.fractions.length} frações carregadas`);
+    setStatus(`${state.fractions.length} frações carregadas · a consultar base comercial…`);
 
     if(REMOTE_URL){
       try{
-        const remoteResult=await loadRemoteData();
-        remoteLoaded=true;
-        shouldSyncAfterLoad=!!remoteResult?.shouldSave;
+        await loadRemoteData();
       }catch(err){
-        console.warn('Falha ao sincronizar Google Sheets antes de preparar dados locais', err);
-        setStatus(`${state.fractions.length} frações carregadas · dados locais`);
+        sharedSync.verified=false;sharedSync.phase='offline';sharedSync.error=err.code||'SOURCE_UNAVAILABLE';
       }
     }
-
-    const migrated = applyUpdatedInitialPriceMigration();
-    const crmMigrated = migrateCrmData();
-    const historyChanged = ensureHistory();
+    // Startup is read-only: historical imports, pricing migrations and history creation never authorize a remote write.
+    sharedSync.initialized=true;
+    if(!REMOTE_URL){sharedSync.phase='offline';sharedSync.error='LOCAL_PREVIEW'}
     populate();
     restoreCommercialContext();
     renderAll();
@@ -725,18 +721,7 @@ async function loadExcel(){
     restoreCommercialScroll();
     requestAnimationFrame(applyFractionDeepLink);
 
-    if(REMOTE_URL){
-      if(remoteLoaded && (shouldSyncAfterLoad || migrated || crmMigrated || historyChanged)){
-        save();
-      }else if(!remoteLoaded && (migrated || crmMigrated || historyChanged)){
-        saveLocalOnly();
-      }
-      if(remoteLoaded){
-        setStatus(migrated || crmMigrated || historyChanged ? `${state.fractions.length} frações · dados preparados e sincronização ativa` : `${state.fractions.length} frações · sincronização Google Sheets ativa`);
-      }
-    }else if(migrated || crmMigrated || historyChanged){
-      save();
-    }
+    renderSharedSyncStatus();
   }catch(e){
     console.error(e);
     showError(e.message || String(e));
@@ -1447,6 +1432,7 @@ function clientReportFilterLabel(options){
   const sorts={operational:'Relevância operacional',followup:'Relevância operacional',name:'Nome',status:'Estado comercial',lastContact:'Último contacto',agent:'Agente',priority:'Prioridade'};
   return`Estados: ${(options.statuses||STAGES.filter(stage=>!['Vendido','Desistiu'].includes(stage))).join(', ')} | Agente: ${options.agentId&&options.agentId!=='all'?agent(options.agentId)?.name||'Agente selecionado':'Todos'}${options.search?` | Nome: ${options.search}`:''} | Follow-up: ${followups[options.followupFilter||'all']} | Prioridade: ${options.priority&&options.priority!=='all'?options.priority:'Todas'} | Ordem: ${sorts[options.model==='management'?'operational':options.sort||'operational']}`;
 }
+function clientReportSourceMarkup(){return`<p class="filters">${esc(commercialDataOriginLabel())}</p>`}
 function clientReportMarkup(rows,options={}){
   const model=options.model||'listing',indicators=clientReportIndicators(rows);
   const text=value=>esc(value===0?0:value||'—'),line=(label,value)=>`<p><b>${esc(label)}</b> ${text(value)}</p>`;
@@ -1520,7 +1506,7 @@ function generateClientsSummaryPdf(rows,columns,options={}){
   const w=window.open('','_blank');if(!w){notifyUser('Autorize pop-ups para gerar o PDF.','Relatórios de Clientes');return false}
   w.document.open();w.document.write(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The View - ${config.model==='operational'?'Acompanhamento Comercial':report.title}</title><style>
     @page{size:A4 ${landscape?'landscape':'portrait'};margin:0}*{box-sizing:border-box;letter-spacing:0}body{margin:0;background:#eef1f2;color:#1e2c3b;font:9pt/1.4 Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.preview-toolbar{position:sticky;top:0;padding:12px 20px;display:flex;gap:12px;justify-content:space-between;align-items:center;background:#fff;border-bottom:1px solid #ccd5d8;z-index:2;font-size:14px}.preview-toolbar button{background:#236951;color:#fff;padding:10px 18px;border:0;border-radius:5px;cursor:pointer}.preview-toolbar button:disabled{opacity:.5}.page{width:${landscape?'297':'210'}mm;height:${landscape?'210':'297'}mm;padding:9mm 10mm 8mm;margin:16px auto;background:#fff;display:flex;flex-direction:column;break-after:page}.page:last-child{break-after:auto}.doc-header{flex-shrink:0;display:flex;justify-content:space-between;gap:7mm;border-bottom:1px solid #aab9b3;padding-bottom:3mm;margin-bottom:3mm}.brand{font-weight:bold;font-size:10pt;color:#236951}.doc-header h1{font-size:16pt;line-height:1.2;margin:1mm 0 2mm}.filters{font-size:8.5pt;color:#526169;margin:0;max-width:${landscape?'220':'145'}mm;overflow-wrap:anywhere}.meta{font-size:8.5pt;white-space:nowrap;text-align:right}.page-body{flex:1;min-height:0}h2{font-size:11pt;margin:3mm 0 2mm;color:#236951}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}thead{display:table-header-group}th,td{text-align:left;vertical-align:top;padding:2mm 1.6mm;border-bottom:1px solid #dce3df;overflow-wrap:anywhere}th{font-size:8.5pt;background:#edf3f0}tr{break-inside:avoid}tbody tr:nth-child(even){background:#f7f9f8}p{margin:1mm 0}.subtle{color:#59656b;font-size:8.5pt}.overdue{color:#a03638}.report-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4mm;border-bottom:1px solid #dce3df;padding:1mm 0 4mm;margin-bottom:3mm}.report-metrics strong{display:block;font-size:20pt;line-height:1.3;color:#236951}.report-metrics span{font-size:8.5pt;display:block}.doc-footer{flex-shrink:0;border-top:1px solid #cbd6d0;display:flex;justify-content:space-between;gap:4mm;padding-top:2mm;margin-top:3mm;font-size:8.5pt;color:#526169}#report-source{display:none}#report-error{color:#a03638;padding:16px}@media print{body{background:#fff}.preview-toolbar,#report-error{display:none}.page{margin:0}}
-    </style></head><body data-model="${attr(config.model||'listing')}"><div class="preview-toolbar"><strong>Documento interno · ${rows.length} clientes</strong><button id="report-print" type="button" disabled>Imprimir / Guardar PDF</button></div><div id="report-error" hidden></div><template id="report-page-template"><article class="page"><header class="doc-header"><div><span class="brand">THE VIEW OLHÃO</span><h1>${esc(report.title)}</h1><p class="filters">${esc(clientReportFilterLabel(config))}</p></div><div class="meta">Documento interno<br>${esc(generatedAt)}</div></header><main class="page-body"></main><footer class="doc-footer"><span>Documento interno de acompanhamento comercial. Informação sujeita a atualização.</span><span data-page-number></span></footer></article></template><div id="report-source">${report.body}</div><div id="report-pages"></div><script>document.getElementById('report-print').onclick=()=>window.print();document.fonts.ready.then(()=>{try{(${paginateClientReport.toString()})();}catch(error){const box=document.getElementById('report-error');box.hidden=false;box.textContent='Não foi possível preparar a impressão: '+error.message;}});</script></body></html>`);w.document.close();
+    </style></head><body data-model="${attr(config.model||'listing')}"><div class="preview-toolbar"><strong>Documento interno · ${rows.length} clientes</strong><button id="report-print" type="button" disabled>Imprimir / Guardar PDF</button></div><div id="report-error" hidden></div><template id="report-page-template"><article class="page"><header class="doc-header"><div><span class="brand">THE VIEW OLHÃO</span><h1>${esc(report.title)}</h1><p class="filters">${esc(clientReportFilterLabel(config))}</p>${clientReportSourceMarkup()}</div><div class="meta">Documento interno<br>${esc(generatedAt)}</div></header><main class="page-body"></main><footer class="doc-footer"><span>Documento interno de acompanhamento comercial. Informação sujeita a atualização.</span><span data-page-number></span></footer></article></template><div id="report-source">${report.body}</div><div id="report-pages"></div><script>document.getElementById('report-print').onclick=()=>window.print();document.fonts.ready.then(()=>{try{(${paginateClientReport.toString()})();}catch(error){const box=document.getElementById('report-error');box.hidden=false;box.textContent='Não foi possível preparar a impressão: '+error.message;}});</script></body></html>`);w.document.close();
   commercialUxToast('Relatório preparado para pré-visualização.');return true;
 }
 
@@ -1693,7 +1679,7 @@ function renderDashboard(){
   renderDecisionAlerts();
 }
 
-function renderDecisionAlerts(){if(!el.decisionAlerts)return;const soldBelow=state.fractions.filter(f=>statusOf(f)==='Vendido'&&salePrice(f)&&salePrice(f)<finalPrice(f));const reserved=state.fractions.filter(f=>statusOf(f)==='Reservado');const changed=state.fractions.filter(f=>historyOf(f).length>1).slice(0,8);const hot=state.fractions.map(f=>({f,m:metrics(f.number)})).filter(x=>x.m.proposals||x.m.interested).sort((a,b)=>(b.m.proposals-a.m.proposals)||(b.m.interested-a.m.interested)).slice(0,6);let blocks=[];blocks.push(`<article class="decision-alert decision-alert--warn"><h3>Reservas pendentes</h3><p><strong>${reserved.length}</strong> frações reservadas.</p><p>${reserved.slice(0,5).map(f=>esc(f.name)).join(', ')||'Sem reservas neste momento.'}</p></article>`);blocks.push(`<article class="decision-alert ${soldBelow.length?'decision-alert--danger':'decision-alert--success'}"><h3>Vendas abaixo da tabela</h3><p><strong>${soldBelow.length}</strong> vendas abaixo do preço final definido.</p><p>${soldBelow.slice(0,5).map(f=>`${esc(f.name)} (${money(finalPrice(f)-salePrice(f))})`).join(', ')||'Sem desvios negativos registados.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Preços alterados</h3><p><strong>${changed.length}</strong> frações com histórico de alteração.</p><p>${changed.map(f=>esc(f.name)).join(', ')||'Ainda sem alterações manuais.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Maior procura</h3><p>${hot.length?hot.map(x=>`${esc(x.f.name)} · ${x.m.interested} interessados · ${x.m.proposals} propostas`).join('<br>'):'Ainda sem eventos comerciais suficientes.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Sincronização</h3><p>${REMOTE_URL?'Google Sheets ativo. As alterações são guardadas na base partilhada.':'Modo local. Configure o URL do Google Apps Script em config.js para partilhar dados.'}</p></article>`);el.decisionAlerts.innerHTML=operationalActionsMarkup()+`<details class="ux-financial-details"><summary>Indicadores complementares</summary><div class="decision-alerts">${blocks.join('')}</div></details>`}
+function renderDecisionAlerts(){if(!el.decisionAlerts)return;const soldBelow=state.fractions.filter(f=>statusOf(f)==='Vendido'&&salePrice(f)&&salePrice(f)<finalPrice(f));const reserved=state.fractions.filter(f=>statusOf(f)==='Reservado');const changed=state.fractions.filter(f=>historyOf(f).length>1).slice(0,8);const hot=state.fractions.map(f=>({f,m:metrics(f.number)})).filter(x=>x.m.proposals||x.m.interested).sort((a,b)=>(b.m.proposals-a.m.proposals)||(b.m.interested-a.m.interested)).slice(0,6);let blocks=[];blocks.push(`<article class="decision-alert decision-alert--warn"><h3>Reservas pendentes</h3><p><strong>${reserved.length}</strong> frações reservadas.</p><p>${reserved.slice(0,5).map(f=>esc(f.name)).join(', ')||'Sem reservas neste momento.'}</p></article>`);blocks.push(`<article class="decision-alert ${soldBelow.length?'decision-alert--danger':'decision-alert--success'}"><h3>Vendas abaixo da tabela</h3><p><strong>${soldBelow.length}</strong> vendas abaixo do preço final definido.</p><p>${soldBelow.slice(0,5).map(f=>`${esc(f.name)} (${money(finalPrice(f)-salePrice(f))})`).join(', ')||'Sem desvios negativos registados.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Preços alterados</h3><p><strong>${changed.length}</strong> frações com histórico de alteração.</p><p>${changed.map(f=>esc(f.name)).join(', ')||'Ainda sem alterações manuais.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Maior procura</h3><p>${hot.length?hot.map(x=>`${esc(x.f.name)} · ${x.m.interested} interessados · ${x.m.proposals} propostas`).join('<br>'):'Ainda sem eventos comerciais suficientes.'}</p></article>`);blocks.push(`<article class="decision-alert"><h3>Sincronização</h3><p>${esc(commercialDataOriginLabel())}</p></article>`);el.decisionAlerts.innerHTML=operationalActionsMarkup()+`<details class="ux-financial-details"><summary>Indicadores complementares</summary><div class="decision-alerts">${blocks.join('')}</div></details>`}
 
 function recommendedPriceOf(f){
   const value=Number(f?.raw?.['Preço Recomendado']);
@@ -2009,6 +1995,7 @@ function setSaleCommissionForFraction(n,ev){
 }
 function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[])}
 function applyEventBusinessRules(ev){
+  if(isCommercialClosingEvent(ev))ensureLegacyCommercialEventLinks(ev.fractions||[]);
   state.data.events.push(ev);
   if(ev.type==='Preferências recebidas'&&client(ev.clientId))client(ev.clientId).preferencesManuallyEdited=false;
   applyClientEventStage(client(ev.clientId),ev);
@@ -2029,6 +2016,19 @@ function commercialEffectForFraction(n){
 }
 function latestCommercialEventForFraction(n){
   return commercialEffectForFraction(n)?.event||null;
+}
+function ensureLegacyCommercialEventLinks(numbers){
+  state.data.statusEventIds=state.data.statusEventIds||{};
+  state.data.salePriceEventIds=state.data.salePriceEventIds||{};
+  uniqNum(numbers||[]).forEach(n=>{
+    const effect=commercialEffectForFraction(n);
+    if(!effect||state.data.statuses[n]!==effect.status)return;
+    const index=state.data.events.indexOf(effect.event),key=eventSortKey(effect.event,index);
+    if(state.data.events.some((ev,i)=>ev.type==='Alteração de estado'&&(ev.fractions||[]).includes(n)&&eventSortKey(ev,i)>key))return;
+    // Older stores lacked ownership IDs; infer them only before an explicit commercial edit.
+    if(!state.data.statusEventIds[n])state.data.statusEventIds[n]=effect.event.id;
+    if(!state.data.salePriceEventIds[n]&&effect.amount&&Number(state.data.salePrices[n])===effect.amount)state.data.salePriceEventIds[n]=effect.event.id;
+  });
 }
 function latestDerivedStageForClient(cid){
   return (state.data.events||[])
@@ -2079,6 +2079,7 @@ function hasCriticalCommercialEventChange(oldEv,newEv){
 function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
+  if(isCommercialClosingEvent(oldEv)||isCommercialClosingEvent(newEv))ensureLegacyCommercialEventLinks(uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]));
   state.data.events[idx]=newEv;
   if(newEv.type==='Preferências recebidas'&&client(newEv.clientId))client(newEv.clientId).preferencesManuallyEdited=false;
   reapplyClientLinksAfterEventEdit(oldEv,newEv);
@@ -3799,6 +3800,7 @@ function salePrice(f){return f?(+state.data.salePrices[f.number]||0):0}
 function historyOf(f){return f?(state.data.priceHistory[f.number]||[]):[]}
 function normalizeData(d={}){
   return {
+    ...d,
     finalPrices:d.finalPrices||{},
     statuses:d.statuses||{},
     salePrices:d.salePrices||{},
@@ -3831,83 +3833,70 @@ function hasBusinessData(d){
     (d.events||[]).length>0 ||
     (d.agents||[]).length>0;
 }
-function loadRemoteJsonp(){
-  return new Promise((resolve, reject)=>{
-    if(!REMOTE_URL){ resolve(null); return; }
-    const cb='theViewJsonp_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const sep=REMOTE_URL.includes('?')?'&':'?';
-    const s=document.createElement('script');
-    const timer=setTimeout(()=>{ cleanup(); reject(new Error('Tempo esgotado ao ler Google Sheets')); }, 12000);
-    function cleanup(){ clearTimeout(timer); try{ delete window[cb]; }catch{} if(s.parentNode) s.parentNode.removeChild(s); }
-    window[cb]=(data)=>{ cleanup(); resolve(data); };
-    s.onerror=()=>{ cleanup(); reject(new Error('Erro ao carregar JSONP Google Sheets')); };
-    s.src=REMOTE_URL+sep+'action=load&callback='+encodeURIComponent(cb)+'&ts='+Date.now();
-    document.head.appendChild(s);
-  });
+function readSyncMeta(){try{const meta=JSON.parse(localStorage.getItem(LOCAL_SYNC_META_KEY));return meta&&/^[a-f0-9]{64}$/.test(meta.revision)&&validSharedData(meta.base)&&/^\d{4}-\d{2}-\d{2}T/.test(meta.lastConfirmedAt)&&Number.isFinite(Date.parse(meta.lastConfirmedAt))?meta:null}catch{return null}}
+function hasUnconfirmedLocalData(data){try{const meta=readSyncMeta();return !!localStorage.getItem(KEY)&&!!meta&&syncComparable(data)!==syncComparable(meta.base)}catch{return true}}
+function persistSyncMeta(){
+  localStorage.setItem(LOCAL_SYNC_META_KEY,JSON.stringify({revision:sharedSync.revision,base:sharedSync.base,lastConfirmedAt:sharedSync.lastConfirmedAt}));
 }
-
+function syncComparable(value){
+  if(Array.isArray(value))return'['+value.map(syncComparable).join(',')+']';
+  if(value&&typeof value==='object')return'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+syncComparable(value[key])).join(',')+'}';
+  return JSON.stringify(value);
+}
+function validSharedData(data){
+  if(!data||typeof data!=='object'||Array.isArray(data))return false;
+  for(const key of ['clients','events','agents']){
+    if(key in data&&!Array.isArray(data[key]))return false;
+    const ids=new Set();for(const item of data[key]||[]){if(!item||!['string','number'].includes(typeof item.id)||!String(item.id)||ids.has(String(item.id)))return false;ids.add(String(item.id))}
+  }
+  return ['finalPrices','statuses','salePrices','priceHistory','saleCommissions','unavailableReasons','statusEventIds','salePriceEventIds'].every(key=>!(key in data)||data[key]&&typeof data[key]==='object'&&!Array.isArray(data[key]));
+}
+async function requestCommercialData(payload){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+  try{
+    const response=await fetch(COMMERCIAL_DATA_API,{method:payload?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal,headers:payload?{'Content-Type':'application/json','X-CRM-Read-Ticket':sharedSync.ticket}:{},...(payload?{body:JSON.stringify(payload)}:{})});
+    let result;if(!response.headers.get('content-type')?.includes('application/json'))throw Object.assign(new Error('Resposta não confirmada'),{code:'INVALID_SOURCE_RESPONSE'});
+    try{result=await response.json()}catch{throw Object.assign(new Error('Resposta inválida'),{code:'INVALID_SOURCE_RESPONSE'})}
+    if(!response.ok||!result.ok)throw Object.assign(new Error('Ligação não confirmada'),{code:result.code||'SOURCE_UNAVAILABLE'});
+    if(result.protocol!=='tv-cas-v1'||result.source!=='shared'||! /^[a-f0-9]{64}$/.test(result.revision)||typeof result.readTicket!=='string'||! /^\d{13}\.[a-f0-9]{64}$/.test(result.readTicket)||!/^\d{4}-\d{2}-\d{2}T/.test(result.confirmedAt)||!Number.isFinite(Date.parse(result.confirmedAt))||!payload&&!validSharedData(result.data))throw Object.assign(new Error('Integridade não confirmada'),{code:'INVALID_SOURCE_RESPONSE'});
+    return result;
+  }catch(error){if(error.name==='AbortError')error.code='SOURCE_TIMEOUT';throw error}
+  finally{clearTimeout(timer)}
+}
 async function loadRemoteData(){
-  if(!REMOTE_URL) return;
-  setStatus('A sincronizar com Google Sheets…');
-
-  const localData = loadDataLocal();
-  const localHasData = hasBusinessData(localData);
-  const localPending = hasPendingLocalSync();
-
-  const j = await loadRemoteJsonp();
-  if(j && j.ok && j.data){
-    const remoteData = normalizeData(j.data);
-    const remoteHasData = hasBusinessData(remoteData);
-
-    // Proteção contra perda de dados:
-    // se a Google Sheet ainda estiver vazia, não deixa que ela apague o que acabou de ser criado no navegador.
-    if(!remoteHasData && localHasData){
-      state.data = localData;
-      saveLocalOnly();
-      setStatus('Google Sheets vazio · dados locais preservados');
-      return {shouldSave:true};
-    }
-
-    if(remoteHasData){
-      backupLocalBeforeRemoteLoad(localData, remoteData);
-      if(localPending && localHasData && JSON.stringify(localData)!==JSON.stringify(remoteData)){
-        const mergedData = mergeCommercialData(remoteData, localData);
-        state.data = mergedData;
-        saveLocalOnly();
-        setStatus('Dados locais pendentes preservados · a reenviar para Google Sheets');
-        return {shouldSave:JSON.stringify(mergedData)!==JSON.stringify(remoteData)};
-      }
-      if(localPending)clearPendingLocalSync();
-      state.data = remoteData;
-      saveLocalOnly();
-      setStatus('Dados sincronizados com Google Sheets');
+  if(!REMOTE_URL||sharedSync.busy)return;
+  const generation=sharedSync.generation;
+  sharedSync.verified=false;sharedSync.phase='loading';renderSharedSyncStatus();
+  try{
+    const result=await requestCommercialData(),remote=normalizeData(result.data),meta=readSyncMeta();
+    sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite};
+    if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
+    const differs=syncComparable(state.data)!==syncComparable(remote);
+    if((hasPendingLocalSync()||sharedSync.dirty||generation!==sharedSync.generation)&&differs){
+      sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
+      if(sharedSync.base&&sharedSync.revision===result.revision&&syncComparable(sharedSync.base)===syncComparable(remote)){
+        sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.phase='pending';persistSyncMeta();
+      }else{sharedSync.phase='conflict';sharedSync.error='UNRECONCILED_LOCAL_CHANGES'}
       return {shouldSave:false};
     }
-
-    state.data = localData;
-    saveLocalOnly();
-    setStatus('Google Sheets vazio · sem dados comerciais remotos');
+    if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+    state.data=remote;sharedSync.base=JSON.parse(JSON.stringify(remote));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';
+    saveLocalOnly();persistSyncMeta();clearPendingLocalSync();sharedSync.dirty=false;localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);sharedSync.phase='synced';
     return {shouldSave:false};
-  }
-
-  if(j && j.error) throw new Error(j.error);
-  throw new Error('Resposta inválida do Google Sheets');
+  }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';throw error}
+  finally{renderSharedSyncStatus()}
 }
 let saveTimer=null;
 function saveLocalOnly(){
   localStorage.setItem(KEY, JSON.stringify(state.data));
 }
 function markPendingLocalSync(){
-  try{
     localStorage.setItem(LOCAL_PENDING_SYNC_KEY,JSON.stringify({
       createdAt:new Date().toISOString(),
       clients:(state.data.clients||[]).length,
       events:(state.data.events||[]).length,
       agents:(state.data.agents||[]).length
     }));
-  }catch(err){
-    console.warn('Falha ao marcar sincronização local pendente',err);
-  }
 }
 function hasPendingLocalSync(){
   try{return !!localStorage.getItem(LOCAL_PENDING_SYNC_KEY)}catch{return false}
@@ -3934,6 +3923,7 @@ function mergeHistoryByFraction(remoteHistory={},localHistory={}){
   return merged;
 }
 function mergeCommercialData(remoteData={},localData={}){
+  // Legacy export/test compatibility only. Shared synchronization never calls this local-wins merge.
   const remote=normalizeData(remoteData),local=normalizeData(localData);
   return normalizeData({
     ...remote,
@@ -3957,96 +3947,115 @@ function mergeCommercialData(remoteData={},localData={}){
 function backupLocalBeforeRemoteLoad(localData, remoteData){
   try{
     const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
-    if(!hasBusinessData(local)||JSON.stringify(local)===JSON.stringify(remote))return;
+    if(!hasBusinessData(local)||syncComparable(local)===syncComparable(remote))return true;
     localStorage.setItem(LOCAL_REMOTE_BACKUP_KEY,JSON.stringify({
       createdAt:new Date().toISOString(),
       reason:'Backup automático antes de substituir dados locais por dados do Google Sheets',
       data:local
     }));
+    return true;
   }catch(err){
-    console.warn('Falha ao criar backup local antes da sincronização remota',err);
+    return false;
   }
 }
 function save(){
-  saveLocalOnly();
-  markPendingLocalSync();
-  if(REMOTE_URL){
-    clearTimeout(saveTimer);
-    saveTimer=setTimeout(syncRemote,300);
-  }
+  sharedSync.generation++;sharedSync.dirty=true;
+  try{saveLocalOnly();markPendingLocalSync()}catch{sharedSync.verified=false;sharedSync.phase='offline';sharedSync.error='LOCAL_STORAGE_FAILED';renderSharedSyncStatus();return}
+  if(sharedSync.verified&&sharedSync.phase!=='conflict')sharedSync.phase='pending';
+  renderSharedSyncStatus();
+  if(REMOTE_URL&&sharedSync.initialized&&sharedSync.verified&&sharedSync.base&&sharedSync.revision&&sharedSync.canWrite&&sharedSync.phase==='pending'){clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300)}
 }
 function remotePayload(){
-  return JSON.stringify({action:'save',data:state.data,updatedAt:new Date().toISOString()});
+  return JSON.stringify({action:'save',data:state.data,baseRevision:sharedSync.revision});
 }
 function flushPendingSyncOnUnload(){
-  if(!REMOTE_URL||!hasPendingLocalSync())return;
-  try{
-    const payload=remotePayload();
-    if(navigator.sendBeacon){
-      const blob=new Blob([payload],{type:'text/plain;charset=utf-8'});
-      navigator.sendBeacon(REMOTE_URL,blob);
-    }
-  }catch(err){
-    console.warn('Falha ao enviar sincronização pendente ao sair',err);
-  }
+  // Unconfirmed writes remain in localStorage; unload never sends a blind or duplicate request.
 }
-async function syncRemote(){
-  if(!REMOTE_URL) return;
-  const payload = remotePayload();
-
+async function syncRemote(recovery=false){
+  if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!hasPendingLocalSync()||!recovery&&(!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
+  let payload;
   try{
-    setStatus('A guardar no Google Sheets…');
-
-    // Método principal: POST por formulário oculto.
-    // Isto evita bloqueios CORS/no-cors e entrega o payload ao Apps Script em e.parameter.payload.
-    postToAppsScriptForm(payload);
-
-    // Mantém também uma tentativa fetch em segundo plano. Se o browser bloquear, o formulário já fez o envio.
+    payload=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null');
+    if(recovery){if(!payload)return false;payload={...payload,action:'recover'}}
+    else if(!payload||payload.baseRevision!==sharedSync.revision){payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload))}
+    sharedSync.busy=true;renderSharedSyncStatus();
+    const result=await requestCommercialData(payload);
+    sharedSync.base=JSON.parse(JSON.stringify(payload.data));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';persistSyncMeta();localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
+    if(syncComparable(state.data)===syncComparable(payload.data)){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{sharedSync.phase='pending';clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300)}
+    return true;
+  }catch(error){
+    if(['READ_REQUIRED','WRITES_DISABLED','UNAUTHENTICATED','INVALID_ORIGIN','INVALID_PAYLOAD'].includes(error.code))try{localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
+    sharedSync.remote=null;sharedSync.phase=error.code==='CONFLICT'?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';return false;
+  }
+  finally{sharedSync.busy=false;renderSharedSyncStatus()}
+}
+function commercialDataOriginLabel(){
+  const date=sharedSync.lastConfirmedAt?new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}):'';
+  if(sharedSync.phase==='synced'&&sharedSync.verified)return`Origem: Base comercial partilhada - Última sincronização: ${date}`;
+  if(sharedSync.phase==='conflict')return'Origem: Dados locais - Conflito de sincronização. Informação não reconciliada com a base partilhada.';
+  return'Origem: Dados locais - Sincronização não confirmada. Informação potencialmente desatualizada.';
+}
+function reconcileSharedData(base,local,remote){
+  const conflicts=[],copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+  const equal=(a,b)=>syncComparable(a)===syncComparable(b),object=value=>value&&typeof value==='object'&&!Array.isArray(value);
+  function merge(b,l,r,path){
+    if(equal(l,r))return copy(l);if(equal(l,b))return copy(r);if(equal(r,b))return copy(l);
+    if(['clients','events','agents'].includes(path)&&[b,l,r].every(Array.isArray)){
+      const maps=[b,l,r].map(list=>new Map(list.map(item=>[String(item.id),item]))),ids=[...new Set([...maps[2].keys(),...maps[1].keys(),...maps[0].keys()])];
+      return ids.map(key=>merge(maps[0].get(key),maps[1].get(key),maps[2].get(key),path+'.'+key)).filter(value=>value!==undefined);
+    }
+    if(object(b)&&object(l)&&object(r)&&!path.startsWith('events.')&&!path.startsWith('saleCommissions.')){
+      const result={};for(const key of new Set([...Object.keys(b),...Object.keys(l),...Object.keys(r)])){if(['__proto__','prototype','constructor'].includes(key)){conflicts.push(path+'.'+key);continue}const value=merge(b[key],l[key],r[key],path?path+'.'+key:key);if(value!==undefined)result[key]=value}return result;
+    }
+    if(path.startsWith('priceHistory.')&&[b,l,r].every(Array.isArray)&&b.every(item=>l.some(other=>equal(item,other))&&r.some(other=>equal(item,other))))return [...r,...l.filter(item=>!r.some(other=>equal(item,other)))].map(copy);
+    conflicts.push(path);return copy(l);
+  }
+  return{data:merge(base,local,remote,''),conflicts};
+}
+function openSyncReconciliation(){
+  const remote=sharedSync.remote;
+  if(!remote){notifyUser('Tente novamente a ligação para consultar a versão partilhada, sem apagar alterações locais.','Rever sincronização');return}
+  if(!hasBusinessData(remote.data)&&hasBusinessData(state.data)){notifyUser('A base partilhada está inesperadamente vazia. A cópia local foi preservada e não será enviada nem substituída. Peça ao administrador para verificar a fonte e os backups.','Verificar base partilhada');return}
+  const local=JSON.parse(JSON.stringify(state.data)),meta=readSyncMeta(),base=meta?.base||sharedSync.base;
+  const result=base?reconcileSharedData(base,local,remote.data):{data:null,conflicts:['A versão de origem das alterações locais é desconhecida.']};
+  document.getElementById('syncReviewModal')?.remove();
+  const modal=document.createElement('div');modal.id='syncReviewModal';modal.className='modal-backdrop';modal.style.zIndex='150';
+  modal.innerHTML=`<div class="modal"><button type="button" class="modal-close" data-sync-close aria-label="Fechar">×</button><p class="eyebrow eyebrow--dark">Integridade dos dados</p><h2>Rever sincronização</h2><p>Local: ${(local.clients||[]).length} clientes · Base partilhada: ${(remote.data.clients||[]).length} clientes</p>${result.conflicts.length?`<p class="muted">Existem diferenças que não podem ser resolvidas automaticamente. As alterações locais permanecem guardadas.</p><ul>${result.conflicts.slice(0,25).map(path=>`<li>${esc(path)}</li>`).join('')}</ul>`:'<p class="muted">As alterações afetam campos distintos e podem ser reconciliadas sem substituir alterações de outro utilizador. A gravação exigirá confirmação da versão no servidor.</p>'}<div class="modal-actions"><button type="button" class="ghost-button" data-sync-export>Exportar cópia local</button><button type="button" class="ghost-button" data-sync-use-remote>Guardar cópia e usar base partilhada</button><button type="button" class="primary-button" data-sync-merge ${result.conflicts.length?'disabled':''}>Reconciliar alterações compatíveis</button></div></div>`;
+  document.body.appendChild(modal);const overflow=document.body.style.overflow;document.body.style.overflow='hidden';
+  const close=()=>{modal.remove();document.body.style.overflow=overflow};modal.querySelector('[data-sync-close]').onclick=close;
+  modal.querySelector('[data-sync-export]').onclick=()=>downloadJson({data:local,base,createdAt:new Date().toISOString()},'the-view-alteracoes-locais-pendentes.json');
+  const apply=async(useRemote)=>{
+    if(useRemote&&!await confirmUser('Guardar uma cópia das alterações locais neste navegador e passar a consultar a base partilhada? As alterações dessa cópia não serão enviadas.','Usar base partilhada'))return;
     try{
-      await fetch(REMOTE_URL,{
-        method:'POST',
-        mode:'no-cors',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:payload,
-        keepalive:true
-      });
-    }catch(fetchErr){
-      console.warn('Fetch no-cors falhou; formulário oculto já foi enviado.', fetchErr);
-    }
-
-    setStatus('Enviado para Google Sheets');
-  }catch(e){
-    console.warn('Falha ao guardar Google Sheets',e);
-    setStatus('Falha ao sincronizar · dados guardados localmente');
-  }
+      if(syncComparable(state.data)!==syncComparable(local))throw new Error('Os dados locais mudaram. Volte a rever as diferenças.');
+      localStorage.setItem(KEY+'.conflictBackup.'+Date.now(),JSON.stringify({data:local,base,createdAt:new Date().toISOString()}));
+      state.data=useRemote?JSON.parse(JSON.stringify(remote.data)):normalizeData(result.data);
+      sharedSync.base=JSON.parse(JSON.stringify(remote.data));sharedSync.revision=remote.revision;sharedSync.ticket=remote.ticket;sharedSync.lastConfirmedAt=remote.confirmedAt;sharedSync.canWrite=remote.canWrite;sharedSync.verified=true;sharedSync.error='';sharedSync.generation++;
+      saveLocalOnly();persistSyncMeta();localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
+      if(useRemote){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{markPendingLocalSync();sharedSync.dirty=true;sharedSync.phase='pending'}
+      close();renderAll();renderSharedSyncStatus();
+    }catch(error){sharedSync.verified=false;sharedSync.phase='conflict';renderSharedSyncStatus();notifyUser(error.message||'Não foi possível preservar a cópia local. Nenhuma gravação remota foi feita.','Rever sincronização')}
+  };
+  modal.querySelector('[data-sync-use-remote]').onclick=()=>apply(true);modal.querySelector('[data-sync-merge]').onclick=()=>apply(false);
 }
-
-function postToAppsScriptForm(payload){
-  const iframeName = 'gsheets_sync_iframe';
-  let iframe = document.getElementById(iframeName);
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.name = iframeName;
-    iframe.id = iframeName;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+function renderSharedSyncStatus(){
+  const labels={loading:'A consultar base partilhada…',synced:'Dados partilhados — Sincronizados',offline:'Dados locais — Sem ligação',pending:'Sincronização pendente',conflict:'Conflito de sincronização'};
+  if(el.dataStatus)el.dataStatus.textContent=labels[sharedSync.phase]||labels.offline;
+  if(!document.getElementById||!document.createElement)return;
+  let bar=document.getElementById('commercialSyncStatus');
+  if(!bar){const main=document.querySelector?.('main');if(!main)return;bar=document.createElement('section');bar.id='commercialSyncStatus';bar.setAttribute('aria-live','polite');main.prepend(bar)}
+  const header=document.getElementById('commercialAppHeader');
+  if(header){
+    let badge=document.getElementById('commercialSyncBadge');
+    if(!badge){badge=document.createElement('button');badge.id='commercialSyncBadge';badge.type='button';badge.className='ux-sync-indicator';header.appendChild(badge)}
+    badge.textContent=labels[sharedSync.phase];badge.dataset.phase=sharedSync.phase;badge.title=commercialDataOriginLabel();badge.setAttribute('aria-label','Ver detalhes da sincronização: '+labels[sharedSync.phase]);badge.onclick=()=>bar.scrollIntoView({block:'start',behavior:'smooth'});
   }
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = REMOTE_URL;
-  form.target = iframeName;
-  form.style.display = 'none';
-
-  const input = document.createElement('textarea');
-  input.name = 'payload';
-  input.value = payload;
-  form.appendChild(input);
-
-  document.body.appendChild(form);
-  form.submit();
-
-  setTimeout(()=>{ try{ form.remove(); }catch(e){} }, 1000);
+  const message=sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.phase==='offline'?'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.':sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
+  let recovery=false;try{recovery=!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
+  bar.innerHTML=`<div><strong>${esc(labels[sharedSync.phase])}</strong>${message?`<p>${esc(message)}</p>`:''}${sharedSync.verified&&!sharedSync.canWrite?'<p>Gravação remota desativada neste ambiente.</p>':''}${sharedSync.lastConfirmedAt?`<small>Última confirmação: ${esc(new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}))}</small>`:''}</div><div class="top-actions"><button type="button" class="ghost-button compact-button" data-sync-retry ${sharedSync.busy||sharedSync.phase==='loading'?'disabled':''}>${sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite?'Sincronizar':'Tentar novamente'}</button>${sharedSync.phase==='conflict'?'<button type="button" class="ghost-button compact-button" data-sync-review>Rever diferenças</button>':''}${recovery&&!sharedSync.verified?'<button type="button" class="ghost-button compact-button" data-sync-recover>Retomar gravação pendente</button>':''}${sharedSync.error==='UNAUTHENTICATED'?'<a class="ghost-link" href="/access.html">Renovar acesso</a>':''}</div>`;
+  bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};
+  const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
+  const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);renderAll()}};
 }
 
 function appDialog({title='Aviso',message='',confirmText='OK',cancelText='',input=false,defaultValue='',danger=false}={}){
@@ -4140,12 +4149,19 @@ function exportSalesEvents(){
 }
 
 async function resetLocal(){
+  if(hasPendingLocalSync()||sharedSync.dirty){notifyUser('Existem alterações locais pendentes. Exporte uma cópia e reveja a sincronização antes de repor dados locais.','Dados locais preservados');return}
   if(await confirmUser('Apagar dados locais deste navegador? Os dados da Google Sheet não serão apagados.','Repor dados locais')){
+    if(REMOTE_URL){
+      try{await loadRemoteData();renderAll();renderSharedSyncStatus()}catch{notifyUser('Não foi possível confirmar a base partilhada. A cópia local não foi apagada.','Dados locais preservados')}
+      return;
+    }
+    localStorage.setItem(KEY+'.conflictBackup.'+Date.now(),JSON.stringify({data:state.data,createdAt:new Date().toISOString()}));
     localStorage.removeItem(KEY);
     state.data=loadDataLocal();
+    sharedSync.verified=false;sharedSync.phase='offline';sharedSync.base=null;sharedSync.revision='';
     ensureHistory();
     renderAll();
-    setStatus('Dados locais repostos');
+    renderSharedSyncStatus();
   }
 }
 

@@ -14,7 +14,7 @@ async function main() {
     '/data.xlsx', '/data.xls', '/precos_iniciais_atualizados.json',
     '/google_apps_script.gs'
   ];
-  assert.deepEqual(config.matcher, protectedPaths);
+  assert.deepEqual(config.matcher, [...protectedPaths,'/api/commercial-data','/server/:path*']);
   assert.ok(!config.matcher.includes('/access.html'));
   assert.ok(!config.matcher.includes('/Olhao_Ext_Piscina_Web.jpg'));
 
@@ -33,6 +33,10 @@ async function main() {
     headers: {cookie: `tv_commercial_access=${issuedAt}.${signature}`}
   });
   assert.equal(await middleware(authenticated), undefined);
+  assert.equal((await middleware(new Request('https://example.test/api/commercial-data'))).status,401);
+  assert.equal((await middleware(new Request('https://example.test/server/session.js'))).status,404);
+  const future=String(Date.now()+600000),futureSignature=createHmac('sha256',process.env.COMMERCIAL_ACCESS_SECRET).update(future).digest('hex');
+  assert.equal((await middleware(new Request('https://example.test/commercial.html',{headers:{cookie:`tv_commercial_access=${future}.${futureSignature}`}}))).status,303);
 
   const login = fs.readFileSync(path.join(root, 'access.html'), 'utf8');
   assert.doesNotMatch(login, /Comparador público/);

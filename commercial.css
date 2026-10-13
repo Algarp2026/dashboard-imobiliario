@@ -456,3 +456,13 @@ body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#
 .ux-recommendation-options{margin-top:14px}
 .ux-recommendation-filters button:focus-visible,.ux-recommendation-row:focus-visible{outline:2px solid #28765b;outline-offset:-2px}
 @media(max-width:760px){.ux-recommendation-row-heading{align-items:flex-start}.ux-recommendation-item>header{display:block}.ux-recommendation-item .ux-priority{margin-top:8px}.ux-recommendation-row{padding:14px 4px}.ux-recommendation-list{max-height:430px}}
+#commercialSyncStatus{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;margin-bottom:16px;border-bottom:1px solid #d6e1da;color:#213c31;font-size:14px}
+#commercialSyncStatus p{margin:4px 0;max-width:820px;color:#5a646b;line-height:1.45}
+#commercialSyncStatus small{color:#65716b}
+#commercialSyncStatus .top-actions{flex-shrink:0}
+#commercialSyncStatus{scroll-margin-top:calc(var(--commercial-header-height,68px) + 8px)}
+.ux-sync-indicator{appearance:none;background:transparent;border:0;border-left:3px solid #26785b;color:#26785b;font:inherit;font-size:11px;font-weight:600;line-height:1.3;text-align:left;padding:4px 8px;max-width:210px;flex-shrink:0;cursor:pointer;letter-spacing:0}
+.ux-sync-indicator[data-phase=offline],.ux-sync-indicator[data-phase=conflict]{color:#a44335;border-color:#a44335}
+.ux-sync-indicator[data-phase=pending]{color:#8c6b23;border-color:#8c6b23}
+.ux-sync-indicator:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+@media(max-width:760px){#commercialSyncStatus{align-items:flex-start;flex-direction:column}#commercialSyncStatus .top-actions{flex-wrap:wrap}}

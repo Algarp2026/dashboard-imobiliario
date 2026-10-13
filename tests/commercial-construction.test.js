@@ -113,35 +113,20 @@ assert.equal(JSON.stringify(rows),rowsBefore);
 assert.ok(!html.includes('<option>Visita</option>'));
 assert.ok(!html.includes('2ª Visita'));
 
-// Exercise the unchanged backend against an in-memory Sheet, never Google Sheets.
-const sheets = new Map();
-function sheet(name){
-  if (!sheets.has(name)) sheets.set(name,{
-    cells:new Map(),rows:[],
-    getRange(key){return {getValue:()=>this.cells.get(key)||'',setValue:value=>this.cells.set(key,value),setValues:values=>{this.rows.push(values)}}},
-    getLastRow(){return this.rows.length},clearContents(){this.rows=[]},setFrozenRows(){},appendRow(row){this.rows.push(row)}
-  });
-  return sheets.get(name);
-}
-const backend = {
-  console,
-  SpreadsheetApp:{getActiveSpreadsheet(){return {getSheetByName:name=>sheets.get(name),insertSheet:sheet}}},
-  LockService:{getDocumentLock(){return {waitLock(){},releaseLock(){}}}},
-  ContentService:{MimeType:{JSON:'json',JAVASCRIPT:'javascript'},createTextOutput(body){return {body,setMimeType(){return this}}}}
-};
-vm.createContext(backend);
-vm.runInContext(fs.readFileSync(path.join(root,'google_apps_script.gs'),'utf8'),backend);
+// Exercise the authenticated/versioned backend against an in-memory Sheet, never Google Sheets.
+const store=require('./helpers/apps-script-store.js')(app.normalizeData()),backend=store.context;
 const payload = JSON.stringify({action:'save',data:restored,updatedAt:'2026-10-08T12:00:00Z'});
-assert.equal(JSON.parse(backend.doPost({parameter:{payload}}).body).ok,true);
-assert.equal(sheet('Store').cells.get('B2'),JSON.stringify(restored));
-assert.equal(JSON.stringify(JSON.parse(backend.doGet({parameter:{action:'load'}}).body).data),JSON.stringify(restored));
-assert.equal(JSON.parse(backend.doPost({postData:{contents:payload}}).body).ok,true);
-assert.equal(JSON.parse(backend.doGet().body).ok,true);
+assert.equal(store.write({data:restored,baseRevision:store.revision,requestId:'construction-test'}).ok,true);
+assert.deepEqual(store.data,JSON.parse(JSON.stringify(restored)));
+assert.deepEqual(JSON.parse(JSON.stringify(store.read().data)),JSON.parse(JSON.stringify(restored)));
+assert.equal(JSON.parse(backend.doPost({parameter:{payload}}).body).ok,false);
+assert.equal(JSON.parse(backend.doPost({postData:{contents:payload}}).body).ok,false);
+assert.equal(JSON.parse(backend.doGet().body).ok,false);
 assert.ok(backend.doGet({parameter:{action:'load',callback:'testCallback'}}).body.startsWith('testCallback('));
-const storedBeforeInvalid = sheet('Store').cells.get('B2');
+const storedBeforeInvalid = JSON.stringify(store.data);
 assert.equal(JSON.parse(backend.doPost({}).body).ok,false);
-assert.equal(sheet('Store').cells.get('B2'),storedBeforeInvalid);
-for (const name of ['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes']) assert.ok(sheets.has(name),name+' mirror missing');
+assert.equal(JSON.stringify(store.data),storedBeforeInvalid);
+for (const name of ['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes']) assert.ok(store.sheets.has(name),name+' mirror missing');
 
 // Existing closing rules still apply only to explicit negotiation/reservation/sale events.
 app.state.data = app.normalizeData(JSON.parse(JSON.stringify(restored)));
@@ -162,6 +147,39 @@ assert.equal(app.state.data.statuses[24],'Vendido');
 assert.equal(app.state.data.saleCommissions[24].eventId,'sale-test');
 assert.equal(app.state.data.clients.find(client => client.id === 'client-active').stage,'Vendido');
 assert.equal(app.state.data.statuses[30],'Indisponível');
+assert.equal(JSON.stringify(app.state.data.finalPrices),JSON.stringify(initial.finalPrices));
+assert.equal(JSON.stringify(app.state.data.priceHistory),JSON.stringify(initial.priceHistory));
+
+// Legacy event ownership is recovered on explicit edits, never during a read/startup migration.
+const legacyReservation={id:'legacy-reservation',clientId:'client-active',type:'Reserva efetuada',date:'2026-10-01',fractions:[24],amount:700000};
+const legacyData=()=>({...JSON.parse(JSON.stringify(initial)),events:[legacyReservation],statuses:{24:'Reservado',30:'Indisponível'},salePrices:{24:700000},statusEventIds:{},salePriceEventIds:{},saleCommissions:{}});
+app.state.data=app.normalizeData(legacyData());
+app.replaceEventAndReapplyBusinessRules(legacyReservation,{...legacyReservation,fractions:[25]});
+assert.equal(app.state.data.statuses[24],undefined);
+assert.equal(app.state.data.salePrices[24],undefined);
+assert.equal(app.state.data.statuses[25],'Reservado');
+assert.equal(app.state.data.salePrices[25],700000);
+assert.equal(app.state.data.statuses[30],'Indisponível');
+assert.equal(app.state.data.events.length,1);
+app.state.data=app.normalizeData(legacyData());
+app.applyEventBusinessRules({id:'legacy-cancellation',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-02',fractions:[24]});
+assert.equal(app.state.data.statuses[24],undefined);
+assert.equal(app.state.data.salePrices[24],undefined);
+app.state.data=app.normalizeData(legacyData());
+app.state.data.statuses[24]='Indisponível';
+app.applyEventBusinessRules({id:'manual-cancellation',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-02',fractions:[24]});
+assert.equal(app.state.data.statuses[24],'Indisponível');
+assert.equal(app.state.data.salePrices[24],700000);
+const legacySale={...legacyReservation,id:'legacy-sale',type:'Venda concluída',withAgent:true,agentId:'agent-old',commissionType:'percent',commissionValue:3,commissionAmount:21000};
+app.state.data=app.normalizeData({...legacyData(),events:[legacySale],statuses:{24:'Vendido',30:'Indisponível'},saleCommissions:{24:{eventId:'legacy-sale',amount:21000}}});
+app.replaceEventAndReapplyBusinessRules(legacySale,{...legacySale,fractions:[25]});
+assert.equal(app.state.data.statuses[24],undefined);
+assert.equal(app.state.data.salePrices[24],undefined);
+assert.equal(app.state.data.saleCommissions[24],undefined);
+assert.equal(app.state.data.statuses[25],'Vendido');
+assert.equal(app.state.data.saleCommissions[25].amount,21000);
+assert.equal(app.state.data.saleCommissions[25].netRevenue,679000);
+assert.equal(app.state.data.events.length,1);
 assert.equal(JSON.stringify(app.state.data.finalPrices),JSON.stringify(initial.finalPrices));
 assert.equal(JSON.stringify(app.state.data.priceHistory),JSON.stringify(initial.priceHistory));
 assert.equal(requests,0);

@@ -1,15 +1,18 @@
 "use strict";
 
 const crypto = require("crypto");
+const {sameOrigin} = require('../server/session.js');
 
 const COOKIE_NAME = "tv_commercial_access";
 const SESSION_SECONDS = 60 * 60 * 8;
 
 module.exports = async function access(request, response) {
+  response.setHeader('Cache-Control','no-store');
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
     return response.status(405).json({ ok: false, error: "Method not allowed" });
   }
+  if (!sameOrigin(request)) return response.status(403).json({ok:false,error:'Invalid origin'});
 
   const expectedPassword = process.env.COMMERCIAL_ACCESS_PASSWORD || "";
   const signingSecret = process.env.COMMERCIAL_ACCESS_SECRET || expectedPassword;
@@ -38,7 +41,7 @@ module.exports = async function access(request, response) {
   const secure = isLocalHost(request.headers.host) ? "" : "; Secure";
   response.setHeader(
     "Set-Cookie",
-    `${COOKIE_NAME}=${issuedAt}.${signature}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; SameSite=Lax${secure}`
+    `${COOKIE_NAME}=${issuedAt}.${signature}; Path=/; Max-Age=${SESSION_SECONDS}; HttpOnly; SameSite=Strict${secure}`
   );
   return response.status(200).json({ ok: true });
 };

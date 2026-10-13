@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/commercial-data.js": {
+      "maxDuration": 60
+    }
+  }
+}
