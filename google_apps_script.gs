@@ -133,10 +133,10 @@ function crmWrite(request) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var sheet = getStoreSheet_(), raw = String(sheet.getRange(STORE_JSON_CELL).getValue() || '').trim();
+    var sheet = getStoreSheet_(), storedRaw = String(sheet.getRange(STORE_JSON_CELL).getValue() || ''), raw = storedRaw.trim();
     if (!raw || !validStoreData_(JSON.parse(raw),false)) return storeResponse_({ok:false,code:'UNINITIALIZED'});
     var revision = storeRevision_(raw), nextJson = storeJson_(request.data), nextRevision = storeRevision_(nextJson);
-    if (nextJson.length > STORE_MAX_CHARACTERS || raw.length > STORE_MAX_CHARACTERS) return storeResponse_({ok:false,code:'STORE_SIZE_LIMIT'});
+    if (nextJson.length > STORE_MAX_CHARACTERS || storedRaw.length > STORE_MAX_CHARACTERS) return storeResponse_({ok:false,code:'STORE_SIZE_LIMIT'});
     var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL), receipt = readStoreMetadata_(STORE_RECEIPT_CELL);
     var sameRequest = function(value) { return value && value.requestId === request.requestId && value.baseRevision === request.baseRevision && value.revision === nextRevision; };
     if (request.recovery && !sameRequest(intent) && !sameRequest(receipt)) return storeResponse_({ok:false,code:'CONFLICT'});
