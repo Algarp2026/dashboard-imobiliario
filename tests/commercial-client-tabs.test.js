@@ -15,12 +15,18 @@ vm.runInContext(source.slice(0,end)+'globalThis.tabs={state,el,commercialUx,pars
 const app=context.tabs;app.el.clientDetail=detail;
 app.state.fractions=JSON.parse(fs.readFileSync(path.join(root,'data.json'),'utf8')).map(app.parseRow).filter(f=>f.isTheView);
 app.state.data={clients:[{id:'old',name:'Old <fixture>',phone:'912345678',email:'old@example.test',preferences:{typology:'T2'},budget:800000,stage:'Apresentado',fractions:[18,21],presentationSelection:[36],manualNextStep:'Preserved action',manualNextFollowup:'2099-01-01',commercialSummary:{presentedFractions:[18,21],lastContact:'2026-09-01'}},{id:'incomplete',name:'Incomplete fixture',stage:'Novo Lead',preferences:{},fractions:[]}],events:[{id:'show',clientId:'old',type:'Apresentação comercial',date:'2026-09-01',fractions:[18,21],interest:'4 — Interesse elevado'},{id:'prices',clientId:'old',type:'Preços informados',date:'2026-09-02',fractions:[18,21],informedPrices:[{fraction:18,informedPrice:665000},{fraction:21,informedPrice:720000}]},{id:'docs',clientId:'old',type:'Documentação enviada',date:'2026-09-03',fractions:[36]}],agents:[],finalPrices:{18:665000,21:720000},statuses:{36:'Vendido'},priceHistory:{},salePrices:{36:1400000},saleCommissions:{36:{amount:42000}}};
+app.state.data.clients[0].budgetMax=900000;
+app.state.data.events[1].informedPrices[0].observation='Fictitious <price note>';
 function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value)}}
 freeze(app.state.data);const before=JSON.stringify(app.state.data);
 app.state.selectedClientId='old';app.renderClientDetail();
 assert.deepEqual(Array.from(app.CLIENT_DETAIL_TABS,tab=>tab[1]),['Dados','Preferências','Frações','Apresentação','Negociação']);
 assert.equal(app.commercialUx.clientDetailTab,'data');assert.equal(panels.filter(p=>!p.hidden).length,1);assert.equal(panels.find(p=>!p.hidden).dataset.clientPanel,'data');
 assert.equal((detail.innerHTML.match(/role="tabpanel"/g)||[]).length,5);assert.match(detail.innerHTML,/Old &lt;fixture&gt;/);
+assert.match(detail.innerHTML,/O motor de alternativas próximas será disponibilizado na Fase 2\./);
+assert.doesNotMatch(detail.innerHTML,/Sem alternativas adicionais identificadas/);
+assert.match(detail.innerHTML,/Orçamento indicativo/);assert.match(detail.innerHTML,/Estado com cliente/);assert.match(detail.innerHTML,/Preço informado/);assert.match(detail.innerHTML,/Observação/);assert.match(detail.innerHTML,/02\/09\/2026/);
+assert.match(detail.innerHTML,/800\.000/);assert.match(detail.innerHTML,/900\.000/);assert.match(detail.innerHTML,/Fictitious &lt;price note&gt;/);
 for(const key of keys){app.activateClientDetailTab(key,true);assert.equal(focused,key);assert.equal(panels.filter(p=>!p.hidden).length,1);assert.equal(panels.find(p=>!p.hidden).dataset.clientPanel,key);assert.equal(buttons.find(b=>b.dataset.uxClientTab===key).attributes['aria-selected'],'true')}
 app.activateClientDetailTab('preferences');app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'preferences');
 app.commercialUx.clientDetailId='';app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'preferences');
@@ -29,6 +35,9 @@ app.activateClientDetailTab('summary');assert.equal(app.commercialUx.clientDetai
 app.activateClientDetailTab('invalid');assert.equal(app.commercialUx.clientDetailTab,'data');
 app.state.cf={search:'Preserved search',stage:'Apresentado'};const filters=JSON.stringify(app.state.cf);
 app.openClientProfile('old');assert.equal(app.commercialUx.clientProfileOpen,true);app.closeClientProfile();assert.equal(app.commercialUx.clientProfileOpen,false);assert.equal(JSON.stringify(app.state.cf),filters);
+assert.equal((detail.innerHTML.match(/role="tabpanel"/g)||[]).length,5);
+for(const key of keys){app.activateClientDetailTab(key);assert.equal(panels.find(p=>!p.hidden).dataset.clientPanel,key)}
+assert.match(detail.innerHTML,/Editar preferências/);assert.match(detail.innerHTML,/Editar frações de interesse/);assert.match(detail.innerHTML,/Definir preços e gerar PDF/);assert.match(detail.innerHTML,/Adicionar evento/);assert.match(detail.innerHTML,/Histórico comercial completo/);
 assert.match(app.clientPreferenceDisplay('Tipologias','T1 ou T2'),/>T1<.*>T2</);
 assert.match(app.clientPreferenceDisplay('Piso','Indiferente'),/is-indifferent/);
 assert.match(app.clientPreferenceDisplay('Piso',''),/Não informada/);

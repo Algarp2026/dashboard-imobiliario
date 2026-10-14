@@ -48,9 +48,18 @@ Testes executados:
 
 - Renderizacao/abas com modelos congelados: clientes legados e incompletos, etiquetas de preferencias, aliases antigos, filtros e distincao entre preparacao/apresentacao, sem alteracoes ao JSON nem pedidos de rede.
 - Browser desktop 1440x1000, tablet 820x1080 e mobile 390x844: login, abertura, cinco abas, retorno com pesquisa preservada, valores antigos no modal de preferencias, modal de apresentacao e edicao do evento original, clientes incompletos e Indiferente. Scroll verificado sem sobreposicao entre abas sticky e barra de acoes.
-- JSON comercial no localStorage identico antes/depois; zero POST comerciais, zero escritas na fonte e zero erros JavaScript. Imagens dos testes contêm somente dados ficticios e ficam fora do Git.
+- JSON comercial no localStorage identico antes/depois; zero POST comerciais, zero escritas na fonte e zero erros JavaScript. As capturas para revisao do PR #3 contêm somente dados ficticios e estao na [galeria visual](docs/client-profile-phase1-review/README.md).
 - Oito suites passaram: commercial-client-tabs, commercial-progressive-flow, commercial-ux, commercial-recommendations-ui, commercial-client-reports, commercial-sync-client, commercial-concurrency e commercial-chunk-storage. `node --check` passou para commercial.js, app.js e config.js. Comparacao de fonte confirmou sincronizacao e nove funcoes comerciais inalteradas.
 
 Para testar: iniciar sessao local, abrir Cliente exemplo, alternar as cinco abas, abrir/cancelar os modais, regressar e confirmar filtros. Testar Cliente demonstracao 02 (campos vazios) e 03 (Indiferente). A preview e de leitura remota: uma edicao deliberada fica apenas local e nao modifica Sheets.
 
 Limites: nao se validou qualquer cliente real ou ambiente de producao. Fixtures nao comprovam todas as variantes historicas. O estado visual das abas e mantido na sessao em memoria; nao foi criada persistencia adicional no CRM. Esta Fase 1 aguarda validacao visual/funcional antes das fases seguintes.
+
+## Correcoes da revisao do PR #3
+
+- Removida a regra CSS que escondia as abas e o conteudo do cliente selecionado na listagem. O painel lateral continua operacional antes de abrir a ficha completa e depois de regressar. Apenas o botao de regresso fica escondido quando ja se esta na listagem.
+- Reposta a consulta anterior das fracoes relacionadas: estado com cliente, preco informado, data e observacao, usando `clientFractionCommercialRows` sem mudar a derivacao existente. O orcamento indicativo legado tambem permanece visivel, mesmo quando existe investimento maximo distinto.
+- Alternativas proximas identifica expressamente o motor futuro da Fase 2. O acesso manual a outras fracoes e as correspondencias do motor atual continuam disponiveis.
+- Regressao direcionada: suites client-tabs, progressive-flow e UX aprovadas; `node --check commercial.js` aprovado. Comparacao com a base confirmou o trecho de sincronizacao e nove funcoes comerciais intactos.
+- Browser 1440x1000, 820x1080 e 390x844: abas/conteudo visiveis na listagem; filtros, cliente selecionado e scroll preservados; preferencias e eventos editaveis pelos modais existentes; cinco abas operacionais; sem overflow da pagina nem sobreposicao das abas com a barra sticky. JSON comercial inalterado, zero POST comerciais, zero escritas na fonte ficticia e zero erros JavaScript.
+- Evidencia e instrucoes na galeria: listagem, transicao, cinco abas desktop/mobile e regresso. API, Google Sheets, autenticacao e sincronizacao nao foram alterados. Nao houve merge nem deployment.

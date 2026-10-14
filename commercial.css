@@ -463,7 +463,7 @@ body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#
 .ux-client-return>span{margin-left:auto}
 .ux-client-return .ux-text-button{display:inline-flex;gap:8px;align-items:center}
 .ux-client-profile-active .ux-client-open{display:none}
-.panel:not(.ux-client-profile-active) .ux-client-return>[data-client-return],.panel:not(.ux-client-profile-active) #clientDetail .ux-client-tabs,.panel:not(.ux-client-profile-active) #clientDetail .ux-client-workspace__content{display:none}
+.panel:not(.ux-client-profile-active) .ux-client-return>[data-client-return]{display:none}
 .panel:not(.ux-client-profile-active) .ux-client-workspace__top{position:static}
 .ux-client-profile-active .ux-client-contact{font-size:13px;display:flex;gap:10px 22px;flex-wrap:wrap;margin:16px 0 0}
 .ux-client-last-interaction{font-size:12px;color:var(--text);margin:14px 0 0;display:flex;gap:8px 14px;flex-wrap:wrap;line-height:1.6}
