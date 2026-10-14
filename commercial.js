@@ -271,9 +271,9 @@ function renderEventSelectedFractionChips(){
 function clientOriginDisplayValue(value){return norm(value)==='portal imobiliario'?'Website The View':safe(value)}
 function populateClientOriginSelect(value=''){
   const select=el.clientOrigin||document.getElementById('clientOrigin');if(!select)return;
-  const selected=clientOriginDisplayValue(value)||'Website The View';
-  select.innerHTML=CLIENT_ORIGINS.map(origin=>`<option value="${attr(origin)}">${esc(origin)}</option>`).join('');
-  if(!CLIENT_ORIGINS.includes(selected))select.add(new Option(`${selected} (registo anterior)`,selected));
+  const selected=clientOriginDisplayValue(value);
+  select.innerHTML='<option value="">Não informada</option>'+CLIENT_ORIGINS.map(origin=>`<option value="${attr(origin)}">${esc(origin)}</option>`).join('');
+  if(selected&&!CLIENT_ORIGINS.includes(selected))select.add(new Option(`${selected} (registo anterior)`,selected));
   select.value=selected;
 }
 function toggleClientOriginManual(){
@@ -806,6 +806,7 @@ function applyUpdatedInitialPriceMigration(){
 function emptyPreferences(){return{typology:'',floor:'',orientation:'',objective:'',decisionTime:'',summary:''}}
 function cleanPreferences(value={}){
   return {
+    ...value,
     typology:safe(value.typology),
     floor:safe(value.floor),
     orientation:safe(value.orientation),
@@ -814,7 +815,7 @@ function cleanPreferences(value={}){
     summary:safe(value.summary)
   };
 }
-function hasPreferenceData(value={}){return Object.values(cleanPreferences(value)).some(Boolean)}
+function hasPreferenceData(value={}){return ['typology','floor','orientation','objective','decisionTime','summary'].some(key=>!!safe(value[key]))}
 function normalizeClientStage(stage){
   const value=norm(stage);
   const aliases={
@@ -853,7 +854,8 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   const before=JSON.stringify(c);
   const events=sortedClientEvents(clientId);
   const manualPreferences=cleanPreferences(c.manualPreferences||c.preferences||{});
-  let preferences={...manualPreferences};
+  const consolidatedManual={...manualPreferences,...(c.preferences||{}),...Object.fromEntries(Object.keys(emptyPreferences()).map(key=>[key,manualPreferences[key]]))};
+  let preferences={...consolidatedManual};
   let budget=Number(c.manualBudget??c.budget)||0;
   let derivedStage=(hasPreferenceData(manualPreferences)||budget>0||(c.manualFractions||[]).length)?'Qualificado':'Novo Lead';
   const presented=new Set();
@@ -865,7 +867,7 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
     if(eventFractionsPresented(ev))(ev.fractions||[]).forEach(n=>presented.add(Number(n)));
     if(ev.type==='Preferências recebidas'){
       const eventPreferences=cleanPreferences(ev.preferences||{});
-      Object.keys(eventPreferences).forEach(key=>{if(eventPreferences[key])preferences[key]=eventPreferences[key]});
+      Object.keys(emptyPreferences()).forEach(key=>{if(eventPreferences[key])preferences[key]=eventPreferences[key]});
       if(Number(ev.preferenceBudget)>0)budget=Number(ev.preferenceBudget);
     }
     (ev.informedPrices||[]).forEach(item=>{
@@ -879,8 +881,8 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
     }
   });
   if(c.preferencesManuallyEdited){
-    preferences={...manualPreferences};
-    budget=Number(c.manualBudget)||0;
+    preferences={...consolidatedManual};
+    budget=Number(manualPreferences.selectionV1?.version===1?c.budget:(c.manualBudget??c.budget))||0;
   }
 
   const criticalDerived=['Reservado','Vendido','Desistiu'].includes(derivedStage);
@@ -897,6 +899,7 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   const nextAction=clientSummaryFollowupInfo(c);
   const previousSummary=c.commercialSummary||{};
   c.commercialSummary={
+    ...previousSummary,
     presentedFractions:uniqNum([...presented]),
     lastInformedPrices:[...latestPrices.values()].sort((a,b)=>a.fraction-b.fraction),
     lastContact,
@@ -1822,6 +1825,63 @@ function clientPreferenceDisplay(label,value){
   const parts=indifferent?['Indiferente']:text?text.split(/\s+(?:ou|e)\s+|[,;|]+/i).map(part=>part.trim()).filter(Boolean):[];
   return `<div class="ux-preference-display"><dt>${esc(label)}</dt><dd class="${!text?'is-uninformed':indifferent?'is-indifferent':''}">${parts.length?parts.map(part=>`<span class="ux-preference-value">${esc(part)}</span>`).join(''):'<span>Não informada</span>'}</dd></div>`;
 }
+function preferenceOptionsMarkup(values,current){
+  const options=uniq(['',...values,...(current&&!values.includes(current)?[current]:[])]);
+  return options.map(value=>`<option value="${attr(value)}" ${value===current?'selected':''}>${esc(value||'Não informado')}</option>`).join('');
+}
+function archivedPreferencesMarkup(c){
+  const previous={...(c.manualPreferences?.legacyText||{}),...(c.preferences?.legacyText||{})};
+  const labels={typology:'Tipologias',floor:'Pisos',orientation:'Orientações',objective:'Objetivo da aquisição',decisionTime:'Prazo de decisão',summary:'Outras preferências'};
+  const rows=Object.keys(labels).filter(key=>previous[key]!==undefined&&previous[key]!==''&&previous[key]!==null).map(key=>[labels[key],typeof previous[key]==='string'?previous[key]:JSON.stringify(previous[key])]);
+  return rows.length?`<details id="clientArchivedPreferences" class="ux-client-details"><summary>Textos anteriores preservados</summary>${clientFactsMarkup(rows)}</details>`:'';
+}
+function inlinePreferencesMarkup(c){
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;if(!api)return'';
+  const record=commercialUx.preferenceDraft?.clientId===c.id?commercialUx.preferenceDraft:null;
+  if(!record)return`<div class="crm-detail-section__heading"><h3>Preferências</h3><button class="ghost-button compact-button" type="button" data-preferences-edit>${uxIcon('sliders-horizontal')}Editar preferências</button></div>`;
+  const d=record.values,labels={typology:'Tipologias',floor:'Pisos',orientation:'Orientações'};
+  return`<form id="clientPreferencesEditor"><div class="crm-detail-section__heading"><h3>Editar preferências</h3></div>${Object.keys(api.options).map(key=>`<fieldset class="ux-preference-selector"><legend>${labels[key]}</legend><div role="group" aria-label="${labels[key]}">${[...api.options[key],'Indiferente'].map(value=>`<button class="ux-preference-chip" type="button" data-preference-key="${key}" data-preference-value="${attr(value)}" aria-pressed="${value==='Indiferente'?d.choices[key].state==='indifferent':d.choices[key].state==='selected'&&d.choices[key].values.includes(value)}">${esc(key==='floor'&&value!=='Indiferente'?'Piso '+value:value)}</button>`).join('')}</div><p class="muted small">${d.choices[key].state==='legacy'?`Texto anterior preservado: ${esc(d.choices[key].legacyText)}`:d.choices[key].state==='unreported'?'Não informado':d.choices[key].state==='indifferent'?'Indiferente':esc(api.projection(d.choices[key]))}</p></fieldset>`).join('')}<div class="ux-preference-fields"><label class="field"><span>Investimento mínimo (€)</span><input name="budgetMin" inputmode="decimal" value="${attr(d.budgetMin?new Intl.NumberFormat('pt-PT').format(d.budgetMin):'')}" /></label><label class="field"><span>Investimento máximo (€)</span><input name="budgetMax" inputmode="decimal" value="${attr(d.budgetMax?new Intl.NumberFormat('pt-PT').format(d.budgetMax):'')}" /></label><label class="field"><span>Objetivo de aquisição</span><select name="objective">${preferenceOptionsMarkup(api.objectives,d.objective)}</select></label><label class="field"><span>Prazo de decisão</span><select name="decisionTime">${preferenceOptionsMarkup(api.deadlines,d.decisionTime)}</select></label><label class="field ux-preference-notes"><span>Outras preferências</span><textarea name="summary">${esc(d.summary)}</textarea></label></div>${c.budget?`<p class="muted small">Orçamento indicativo anterior: ${displayMoney(c.budget)}</p>`:''}<div class="ux-client-secondary-actions"><button class="primary-button" type="submit" ${record.saving?'disabled':''}>${uxIcon('check')}Guardar preferências</button><button class="ghost-button" type="button" data-preferences-cancel ${record.saving?'disabled':''}>Cancelar</button></div><p class="error-box hidden" id="clientPreferencesError" role="alert"></p></form>`;
+}
+function startInlinePreferences(c){
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;if(!api)return;
+  commercialUx.preferenceDraft={clientId:c.id,values:api.draft(c),original:JSON.stringify(c)};
+  activateClientDetailTab('preferences');renderClientDetail();
+}
+function parsePreferenceInvestment(value){
+  const input=safe(value).trim();if(!input)return 0;
+  const compact=input.replace(/[\s\u00a0\u202f€]/g,'');
+  if(!/^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(compact))return NaN;
+  return Number(compact.replace(/\./g,'').replace(',','.'));
+}
+function bindInlinePreferences(c){
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;if(!api)return;
+  el.clientDetail.querySelector('[data-preferences-edit]')?.addEventListener('click',()=>startInlinePreferences(c));
+  const form=el.clientDetail.querySelector('#clientPreferencesEditor'),record=commercialUx.preferenceDraft;
+  if(!form||record?.clientId!==c.id)return;
+  for(const key of ['budgetMin','budgetMax','objective','decisionTime','summary'])form.elements.namedItem(key).oninput=event=>{record.values[key]=key.startsWith('budget')?parsePreferenceInvestment(event.target.value):event.target.value;form.querySelector('#clientPreferencesError').classList.add('hidden')};
+  form.querySelectorAll('[data-preference-key]').forEach(button=>button.onclick=()=>{
+    if(record.saving)return;
+    const key=button.dataset.preferenceKey,value=button.dataset.preferenceValue;record.values.choices[key]=api.toggle(key,record.values.choices[key],value);renderClientDetail();
+    el.clientDetail.querySelector(`[data-preference-key="${key}"][data-preference-value="${value}"]`)?.focus({preventScroll:true});
+  });
+  form.querySelector('[data-preferences-cancel]').onclick=()=>{if(!record.saving){commercialUx.preferenceDraft=null;renderClientDetail()}};
+  form.onsubmit=async event=>{
+    event.preventDefault();if(record.saving)return;
+    const error=form.querySelector('#clientPreferencesError');
+    if(record.original!==JSON.stringify(client(c.id))){error.textContent='O cliente mudou durante a edição. Cancele e reabra as preferências antes de guardar.';error.classList.remove('hidden');return}
+    let updated;try{updated=api.buildUpdate(c,record.values)}catch(problem){error.textContent=problem.message==='UNSUPPORTED_PREFERENCE_VERSION'?'Esta versão das preferências não é compatível com o editor. Os dados anteriores foram preservados.':problem.message==='INVALID_INVESTMENT'?'Indique investimentos válidos. O máximo deve ser igual ou superior ao mínimo.':'Não foi possível validar as seleções. Os dados anteriores foram preservados.';error.classList.remove('hidden');return}
+    if(!updated){commercialUx.preferenceDraft=null;renderClientDetail();return}
+    record.saving=true;form.querySelectorAll('button,input,select,textarea').forEach(control=>control.disabled=true);
+    recordClientPreferenceChange(c,updated);
+    const confirmed=await persistClientChange();commercialUx.preferenceDraft=null;RenderFlow.clientChanged();clientSaveFeedback(confirmed,'Preferências guardadas na base partilhada.');
+  };
+}
+function recordClientPreferenceChange(c,updated){
+  const previousPreferences=JSON.parse(JSON.stringify(c.preferences||{})),previousManualPreferences=JSON.parse(JSON.stringify(c.manualPreferences||{}));
+  Object.assign(c,updated,{updated:new Date().toLocaleString('pt-PT'),updatedAt:new Date().toISOString()});
+  state.data.events.push({id:id(),clientId:c.id,type:'Preferências recebidas',date:today(),time:currentTimeValue(),fractions:[],preferences:JSON.parse(JSON.stringify(c.preferences)),previousPreferences,previousManualPreferences,preferenceBudget:Number(c.budget)||0,...(Object.hasOwn(c,'budgetMin')?{budgetMin:c.budgetMin}:{}),...(Object.hasOwn(c,'budgetMax')?{budgetMax:c.budgetMax}:{}),notes:''});
+  recalculateResumoCliente(c.id);
+}
 function clientNegotiationMarkup(c,events,fractions){
   const closing=events.filter(ev=>/proposta|reserva|venda|desist/i.test(ev.type||''));
   return fractions.length?fractions.map(f=>{
@@ -1863,6 +1923,10 @@ function renderClientDetail(){
     presentation:heading('Apresentação',action('presentation','Registar apresentação','presentation')+action('documentation','Registar documentação','send'))+`<section id="clientPreparedFractions">${heading(`Apresentação preparada <span class="muted small">${preparation.length} frações</span>`,action('select-presentation','Adicionar / retirar frações','list-checks'))}${preparation.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipologia / Piso</th><th>Preço comercial oficial</th><th>Disponibilidade</th></tr></thead><tbody>${preparation.map(f=>`<tr><td>${fractionReference(f)}</td><td>${esc(f.typology)} · ${esc(f.floorLabel)}</td><td>${displayMoney(finalPrice(f))}</td><td><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span></td></tr>`).join('')}</tbody></table></div><div class="ux-client-secondary-actions">${action('proposal','Definir preços e gerar PDF','file-text')}</div>`:'<p class="muted">Ainda não existem frações selecionadas para apresentação.</p>'}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Apresentações realizadas <span class="muted small">${presented.length} frações</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientPresentationHistory" class="ux-client-details"><summary>Histórico de apresentações e documentação (${presentationEvents.length})</summary><div class="timeline ux-client-timeline">${presentationEvents.length?presentationEvents.map(clientTimelineItem).join(''):'<p class="muted">Sem apresentações ou documentação registadas.</p>'}</div></details>`,
     negotiation:heading('Negociação',action('proposal','Criar proposta','file-text')+action('stage','Atualizar estado comercial','tag'))+clientNegotiationMarkup(c,chronological,related)+`<section class="ux-client-section">${heading('Registar negociação')}<div class="ux-client-negotiation"><label class="field"><span>Evento comercial</span><select id="clientNegotiationType">${['Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência'].map(type=>`<option>${esc(type)}</option>`).join('')}</select></label>${action('negotiation','Registar evento','plus')}</div></section><section class="ux-client-section">${heading('Próxima ação do cliente')}${clientNextActionMarkup(followup,recommendation)}<div class="ux-client-secondary-actions">${action('contact','Registar contacto','phone')}${action('note','Adicionar observação','message-square')}</div></section><details id="clientFullHistory" class="ux-client-details" open><summary>Histórico comercial completo (${evs.length})</summary><div class="top-actions">${action('event','Adicionar evento','plus')}</div><div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<p class="muted">Sem interações registadas.</p>'}</div></details>`
   };
+  if(commercialUx.clientProfileOpen&&window.THE_VIEW_CLIENT_PREFERENCES){
+    const content=panels.preferences;
+    panels.preferences=inlinePreferencesMarkup(c)+(commercialUx.preferenceDraft?.clientId===c.id?'':content.slice(content.indexOf('<dl')))+archivedPreferencesMarkup(c);
+  }
   el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-client-return" aria-label="Navegação do cliente"><button class="ux-text-button" type="button" data-client-return>${uxIcon('arrow-left')}Voltar aos clientes</button><span>Ficha de cliente</span><button class="ghost-button compact-button ux-client-open" type="button" data-open-client-profile>${uxIcon('arrow-up-right')}Abrir ficha completa</button></nav><header class="client-detail-header"><div class="ux-client-title"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2 tabindex="-1">${esc(c.name||'Cliente sem nome')}</h2></div><button class="ghost-button compact-button" type="button" data-client-header-edit>${uxIcon('pencil')}Editar dados</button></div><div class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}${c.origin||c.originManual?`<span>Origem: ${esc(clientOriginLabel(c))}</span>`:''}${registered?`<span>Registo: ${esc(formatCommercialDate(registered.slice(0,10))==='—'?registered:formatCommercialDate(registered.slice(0,10)))}</span>`:''}</div>${latest?`<p class="ux-client-last-interaction"><span>Última interação</span> ${esc(latest.type||'Evento')} <time>${esc(formatTimelineDate(latest.date,latest.time))}</time></p>`:''}</header></div><div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
   el.clientDetail.querySelector('[data-client-header-edit]')?.addEventListener('click',()=>openClientModal(c.id));
@@ -1877,6 +1941,7 @@ function renderClientDetail(){
   detailStates.forEach(([id,open])=>{const details=el.clientDetail.querySelector(`#${id}`);if(details)details.open=open});
   const matchingList=el.clientDetail.querySelector('.ux-suggested-fractions');if(matchingList)matchingList.scrollTop=matchingScroll;
   renderUxIcons();activateClientDetailTab(commercialUx.clientDetailTab);
+  bindInlinePreferences(c);
 }
 function activateClientDetailTab(key,focus=false){
   key=({followup:'negotiation',summary:'data'})[key]||key;
@@ -2186,22 +2251,19 @@ function currentTimeValue(){
 }
 function clientPhoneDigits(v){return safe(v).replace(/\D/g,'')}
 function sameClientPhone(a,b){
-  const x=clientPhoneDigits(a),y=clientPhoneDigits(b);
-  return x.length>=5&&y.length>=5&&(x===y||x.endsWith(y)||y.endsWith(x));
+  const normalize=value=>clientPhoneDigits(value).replace(/^00/,'').replace(/^351(?=\d{9}$)/,'');
+  const x=normalize(a),y=normalize(b);
+  return x.length>=5&&x===y;
 }
 function findPotentialDuplicateClient(candidate={},excludeId=''){
-  const email=norm(candidate.email),name=norm(candidate.name);
+  const email=safe(candidate.email).trim().toLowerCase();
   const clients=(state.data.clients||[]).filter(c=>c.id!==excludeId);
   if(email){
-    const found=clients.find(c=>norm(c.email)===email);
+    const found=clients.find(c=>safe(c.email).trim().toLowerCase()===email);
     if(found)return{client:found,reason:'email'};
   }
   const phoneFound=clients.find(c=>sameClientPhone(c.phone,candidate.phone));
   if(phoneFound)return{client:phoneFound,reason:'contacto'};
-  if(name){
-    const found=clients.find(c=>norm(c.name)===name);
-    if(found)return{client:found,reason:'nome'};
-  }
   return null;
 }
 function chooseDuplicateClientAction(duplicate,candidate={},reason=''){
@@ -2258,7 +2320,7 @@ function buildInitialRequestEvent(clientId,c={}){
     type:EVENT_TYPES[0],
     date:el.clientInitialRequestDate?.value||today(),
     time:el.clientInitialRequestTime?.value||currentTimeValue(),
-    channel:el.clientModal?.dataset.clientMode==='quick'?clientOriginLabel(c):el.clientInitialRequestChannel?.value||clientOriginLabel(c),
+    channel:el.clientModal?.dataset.clientMode==='quick'?(c.origin?clientOriginLabel(c):''):el.clientInitialRequestChannel?.value||(c.origin?clientOriginLabel(c):''),
     amount:0,
     interest:preferences.typology||'',
     nextStep:'',
@@ -2800,6 +2862,7 @@ async function completeClientNextAction(){
   recalculateResumoCliente(c.id);save();RenderFlow.clientChanged();
 }
 function openClientModal(cid='',mode='identity'){
+  if(state.clientSaving)return;
   state.definingNextAction=false;
   ensureClientAgentSelect();
   populateClientAgentSelect();
@@ -2816,7 +2879,7 @@ function openClientModal(cid='',mode='identity'){
   el.clientEmail.value=isEdit?(c.email||''):'';
   el.clientNif.value=isEdit?(c.nif||''):'';
   el.clientNationality.value=isEdit?(c.nationality||''):'';
-  populateClientOriginSelect(isEdit?(c.origin||''):'Website The View');
+  populateClientOriginSelect(isEdit?(c.origin||''):'');
   el.clientOriginManual.value=isEdit?(c.originManual||''):'';
   toggleClientOriginManual();
   if(el.clientAgent)el.clientAgent.value=aid;
@@ -2834,9 +2897,10 @@ function openClientModal(cid='',mode='identity'){
   el.clientNextFollowup.value=isEdit?(c.manualNextFollowup??c.nextFollowup??''):'';
   el.clientInitialRequestFields?.classList.toggle('hidden',isEdit);
   if(!isEdit){
+    state.clientCreationDraft={id:id(),eventId:id(),createdAt:new Date().toISOString()};
     if(el.clientInitialRequestDate)el.clientInitialRequestDate.value=today();
     if(el.clientInitialRequestTime)el.clientInitialRequestTime.value=currentTimeValue();
-    if(el.clientInitialRequestChannel)el.clientInitialRequestChannel.value='Website The View';
+    if(el.clientInitialRequestChannel)el.clientInitialRequestChannel.value='';
     if(el.clientInitialRequestNotes)el.clientInitialRequestNotes.value='';
     if(el.clientSkipInitialRequest)el.clientSkipInitialRequest.checked=!!state.pendingEventClientCreation;
   }
@@ -2862,14 +2926,54 @@ function openClientModal(cid='',mode='identity'){
   document.body.style.overflow='hidden';
   el.clientModal.querySelector('.modal').scrollTop=0;
   state.clientFormSnapshot=readClientEditValues();
+  installClientDuplicateWarning();
   ({preferences:el.clientTypologyPreference,plan:el.clientNextStep,associate:el.clientFractions,stage:el.clientStage}[mode]||el.clientName).focus({preventScroll:true});
 }
 function closeClientModal(){state.definingNextAction=false;state.pendingEventClientCreation=false;state.clientFormSnapshot=null;el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
 async function saveClient(){
+  if(state.clientSaving)return;
+  state.clientSaving=true;
+  const button=document.getElementById('saveClient');if(button)button.disabled=true;
+  try{await saveClientForm()}finally{state.clientSaving=false;if(button)button.disabled=false}
+}
+async function persistClientChange(){
+  save();clearTimeout(saveTimer);
+  const confirmed=await syncRemote();
+  return confirmed&&sharedSync.phase==='synced'&&!sharedSync.dirty;
+}
+function clientSaveFeedback(confirmed,message){commercialUxToast(confirmed?message:sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local. Mantenha a página aberta e exporte uma cópia dos dados.':'Alterações locais preservadas. Sincronização por confirmar.')}
+function installClientDuplicateWarning(){
+  let box=document.getElementById('clientDuplicateWarning');
+  if(!box){box=document.createElement('div');box.id='clientDuplicateWarning';box.className='ux-client-duplicate-warning hidden';box.setAttribute('role','status');el.clientPhone.closest('.form-grid')?.after(box)}
+  const update=()=>{
+    const found=findPotentialDuplicateClient({phone:el.clientPhone.value,email:el.clientEmail.value},el.clientId.value);
+    box.classList.toggle('hidden',!found);if(!found){box.innerHTML='';return}
+    box.innerHTML=`<span>Possível duplicado (${esc(found.reason)}): <strong>${esc(found.client.name)}</strong></span><button class="ux-text-button" type="button">Abrir ficha existente</button>`;
+    box.querySelector('button').onclick=()=>{
+      const fromEvent=state.pendingEventClientCreation;state.selectedClientId=found.client.id;renderClientSelects();
+      if(fromEvent&&el.eventClientId)el.eventClientId.value=found.client.id;
+      closeClientModal();RenderFlow.clientChanged();if(!fromEvent)openClientProfile(found.client.id);
+    };
+  };
+  el.clientPhone.oninput=update;el.clientEmail.oninput=update;update();
+}
+function initialClientRequestEvent(cid,c,draft){
+  if(state.pendingEventClientCreation&&!state.editingEventId&&el.eventType?.value==='Pedido de informação recebido')return buildEventFromForm(cid,getMulti(el.eventFractions).map(Number),draft.eventId);
+  return{...buildInitialRequestEvent(cid,c),id:draft.eventId};
+}
+function resumeInitialRequestInEvent(event){
+  if(!state.pendingEventClientCreation||state.editingEventId||el.eventType?.value!=='Pedido de informação recebido')return;
+  state.editingEventId=event.id;state.eventEditSource='client';
+  document.getElementById('saveEvent').textContent='Atualizar evento';
+  el.eventModal.querySelector('h2').textContent='Editar evento';
+}
+async function saveClientForm(){
   if(el.clientModal.dataset.clientMode==='preferences'){await saveClientPreferences();return}
   if(el.clientId.value){await saveClientEdit();return}
   const isNew=!el.clientId.value;
-  let cid=el.clientId.value||id();
+  const draft=state.clientCreationDraft||(state.clientCreationDraft={id:id(),eventId:id(),createdAt:new Date().toISOString()});
+  if(draft.applied&&!el.clientId.value){if(sharedSync.dirty)clientSaveFeedback(await persistClientChange(),'Cliente guardado na base partilhada.');return}
+  let cid=el.clientId.value||draft.id;
   const existing=client(cid)||{};
   const selectedAgentId=el.clientAgent?.value||'';
   const selectedAgent=agent(selectedAgentId);
@@ -2880,7 +2984,7 @@ async function saveClient(){
   const stageChanged=selectedStage!==(el.clientStage.dataset.original||'Novo Lead');
   const c={
     ...existing,
-    ...(isNew?{legacyStageFallback:'Novo Lead'}:{}),
+    ...(isNew?{legacyStageFallback:'Novo Lead',createdAt:draft.createdAt}:{}),
     id:cid,
     name:el.clientName.value.trim(),
     phone:el.clientPhone.value.trim(),
@@ -2934,7 +3038,8 @@ async function saveClient(){
         try{
           state.data.clients=state.data.clients||[];
           state.data.events=state.data.events||[];
-          applyEventBusinessRules(buildInitialRequestEvent(duplicate.client.id,c));
+          const event=initialClientRequestEvent(duplicate.client.id,c,draft);
+          if(!state.data.events.some(item=>item.id===event.id))applyEventBusinessRules(event);
           recalculateResumoCliente(duplicate.client.id);
         }catch(err){
           state.data.clients=clientsBefore;
@@ -2944,19 +3049,22 @@ async function saveClient(){
           return;
         }
         state.selectedClientId=duplicate.client.id;
-        save();
+        draft.applied=true;
+        const confirmed=await persistClientChange();
         renderClientSelects();
         if(state.pendingEventClientCreation&&el.eventClientId){
           el.eventClientId.value=duplicate.client.id;
+          resumeInitialRequestInEvent(state.data.events.find(event=>event.id===draft.eventId));
           state.pendingEventClientCreation=false;
         }
         closeClientModal();
         RenderFlow.clientChanged();
+        clientSaveFeedback(confirmed,'Pedido guardado na base partilhada.');
         return;
       }
     }
   }
-  const initialEvent=isNew&&!(el.clientSkipInitialRequest?.checked)?buildInitialRequestEvent(cid,c):null;
+  const initialEvent=isNew?initialClientRequestEvent(cid,c,draft):null;
   const clientsBefore=JSON.parse(JSON.stringify(state.data.clients||[]));
   const eventsBefore=JSON.parse(JSON.stringify(state.data.events||[]));
   try{
@@ -2964,7 +3072,7 @@ async function saveClient(){
     state.data.events=state.data.events||[];
     const idx=state.data.clients.findIndex(x=>x.id===cid);
     idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
-    if(initialEvent)applyEventBusinessRules(initialEvent);
+    if(initialEvent&&!state.data.events.some(event=>event.id===initialEvent.id))applyEventBusinessRules(initialEvent);
     else recalculateResumoCliente(cid);
   }catch(err){
     state.data.clients=clientsBefore;
@@ -2974,11 +3082,13 @@ async function saveClient(){
     return;
   }
   state.selectedClientId=cid;
-  save();
+  draft.applied=true;
+  const confirmed=await persistClientChange();
   renderClientSelects();
   const fromEvent=state.pendingEventClientCreation;
   if(fromEvent&&el.eventClientId){
     el.eventClientId.value=cid;
+    if(initialEvent)resumeInitialRequestInEvent(initialEvent);
     state.pendingEventClientCreation=false;
   }
   closeClientModal();
@@ -2986,7 +3096,8 @@ async function saveClient(){
   if(isNew&&!fromEvent)contextualCommercialNavigation('sales',()=>{
     state.salesSubtab='clients';commercialUx.clientFocus='';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all';
   });
-  commercialUxToast(isNew?'Cliente criado e guardado.':'Cliente atualizado.');
+  if(isNew&&!fromEvent)openClientProfile(cid);
+  clientSaveFeedback(confirmed,isNew?'Cliente criado e guardado na base partilhada.':'Cliente atualizado na base partilhada.');
 }
 function readClientEditValues(){
   return{name:el.clientName.value.trim(),phone:el.clientPhone.value.trim(),email:el.clientEmail.value.trim(),origin:el.clientOrigin.value,originManual:el.clientOriginManual.value.trim(),nif:el.clientNif.value.trim(),nationality:el.clientNationality.value.trim(),agentId:el.clientAgent.value,agency:el.clientAgency.value.trim(),notes:el.clientNotes.value.trim(),manualNextStep:el.clientNextStep.value.trim(),manualNextFollowup:el.clientNextFollowup.value,stage:el.clientStage.value,manualFractions:uniqNum(getMulti(el.clientFractions))};
@@ -3011,9 +3122,9 @@ async function saveClientEdit(){
   }
   if(Object.hasOwn(patch,'stage'))Object.assign(patch,{stage:normalizeClientStage(patch.stage),stageManual:true,manualStage:normalizeClientStage(patch.stage)});
   if(!Object.keys(patch).length){closeClientModal();return}
-  Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT')});
+  Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT'),updatedAt:new Date().toISOString()});
   if(mode!=='identity')recalculateResumoCliente(c.id);
-  save();closeClientModal();RenderFlow.clientChanged();commercialUxToast(mode==='identity'?'Dados do cliente atualizados.':'Acompanhamento atualizado.');
+  const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,mode==='identity'?'Dados do cliente atualizados na base partilhada.':'Acompanhamento atualizado na base partilhada.');
 }
 function clientInvestmentInterval(existing){
   const min=num(document.getElementById('clientBudgetMin').value),max=num(document.getElementById('clientBudgetMax').value),budget=num(el.clientBudget.value);
@@ -3026,11 +3137,20 @@ function clientInvestmentInterval(existing){
 async function saveClientPreferences(){
   const c=client(el.clientId.value);if(!c)return;
   const interval=clientInvestmentInterval(c);if(!interval)return;
-  const preferences=cleanPreferences({typology:el.clientTypologyPreference.value,floor:el.clientFloorPreference.value,orientation:el.clientOrientationPreference.value,objective:el.clientPurchaseObjective.value,decisionTime:el.clientDecisionTime.value,summary:el.clientPreferenceSummary.value});
+  const preferences=cleanPreferences({...c.preferences,typology:el.clientTypologyPreference.value,floor:el.clientFloorPreference.value,orientation:el.clientOrientationPreference.value,objective:el.clientPurchaseObjective.value,decisionTime:el.clientDecisionTime.value,summary:el.clientPreferenceSummary.value});
   const budget=num(el.clientBudget.value);
   if(JSON.stringify(preferences)===JSON.stringify(cleanPreferences(c.preferences||{}))&&budget===(Number(c.budget)||0)&&Object.entries(interval).every(([key,value])=>value===(Number(c[key])||0))){closeClientModal();return}
-  Object.assign(c,interval,{manualPreferences:preferences,preferences,preferencesManuallyEdited:true,manualBudget:budget,budget,updated:new Date().toLocaleString('pt-PT')});
-  recalculateResumoCliente(c.id);save();closeClientModal();RenderFlow.clientChanged();commercialUxToast('Preferências guardadas.');
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;
+  let updated={...c,...interval,preferences,manualPreferences:{...c.manualPreferences,...preferences},preferencesManuallyEdited:true};
+  if(api){
+    const draft=api.draft(c);
+    for(const key of Object.keys(api.options))draft.choices[key]=api.fromLegacy(key,preferences[key]);
+    for(const key of ['objective','decisionTime','summary'])draft[key]=preferences[key];
+    for(const key of ['budgetMin','budgetMax'])if(Object.hasOwn(interval,key))draft[key]=interval[key];
+    try{updated=api.buildUpdate(c,draft)||updated}catch{await notifyUser('Não foi possível validar o formato das preferências. Nenhum dado foi alterado.','Preferências');return}
+  }
+  if(budget!==(Number(c.budget)||0))Object.assign(updated,{manualBudget:budget,budget});
+  recordClientPreferenceChange(c,updated);const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,'Preferências guardadas na base partilhada.');
 }
 function openEventModal(eventId='',source=''){
   ensureEventAgentFields();
@@ -3737,7 +3857,7 @@ function openClientUxAction(action){
   const destinations={preferences:'preferences','select-presentation':'fractions',associate:'fractions',contact:'negotiation',complete:'negotiation',documentation:'presentation',note:'negotiation',plan:'negotiation',stage:'negotiation',event:'negotiation',proposal:'presentation',negotiation:'negotiation',presentation:'presentation'};
   if(destinations[action])activateClientDetailTab(destinations[action]);
   if(action==='complete'){completeClientNextAction();return}
-  if(action==='preferences'){openClientModal(c.id,'preferences');return}
+  if(action==='preferences'){if(commercialUx.clientProfileOpen&&window.THE_VIEW_CLIENT_PREFERENCES)startInlinePreferences(c);else openClientModal(c.id,'preferences');return}
   if(action==='select-presentation'){openPresentationSelectionModal();return}
   if(action==='event'){openEventModal('','client');return}
   if(action==='negotiation'){const type=document.getElementById('clientNegotiationType').value;if(!EVENT_TYPES.includes(type))return;openEventModal('','client');el.eventType.value=type;toggleEventSpecificFields();return}
@@ -3946,6 +4066,10 @@ function sharedStoreMayRegress(local,remote,meta,remoteRevision){
   function editablePath(path){
     if(path.length===3&&editable[path[0]]?.has(path[2]))return true;
     if(path.length===4&&path[0]==='clients'&&['preferences','manualPreferences'].includes(path[2])&&preferenceFields.has(path[3]))return true;
+    if(path[0]==='clients'&&['preferences','manualPreferences'].includes(path[2])&&path[3]==='selectionV1'){
+      if(path.length===5&&path[4]==='version')return true;
+      if(path.length===6&&['typology','floor','orientation'].includes(path[4])&&['state','values','legacyText'].includes(path[5]))return true;
+    }
     if(path.length===4&&path[0]==='clients'&&path[2]==='commercialSummary'&&['lastContact','nextFollowup','nextStep','presentedFractions'].includes(path[3]))return true;
     return path.length===2&&['finalPrices','statuses','salePrices','unavailableReasons','statusEventIds','salePriceEventIds'].includes(path[0]);
   }
