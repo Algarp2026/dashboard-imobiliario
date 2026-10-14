@@ -102,8 +102,11 @@ includesAll(commercial, [
 includesAll(appsScript, [
   'BACKUP_SHEET_NAME',
   'Backups',
-  'backupStoreBeforeSave_',
-  'Store!B2 and mirror sheets refreshed.'
+  'stageVersion_(current.raw',
+  'readVersion_(previous)',
+  'archive.appendRow',
+  'archived[1] !== JSON.stringify(previous)',
+  'sheet.getRange(STORE_ACTIVE_CELL).setValue(pointer)'
 ], 'Apps Script backup flow');
 
 assert(config.trim().startsWith('window.THE_VIEW_CONFIG = {'), 'config.js must expose THE_VIEW_CONFIG');

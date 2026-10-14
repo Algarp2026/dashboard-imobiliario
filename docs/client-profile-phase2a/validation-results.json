@@ -1,0 +1,33 @@
+[
+  {
+    "fixtureClients": 64,
+    "nameOnlyCreation": true,
+    "fullCreation": true,
+    "emptyOrigin": true,
+    "oneInitialEvent": true,
+    "nestedClientOneInitialEvent": true,
+    "repeatedSaveIdempotent": true,
+    "createdAtPreserved": true,
+    "duplicateContactAllowed": true,
+    "identityPreservesUnknownFields": true,
+    "multiplePreferences": true,
+    "legacyTextsPreserved": true,
+    "archivedTextsVisible": true,
+    "budgetsPreserved": true,
+    "legacyModalFunctional": true,
+    "validation": true,
+    "noOpWrites": 0,
+    "refreshRoundtrip": true,
+    "allModules": true,
+    "mobileOverflow": false,
+    "sameInitialRevision": "1a18f3594638460c80abbe6c3328f52f2c487a353249a9dddaa30d17239da6a1",
+    "cleanBrowserReceivesStructuredEdit": true,
+    "conflictStatus": 409,
+    "firstDataIntact": true,
+    "secondLocalChangesPreserved": true,
+    "writeFailurePreserved": true,
+    "errors": [],
+    "productionNetwork": false,
+    "source": "actual app/API/Apps Script VM; fictitious in-memory storage only"
+  }
+]
