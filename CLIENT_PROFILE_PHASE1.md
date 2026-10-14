@@ -63,3 +63,11 @@ Limites: nao se validou qualquer cliente real ou ambiente de producao. Fixtures 
 - Regressao direcionada: suites client-tabs, progressive-flow e UX aprovadas; `node --check commercial.js` aprovado. Comparacao com a base confirmou o trecho de sincronizacao e nove funcoes comerciais intactos.
 - Browser 1440x1000, 820x1080 e 390x844: abas/conteudo visiveis na listagem; filtros, cliente selecionado e scroll preservados; preferencias e eventos editaveis pelos modais existentes; cinco abas operacionais; sem overflow da pagina nem sobreposicao das abas com a barra sticky. JSON comercial inalterado, zero POST comerciais, zero escritas na fonte ficticia e zero erros JavaScript.
 - Evidencia e instrucoes na galeria: listagem, transicao, cinco abas desktop/mobile e regresso. API, Google Sheets, autenticacao e sincronizacao nao foram alterados. Nao houve merge nem deployment.
+
+## Refinamento visual final do PR #3
+
+- Alteracao de aplicacao exclusivamente em `commercial.css`. Barras/espacamentos compactos apenas quando a ficha completa e a area visivel; os seletores excluem outros modulos e subareas. Navegacao, pesquisa global, acoes rapidas e avisos/controlos de sincronizacao preservados.
+- Unica acao principal "Editar Cliente" na barra sticky; atalhos de edicao duplicados ocultos exclusivamente nessa vista. Os acessos de Novo Cliente/Novo Agente continuam nas acoes rapidas. Listagem e respetivos atalhos anteriores inalterados.
+- Browser desktop/tablet/mobile: comparacao com o CSS aprovado `93f509d` confirmou mesmas dimensoes/estilos na listagem. Navegacao de todos os modulos funcionou e repoe o estilo original fora da ficha. Cinco abas, retorno/filtros/scroll e modais existentes aprovados. Zero erros JavaScript, zero POST comerciais, zero escritas na fonte e cache comercial inalterada.
+- Inicio das abas, pagina no topo e cliente ficticio completo: desktop 818 -> 524 px; tablet 875 -> 524 px; mobile 1366 -> 647 px. Capturas da ficha/transicao atualizadas na galeria, sem substituir as capturas anteriores da listagem/regresso.
+- Suites client-tabs, progressive-flow e UX e `node --check commercial.js` aprovados. Comparacao de fonte confirma sincronizacao/nove funcoes comerciais intactas. Sem alteracao a HTML, JS comercial, dados, API ou autenticacao; sem merge/deployment nem inicio da Fase 2.

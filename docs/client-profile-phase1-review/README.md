@@ -9,6 +9,22 @@ Capturas reais de navegador, nao mockups. Todos os clientes, contactos, agente e
 - "Alternativas proximas" indica que o novo motor sera disponibilizado na Fase 2; nao afirma que foram avaliadas todas as alternativas.
 - API, sincronizacao e funcoes comerciais de gravacao permanecem inalteradas.
 
+## Refinamento final - barras compactas
+
+Exclusivamente na ficha completa: marca/navegacao superior compacta, menor espacamento entre barras, acoes rapidas e navegacao interna em linhas com scroll horizontal quando necessario. Todos os modulos e as quatro acoes rapidas continuam acessiveis. Os detalhes/avisos e controlos de sincronizacao nao foram escondidos; apenas o indicador duplicado do topo deixa de aparecer nesta vista.
+
+"Editar Cliente" e a unica acao principal de edicao dos dados, na barra sticky. Os atalhos duplicados do cabecalho e do painel Dados ficam ocultos apenas na ficha completa. Editar preferencias e as outras acoes especializadas continuam disponiveis. Ao fechar a ficha ou mudar de modulo/subarea, regressa o estilo anterior.
+
+Comparacao automatizada com o CSS do commit aprovado `93f509d`: dimensoes/estilos da listagem iguais antes de abrir e depois de regressar. No cliente ficticio completo, com a pagina no topo:
+
+| Viewport | Inicio dos separadores antes | Depois |
+| --- | ---: | ---: |
+| Desktop 1440x1000 | 818 px | 524 px |
+| Tablet 820x1080 | 875 px | 524 px |
+| Mobile 390x844 | 1366 px | 647 px |
+
+Capturas da ficha completa/transicao atualizadas abaixo. As imagens da listagem/regresso aprovadas anteriormente foram mantidas, pois essa experiencia nao foi alterada. [Resultados da regressao no navegador](validation-results.json), exclusivamente com dados ficticios e sem escritas comerciais.
+
 ## Computador - 1440 x 1000
 
 Listagem inicial, com painel lateral acessivel:
@@ -96,6 +112,7 @@ Regresso a listagem:
 - Zero erros JavaScript, zero POST comerciais, zero escritas na fonte. JSON comercial no localStorage identico antes/depois da navegacao. Sem overflow horizontal da pagina ou sobreposicao das abas sticky com a barra de acoes.
 - Testes direcionados `commercial-client-tabs`, `commercial-progressive-flow`, `commercial-ux` e `node --check commercial.js` aprovados. Comparacao de fonte confirmou sincronizacao e nove funcoes comerciais identicas a `db097c8`.
 - Nao se testou producao nem se guardaram alteracoes de clientes reais. Abertura/cancelamento de modais valida acessibilidade, nao substitui um teste futuro de gravacao deliberada num ambiente isolado de escrita.
+- Refinamento final: navegacao por Dashboard, Fracoes/Vendas, Agentes, Propostas, Comparador, Precos, Historico e Relatorios; unica edicao principal funcional; estilo original restaurado fora da ficha; mesmas dimensoes da listagem face ao CSS aprovado; modais acessiveis. JavaScript comercial permaneceu identico ao commit anterior.
 - Capturas de pagina completa incluem zonas abaixo do viewport indicado; os ficheiros `*-navegacao.png` e `*-transicao.png` sao capturas do viewport.
 
 Para rever manualmente: comparar listagem inicial/regresso; verificar os cinco separadores; confirmar a mensagem da Fase 2 e a tabela anterior em Fracoes. Nao fazer merge nem deployment antes da aprovacao visual.
