@@ -5,6 +5,10 @@ var BACKUP_SHEET_NAME = 'Backups';
 var STORE_RECEIPT_CELL = 'B4';
 var STORE_WRITE_INTENT_CELL = 'B5';
 var STORE_MAX_CHARACTERS = 50000;
+var STORE_ACTIVE_CELL = 'B6';
+var STORE_VERSIONS_SHEET = 'StoreVersions';
+var STORE_CHUNK_CHARACTERS = 24000;
+var STORE_TOTAL_CHARACTERS = 900000;
 
 function doGet(e) {
   var params = e && e.parameter ? e.parameter : {};
@@ -44,21 +48,11 @@ function doPost(e) {
   }
 }
 
-function testWrite() {
+function testWrite(request) {
+  // Manual diagnostics must never bypass revision checks or migrate storage.
   assertServerCaller_();
-  if (PropertiesService.getScriptProperties().getProperty('CRM_API_WRITES_ENABLED') !== 'true') throw new Error('WRITES_DISABLED');
-  var lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    if (readStoreMetadata_(STORE_WRITE_INTENT_CELL)) throw new Error('WRITE_INCOMPLETE');
-    var data = loadStore_();
-    var updatedAt = new Date().toISOString();
-    saveStore_(data, updatedAt);
-    mirrorAll_(data);
-    return { ok: true, updatedAt: updatedAt, message: 'Store!B2 and mirror sheets refreshed.' };
-  } finally {
-    lock.releaseLock();
-  }
+  if(request) return crmWrite(request);
+  return crmRead({sourceId:PropertiesService.getScriptProperties().getProperty('CRM_SPREADSHEET_ID'),environment:PropertiesService.getScriptProperties().getProperty('CRM_ENVIRONMENT')});
 }
 
 function assertServerCaller_() {
@@ -111,55 +105,120 @@ function validSourceRequest_(request) {
   var props = PropertiesService.getScriptProperties();
   return request && request.sourceId === props.getProperty('CRM_SPREADSHEET_ID') && request.environment === props.getProperty('CRM_ENVIRONMENT');
 }
+// Descriptors are small; payloads are immutable, append-only rows. B6 is the sole commit point.
+function readVersion_(version) {
+  if (!version || version.format !== 2 || !Number.isInteger(version.start) || version.start < 1 ||
+      !Number.isInteger(version.count) || version.count < 1 || version.count > 100 ||
+      !Number.isInteger(version.length) || version.length > STORE_TOTAL_CHARACTERS ||
+      !/^[a-f0-9]{64}$/.test(version.checksum)) throw new Error('INVALID_STORAGE');
+  var sheet = storeSpreadsheet_().getSheetByName(STORE_VERSIONS_SHEET);
+  if (!sheet) throw new Error('INVALID_STORAGE');
+  var rows = sheet.getRange(version.start, 1, version.count, 3).getValues();
+  var raw = rows.map(function(row, index) {
+    if (row[0] !== version.checksum || Number(row[1]) !== index || typeof row[2] !== 'string' ||
+        row[2].charAt(0) !== ':' || row[2].length > STORE_CHUNK_CHARACTERS + 1) throw new Error('INVALID_STORAGE');
+    return row[2].slice(1);
+  }).join('');
+  if (raw.length !== version.length || storeRevision_(raw) !== version.checksum ||
+      !validStoreData_(JSON.parse(raw), false)) throw new Error('INVALID_STORAGE');
+  return raw;
+}
+function stageVersion_(raw, updatedAt) {
+  if(STORE_CHUNK_CHARACTERS + 1 >= STORE_MAX_CHARACTERS) throw new Error('INVALID_STORAGE');
+  if (raw.length > STORE_TOTAL_CHARACTERS || !validStoreData_(JSON.parse(raw), false)) throw new Error('STORE_SIZE_LIMIT');
+  var checksum = storeRevision_(raw), rows = [];
+  // Prefix prevents Sheets interpreting chunks beginning with '=' as formulas.
+  for (var offset = 0; offset < raw.length;) {
+    var end = Math.min(offset + STORE_CHUNK_CHARACTERS, raw.length);
+    if (end < raw.length && /[\uD800-\uDBFF]/.test(raw.charAt(end - 1))) end--;
+    rows.push([checksum, rows.length, ':' + raw.slice(offset, end)]);
+    offset = end;
+  }
+  var sheet = getOrCreateSheet_(STORE_VERSIONS_SHEET);
+  var version = {format:2,start:sheet.getLastRow()+1,count:rows.length,length:raw.length,checksum:checksum,updatedAt:updatedAt};
+  var requiredRows = version.start + version.count - 1, availableRows = sheet.getMaxRows();
+  if(requiredRows > availableRows) sheet.insertRowsAfter(availableRows, requiredRows - availableRows);
+  sheet.getRange(version.start, 1, rows.length, 3).setValues(rows);
+  SpreadsheetApp.flush();
+  if (readVersion_(version) !== raw) throw new Error('WRITE_INCOMPLETE');
+  return version;
+}
+function currentStore_() {
+  var active = readStoreMetadata_(STORE_ACTIVE_CELL), sheet = getStoreSheet_();
+  if(active && (active.format !== 2 || !/^[a-f0-9]{64}$/.test(active.legacyChecksum))) throw new Error('INVALID_STORAGE');
+  if(active && storeRevision_(String(sheet.getRange(STORE_JSON_CELL).getValue() || '')) !== active.legacyChecksum) throw new Error('LEGACY_STORE_CHANGED');
+  var raw = active ? readVersion_(active.version) : String(sheet.getRange(STORE_JSON_CELL).getValue() || '');
+  if (!raw.trim()) throw new Error('UNINITIALIZED');
+  if (!validStoreData_(JSON.parse(raw), false)) throw new Error('INVALID_STORAGE');
+  return {raw:raw,revision:storeRevision_(raw.trim()),updatedAt:active ? active.version.updatedAt : String(sheet.getRange(STORE_UPDATED_AT_CELL).getValue() || ''),active:active};
+}
 function crmRead(request) {
   assertServerCaller_();
   if (!validSourceRequest_(request)) return storeResponse_({ok:false,code:'SOURCE_ENVIRONMENT_MISMATCH'});
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    if (readStoreMetadata_(STORE_WRITE_INTENT_CELL)) return storeResponse_({ok:false,code:'WRITE_INCOMPLETE'});
-    var raw = String(getStoreSheet_().getRange(STORE_JSON_CELL).getValue() || '').trim();
-    if (!raw) return storeResponse_({ok:false,code:'UNINITIALIZED'});
-    var data = JSON.parse(raw);
-    if (!validStoreData_(data, false)) return storeResponse_({ok:false,code:'INVALID_DATA'});
-    return storeResponse_({ok:true,data:data,revision:storeRevision_(raw),updatedAt:getStoreUpdatedAt_(),confirmedAt:new Date().toISOString()});
+    var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL);
+    if (intent && intent.format !== 2) return storeResponse_({ok:false,code:'WRITE_INCOMPLETE'});
+    var current = currentStore_();
+    return storeResponse_({ok:true,data:JSON.parse(current.raw),revision:current.revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString()});
   } finally { lock.releaseLock(); }
 }
 function crmWrite(request) {
   assertServerCaller_();
   if (!validSourceRequest_(request)) return storeResponse_({ok:false,code:'SOURCE_ENVIRONMENT_MISMATCH'});
   if (PropertiesService.getScriptProperties().getProperty('CRM_API_WRITES_ENABLED') !== 'true') return storeResponse_({ok:false,code:'WRITES_DISABLED'});
-  if (!request || typeof request.baseRevision !== 'string' || !/^[a-f0-9]{64}$/.test(request.baseRevision) || typeof request.requestId !== 'string' || !/^[\w-]{8,100}$/.test(request.requestId) || !validStoreData_(request.data, true)) return storeResponse_({ok:false,code:'INVALID_PAYLOAD'});
+  if (!request || typeof request.baseRevision !== 'string' || !/^[a-f0-9]{64}$/.test(request.baseRevision) ||
+      typeof request.requestId !== 'string' || !/^[\w-]{8,100}$/.test(request.requestId) || !validStoreData_(request.data, true))
+    return storeResponse_({ok:false,code:'INVALID_PAYLOAD'});
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    var sheet = getStoreSheet_(), storedRaw = String(sheet.getRange(STORE_JSON_CELL).getValue() || ''), raw = storedRaw.trim();
-    if (!raw || !validStoreData_(JSON.parse(raw),false)) return storeResponse_({ok:false,code:'UNINITIALIZED'});
-    var revision = storeRevision_(raw), nextJson = storeJson_(request.data), nextRevision = storeRevision_(nextJson);
-    if (nextJson.length > STORE_MAX_CHARACTERS || storedRaw.length > STORE_MAX_CHARACTERS) return storeResponse_({ok:false,code:'STORE_SIZE_LIMIT'});
-    var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL), receipt = readStoreMetadata_(STORE_RECEIPT_CELL);
-    var sameRequest = function(value) { return value && value.requestId === request.requestId && value.baseRevision === request.baseRevision && value.revision === nextRevision; };
-    if (request.recovery && !sameRequest(intent) && !sameRequest(receipt)) return storeResponse_({ok:false,code:'CONFLICT'});
-    if (intent && !sameRequest(intent)) return storeResponse_({ok:false,code:'WRITE_INCOMPLETE'});
-    if (receipt && receipt.requestId === request.requestId && !sameRequest(receipt)) return storeResponse_({ok:false,code:'CONFLICT'});
-    if (sameRequest(receipt) && revision === nextRevision && !intent) return storeResponse_({ok:true,persisted:true,revision:revision,updatedAt:getStoreUpdatedAt_(),confirmedAt:new Date().toISOString(),requestId:request.requestId});
-    if (request.baseRevision !== revision && !(sameRequest(intent) && revision === nextRevision)) return storeResponse_({ok:false,code:'CONFLICT'});
-    if (nextRevision === revision && !intent) return storeResponse_({ok:true,persisted:true,revision:revision,updatedAt:getStoreUpdatedAt_(),confirmedAt:new Date().toISOString(),requestId:request.requestId});
-    var updatedAt = sameRequest(intent) && intent.updatedAt ? intent.updatedAt : revision === nextRevision ? getStoreUpdatedAt_() : new Date().toISOString();
-    var metadata = {requestId:request.requestId,baseRevision:request.baseRevision,revision:nextRevision,updatedAt:updatedAt};
-    // A durable intent prevents a partial Store/mirror write from being reported as synchronized.
+    var sheet = getStoreSheet_(), current = currentStore_(), nextJson = storeJson_(request.data), revision = storeRevision_(nextJson);
+    if (nextJson.length > STORE_TOTAL_CHARACTERS || current.raw.length > STORE_TOTAL_CHARACTERS) return storeResponse_({ok:false,code:'STORE_SIZE_LIMIT'});
+    var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL);
+    var receipt = current.active ? current.active.receipt : readStoreMetadata_(STORE_RECEIPT_CELL);
+    var same = function(value) { return value && value.requestId === request.requestId && value.baseRevision === request.baseRevision && value.revision === revision; };
+    var success = function() { return storeResponse_({ok:true,persisted:true,revision:revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString(),requestId:request.requestId}); };
+    if (same(receipt) && current.revision === revision) {
+      if (same(intent)) { sheet.getRange(STORE_WRITE_INTENT_CELL).setValue(''); SpreadsheetApp.flush(); }
+      return success();
+    }
+    if (request.recovery && !same(intent)) return storeResponse_({ok:false,code:'CONFLICT'});
+    if (intent && (intent.format !== 2 || !same(intent))) return storeResponse_({ok:false,code:'WRITE_INCOMPLETE'});
+    if (receipt && receipt.requestId === request.requestId && !same(receipt)) return storeResponse_({ok:false,code:'CONFLICT'});
+    if (current.revision !== request.baseRevision) return storeResponse_({ok:false,code:'CONFLICT'});
+    if (current.revision === revision && !intent) return success();
+    var metadata = intent || {format:2,requestId:request.requestId,baseRevision:request.baseRevision,revision:revision,updatedAt:new Date().toISOString()};
     sheet.getRange(STORE_WRITE_INTENT_CELL).setValue(JSON.stringify(metadata));
     SpreadsheetApp.flush();
-    if (revision !== nextRevision) saveStore_(request.data, updatedAt);
-    else if (sameRequest(intent) && getStoreUpdatedAt_() !== updatedAt) sheet.getRange(STORE_UPDATED_AT_CELL).setValue(updatedAt);
+    // Backups reference fully verified immutable versions, never a single payload cell.
+    var previous = metadata.previous || (current.active ? current.active.version : stageVersion_(current.raw, current.updatedAt));
+    readVersion_(previous);
+    var version = metadata.version || stageVersion_(nextJson, metadata.updatedAt);
+    if(readVersion_(version) !== nextJson) throw new Error('WRITE_INCOMPLETE');
+    metadata.previous = previous; metadata.version = version;
+    sheet.getRange(STORE_WRITE_INTENT_CELL).setValue(JSON.stringify(metadata));
     SpreadsheetApp.flush();
-    if (String(sheet.getRange(STORE_JSON_CELL).getValue()) !== nextJson || getStoreUpdatedAt_() !== updatedAt) throw new Error('WRITE_INCOMPLETE');
+    var archive = getOrCreateSheet_(BACKUP_SHEET_NAME + 'Versions');
+    var last = archive.getLastRow() ? archive.getRange(archive.getLastRow(), 1, 1, 4).getValues()[0] : [];
+    if(last[3] !== JSON.stringify(metadata)) archive.appendRow([metadata.updatedAt, JSON.stringify(previous), JSON.stringify(version), JSON.stringify(metadata)]);
+    SpreadsheetApp.flush();
+    var archived = archive.getRange(archive.getLastRow(), 1, 1, 4).getValues()[0];
+    if (archived[1] !== JSON.stringify(previous) || archived[2] !== JSON.stringify(version)) throw new Error('WRITE_INCOMPLETE');
+    // Mirrors are derived. A failure here leaves the old authoritative version active.
     mirrorAll_(request.data);
     SpreadsheetApp.flush();
-    sheet.getRange(STORE_RECEIPT_CELL).setValue(JSON.stringify(metadata));
+    readVersion_(version);
+    var pointer = JSON.stringify({format:2,version:version,previous:previous,receipt:metadata,legacyChecksum:current.active ? current.active.legacyChecksum : storeRevision_(current.raw)});
+    sheet.getRange(STORE_ACTIVE_CELL).setValue(pointer);
+    SpreadsheetApp.flush();
+    if (String(sheet.getRange(STORE_ACTIVE_CELL).getValue()) !== pointer) throw new Error('WRITE_INCOMPLETE');
+    current = currentStore_();
+    if (current.revision !== revision) throw new Error('WRITE_INCOMPLETE');
     sheet.getRange(STORE_WRITE_INTENT_CELL).setValue('');
     SpreadsheetApp.flush();
-    return storeResponse_({ok:true,persisted:true,revision:nextRevision,updatedAt:getStoreUpdatedAt_(),confirmedAt:new Date().toISOString(),requestId:request.requestId});
+    return success();
   } finally { lock.releaseLock(); }
 }
 function crmRecover(request) {
@@ -167,44 +226,8 @@ function crmRecover(request) {
   request.recovery = true;
   return crmWrite(request);
 }
-
-function loadStore_() {
-  var sheet = getStoreSheet_();
-  var raw = String(sheet.getRange(STORE_JSON_CELL).getValue() || '').trim();
-  if (!raw) return {};
-  return JSON.parse(raw);
-}
-
-function saveStore_(data, updatedAt) {
-  var sheet = getStoreSheet_();
-  var nextJson = storeJson_(data);
-  if (nextJson.length > STORE_MAX_CHARACTERS || String(sheet.getRange(STORE_JSON_CELL).getValue() || '').length > STORE_MAX_CHARACTERS) throw new Error('STORE_SIZE_LIMIT');
-  backupStoreBeforeSave_(sheet, nextJson, updatedAt);
-  sheet.getRange('A1:B3').setValues([['Campo','Valor'],['JSON',nextJson],['AtualizadoEm',updatedAt || new Date().toISOString()]]);
-}
-
-function backupStoreBeforeSave_(storeSheet, nextJson, updatedAt) {
-  var previousJson = String(storeSheet.getRange(STORE_JSON_CELL).getValue() || '');
-  if (!previousJson.trim() || previousJson === nextJson) return;
-
-  var previousUpdatedAt = String(storeSheet.getRange(STORE_UPDATED_AT_CELL).getValue() || '');
-  var backupSheet = getOrCreateSheet_(BACKUP_SHEET_NAME);
-  // Recovery retains the original write timestamp; an already appended backup must not be duplicated.
-  if (backupSheet.getLastRow() > 1) {
-    var last = backupSheet.getRange(backupSheet.getLastRow(), 1, 1, 4).getValues()[0];
-    if (String(last[1]) === previousUpdatedAt && String(last[2]) === String(updatedAt) && String(last[3]) === previousJson) return;
-  }
-  if (backupSheet.getLastRow() === 0) {
-    backupSheet.getRange(1, 1, 1, 4).setValues([['BackupEm', 'StoreAtualizadoEm', 'NovoAtualizadoEm', 'JSONAnterior']]);
-    backupSheet.setFrozenRows(1);
-  }
-  backupSheet.appendRow([new Date().toISOString(), previousUpdatedAt, updatedAt || '', previousJson]);
-}
-
-function getStoreUpdatedAt_() {
-  var value = getStoreSheet_().getRange(STORE_UPDATED_AT_CELL).getValue();
-  return value ? String(value) : '';
-}
+function loadStore_() { return JSON.parse(currentStore_().raw); }
+function getStoreUpdatedAt_() { return currentStore_().updatedAt; }
 
 function mirrorAll_(data) {
   data = data || {};

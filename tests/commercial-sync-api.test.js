@@ -42,18 +42,20 @@ async function main(){
   assert.equal((await invoke(api,request('POST',payload))).body.code,'READ_REQUIRED');
   const otherSession=cookie(Date.now()-1000);assert.equal((await invoke(api,{...post,headers:{...post.headers,cookie:otherSession}})).body.code,'READ_REQUIRED');
   process.env.CRM_GOOGLE_WRITES_ENABLED='false';assert.equal((await invoke(api,post)).body.code,'WRITES_DISABLED');process.env.CRM_GOOGLE_WRITES_ENABLED='true';
-  const saved=await invoke(api,post);assert.equal(saved.statusCode,200);assert.deepEqual(google.data,candidate);assert.equal(google.sheets.get('Backups').rows.length,2);assert.equal(google.sheets.get('Backups').rows[1][3],start);
+  const saved=await invoke(api,post);assert.equal(saved.statusCode,200);assert.deepEqual(google.data,candidate);assert.equal(google.sheets.get('BackupsVersions').rows.length,1);
+  const backupLock=google.context.LockService.getScriptLock();backupLock.waitLock();
+  try{assert.equal(google.context.readVersion_(JSON.parse(google.sheets.get('BackupsVersions').rows[0][1])),start)}finally{backupLock.releaseLock()}
   for(const name of ['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes'])assert.ok(google.sheets.has(name));
   assert.ok(google.trace.filter(item=>item.type==='read'||item.type==='write'||item.type==='rows').every(item=>item.held));
-  const repeated=await invoke(api,post);assert.equal(repeated.statusCode,200);assert.equal(google.sheets.get('Backups').rows.length,2);
+  const repeated=await invoke(api,post);assert.equal(repeated.statusCode,200);assert.equal(google.sheets.get('BackupsVersions').rows.length,1);
   const stale={...payload,requestId:'request-test-stale',data:{...initial,clients:[{...initial.clients[0],email:'stale@example.test'}]}};
   const old=await invoke(api,{...post,body:stale});assert.equal(old.statusCode,409);assert.ok(!old.body.data);assert.deepEqual(google.data,candidate);
   const current=await invoke(api,request()),next=clone(candidate);next.clients[0].email='new@example.test';
   const interrupted={action:'save',data:next,baseRevision:current.body.revision,requestId:'request-test-interrupted'};
   google.failMirror('Eventos');const failure=await invoke(api,{...request('POST',interrupted),headers:{...request().headers,'x-crm-read-ticket':current.body.readTicket}});assert.equal(failure.statusCode,502);
-  assert.deepEqual(google.data,next);assert.equal((await invoke(api,request())).body.code,'WRITE_INCOMPLETE');
-  const backupCount=google.sheets.get('Backups').rows.length;google.failMirror('');
-  const recovery=await invoke(api,request('POST',{...interrupted,action:'recover'}));assert.equal(recovery.statusCode,200);assert.equal(google.sheets.get('Backups').rows.length,backupCount);
+  assert.deepEqual(google.data,candidate);assert.equal((await invoke(api,request())).statusCode,200);
+  const backupCount=google.sheets.get('BackupsVersions').rows.length;google.failMirror('');
+  const recovery=await invoke(api,request('POST',{...interrupted,action:'recover'}));assert.equal(recovery.statusCode,200);assert.equal(google.sheets.get('BackupsVersions').rows.length,backupCount);
   assert.equal((await invoke(api,request('POST',{...payload,action:'recover',requestId:'never-authorized'}))).statusCode,409);
   assert.deepEqual(google.data,next);
   const previewBase=await invoke(api,request());google.properties.CRM_ENVIRONMENT='production';const wrong=await invoke(api,{...request('POST',{...payload,baseRevision:previewBase.body.revision}),headers:{...request().headers,'x-crm-read-ticket':previewBase.body.readTicket}});assert.equal(wrong.statusCode,503);assert.deepEqual(google.data,next);google.properties.CRM_ENVIRONMENT='test';

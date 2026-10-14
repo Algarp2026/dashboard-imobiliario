@@ -4,6 +4,7 @@ const api=require('../api/commercial-data.js'),makeStore=require('./helpers/apps
 const originalEnv={...process.env},originalFetch=global.fetch,KEY='theView.crmCommercial.v2';
 const initial={clients:[{id:'test-client',name:'Fictitious concurrency client',phone:'original',email:'original@example.test',preferences:{},fractions:[]}],events:[],agents:[],finalPrices:{1:700000},statuses:{},salePrices:{},priceHistory:{},saleCommissions:{},unavailableReasons:{},statusEventIds:{},salePriceEventIds:{},unknown:{preserved:true}};
 Object.assign(process.env,{COMMERCIAL_ACCESS_SECRET:'fictitious-concurrency-secret',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-refresh',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true',VERCEL_ENV:'preview'});
+initial.unknown.padding='x'.repeat(160000);
 const google=makeStore(initial);
 global.fetch=async(url,options)=>{
   assert.ok(['https://oauth2.googleapis.com/token','https://script.googleapis.com/v1/scripts/test-deployment:run'].includes(url));

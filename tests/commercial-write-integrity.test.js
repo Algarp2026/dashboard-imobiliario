@@ -32,7 +32,7 @@ const read=session=>invoke(request('GET',undefined,session));
 const post=(payload,session,ticket)=>invoke(request('POST',payload,session,ticket));
 const reset=()=>{google=makeStore(clone(initial));mode='';calls=0;executions=0};
 const cell=address=>google.sheets.get('Store').cells.get(address)||'';
-const backups=()=>google.sheets.get('Backups')?.rows.length||0;
+const backups=()=>google.sheets.get('BackupsVersions')?.rows.length||0;
 
 async function main(){
   reset();const session=cookie(),original=clone(initial);let loaded=await read(session);
@@ -55,7 +55,7 @@ async function main(){
   assert.equal((await post(opB,a,loadB.body.readTicket)).statusCode,403);
   reset();const concurrentA=await read(a),concurrentB=await read(b);
   const simultaneous=await Promise.all([post({...opA,baseRevision:concurrentA.body.revision},a,concurrentA.body.readTicket),post({...opB,baseRevision:concurrentB.body.revision},b,concurrentB.body.readTicket)]);
-  assert.deepEqual(simultaneous.map(r=>r.statusCode).sort(),[200,409]);assert.equal(backups(),2);assert.ok(google.trace.filter(item=>['read','write','rows','append'].includes(item.type)).every(item=>item.held));
+  assert.deepEqual(simultaneous.map(r=>r.statusCode).sort(),[200,409]);assert.equal(backups(),1);assert.ok(google.trace.filter(item=>['read','write','rows','append'].includes(item.type)).every(item=>item.held));
 
   for(const fault of ['offline','timeout-before','401','403','500','invalid-before','false-success']){
     reset();const live=cookie(),base=await read(live),time=cell('3:2');mode=fault;
@@ -64,29 +64,29 @@ async function main(){
   }
   for(const fault of ['timeout-after','invalid-after','wrong-receipt']){
     reset();const live=cookie(),base=await read(live),op={action:'save',requestId:'after-fault-'+fault,baseRevision:base.body.revision,data:created};mode=fault;
-    assert.ok((await post(op,live,base.body.readTicket)).statusCode>=500);assert.deepEqual(google.data,created);assert.equal(backups(),2);mode='';
+    assert.ok((await post(op,live,base.body.readTicket)).statusCode>=500);assert.deepEqual(google.data,created);assert.equal(backups(),1);mode='';
     const proof=await read(live);assert.deepEqual(proof.body.data,created);assert.equal(cell('5:2'),'');
-    const recovered=await post({...op,action:'recover'},live);assert.equal(recovered.statusCode,200);assert.equal(backups(),2);assert.equal(google.data.clients.length,2);
+    const recovered=await post({...op,action:'recover'},live);assert.equal(recovered.statusCode,200);assert.equal(backups(),1);assert.equal(google.data.clients.length,2);
   }
 
-  for(const fault of ['backup-header','backup-before','backup-after','store-before','store-after','store-json-only','mirror']){
+  for(const fault of ['chunks-before','chunks-partial','archive-before','archive-after','pointer-before','pointer-after','mirror']){
     reset();const live=cookie(),base=await read(live),oldTime=cell('3:2'),op={action:'save',requestId:'partial-fault-'+fault,baseRevision:base.body.revision,data:created};
     fault==='mirror'?google.failMirror('Eventos'):google.failWrite(fault);
-    assert.equal((await post(op,live,base.body.readTicket)).statusCode,502);assert.equal((await read(live)).body.code,'WRITE_INCOMPLETE');
+    assert.equal((await post(op,live,base.body.readTicket)).statusCode,502);assert.equal((await read(live)).statusCode,200);
     const intent=JSON.parse(cell('5:2'));assert.equal(intent.requestId,op.requestId);assert.ok(Number.isFinite(Date.parse(intent.updatedAt)));
-    if(['store-after','store-json-only','mirror'].includes(fault))assert.deepEqual(google.data,created);else assert.deepEqual(google.data,initial);
-    if(!['store-after','mirror'].includes(fault))assert.equal(cell('3:2'),oldTime);
+    if(fault==='pointer-after')assert.deepEqual(google.data,created);else assert.deepEqual(google.data,initial);
+    assert.equal(cell('3:2'),oldTime);
     const savedBefore=clone(google.data),intentBefore=cell('5:2');assert.equal((await post({...op,action:'recover',requestId:'unrelated-operation'},live)).statusCode,409);assert.deepEqual(google.data,savedBefore);assert.equal(cell('5:2'),intentBefore);
     const oldCalls=calls;assert.equal((await post({...op,action:'recover'},cookie(9*3600000))).statusCode,401);assert.equal(calls,oldCalls);assert.equal(cell('5:2'),intentBefore);
-    google.failWrite('');google.failMirror('');const restored=await post({...op,action:'recover'},live);assert.equal(restored.statusCode,200,fault);assert.equal(restored.body.persisted,true);assert.deepEqual(google.data,created);assert.equal(cell('3:2'),intent.updatedAt);assert.equal(cell('5:2'),'');assert.equal(backups(),2,fault+' duplicated backup');
+    google.failWrite('');google.failMirror('');const restored=await post({...op,action:'recover'},live);assert.equal(restored.statusCode,200,fault);assert.equal(restored.body.persisted,true);assert.deepEqual(google.data,created);assert.equal((await read(live)).body.updatedAt,intent.updatedAt);assert.equal(cell('5:2'),'');assert.equal(backups(),1,fault+' duplicated backup');
     for(const name of ['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes'])assert.ok(google.sheets.has(name));
-    assert.equal((await read(live)).statusCode,200);assert.equal((await post({...op,action:'recover'},live)).statusCode,200);assert.equal(backups(),2);
+    assert.equal((await read(live)).statusCode,200);assert.equal((await post({...op,action:'recover'},live)).statusCode,200);assert.equal(backups(),1);
   }
-  reset();const sizeSession=cookie(),sizeBase=await read(sizeSession),oversized=clone(created);oversized.clients[1].notes='x'.repeat(50000);
+  reset();const sizeSession=cookie(),sizeBase=await read(sizeSession),oversized=clone(created);oversized.clients[1].notes='x'.repeat(900000);
   const sizeReply=await post({action:'save',requestId:'oversized-store',baseRevision:sizeBase.body.revision,data:oversized},sizeSession,sizeBase.body.readTicket);
   assert.equal(sizeReply.statusCode,413);assert.equal(sizeReply.body.code,'STORE_SIZE_LIMIT');assert.deepEqual(google.data,initial);assert.equal(backups(),0);assert.equal(cell('5:2'),'');assert.equal(cell('4:2'),'');
   reset();const readonly=cookie(),base=await read(readonly);google.properties.CRM_API_WRITES_ENABLED='false';assert.equal((await read(readonly)).body.canWrite,false);
-  assert.equal((await post({action:'save',requestId:'readonly-write',baseRevision:base.body.revision,data:created},readonly,base.body.readTicket)).body.code,'WRITES_DISABLED');assert.throws(()=>google.context.testWrite(),/WRITES_DISABLED/);assert.deepEqual(google.data,initial);assert.equal(backups(),0);
-  console.log('write integrity tests passed: create/preferences/event reload, simultaneous CAS, revision manipulation, expired real session, invalid/false acknowledgements, seven partial-write recovery stages, Store B3, backup deduplication and source read-only mode');
+  assert.equal((await post({action:'save',requestId:'readonly-write',baseRevision:base.body.revision,data:created},readonly,base.body.readTicket)).body.code,'WRITES_DISABLED');assert.equal(google.context.testWrite().ok,true);assert.deepEqual(google.data,initial);assert.equal(backups(),0);
+  console.log('write integrity tests passed: create/preferences/event reload, simultaneous CAS, revision manipulation, expired real session, invalid/false acknowledgements, seven partial-write recovery stages, preserved legacy B3, backup deduplication and source read-only mode');
 }
 main().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>{global.fetch=originalFetch;for(const key of Object.keys(process.env))if(!(key in originalEnv))delete process.env[key];Object.assign(process.env,originalEnv)});

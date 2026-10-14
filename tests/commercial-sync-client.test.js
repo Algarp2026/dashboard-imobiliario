@@ -42,6 +42,21 @@ function app(local,options={}){
   const api=context.syncTest;return{api,storage,requests,get upstream(){return upstream},set upstream(value){upstream=clone(value)},set failure(value){failure=value},set writeFault(value){writeFault=value},get writes(){return writes},get pdf(){return pdf},get migrations(){return context.migrations||0},context};
 }
 async function main(){
+  for(const scenario of ['missing-records','changed-without-timestamp','newer-record','price-change']){
+    const local=root(63),remote=clone(local);
+    if(scenario==='missing-records')remote.clients=remote.clients.slice(0,24);
+    if(scenario==='changed-without-timestamp')local.clients[0].notes='Newer local note without metadata';
+    if(scenario==='newer-record'){local.clients[0].updated='2026-10-14T10:00:00Z';remote.clients[0].updated='2026-10-01T10:00:00Z'}
+    if(scenario==='price-change')remote.finalPrices[1]=600000;
+    const guarded=app(local,{upstream:remote});const cached=guarded.storage.get(KEY);await guarded.api.loadExcel();
+    assert.equal(guarded.api.sharedSync.phase,'conflict',scenario);assert.equal(guarded.api.sharedSync.verified,false);
+    assert.equal(guarded.storage.get(KEY),cached);assert.equal(guarded.api.state.data.clients.length,63);assert.equal(guarded.writes,0);
+    assert.ok(guarded.storage.has(KEY+'.backupBeforeRemoteLoad'));
+    assert.equal(JSON.parse(guarded.storage.get(KEY+'.backupBeforeRemoteLoad')).remoteData.clients.length,remote.clients.length);
+    const originalBackup=guarded.storage.get(KEY+'.backupBeforeRemoteLoad');
+    guarded.api.state.data.clients[0].notes='A later local edit';await guarded.api.loadRemoteData();
+    assert.ok([...guarded.storage.entries()].some(([key,value])=>key.startsWith(KEY+'.backupBeforeRemoteLoad.archive.')&&value===originalBackup));
+  }
   const a=app(root(50));await a.api.loadExcel();assert.equal(a.api.state.data.clients.length,63);assert.equal(a.writes,0);assert.equal(a.migrations,0);assert.equal(a.api.sharedSync.phase,'synced');assert.equal(JSON.parse(a.storage.get(KEY+'.backupBeforeRemoteLoad')).data.clients.length,50);assert.deepEqual(clone(a.api.state.data.unknownRoot),{preserved:true});
   for(const model of ['operational','management','listing']){const before=JSON.stringify(a.api.state.data),rows=a.api.buildClientSummaryRows();assert.equal(rows.length,63);assert.equal(a.api.clientReportIndicators(rows).total,63);a.api.generateClientsSummaryPdf(rows,['client'],{model});assert.ok(a.pdf.includes('Base comercial partilhada'));assert.ok(a.pdf.includes('13/10/2026'));assert.equal(JSON.stringify(a.api.state.data),before);assert.equal(a.writes,0)}
   a.api.state.data.clients[0].phone='new-phone';a.api.save();assert.equal(a.api.sharedSync.phase,'pending');assert.ok(a.api.commercialDataOriginLabel().includes('Dados locais'));await a.api.syncRemote();assert.equal(a.writes,1);assert.equal(a.upstream.clients[0].phone,'new-phone');assert.equal(a.api.sharedSync.phase,'synced');assert.equal(a.storage.has(KEY+'.pendingSync'),false);a.api.flushPendingSyncOnUnload();assert.equal(a.writes,1);

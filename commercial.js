@@ -3872,6 +3872,12 @@ async function loadRemoteData(){
     sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite};
     if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
     const differs=syncComparable(state.data)!==syncComparable(remote);
+    // A confirmed remote response can still be an older restored database.
+    if(differs&&sharedStoreMayRegress(state.data,remote)){
+      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
+      sharedSync.phase='conflict';sharedSync.error='POSSIBLE_SHARED_ROLLBACK';return {shouldSave:false};
+    }
     if((hasPendingLocalSync()||sharedSync.dirty||generation!==sharedSync.generation)&&differs){
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       if(sharedSync.base&&sharedSync.revision===result.revision&&syncComparable(sharedSync.base)===syncComparable(remote)){
@@ -3887,6 +3893,21 @@ async function loadRemoteData(){
   finally{renderSharedSyncStatus()}
 }
 let saveTimer=null;
+function sharedStoreMayRegress(local,remote){
+  for(const key of ['clients','events','agents']){
+    const incoming=new Map((remote[key]||[]).map(item=>[String(item.id),item]));
+    for(const item of local[key]||[]){
+      const other=incoming.get(String(item.id));
+      if(!other)return true;
+      if(syncComparable(item)!==syncComparable(other)&&!hasPendingLocalSync())return true;
+      const latest=value=>Math.max(0,...['updated','updatedAt','createdAt'].map(field=>Date.parse(value[field])||0));
+      if(latest(item)>latest(other))return true;
+    }
+  }
+  // Prices/states have no reliable per-field clock: any difference requires explicit review.
+  return ['finalPrices','statuses','salePrices','priceHistory','saleCommissions','unavailableReasons','statusEventIds','salePriceEventIds'].some(key=>
+    Object.keys(local[key]||{}).some(id=>syncComparable(local[key][id])!==syncComparable(remote[key]?.[id])));
+}
 function saveLocalOnly(){
   localStorage.setItem(KEY, JSON.stringify(state.data));
 }
@@ -3948,10 +3969,17 @@ function backupLocalBeforeRemoteLoad(localData, remoteData){
   try{
     const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
     if(!hasBusinessData(local)||syncComparable(local)===syncComparable(remote))return true;
+    const previous=localStorage.getItem(LOCAL_REMOTE_BACKUP_KEY);
+    if(previous&&syncComparable(JSON.parse(previous).data)!==syncComparable(local)){
+      const prefix=LOCAL_REMOTE_BACKUP_KEY+'.archive.'+Date.now();let key=prefix,index=0;
+      while(localStorage.getItem(key))key=prefix+'.'+(++index);
+      localStorage.setItem(key,previous);
+    }
     localStorage.setItem(LOCAL_REMOTE_BACKUP_KEY,JSON.stringify({
       createdAt:new Date().toISOString(),
       reason:'Backup automático antes de substituir dados locais por dados do Google Sheets',
-      data:local
+      data:local,
+      remoteData:remote
     }));
     return true;
   }catch(err){
@@ -4052,7 +4080,7 @@ function renderSharedSyncStatus(){
     if(!badge){badge=document.createElement('button');badge.id='commercialSyncBadge';badge.type='button';badge.className='ux-sync-indicator';header.appendChild(badge)}
     badge.textContent=label;badge.dataset.phase=sharedSync.phase;badge.title=commercialDataOriginLabel();badge.setAttribute('aria-label','Ver detalhes da sincronização: '+label);badge.onclick=()=>bar.scrollIntoView({block:'start',behavior:'smooth'});
   }
-  const message=sharedSync.error==='STORE_SIZE_LIMIT'?'A base excede o limite preventivo de 50 000 caracteres por célula da fonte. A gravação foi recusada sem truncar dados. As alterações locais estão preservadas; contacte o administrador para rever a capacidade antes de voltar a sincronizar.':sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.error==='UNAUTHENTICATED'?'A sessão terminou e o pedido foi recusado. Renove o acesso. As alterações locais estão preservadas e não foram confirmadas pela base partilhada.':sharedSync.phase==='offline'?(!hasBusinessData(state.data)?'Não existe cópia comercial local neste navegador. Não foi possível carregar a base partilhada. Os dados comerciais não estão confirmados e as gravações remotas estão bloqueadas.':sharedSync.dirty?'Não foi possível confirmar a gravação. As alterações permanecem locais, sem confirmação de sincronização. Releia a fonte ou retome a operação pendente antes de voltar a gravar.':'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.'):sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
+  const message=sharedSync.error==='STORE_SIZE_LIMIT'?'A base excede a capacidade configurada para o armazenamento comercial. A gravação foi recusada sem truncar dados. As alterações locais estão preservadas; contacte o administrador para rever a capacidade antes de voltar a sincronizar.':sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.error==='UNAUTHENTICATED'?'A sessão terminou e o pedido foi recusado. Renove o acesso. As alterações locais estão preservadas e não foram confirmadas pela base partilhada.':sharedSync.phase==='offline'?(!hasBusinessData(state.data)?'Não existe cópia comercial local neste navegador. Não foi possível carregar a base partilhada. Os dados comerciais não estão confirmados e as gravações remotas estão bloqueadas.':sharedSync.dirty?'Não foi possível confirmar a gravação. As alterações permanecem locais, sem confirmação de sincronização. Releia a fonte ou retome a operação pendente antes de voltar a gravar.':'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.'):sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
   let recovery=false;try{recovery=!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
   bar.innerHTML=`<div><strong>${esc(label)}</strong>${message?`<p>${esc(message)}</p>`:''}${sharedSync.verified&&!sharedSync.canWrite?'<p>Gravação remota desativada neste ambiente.</p>':''}${sharedSync.lastConfirmedAt?`<small>Última confirmação: ${esc(new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}))}</small>`:''}</div><div class="top-actions"><button type="button" class="ghost-button compact-button" data-sync-retry ${sharedSync.busy||sharedSync.phase==='loading'?'disabled':''}>${sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite?'Sincronizar':'Tentar novamente'}</button>${sharedSync.phase==='conflict'?'<button type="button" class="ghost-button compact-button" data-sync-review>Rever diferenças</button>':''}${recovery&&!sharedSync.verified?'<button type="button" class="ghost-button compact-button" data-sync-recover>Retomar gravação pendente</button>':''}${sharedSync.error==='UNAUTHENTICATED'?'<a class="ghost-link" href="/access.html">Renovar acesso</a>':''}</div>`;
   bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};
