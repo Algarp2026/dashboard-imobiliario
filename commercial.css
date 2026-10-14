@@ -446,6 +446,42 @@ body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#
 .ux-priority--high{color:#943b32;background:#faeeeb}.ux-priority--medium{color:#765616;background:#f8f3e7}.ux-priority--low{color:#46615d;background:#edf3f1}
 .ux-recommendation-open{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#245b45}
 .ux-client-recommendation{margin-bottom:18px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+
+/* Client profile: layout state only, within the existing commercial workspace. */
+.ux-client-profile-active>.section-heading,.ux-client-profile-active>.filters-grid,.ux-client-profile-active>#clientFilterSummary{display:none}
+.ux-client-profile-active .client-layout{display:block}
+.ux-client-profile-active #clientsList{display:none}
+.ux-app-shell .ux-client-profile-active #clientDetail{border:0;border-radius:0;background:transparent;width:100%}
+.ux-client-profile-active .ux-client-workspace__top{position:static;padding:22px 0 18px;border-radius:0;background:transparent}
+.ux-client-profile-active .ux-client-tabs{position:sticky;top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 12px);z-index:10;background:rgba(249,251,252,.98);border-bottom:1px solid #dce0df;padding:0;backdrop-filter:blur(10px)}
+.ux-client-profile-active .ux-client-tabs>button{flex:0 0 auto;font-size:14px;padding:16px 22px;color:#666766}
+.ux-client-profile-active .ux-client-tabs>button[aria-selected=true]{color:#343333;border-bottom-color:#343333;background:#eef0ee}
+.ux-client-profile-active .ux-client-workspace__content{padding:28px 0;max-width:1240px}
+.ux-client-profile-active .ux-client-title{align-items:flex-start}
+.ux-app-shell .ux-client-profile-active .ux-client-title h2{font-size:30px;color:#343333;margin:12px 0 0;line-height:1.2}
+.ux-client-return{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;color:var(--muted);margin-bottom:22px}
+.ux-client-return>span{margin-left:auto}
+.ux-client-return .ux-text-button{display:inline-flex;gap:8px;align-items:center}
+.ux-client-profile-active .ux-client-open{display:none}
+.panel:not(.ux-client-profile-active) .ux-client-return>[data-client-return],.panel:not(.ux-client-profile-active) #clientDetail .ux-client-tabs,.panel:not(.ux-client-profile-active) #clientDetail .ux-client-workspace__content{display:none}
+.panel:not(.ux-client-profile-active) .ux-client-workspace__top{position:static}
+.ux-client-profile-active .ux-client-contact{font-size:13px;display:flex;gap:10px 22px;flex-wrap:wrap;margin:16px 0 0}
+.ux-client-last-interaction{font-size:12px;color:var(--text);margin:14px 0 0;display:flex;gap:8px 14px;flex-wrap:wrap;line-height:1.6}
+.ux-client-last-interaction>span,.ux-client-last-interaction>time{color:var(--muted)}
+.ux-client-profile-active #clientDetail .ux-client-facts{grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin:22px 0 28px}
+.ux-preference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:0;margin:24px 0}
+.ux-preference-display{min-width:0;padding:18px 0;border-top:1px solid var(--line)}
+.ux-preference-display dt{font-size:12px;color:var(--muted);margin-bottom:12px}
+.ux-preference-display dd{display:flex;flex-wrap:wrap;gap:8px;margin:0;font-size:13px;line-height:1.5}
+.ux-preference-value{display:inline-flex;padding:6px 10px;background:#eef2f0;border:1px solid #d9e2dc;border-radius:5px;color:#343333;overflow-wrap:anywhere;max-width:100%}
+.ux-preference-display .is-uninformed{color:#7b817e;font-style:italic}
+.ux-preference-display .is-indifferent .ux-preference-value{background:#f3f4f4;border-color:#dfe2e1;color:#5a635e}
+.ux-unit-negotiation h3 .muted{font-weight:400;margin-left:10px}
+.ux-client-profile-active .ux-client-details>summary{font-size:14px;padding:16px 0}
+.ux-client-profile-active .primary-button{background:#343333}
+.ux-client-profile-active .client-sticky-actions{background:#fff;border-color:#e0e3e1}
+@media(max-width:1100px){.ux-client-profile-active .ux-client-tabs>button{padding:15px;font-size:13px}.ux-client-profile-active .ux-client-workspace__content{padding:22px 0}.ux-preference-grid{gap:14px}}
+@media(max-width:760px){.ux-client-profile-active .ux-client-workspace__top{padding:16px 0}.ux-app-shell .ux-client-profile-active .ux-client-title h2{font-size:25px}.ux-client-profile-active .ux-client-title{display:flex;gap:12px;flex-wrap:wrap}.ux-client-return{margin-bottom:18px}.ux-client-return>span{display:none}.ux-client-profile-active .ux-client-tabs>button{padding:14px 12px;font-size:12px}.ux-client-profile-active .ux-client-workspace__content{padding:20px 0}.ux-client-profile-active #clientDetail .ux-client-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.ux-preference-grid{grid-template-columns:1fr;gap:0}.ux-client-profile-active .ux-client-contact{font-size:12px;gap:10px}.ux-unit-negotiation .crm-detail-section__heading{align-items:flex-start}.ux-unit-negotiation h3 .muted{display:block;margin:6px 0 0}}
 .ux-recommendation-item h4{font-size:15px;line-height:1.45;margin:0;overflow-wrap:anywhere}
 .ux-recommendation-item p{font-size:13px;color:var(--muted);line-height:1.65;margin:10px 0;overflow-wrap:anywhere}
 .ux-recommendation-references{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
