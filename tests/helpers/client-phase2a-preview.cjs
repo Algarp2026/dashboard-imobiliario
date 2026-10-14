@@ -1,9 +1,9 @@
 'use strict';
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const repo=path.resolve(__dirname,'../..'),port=5194;
+const repo=path.resolve(__dirname,'../..'),port=Number(process.env.PHASE2A_TEST_PORT)||5194;
 // Test process only: no env file, production secrets, Google calls or disk CRM store.
 Object.assign(process.env,{COMMERCIAL_ACCESS_PASSWORD:'View-Phase2A-Teste',COMMERCIAL_ACCESS_SECRET:crypto.randomBytes(32).toString('hex'),VERCEL_ENV:'preview',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-token',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true'});
-const session=require('../../server/session.js'),access=require('../../api/access.js'),api=require('../../api/commercial-data.js'),makeStore=require('./apps-script-store.js'),fixture=require('./client-phase2a-fixture.js');
+const session=require('../../server/session.js'),access=require('../../api/access.js'),api=require('../../api/commercial-data.js'),makeStore=require('./apps-script-store.js'),fixture=require(process.env.PHASE2B_FIXTURE==='true'?'./client-phase2b-fixture.js':'./client-phase2a-fixture.js');
 let store=makeStore(fixture()),reads=0,writes=0,failure='',delay=0;
 global.fetch=async(url,options)=>{
   if(url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'fictitious-access'});
@@ -15,7 +15,7 @@ global.fetch=async(url,options)=>{
   if(failure==='write-failure'&&call.function!=='crmRead')return Response.json({done:true,response:{result:{ok:false,code:'WRITE_INCOMPLETE',sourceId:'test-sheet',environment:'test'}}});
   return Response.json({done:true,response:{result:store.context[call.function](...call.parameters)}});
 };
-const allowed=new Set(['commercial.html','commercial.css','commercial.js','commercial-client-preferences.js','commercial-recommendations.js','data.json','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','vendor/lucide.min.js']);
+const allowed=new Set(['commercial.html','commercial.css','commercial.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','data.json','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','vendor/lucide.min.js']);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.jpg':'image/jpeg','.pdf':'application/pdf','.png':'image/png'};
 http.createServer(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');const url=new URL(req.url,'http://127.0.0.1:'+port),name=url.pathname.slice(1)||'commercial.html';
@@ -29,6 +29,7 @@ http.createServer(async(req,res)=>{
         if(req.headers.origin!=='http://127.0.0.1:'+port){reply.status(403).json({ok:false});return}
         const input=req.body||{};
         if(input.reset){store=makeStore(fixture());reads=0;writes=0}
+        if(process.env.PHASE2B_FIXTURE==='true'&&input.commercialChange){const data=store.data;for(const key of ['statuses','finalPrices'])if(input.commercialChange[key])Object.assign(data[key],input.commercialChange[key]);const result=store.write({data,baseRevision:store.revision,requestId:'test-change-'+crypto.randomUUID()});if(!result.ok)throw Error('Isolated change failed')}
         failure=['','offline','write-failure'].includes(input.failure)?input.failure:'';delay=Math.min(3000,Math.max(0,Number(input.delay)||0));reply.json({ok:true});return;
       }
       if(name==='api/test-meta'){const data=store.data;reply.json({clients:data.clients.length,events:data.events.length,reads,writes,revision:store.revision,source:'fictitious in-memory test store',productionNetwork:false});return}

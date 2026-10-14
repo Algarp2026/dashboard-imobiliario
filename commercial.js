@@ -1882,6 +1882,98 @@ function recordClientPreferenceChange(c,updated){
   state.data.events.push({id:id(),clientId:c.id,type:'Preferências recebidas',date:today(),time:currentTimeValue(),fractions:[],preferences:JSON.parse(JSON.stringify(c.preferences)),previousPreferences,previousManualPreferences,preferenceBudget:Number(c.budget)||0,...(Object.hasOwn(c,'budgetMin')?{budgetMin:c.budgetMin}:{}),...(Object.hasOwn(c,'budgetMax')?{budgetMax:c.budgetMax}:{}),notes:''});
   recalculateResumoCliente(c.id);
 }
+function clientFractionSource(){
+  const current=sharedSync.verified&&sharedSync.phase==='synced'&&!sharedSync.dirty&&!sharedSync.busy;
+  return commercialRecommendationInput().fractions.map(row=>{
+    const f=getF(row.number),rawPrice=state.data.finalPrices?.[row.number],recorded=Object.hasOwn(state.data.finalPrices||{},row.number)&&Number.isFinite(Number(rawPrice))&&Number(rawPrice)>0;
+    const status=state.data.statuses?.[row.number],statusRecorded=Object.hasOwn(state.data.statuses||{},row.number)&&STATUS.includes(status);
+    return{...row,currentPrice:recorded?finalPrice(f):null,priceConfirmed:recorded&&current,status:statusRecorded?status:null,statusConfirmed:statusRecorded&&current,sourceCurrent:current,floorLabel:f.floorLabel,abp:f.abp,parking:f.parking,totalArea:f.totalArea,terrace:f.terrace};
+  });
+}
+function clientFractionBrowse(c){
+  if(commercialUx.fractionBrowse?.clientId!==c.id)commercialUx.fractionBrowse={clientId:c.id,filter:'all',search:'',manualOpen:false};
+  return commercialUx.fractionBrowse;
+}
+function clientFractionDraft(c){return commercialUx.fractionSelectionDraft?.clientId===c.id?commercialUx.fractionSelectionDraft:null}
+function clientFractionSelected(c){return clientFractionDraft(c)?.values||presentationSelection(c)}
+function clientFractionStatus(row){return row.status?(row.statusConfirmed?row.status:row.status+' · por confirmar'):'Disponibilidade não confirmada'}
+function clientFractionPrice(row){return row.currentPrice?displayMoney(row.currentPrice)+(row.priceConfirmed?'':' · cópia local, por confirmar'):'Preço comercial não confirmado'}
+function clientFractionCards(c,rows){
+  const selected=new Set(clientFractionSelected(c)),busy=!!clientFractionDraft(c)?.saving||!!clientFractionDraft(c)?.checking;
+  return rows.map(row=>`<article class="ux-fraction-option" data-client-fraction="${row.number}"><header><h4>Apt. ${row.number}</h4><span class="${row.statusConfirmed?badge(row.status):'badge badge--neutral'}">${esc(clientFractionStatus(row))}</span></header><p>${esc(row.typology)} · Piso ${esc(row.floorLabel||'não informado')} · ${esc(row.orientation||'Orientação não informada')}</p><p class="muted small">${row.abp>0?'ABP '+area(row.abp):'ABP não informada'}</p><strong class="ux-fraction-option-price">${esc(clientFractionPrice(row))}</strong>${row.explanation?`<p class="ux-fraction-explanation">${esc(row.explanation)}</p>`:''}<footer><button class="ux-text-button" type="button" data-fraction-details="${row.number}">${uxIcon('eye')}Detalhes</button><button class="ghost-button compact-button" type="button" data-fraction-select="${row.number}" aria-pressed="${selected.has(row.number)}" ${busy?'disabled':''}>${uxIcon(selected.has(row.number)?'check':'plus')}${selected.has(row.number)?'Retirar':'Selecionar'}</button></footer></article>`).join('');
+}
+function clientFractionWorkspaceMarkup(c){
+  const engine=window.THE_VIEW_FRACTION_RECOMMENDATIONS,p=engine.profile(c),browse=clientFractionBrowse(c);
+  const preference=(key,label)=>[label,p.choices[key].state==='selected'?window.THE_VIEW_CLIENT_PREFERENCES.projection(p.choices[key]):p.choices[key].state==='indifferent'?'Indiferente':p.choices[key].state==='legacy'?p.choices[key].legacyText:'Não informado'];
+  const filterUnavailable=key=>key==='within'&&!p.min&&!p.max||key==='plus5'&&p.maxSource!=='declared';
+  return`<section id="clientFractionWorkspace"><div class="crm-detail-section__heading"><h3>Frações</h3><button class="ux-text-button" type="button" data-fraction-preferences>${uxIcon('sliders-horizontal')}Preferências</button></div>${clientFactsMarkup([preference('typology','Tipologias'),['Investimento mínimo',p.min?displayMoney(p.min):'Não informado'],[p.maxSource==='legacy'?'Orçamento legado (limite)':'Investimento máximo',p.max?displayMoney(p.max):'Não informado'],preference('floor','Pisos'),preference('orientation','Orientações'),['Alternativas até +5%',p.maxSource==='declared'?displayMoney(p.alternativeMax):'Sem tolerância calculada']])}<p class="muted small" id="clientFractionSourceNotice" role="status"></p><div id="clientFractionSelection" aria-live="polite"></div><div class="ux-fraction-filters" role="group" aria-label="Filtrar recomendações">${[['all','Todas as recomendações'],['main','Correspondências principais'],['alternatives','Alternativas próximas'],['within','Dentro do orçamento'],['plus5','Até +5%']].map(([key,label])=>`<button class="ghost-button compact-button" type="button" data-fraction-filter="${key}" aria-pressed="${browse.filter===key}" ${filterUnavailable(key)?'disabled title="Investimento não informado para este filtro"':''}>${label}</button>`).join('')}</div><div id="clientFractionRecommendations"></div><details id="clientFractionManual" class="ux-client-details" ${browse.manualOpen?'open':''}><summary>Consultar todas as frações (${state.fractions.length})</summary><label class="field"><span>Pesquisar fração</span><input id="clientFractionSearch" type="search" value="${attr(browse.search)}" placeholder="Fração, tipologia, piso ou orientação"></label><div id="clientFractionManualCount" class="muted small" role="status"></div><div id="clientFractionManualResults" class="ux-fraction-manual-results"></div></details></section>`;
+}
+function refreshClientFractionResults(){
+  refreshClientPreparedConditions();
+  const root=el.clientDetail?.querySelector('#clientFractionWorkspace'),c=client(state.selectedClientId),engine=window.THE_VIEW_FRACTION_RECOMMENDATIONS;
+  if(!root||!c||!engine)return;
+  const rows=clientFractionSource(),result=engine.evaluate(c,rows),browse=clientFractionBrowse(c),draft=clientFractionDraft(c),selected=clientFractionSelected(c),filtered=engine.filter(result,browse.filter);
+  root.querySelector('#clientFractionSourceNotice').textContent=rows[0]?.sourceCurrent?'Preços e estados explícitos da última base confirmada. Valores em falta não são inferidos.':'Base por confirmar: os valores registados são cópias locais, não condições comerciais verificadas. As recomendações exigem confirmação da fonte.';
+  const selection=root.querySelector('#clientFractionSelection');
+  selection.innerHTML=`<div class="ux-fraction-selection-heading"><strong>${selected.length} ${selected.length===1?'fração selecionada':'frações selecionadas'}${draft?' · por guardar':''}</strong><div class="top-actions">${draft?`<button class="primary-button compact-button" type="button" data-fraction-save ${draft.saving||draft.checking?'disabled':''}>${uxIcon('check')}Guardar seleção</button><button class="ghost-button compact-button" type="button" data-fraction-cancel ${draft.saving||draft.checking?'disabled':''}>Cancelar</button>`:''}<button class="ux-text-button" type="button" data-ux-client-action="select-presentation">${uxIcon('list-checks')}Adicionar frações</button></div></div>${selected.length?`<div class="ux-fraction-selected">${selected.map(n=>{const row=rows.find(f=>f.number===n);return`<button class="ux-preference-chip" type="button" data-fraction-select="${n}" ${draft?.saving||draft?.checking?'disabled':''}>Apt. ${n} ${uxIcon('x')}</button>${!row||!row.statusConfirmed||row.status!=='Disponível'?`<span class="ux-fraction-warning">Apt. ${n}: ${esc(row?clientFractionStatus(row):'referência não encontrada')}. Seleção mantida; confirmar condições.</span>`:''}`}).join('')}</div>`:''}`;
+  root.querySelector('#clientFractionRecommendations').innerHTML=!result.profile.known?`<p class="muted">${esc(result.profile.message)}</p>`:[['main','Correspondências principais'],['alternative','Alternativas próximas']].map(([group,label])=>{const groupRows=filtered.filter(row=>row.group===group);return`<section class="ux-client-section"><h3>${label} <span class="muted small">${groupRows.length}</span></h3>${groupRows.length?`<div class="ux-fraction-options">${clientFractionCards(c,groupRows)}</div>`:'<p class="muted small">Nenhuma fração com condições confirmadas neste grupo e filtro.</p>'}</section>`}).join('');
+  const manual=engine.search(rows,browse.search);root.querySelector('#clientFractionManualCount').textContent=`${manual.length} ${manual.length===1?'fração encontrada':'frações encontradas'}`;
+  root.querySelector('#clientFractionManualResults').innerHTML=manual.length?clientFractionCards(c,manual):'<p class="muted">Nenhuma fração encontrada.</p>';
+  root.querySelectorAll('[data-fraction-filter]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.fractionFilter===browse.filter));renderUxIcons();
+}
+function refreshClientPreparedConditions(){
+  if(!window.THE_VIEW_FRACTION_RECOMMENDATIONS||!el.clientDetail)return;
+  const rows=clientFractionSource();
+  el.clientDetail.querySelectorAll('[data-prepared-price]').forEach(cell=>{const row=rows.find(f=>f.number===Number(cell.dataset.preparedPrice));if(row)cell.textContent=clientFractionPrice(row)});
+  el.clientDetail.querySelectorAll('[data-prepared-status]').forEach(cell=>{const row=rows.find(f=>f.number===Number(cell.dataset.preparedStatus));if(row)cell.innerHTML=`<span class="${row.statusConfirmed?badge(row.status):'badge badge--neutral'}">${esc(clientFractionStatus(row))}</span>`});
+}
+async function confirmClientFractionAddition(n,approvals){
+  const row=clientFractionSource().find(f=>f.number===n);if(!row)return false;
+  if(row.statusConfirmed&&row.status==='Disponível')return true;
+  const signature=JSON.stringify([row.status,row.statusConfirmed,sharedSync.revision]);
+  if(approvals.get(n)===signature)return true;
+  const allowed=await confirmUser(`Apt. ${n}: ${clientFractionStatus(row)}. Esta fração não está confirmada como disponível para comercialização normal. Incluir apenas na seleção preparatória do cliente? Isto não altera disponibilidade, reservas, vendas ou autorizações comerciais.`,'Confirmar inclusão na seleção');
+  if(allowed)approvals.set(n,signature);return allowed;
+}
+async function saveClientFractionSelection(clientId,values,original,approvals){
+  const c=client(clientId);
+  if(!c||JSON.stringify(presentationSelection(c))!==original){await notifyUser('A seleção mudou durante a edição. Cancele e reabra antes de guardar. Nenhuma seleção foi substituída.','Rever seleção');return false}
+  for(const n of values)if(!getF(n)){await notifyUser(`Apt. ${n}: referência não encontrada. Reveja a seleção antes de guardar.`,'Rever seleção');return false}
+  const previous=presentationSelection(c);
+  for(const n of values)if(!previous.includes(n)&&!await confirmClientFractionAddition(n,approvals))return false;
+  // A confirmation dialog may span a remote refresh; do not overwrite a changed selection.
+  if(c!==client(clientId)||JSON.stringify(presentationSelection(c))!==original){await notifyUser('A base mudou. Reabra a seleção antes de guardar.','Rever seleção');return false}
+  if(updatePresentationSelection(c,values)){const confirmed=await persistClientChange();clientSaveFeedback(confirmed,'Seleção guardada na base partilhada.')}
+  return true;
+}
+function openClientFractionDetails(n){
+  const row=clientFractionSource().find(f=>f.number===n);if(!row)return;
+  document.getElementById('clientFractionInfo')?.remove();const modal=document.createElement('div');modal.id='clientFractionInfo';modal.className='modal-backdrop';
+  modal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="clientFractionInfoTitle"><button class="modal-close" type="button" aria-label="Fechar">${uxIcon('x')}</button><h2 id="clientFractionInfoTitle">Apt. ${n}</h2><p>${esc(clientFractionStatus(row))}</p><strong>${esc(clientFractionPrice(row))}</strong>${clientFactsMarkup([['Tipologia',row.typology],['Piso',row.floorLabel],['Orientação',row.orientation],['ABP',row.abp>0?area(row.abp):''],['Varanda / Terraço',row.terrace>0?area(row.terrace):''],['Estacionamento',row.parking]])}</div>`;
+  const confirmedAt=Date.parse(sharedSync.lastConfirmedAt);if(Number.isFinite(confirmedAt)){const reference=document.createElement('p');reference.className='muted small';reference.textContent='Referência da última leitura: '+new Date(confirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'});modal.querySelector('.modal').appendChild(reference)}
+  const overflow=document.body.style.overflow,trigger=document.activeElement;modal.querySelector('button').onclick=()=>{modal.remove();document.body.style.overflow=overflow;if(trigger?.isConnected)trigger.focus({preventScroll:true})};document.body.appendChild(modal);document.body.style.overflow='hidden';renderUxIcons();modal.querySelector('button').focus();
+}
+function bindClientFractionWorkspace(c){
+  const root=el.clientDetail.querySelector('#clientFractionWorkspace');if(!root)return;
+  refreshClientFractionResults();const browse=clientFractionBrowse(c);
+  root.querySelector('#clientFractionSearch').oninput=event=>{browse.search=event.target.value;refreshClientFractionResults()};
+  root.querySelector('#clientFractionManual').ontoggle=event=>{browse.manualOpen=event.target.open};
+  root.onclick=async event=>{
+    const button=event.target.closest('[data-fraction-filter],[data-fraction-select],[data-fraction-save],[data-fraction-cancel],[data-fraction-preferences],[data-fraction-details]');if(!button)return;
+    event.preventDefault();event.stopPropagation();const data=button.dataset;let draft=clientFractionDraft(c);
+    if(data.fractionFilter){browse.filter=data.fractionFilter;refreshClientFractionResults();return}
+    if('fractionPreferences'in data){activateClientDetailTab('preferences',true);return}
+    if(data.fractionDetails){openClientFractionDetails(Number(data.fractionDetails));return}
+    if(draft?.saving||draft?.checking)return;
+    if('fractionCancel'in data){commercialUx.fractionSelectionDraft=null;refreshClientFractionResults();return}
+    if('fractionSave'in data){if(!draft)return;draft.saving=true;refreshClientFractionResults();const saved=await saveClientFractionSelection(c.id,draft.values,draft.original,draft.approvals);draft.saving=false;if(saved)commercialUx.fractionSelectionDraft=null;RenderFlow.clientChanged();return}
+    const n=Number(data.fractionSelect);
+    if(!draft)draft={clientId:c.id,original:JSON.stringify(presentationSelection(c)),values:[...presentationSelection(c)],approvals:new Map()};
+    if(draft.values.includes(n))draft.values=draft.values.filter(value=>value!==n);
+    else{draft.checking=true;commercialUx.fractionSelectionDraft=draft;refreshClientFractionResults();const allowed=await confirmClientFractionAddition(n,draft.approvals);draft.checking=false;if(!allowed){if(JSON.stringify(uniqNum(draft.values))===draft.original)commercialUx.fractionSelectionDraft=null;refreshClientFractionResults();return}draft.values.push(n)}
+    commercialUx.fractionSelectionDraft=draft;refreshClientFractionResults();
+  };
+}
 function clientNegotiationMarkup(c,events,fractions){
   const closing=events.filter(ev=>/proposta|reserva|venda|desist/i.test(ev.type||''));
   return fractions.length?fractions.map(f=>{
@@ -1916,22 +2008,24 @@ function renderClientDetail(){
   const overview=clientFactsMarkup([['Último contacto',formatCommercialDate(summary.lastContact)],['Investimento',clientInvestmentLabel(c)],['Frações apresentadas',presented.length]]);
   const fractionRows=clientFractionCommercialRows(c,chronological);
   const fractionHistory=fractionRows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Fração</th><th>Estado com cliente</th><th>Preço informado</th><th>Data</th><th>Observação</th></tr></thead><tbody>${fractionRows.map(row=>`<tr><td>${getF(row.fraction)?fractionReference(getF(row.fraction)):`Apt. ${row.fraction}`}</td><td>${esc(row.status)}</td><td>${row.informedPrice?displayMoney(row.informedPrice):'—'}</td><td>${esc(formatCommercialDate(row.date))}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'';
+  const alternativeAccess=window.THE_VIEW_FRACTION_RECOMMENDATIONS?`<button class="ux-text-button" type="button" data-open-client-profile data-profile-tab="fractions">${uxIcon('arrow-up-right')}Abrir recomendações</button>`:'<p class="muted small">O motor de alternativas próximas será disponibilizado na Fase 2.</p>';
   const panels={
     data:heading('Informação principal',`<button class="ghost-button compact-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar dados</button>`)+clientFactsMarkup([['Nome completo',c.name],['Telefone / WhatsApp',c.phone],['Email',c.email],['Origem do contacto',c.origin||c.originManual?clientOriginLabel(c):''],['Estado comercial',c.stage]])+`<details id="clientDataDetails" class="ux-client-details"><summary>Informações complementares</summary>${clientFactsMarkup([['Nacionalidade',c.nationality],['NIF',c.nif],['Agente',associatedAgent?.name||c.agent],['Imobiliária',c.agency||associatedAgent?.agency]])}<div class="ux-client-observations"><h4>Observações gerais</h4><p>${esc(c.notes||'Sem observações registadas.')}</p></div></details><section class="ux-client-section">${heading('Resumo comercial')}${overview}<div id="clientRecommendation">${clientRecommendationMarkup(clientAutomaticRecommendation(recommendation))}</div>${clientNextActionMarkup(followup,recommendation,true)}</section>`,
     preferences:heading('Preferências',action('preferences','Editar preferências','sliders-horizontal'))+`<dl class="ux-preference-grid">${clientPreferenceDisplay('Tipologias',prefs.typology)}${clientPreferenceDisplay('Pisos',prefs.floor)}${clientPreferenceDisplay('Orientações',prefs.orientation)}</dl>${clientFactsMarkup([['Orçamento indicativo',c.budget?displayMoney(c.budget):''],['Investimento mínimo',c.budgetMin?displayMoney(c.budgetMin):''],['Investimento máximo',c.budgetMax||c.budget?displayMoney(c.budgetMax||c.budget):''],['Objetivo da aquisição',prefs.objective],['Prazo de decisão',prefs.decisionTime]])}<div class="ux-client-observations"><h4>Outras preferências</h4><p>${esc(prefs.summary||'Não informadas.')}</p></div>`,
-    fractions:heading('Frações',action('select-presentation','Selecionar frações','list-checks'))+recommendedFractions+`<section class="ux-client-section">${heading('Alternativas próximas',action('select-presentation','Consultar outras frações','building-2'))}<p class="muted small">O motor de alternativas próximas será disponibilizado na Fase 2.</p></section><section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`,
-    presentation:heading('Apresentação',action('presentation','Registar apresentação','presentation')+action('documentation','Registar documentação','send'))+`<section id="clientPreparedFractions">${heading(`Apresentação preparada <span class="muted small">${preparation.length} frações</span>`,action('select-presentation','Adicionar / retirar frações','list-checks'))}${preparation.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipologia / Piso</th><th>Preço comercial oficial</th><th>Disponibilidade</th></tr></thead><tbody>${preparation.map(f=>`<tr><td>${fractionReference(f)}</td><td>${esc(f.typology)} · ${esc(f.floorLabel)}</td><td>${displayMoney(finalPrice(f))}</td><td><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span></td></tr>`).join('')}</tbody></table></div><div class="ux-client-secondary-actions">${action('proposal','Definir preços e gerar PDF','file-text')}</div>`:'<p class="muted">Ainda não existem frações selecionadas para apresentação.</p>'}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Apresentações realizadas <span class="muted small">${presented.length} frações</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientPresentationHistory" class="ux-client-details"><summary>Histórico de apresentações e documentação (${presentationEvents.length})</summary><div class="timeline ux-client-timeline">${presentationEvents.length?presentationEvents.map(clientTimelineItem).join(''):'<p class="muted">Sem apresentações ou documentação registadas.</p>'}</div></details>`,
+    fractions:heading('Frações',action('select-presentation','Selecionar frações','list-checks'))+recommendedFractions+`<section class="ux-client-section">${heading('Alternativas próximas',action('select-presentation','Consultar outras frações','building-2'))}${alternativeAccess}</section><section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`,
+    presentation:heading('Apresentação',action('presentation','Registar apresentação','presentation')+action('documentation','Registar documentação','send'))+`<section id="clientPreparedFractions">${heading(`Apresentação preparada <span class="muted small">${preparation.length} frações</span>`,action('select-presentation','Adicionar / retirar frações','list-checks'))}${preparation.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipologia / Piso</th><th>Preço comercial oficial</th><th>Disponibilidade</th></tr></thead><tbody>${preparation.map(f=>`<tr><td>${fractionReference(f)}</td><td>${esc(f.typology)} · ${esc(f.floorLabel)}</td><td data-prepared-price="${f.number}">${displayMoney(finalPrice(f))}</td><td data-prepared-status="${f.number}"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span></td></tr>`).join('')}</tbody></table></div><div class="ux-client-secondary-actions">${action('proposal','Definir preços e gerar PDF','file-text')}</div>`:'<p class="muted">Ainda não existem frações selecionadas para apresentação.</p>'}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Apresentações realizadas <span class="muted small">${presented.length} frações</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientPresentationHistory" class="ux-client-details"><summary>Histórico de apresentações e documentação (${presentationEvents.length})</summary><div class="timeline ux-client-timeline">${presentationEvents.length?presentationEvents.map(clientTimelineItem).join(''):'<p class="muted">Sem apresentações ou documentação registadas.</p>'}</div></details>`,
     negotiation:heading('Negociação',action('proposal','Criar proposta','file-text')+action('stage','Atualizar estado comercial','tag'))+clientNegotiationMarkup(c,chronological,related)+`<section class="ux-client-section">${heading('Registar negociação')}<div class="ux-client-negotiation"><label class="field"><span>Evento comercial</span><select id="clientNegotiationType">${['Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência'].map(type=>`<option>${esc(type)}</option>`).join('')}</select></label>${action('negotiation','Registar evento','plus')}</div></section><section class="ux-client-section">${heading('Próxima ação do cliente')}${clientNextActionMarkup(followup,recommendation)}<div class="ux-client-secondary-actions">${action('contact','Registar contacto','phone')}${action('note','Adicionar observação','message-square')}</div></section><details id="clientFullHistory" class="ux-client-details" open><summary>Histórico comercial completo (${evs.length})</summary><div class="top-actions">${action('event','Adicionar evento','plus')}</div><div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<p class="muted">Sem interações registadas.</p>'}</div></details>`
   };
   if(commercialUx.clientProfileOpen&&window.THE_VIEW_CLIENT_PREFERENCES){
     const content=panels.preferences;
     panels.preferences=inlinePreferencesMarkup(c)+(commercialUx.preferenceDraft?.clientId===c.id?'':content.slice(content.indexOf('<dl')))+archivedPreferencesMarkup(c);
   }
+  if(commercialUx.clientProfileOpen&&window.THE_VIEW_FRACTION_RECOMMENDATIONS)panels.fractions=clientFractionWorkspaceMarkup(c)+`<section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`;
   el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-client-return" aria-label="Navegação do cliente"><button class="ux-text-button" type="button" data-client-return>${uxIcon('arrow-left')}Voltar aos clientes</button><span>Ficha de cliente</span><button class="ghost-button compact-button ux-client-open" type="button" data-open-client-profile>${uxIcon('arrow-up-right')}Abrir ficha completa</button></nav><header class="client-detail-header"><div class="ux-client-title"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2 tabindex="-1">${esc(c.name||'Cliente sem nome')}</h2></div><button class="ghost-button compact-button" type="button" data-client-header-edit>${uxIcon('pencil')}Editar dados</button></div><div class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}${c.origin||c.originManual?`<span>Origem: ${esc(clientOriginLabel(c))}</span>`:''}${registered?`<span>Registo: ${esc(formatCommercialDate(registered.slice(0,10))==='—'?registered:formatCommercialDate(registered.slice(0,10)))}</span>`:''}</div>${latest?`<p class="ux-client-last-interaction"><span>Última interação</span> ${esc(latest.type||'Evento')} <time>${esc(formatTimelineDate(latest.date,latest.time))}</time></p>`:''}</header></div><div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
   el.clientDetail.querySelector('[data-client-header-edit]')?.addEventListener('click',()=>openClientModal(c.id));
   el.clientDetail.querySelector('[data-client-return]')?.addEventListener('click',closeClientProfile);
-  el.clientDetail.querySelector('[data-open-client-profile]')?.addEventListener('click',()=>openClientProfile(c.id));
+  el.clientDetail.querySelectorAll('[data-open-client-profile]').forEach(button=>button.addEventListener('click',()=>{openClientProfile(c.id);if(button.dataset.profileTab)activateClientDetailTab(button.dataset.profileTab,true)}));
   el.clientDetail.querySelectorAll('[data-edit-client-event]').forEach(btn=>btn.addEventListener('click',()=>openEventModal(btn.dataset.editClientEvent,'client')));
   el.clientDetail.querySelector('.ux-client-tabs').onkeydown=event=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.target.getAttribute('role')!=='tab')return;
@@ -1942,6 +2036,7 @@ function renderClientDetail(){
   const matchingList=el.clientDetail.querySelector('.ux-suggested-fractions');if(matchingList)matchingList.scrollTop=matchingScroll;
   renderUxIcons();activateClientDetailTab(commercialUx.clientDetailTab);
   bindInlinePreferences(c);
+  bindClientFractionWorkspace(c);
 }
 function activateClientDetailTab(key,focus=false){
   key=({followup:'negotiation',summary:'data'})[key]||key;
@@ -2008,25 +2103,28 @@ function clientSuggestedFractionTiles(fractions,matches=[]){
 }
 function openPresentationSelectionModal(){
   const c=client(state.selectedClientId);if(!c)return;
-  const selected=new Set(presentationSelection(c)),matches=commercialClientRecommendation(c)?.matching.matches||[],suggested=new Set(matches.map(f=>f.number));
+  const enhanced=!!window.THE_VIEW_FRACTION_RECOMMENDATIONS,original=JSON.stringify(presentationSelection(c)),approvals=clientFractionDraft(c)?.approvals||new Map();
+  const selected=new Set(enhanced?clientFractionSelected(c):presentationSelection(c)),matches=enhanced?window.THE_VIEW_FRACTION_RECOMMENDATIONS.evaluate(c,clientFractionSource()).main:commercialClientRecommendation(c)?.matching.matches||[],suggested=new Set(matches.map(f=>f.number));
   document.getElementById('presentationSelectionModal')?.remove();
   const backdrop=document.createElement('div');backdrop.id='presentationSelectionModal';backdrop.className='modal-backdrop';
   backdrop.innerHTML=`<div class="modal"><button class="modal-close" type="button" data-close-selection aria-label="Fechar">${uxIcon('x')}</button><h2>Selecionar frações para apresentar</h2><label class="field"><span>Pesquisar fração</span><input type="search" id="presentationSelectionSearch" placeholder="Fração, tipologia, piso ou orientação"></label><div class="ux-selection-tools"><span id="presentationSelectionCount" role="status" aria-live="polite"></span><button class="ux-text-button" type="button" data-select-suggested>${uxIcon('list-checks')}Selecionar recomendadas</button><button class="ux-text-button" type="button" data-clear-selection>${uxIcon('eraser')}Limpar</button></div><div class="ux-presentation-picker"></div><div class="modal-actions"><button class="ghost-button" type="button" data-close-selection>Cancelar</button><button class="primary-button" type="button" data-save-selection>Guardar seleção</button></div></div>`;
   const render=()=>{
     const search=norm(backdrop.querySelector('input').value);
-    const fractions=state.fractions.filter(f=>!search||norm([`Apt. ${f.number}`,f.name,f.typology,`Piso ${f.floorLabel}`,f.orientation].join(' ')).includes(search));
+    const fractions=enhanced?window.THE_VIEW_FRACTION_RECOMMENDATIONS.search(clientFractionSource(),search).map(row=>getF(row.number)):state.fractions.filter(f=>!search||norm([`Apt. ${f.number}`,f.name,f.typology,`Piso ${f.floorLabel}`,f.orientation].join(' ')).includes(search));
     backdrop.querySelector('#presentationSelectionCount').textContent=`${selected.size} ${selected.size===1?'fração selecionada':'frações selecionadas'}`;
-    backdrop.querySelector('.ux-presentation-picker').innerHTML=fractions.length?fractions.map(f=>`<button class="ux-presentation-choice" type="button" data-pick-fraction="${f.number}" aria-pressed="${selected.has(f.number)}"><span><strong>Apt. ${f.number}</strong> · ${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><span>${displayMoney(finalPrice(f))}${suggested.has(f.number)?' · Recomendada':''}</span>${uxIcon(selected.has(f.number)?'check':'plus')}</button>`).join(''):'<p class="muted">Nenhuma fração encontrada.</p>';
+    const rows=enhanced?clientFractionSource():[];
+    backdrop.querySelector('.ux-presentation-picker').innerHTML=fractions.length?fractions.map(f=>{const row=rows.find(row=>row.number===f.number);return`<button class="ux-presentation-choice" type="button" data-pick-fraction="${f.number}" aria-pressed="${selected.has(f.number)}"><span><strong>Apt. ${f.number}</strong> · ${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span><span class="${row&&!row.statusConfirmed?'badge badge--neutral':badge(statusOf(f))}">${esc(row?clientFractionStatus(row):statusOf(f))}</span><span>${row?esc(clientFractionPrice(row)):displayMoney(finalPrice(f))}${suggested.has(f.number)?' · Recomendada':''}</span>${uxIcon(selected.has(f.number)?'check':'plus')}</button>`}).join(''):'<p class="muted">Nenhuma fração encontrada.</p>';
     renderUxIcons();
   };
   const close=()=>{backdrop.remove();document.body.style.overflow='';document.querySelector('[data-ux-client-action="select-presentation"]')?.focus({preventScroll:true})};
-  backdrop.onclick=event=>{
+  backdrop.onclick=async event=>{
     const button=event.target.closest('button');if(!button)return;
+    if(backdrop.dataset.saving==='true')return;
     if(button.hasAttribute('data-close-selection'))close();
-    else if(button.hasAttribute('data-pick-fraction')){const n=Number(button.dataset.pickFraction);selected.has(n)?selected.delete(n):selected.add(n);render();backdrop.querySelector(`[data-pick-fraction="${n}"]`)?.focus({preventScroll:true})}
+    else if(button.hasAttribute('data-pick-fraction')){const n=Number(button.dataset.pickFraction);if(selected.has(n))selected.delete(n);else{backdrop.dataset.saving='true';const allowed=!enhanced||await confirmClientFractionAddition(n,approvals);backdrop.dataset.saving='false';if(!allowed)return;selected.add(n)}render();backdrop.querySelector(`[data-pick-fraction="${n}"]`)?.focus({preventScroll:true})}
     else if(button.hasAttribute('data-select-suggested')){suggested.forEach(n=>selected.add(n));render()}
     else if(button.hasAttribute('data-clear-selection')){selected.clear();render()}
-    else if(button.hasAttribute('data-save-selection')){if(updatePresentationSelection(c,[...selected]))save();close();RenderFlow.clientChanged()}
+    else if(button.hasAttribute('data-save-selection')){if(enhanced){backdrop.dataset.saving='true';button.disabled=true;const saved=await saveClientFractionSelection(c.id,[...selected],original,approvals);backdrop.dataset.saving='false';button.disabled=false;if(!saved)return;commercialUx.fractionSelectionDraft=null}else if(updatePresentationSelection(c,[...selected]))save();close();RenderFlow.clientChanged()}
   };
   backdrop.querySelector('input').oninput=render;document.body.appendChild(backdrop);document.body.style.overflow='hidden';render();ensureCommercialModalLabels();backdrop.querySelector('input').focus();
 }
@@ -4282,6 +4380,7 @@ function renderSharedSyncStatus(){
   bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};
   const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
   const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);renderAll()}};
+  refreshClientFractionResults();
 }
 
 function appDialog({title='Aviso',message='',confirmText='OK',cancelText='',input=false,defaultValue='',danger=false}={}){
