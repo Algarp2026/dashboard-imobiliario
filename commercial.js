@@ -3872,7 +3872,13 @@ async function loadRemoteData(){
     sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite};
     if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
     const differs=syncComparable(state.data)!==syncComparable(remote);
-    if((hasPendingLocalSync()||sharedSync.dirty||generation!==sharedSync.generation)&&differs){
+    // A confirmed remote response can still be an older restored database.
+    if(differs&&sharedStoreMayRegress(state.data,remote,meta,result.revision)){
+      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
+      sharedSync.phase='conflict';sharedSync.error='POSSIBLE_SHARED_ROLLBACK';return {shouldSave:false};
+    }
+    if((hasPendingLocalSync()||sharedSync.dirty||hasUnconfirmedLocalData(state.data)||generation!==sharedSync.generation)&&differs){
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       if(sharedSync.base&&sharedSync.revision===result.revision&&syncComparable(sharedSync.base)===syncComparable(remote)){
         sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.phase='pending';persistSyncMeta();
@@ -3887,6 +3893,55 @@ async function loadRemoteData(){
   finally{renderSharedSyncStatus()}
 }
 let saveTimer=null;
+function sharedStoreMayRegress(local,remote,meta,remoteRevision){
+  const equal=(a,b)=>syncComparable(a)===syncComparable(b),object=value=>value&&typeof value==='object'&&!Array.isArray(value);
+  const base=meta?normalizeData(meta.base):null;
+  if(base&&remoteRevision===meta.revision&&!equal(remote,base))return true;
+  // Only a clean confirmed snapshot may receive a unilateral remote edit automatically.
+  const remoteOnly=!!base&&remoteRevision!==meta.revision&&equal(local,base);
+  const editable={
+    clients:new Set('name phone email nif nationality origin originManual agentId agent agency budget manualBudget budgetMin budgetMax stage stageManual manualStage manualNextStep manualNextFollowup manualNextActionDefinedAt manualNextActionCompletedAt notes updated updatedAt preferencesManuallyEdited manualFractions fractions presentationSelection'.split(' ')),
+    agents:new Set('name agency ami phone email defaultCommission notes updated updatedAt'.split(' ')),
+    events:new Set('clientId type date time amount interest followup followupDate nextStep nextActionDefinedAt nextActionCompletedAt objections notes withAgent agentId commissionType commissionValue commissionAmount channel updated updatedAt fractions'.split(' '))
+  };
+  const preferenceFields=new Set('typology floor orientation objective decisionTime summary'.split(' '));
+  function editablePath(path){
+    if(path.length===3&&editable[path[0]]?.has(path[2]))return true;
+    if(path.length===4&&path[0]==='clients'&&['preferences','manualPreferences'].includes(path[2])&&preferenceFields.has(path[3]))return true;
+    if(path.length===4&&path[0]==='clients'&&path[2]==='commercialSummary'&&['lastContact','nextFollowup','nextStep','presentedFractions'].includes(path[3]))return true;
+    return path.length===2&&['finalPrices','statuses','salePrices','unavailableReasons','statusEventIds','salePriceEventIds'].includes(path[0]);
+  }
+  function timestamp(value){
+    if(typeof value!=='string')return 0;
+    const pt=value.match(/^(\d{2})\/(\d{2})\/(\d{4}),?\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if(pt)return new Date(+pt[3],+pt[2]-1,+pt[1],+pt[4],+pt[5],+(pt[6]||0)).getTime();
+    return /^\d{4}-\d{2}-\d{2}T/.test(value)?Date.parse(value)||0:0;
+  }
+  function losesData(l,r,path){
+    if(equal(l,r))return false;
+    if(l===undefined)return false;
+    if(r===undefined)return true;
+    if(l===null||l==='')return false;
+    if(object(l)&&object(r)){
+      if(['updated','updatedAt','createdAt'].some(key=>timestamp(l[key])>timestamp(r[key])))return true;
+      return Object.keys(l).some(key=>losesData(l[key],r[key],[...path,key]));
+    }
+    if(Array.isArray(l)&&Array.isArray(r)){
+      if(path.length===1&&editable[path[0]]){
+        const incoming=new Map(r.map(item=>[String(item.id),item]));
+        return l.some(item=>!incoming.has(String(item.id))||losesData(item,incoming.get(String(item.id)),[...path,String(item.id)]));
+      }
+      if(remoteOnly&&editablePath(path))return false;
+      // Unknown arrays and histories may grow, but never lose or rewrite existing entries silently.
+      return l.length>r.length||l.some((item,index)=>!equal(item,r[index]));
+    }
+    if(object(l)&&!Object.keys(l).length)return false;
+    if(Array.isArray(l)&&!l.length)return false;
+    // Unrecognised fields (including import metadata) require explicit resolution on change.
+    return !(remoteOnly&&editablePath(path));
+  }
+  return losesData(local,remote,[]);
+}
 function saveLocalOnly(){
   localStorage.setItem(KEY, JSON.stringify(state.data));
 }
@@ -3947,11 +4002,18 @@ function mergeCommercialData(remoteData={},localData={}){
 function backupLocalBeforeRemoteLoad(localData, remoteData){
   try{
     const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
-    if(!hasBusinessData(local)||syncComparable(local)===syncComparable(remote))return true;
+    if(syncComparable(local)===syncComparable(normalizeData())||syncComparable(local)===syncComparable(remote))return true;
+    const previous=localStorage.getItem(LOCAL_REMOTE_BACKUP_KEY);
+    if(previous&&syncComparable(JSON.parse(previous).data)!==syncComparable(local)){
+      const prefix=LOCAL_REMOTE_BACKUP_KEY+'.archive.'+Date.now();let key=prefix,index=0;
+      while(localStorage.getItem(key))key=prefix+'.'+(++index);
+      localStorage.setItem(key,previous);
+    }
     localStorage.setItem(LOCAL_REMOTE_BACKUP_KEY,JSON.stringify({
       createdAt:new Date().toISOString(),
       reason:'Backup automático antes de substituir dados locais por dados do Google Sheets',
-      data:local
+      data:local,
+      remoteData:remote
     }));
     return true;
   }catch(err){
@@ -4052,7 +4114,7 @@ function renderSharedSyncStatus(){
     if(!badge){badge=document.createElement('button');badge.id='commercialSyncBadge';badge.type='button';badge.className='ux-sync-indicator';header.appendChild(badge)}
     badge.textContent=label;badge.dataset.phase=sharedSync.phase;badge.title=commercialDataOriginLabel();badge.setAttribute('aria-label','Ver detalhes da sincronização: '+label);badge.onclick=()=>bar.scrollIntoView({block:'start',behavior:'smooth'});
   }
-  const message=sharedSync.error==='STORE_SIZE_LIMIT'?'A base excede o limite preventivo de 50 000 caracteres por célula da fonte. A gravação foi recusada sem truncar dados. As alterações locais estão preservadas; contacte o administrador para rever a capacidade antes de voltar a sincronizar.':sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.error==='UNAUTHENTICATED'?'A sessão terminou e o pedido foi recusado. Renove o acesso. As alterações locais estão preservadas e não foram confirmadas pela base partilhada.':sharedSync.phase==='offline'?(!hasBusinessData(state.data)?'Não existe cópia comercial local neste navegador. Não foi possível carregar a base partilhada. Os dados comerciais não estão confirmados e as gravações remotas estão bloqueadas.':sharedSync.dirty?'Não foi possível confirmar a gravação. As alterações permanecem locais, sem confirmação de sincronização. Releia a fonte ou retome a operação pendente antes de voltar a gravar.':'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.'):sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
+  const message=sharedSync.error==='STORE_SIZE_LIMIT'?'A base excede a capacidade configurada para o armazenamento comercial. A gravação foi recusada sem truncar dados. As alterações locais estão preservadas; contacte o administrador para rever a capacidade antes de voltar a sincronizar.':sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.error==='UNAUTHENTICATED'?'A sessão terminou e o pedido foi recusado. Renove o acesso. As alterações locais estão preservadas e não foram confirmadas pela base partilhada.':sharedSync.phase==='offline'?(!hasBusinessData(state.data)?'Não existe cópia comercial local neste navegador. Não foi possível carregar a base partilhada. Os dados comerciais não estão confirmados e as gravações remotas estão bloqueadas.':sharedSync.dirty?'Não foi possível confirmar a gravação. As alterações permanecem locais, sem confirmação de sincronização. Releia a fonte ou retome a operação pendente antes de voltar a gravar.':'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.'):sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
   let recovery=false;try{recovery=!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
   bar.innerHTML=`<div><strong>${esc(label)}</strong>${message?`<p>${esc(message)}</p>`:''}${sharedSync.verified&&!sharedSync.canWrite?'<p>Gravação remota desativada neste ambiente.</p>':''}${sharedSync.lastConfirmedAt?`<small>Última confirmação: ${esc(new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}))}</small>`:''}</div><div class="top-actions"><button type="button" class="ghost-button compact-button" data-sync-retry ${sharedSync.busy||sharedSync.phase==='loading'?'disabled':''}>${sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite?'Sincronizar':'Tentar novamente'}</button>${sharedSync.phase==='conflict'?'<button type="button" class="ghost-button compact-button" data-sync-review>Rever diferenças</button>':''}${recovery&&!sharedSync.verified?'<button type="button" class="ghost-button compact-button" data-sync-recover>Retomar gravação pendente</button>':''}${sharedSync.error==='UNAUTHENTICATED'?'<a class="ghost-link" href="/access.html">Renovar acesso</a>':''}</div>`;
   bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};

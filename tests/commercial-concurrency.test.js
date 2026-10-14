@@ -4,6 +4,7 @@ const api=require('../api/commercial-data.js'),makeStore=require('./helpers/apps
 const originalEnv={...process.env},originalFetch=global.fetch,KEY='theView.crmCommercial.v2';
 const initial={clients:[{id:'test-client',name:'Fictitious concurrency client',phone:'original',email:'original@example.test',preferences:{},fractions:[]}],events:[],agents:[],finalPrices:{1:700000},statuses:{},salePrices:{},priceHistory:{},saleCommissions:{},unavailableReasons:{},statusEventIds:{},salePriceEventIds:{},unknown:{preserved:true}};
 Object.assign(process.env,{COMMERCIAL_ACCESS_SECRET:'fictitious-concurrency-secret',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-refresh',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true',VERCEL_ENV:'preview'});
+initial.unknown.padding='x'.repeat(160000);
 const google=makeStore(initial);
 global.fetch=async(url,options)=>{
   assert.ok(['https://oauth2.googleapis.com/token','https://script.googleapis.com/v1/scripts/test-deployment:run'].includes(url));
@@ -23,9 +24,14 @@ function browser(age){
   return{api:context.app,storage,responses,bridge};
 }
 async function main(){
-  const a=browser(1000),b=browser(2000);await Promise.all([a.api.loadExcel(),b.api.loadExcel()]);const revision=a.api.sharedSync.revision,oldTicket=a.api.sharedSync.ticket;
+  const a=browser(1000),b=browser(2000),observer=browser(3000);await Promise.all([a.api.loadExcel(),b.api.loadExcel(),observer.api.loadExcel()]);const revision=a.api.sharedSync.revision,oldTicket=a.api.sharedSync.ticket;
   assert.equal(revision,b.api.sharedSync.revision);assert.equal(revision,google.revision);assert.equal(a.api.sharedSync.verified,true);assert.equal(b.api.sharedSync.verified,true);
   b.api.state.data.clients[0].phone='first-user';b.api.save();assert.equal(await b.api.syncRemote(),true);assert.equal(b.responses.at(-1).status,200);const afterFirst=JSON.stringify(google.data);
+  await observer.api.loadRemoteData();assert.equal(observer.api.sharedSync.phase,'synced');assert.equal(observer.api.sharedSync.verified,true);
+  assert.equal(observer.api.state.data.clients[0].phone,'first-user');assert.equal(JSON.parse(observer.storage.get(KEY)).clients[0].phone,'first-user');
+  assert.equal(observer.api.sharedSync.revision,google.revision);assert.equal(observer.responses.filter(r=>r.method==='POST').length,0);
+  assert.equal(JSON.parse(observer.storage.get(KEY+'.backupBeforeRemoteLoad')).data.clients[0].phone,'original');
+  assert.equal(observer.api.state.data.unknown.padding.length,160000);assert.equal(JSON.stringify(google.data),afterFirst);
   a.api.state.data.clients[0].email='second-user@example.test';a.api.save();assert.equal(await a.api.syncRemote(),false);assert.equal(a.responses.at(-1).status,409);assert.equal(JSON.stringify(google.data),afterFirst);assert.equal(a.api.state.data.clients[0].email,'second-user@example.test');assert.equal(JSON.parse(a.storage.get(KEY)).clients[0].email,'second-user@example.test');assert.ok(a.storage.has(KEY+'.pendingSync'));
   const manipulated=await a.bridge('/api/commercial-data',{method:'POST',headers:{'X-CRM-Read-Ticket':oldTicket},body:JSON.stringify({action:'save',requestId:'stale-reconciliation',baseRevision:google.revision,data:a.api.state.data})});assert.equal(manipulated.status,403);assert.equal(JSON.stringify(google.data),afterFirst);
   const base=a.api.sharedSync.base;await a.api.loadRemoteData();assert.equal(a.api.sharedSync.phase,'conflict');const remote=a.api.sharedSync.remote,merge=a.api.reconcileSharedData(base,a.api.state.data,remote.data);assert.equal(merge.conflicts.length,0);assert.equal(merge.data.clients[0].phone,'first-user');assert.equal(merge.data.clients[0].email,'second-user@example.test');assert.equal(JSON.stringify(google.data),afterFirst);
@@ -33,6 +39,6 @@ async function main(){
   b.api.state.data.clients[0].phone='first-user-newer';b.api.save();assert.equal(await b.api.syncRemote(),true);const latest=JSON.stringify(google.data);
   assert.equal(await a.api.syncRemote(),false);assert.equal(a.responses.at(-1).status,409);assert.equal(JSON.stringify(google.data),latest);assert.equal(JSON.parse(a.storage.get(KEY)).clients[0].email,'second-user@example.test');
   assert.ok(google.trace.filter(item=>['read','write','rows','append'].includes(item.type)).every(item=>item.held));
-  console.log(JSON.stringify({sameInitialRevision:revision,firstStatus:200,staleStatus:409,firstDataIntact:true,secondLocalCachePreserved:true,revisionManipulationStatus:403,afterReconciliationRaceStatus:409,scriptLockChecked:true,visualSimulation:false,realGoogle:false}));
+  console.log(JSON.stringify({sameInitialRevision:revision,cleanBrowserReceivesRemoteEdit:true,observerWrites:0,firstStatus:200,staleStatus:409,firstDataIntact:true,secondLocalCachePreserved:true,revisionManipulationStatus:403,afterReconciliationRaceStatus:409,scriptLockChecked:true,visualSimulation:false,realGoogle:false}));
 }
 main().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>{global.fetch=originalFetch;for(const key of Object.keys(process.env))if(!(key in originalEnv))delete process.env[key];Object.assign(process.env,originalEnv)});
