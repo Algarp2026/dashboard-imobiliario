@@ -25,7 +25,11 @@ Sem B6, a leitura de B2 funciona sem criar folhas ou migrar. A primeira gravacao
 
 B6 invalido ou bloco corrompido falha fechado: nunca volta automaticamente ao B2 antigo. O checksum do B2 e comparado em cada operacao apos migracao para detetar um escritor legado. Essa deteccao nao substitui a revisao administrativa de publicacoes antigas.
 
-O browser bloqueia a substituicao se faltarem clientes/eventos/agentes existentes localmente, se houver registos divergentes sem uma operacao pendente, timestamps locais posteriores ou diferencas em precos/estados/historicos/comissoes locais. Preserva a chave atual, guarda as duas versoes no backup local e arquiva backups anteriores diferentes. A resolucao usa o modal existente, exportacao e confirmacao explicita. Uma base sem ancestral conhecido nao pode ser fundida automaticamente. Divergencias legitimas tambem podem pedir revisao: e uma escolha conservadora. Se localStorage estiver cheio, a substituicao e bloqueada; exportar copias antes de libertar espaco.
+O browser compara o JSON completo com `syncMeta.base`, a ultima base confirmada, e a revisao recebida. Quando a copia local coincide com essa base e chega uma revisao diferente, alteracoes unilaterais em campos editaveis conhecidos do CRM podem ser recebidas sem conflito nem gravacao adicional. Uma resposta que altera o conteudo mantendo a revisao confirmada e bloqueada. Alteracoes locais sao detetadas mesmo sem marcador de gravacao pendente e continuam a exigir reconciliacao de tres versoes.
+
+A comparacao percorre todos os campos, incluindo `majucaImportKey`, `majucaImportSummary`, campos desconhecidos na raiz e dentro de registos, arrays, flags falsas e valores zero. Campos desconhecidos/metadados nao sao tratados como campos editaveis seguros: alteracao, remocao ou perda exige resolucao explicita. Adicoes remotas que preservem a informacao local sao aceites; arrays desconhecidos/historicos existentes nao podem ser reescritos ou encurtados silenciosamente. Nenhum registo existente de cliente/evento/agente pode desaparecer automaticamente, mesmo com uma base confirmada: 63 clientes locais contra 24 remotos continua bloqueado.
+
+Timestamps ISO e do formato usado pelo CRM (`dd/mm/aaaa, hh:mm:ss`) ajudam a detetar retrocessos. Preserva a chave atual, guarda as duas versoes no backup local e arquiva backups anteriores diferentes, incluindo bases compostas apenas por metadados. A resolucao usa o modal existente, exportacao e confirmacao explicita. Uma base sem ancestral conhecido nao pode ser fundida automaticamente. Se localStorage estiver cheio, a substituicao e bloqueada; exportar copias antes de libertar espaco.
 
 ## Validacao executada
 
@@ -52,6 +56,9 @@ node --check config.js
 - Corrupcao da versao ativa e escritor legado detetados; sem fallback silencioso.
 - Dois browsers, API real do repositorio e Apps Script executado numa VM: primeiro 200, segundo 409, cache local preservada, ticket manipulado 403 e novo conflito depois de reconciliacao concorrente.
 - Base local com 63 clientes versus remota com 24, registo diferente sem timestamp, data local mais recente e preco diferente: substituicao bloqueada.
+- Navegador sem alteracoes locais recebe a edicao de um cliente feita por outro navegador, atualiza cache/base/revisao, conserva campos desconhecidos e nao envia POST. O teste atraves da API/Apps Script simulado usa uma base superior a 150.000 caracteres.
+- Doze cenarios de perda/retrocesso de metadados, campos desconhecidos e registos, com e sem base confirmada (24 casos), conservam snapshots local/remoto e nao gravam. Incluem import key/summary, campos desconhecidos aninhados, arrays, false, zero, null e strings vazias.
+- Preferencias e acompanhamento remotos conhecidos, refresh, revisao inconsistente, timestamps portugueses, alteracao local sem marcador e conflitos de metadados foram verificados.
 
 Google Sheets e OAuth sao simulados. Nenhuma destas verificacoes comprova quotas, latencia ou permissoes na conta Google real. Os testes existentes de capacidade da fase anterior foram atualizados para o novo contrato.
 
@@ -83,4 +90,5 @@ Se a versao ativa estiver corrompida, a API bloqueia operacoes normais: e necess
 - ScriptLock protege os participantes do mesmo projeto Apps Script. Outros projetos e edicoes manuais nao respeitam esse lock. Nao eliminar/reordenar linhas em StoreVersions nem editar manifestos.
 - Backups na mesma Sheet nao protegem contra exclusao da Sheet/conta. Manter copias privadas independentes.
 - Revisao continua a ser hash do conteudo, conforme protocolo existente, nao um contador monotono. Restaurar exatamente um conteudo anterior produz o mesmo hash; o ticket e a revisao devem ser relidos em cada recuperacao aprovada.
+- Uma revisao diferente nao prova ordem cronologica nem descendencia. Atualizacoes de campos conhecidos sem timestamp fiavel sao distinguidas por uma copia local limpa e a base confirmada; um rollback de igual forma e contagens pode ser indistinguivel. Mudancas de campos desconhecidos/metadados, remocoes de registos e historicos destrutivos continuam a exigir revisao explicita, mesmo que sejam legitimas. Os campos editaveis reconhecidos nao sao uma lista dos campos guardados: o JSON completo e sempre preservado e verificado.
 - Ainda falta validacao numa Sheet real de TESTES e revisao/aprovacao deste PR antes de qualquer migracao/publicacao.

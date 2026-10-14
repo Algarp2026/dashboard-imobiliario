@@ -42,6 +42,54 @@ function app(local,options={}){
   const api=context.syncTest;return{api,storage,requests,get upstream(){return upstream},set upstream(value){upstream=clone(value)},set failure(value){failure=value},set writeFault(value){writeFault=value},get writes(){return writes},get pdf(){return pdf},get migrations(){return context.migrations||0},context};
 }
 async function main(){
+  const metadataCases=[
+    ['import-key',d=>{d.majucaImportKey='new-import'},d=>{d.majucaImportKey='old-import'}],
+    ['import-summary',d=>{d.majucaImportSummary={key:'test',created:63,extra:{keep:true}}},d=>{d.majucaImportSummary.created=24}],
+    ['unknown-root',d=>{d.futureMetadata={value:'latest',extra:{keep:true}}},d=>{d.futureMetadata.value='old'}],
+    ['unknown-nested',d=>{d.clients[0].extra.value='latest'},d=>{d.clients[0].extra.value='old'}],
+    ['unknown-deleted',d=>{d.futureMetadata={keep:true}},d=>{delete d.futureMetadata}],
+    ['nested-deleted',d=>{d.clients[0].extra.value='keep'},d=>{delete d.clients[0].extra.value}],
+    ['unknown-array',d=>{d.futureEntries=[{v:1},{v:2}]},d=>{d.futureEntries.pop()}],
+    ['unknown-false',d=>{d.customFlag=false},d=>{delete d.customFlag}],
+    ['unknown-zero',d=>{d.customNumber=0},d=>{delete d.customNumber}],
+    ['unknown-null',d=>{d.customEmpty=null},d=>{delete d.customEmpty}],
+    ['unknown-empty',d=>{d.customEmpty=''},d=>{delete d.customEmpty}],
+    ['63-to-24',()=>{},d=>{d.clients=d.clients.slice(0,24)}]
+  ];
+  for(const [name,prepare,rollback] of metadataCases)for(const confirmed of [false,true]){
+    const current=root(63);prepare(current);const old=clone(current);rollback(old);
+    const guarded=app(current,{upstream:confirmed?current:old});
+    if(confirmed){await guarded.api.loadExcel();assert.equal(guarded.api.sharedSync.phase,'synced');guarded.upstream=old}
+    const before=JSON.stringify(guarded.api.state.data),cached=guarded.storage.get(KEY),meta=guarded.storage.get(KEY+'.syncMeta.v1');
+    await guarded.api.loadRemoteData();assert.equal(guarded.api.sharedSync.phase,'conflict',name+' confirmed='+confirmed);
+    assert.equal(JSON.stringify(guarded.api.state.data),before);assert.equal(guarded.storage.get(KEY),cached);
+    assert.equal(guarded.storage.get(KEY+'.syncMeta.v1'),meta);assert.equal(guarded.writes,0);
+    const backup=JSON.parse(guarded.storage.get(KEY+'.backupBeforeRemoteLoad'));assert.deepEqual(backup.data,JSON.parse(before));
+    assert.deepEqual(backup.remoteData,clone(guarded.api.normalizeData(old)));
+  }
+  const clean=app(root(63),{upstream:root(63)});await clean.api.loadExcel();
+  const newer=clone(clean.upstream);newer.clients[0].phone='Remote phone';newer.clients[0].updated='14/10/2026, 10:30:00';newer.clients[0].preferences.typology='T3';
+  clean.upstream=newer;await clean.api.loadRemoteData();assert.equal(clean.api.sharedSync.phase,'synced');assert.equal(clean.api.state.data.clients[0].phone,'Remote phone');
+  const again=app(undefined,{storage:clean.storage,upstream:newer});await again.api.loadExcel();assert.equal(again.api.sharedSync.phase,'synced');
+  const older=clone(newer);older.clients[0].phone='Old phone';older.clients[0].updated='13/10/2026, 10:30:00';again.upstream=older;
+  await again.api.loadRemoteData();assert.equal(again.api.sharedSync.phase,'conflict');assert.equal(again.api.state.data.clients[0].phone,'Remote phone');
+  const followup=app(root(2),{upstream:root(2)});await followup.api.loadExcel();
+  const planned=clone(followup.upstream);Object.assign(planned.clients[0],{manualNextStep:'Contactar',manualNextFollowup:'2026-11-02',manualNextActionDefinedAt:'2026-10-14T10:00:00Z',manualNextActionCompletedAt:'',commercialSummary:{nextStep:'Contactar',nextFollowup:'2026-11-02'}});
+  followup.upstream=planned;await followup.api.loadRemoteData();assert.equal(followup.api.sharedSync.phase,'synced');
+  const completed=clone(planned);completed.clients[0].manualNextActionCompletedAt='2026-10-14T11:00:00Z';completed.clients[0].commercialSummary.nextFollowup='';
+  followup.upstream=completed;await followup.api.loadRemoteData();assert.equal(followup.api.sharedSync.phase,'synced');assert.equal(followup.writes,0);
+  const inconsistent=app(root(2),{upstream:root(2)});await inconsistent.api.loadExcel();
+  const changedRevisionData=clone(inconsistent.upstream);changedRevisionData.clients[0].phone='Unexpected change';
+  const syncMeta=JSON.parse(inconsistent.storage.get(KEY+'.syncMeta.v1'));syncMeta.revision=createHash('sha256').update(JSON.stringify(changedRevisionData)).digest('hex');
+  inconsistent.storage.set(KEY+'.syncMeta.v1',JSON.stringify(syncMeta));inconsistent.upstream=changedRevisionData;
+  await inconsistent.api.loadRemoteData();assert.equal(inconsistent.api.sharedSync.phase,'conflict');assert.equal(inconsistent.api.state.data.clients[0].phone,undefined);
+  const unmarked=app(root(2),{upstream:root(2)});await unmarked.api.loadExcel();unmarked.api.state.data.unknownRoot.note='Local unsaved metadata';
+  await unmarked.api.loadRemoteData();assert.equal(unmarked.api.sharedSync.phase,'conflict');assert.equal(unmarked.api.state.data.unknownRoot.note,'Local unsaved metadata');
+  const conflictingBase=root(2);conflictingBase.majucaImportSummary={created:63};
+  const conflictingLocal=clone(conflictingBase),conflictingRemote=clone(conflictingBase);conflictingLocal.majucaImportSummary.created=64;conflictingRemote.majucaImportSummary.created=24;
+  const conflict=unmarked.api.reconcileSharedData(conflictingBase,conflictingLocal,conflictingRemote);assert.ok(conflict.conflicts.includes('majucaImportSummary.created'));assert.equal(conflict.data.majucaImportSummary.created,64);
+  const metadataOnly=app({majucaImportKey:'keep',futureMetadata:{flag:false}},{upstream:{}});
+  await metadataOnly.api.loadRemoteData();assert.equal(metadataOnly.api.sharedSync.phase,'conflict');assert.ok(metadataOnly.storage.has(KEY+'.backupBeforeRemoteLoad'));
   for(const scenario of ['missing-records','changed-without-timestamp','newer-record','price-change']){
     const local=root(63),remote=clone(local);
     if(scenario==='missing-records')remote.clients=remote.clients.slice(0,24);
@@ -97,6 +145,6 @@ async function main(){
   const simultaneous=clone(c.upstream);simultaneous.clients[0].phone='Different remote phone';assert.ok(c.api.reconcileSharedData(base,c.api.state.data,simultaneous).conflicts.length);assert.ok(c.api.commercialDataOriginLabel().includes('não reconciliada'));
   const unknown={...root(1),futureMetadata:{nested:{unrecognized:'Keep this'}}};const roundtrip=app(unknown);roundtrip.upstream=unknown;await roundtrip.api.loadExcel();assert.deepEqual(clone(roundtrip.api.state.data.futureMetadata),unknown.futureMetadata);
   roundtrip.api.state.data.clients[0].notes='Unmarked local difference';assert.equal(roundtrip.api.hasUnconfirmedLocalData(roundtrip.api.state.data),true);
-  console.log('secure sync client tests passed: 50/63 diagnostic, no startup migration or writes, offline safety, pending edits, conservative reconciliation, conflict denial, source labels, exact PDF counts and unknown fields');
+  console.log('secure sync client tests passed: remote-only edits, 24 rollback/metadata cases, unknown fields, base/revision checks, offline safety, pending edits, three-way conflicts and preserved reports');
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
