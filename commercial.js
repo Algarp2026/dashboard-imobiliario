@@ -69,7 +69,7 @@ const MAJUCA_IMPORT_RECORDS=[
   {id:'ibericatrio',name:'Ibéricatrio',role:'Comprador/lead, empresa ou intermediário, por confirmar',notes:['Manter exatamente esta identificação até confirmação.']}
 ];
 const MAX_COMPARE_FRACTIONS=4;
-const CLIENT_DETAIL_TABS=[['data','Dados','user-round'],['preferences','Preferências','sliders-horizontal'],['fractions','Frações','building-2'],['followup','Acompanhamento','messages-square'],['summary','Resumo','clipboard-list']];
+const CLIENT_DETAIL_TABS=[['data','Dados','user-round'],['preferences','Preferências','sliders-horizontal'],['fractions','Frações','building-2'],['presentation','Apresentação','presentation'],['negotiation','Negociação','messages-square']];
 const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,definingNextAction:false,nextActionFormSignature:'',data:loadDataLocal()};
 const el={};
 const sharedSync={phase:'loading',initialized:false,verified:false,revision:'',ticket:'',base:null,remote:null,lastConfirmedAt:readSyncMeta()?.lastConfirmedAt||'',canWrite:false,busy:false,dirty:hasPendingLocalSync()||hasUnconfirmedLocalData(state.data),generation:0,error:''};
@@ -115,7 +115,7 @@ function bind(){
   document.getElementById('saveEvent').onclick=saveEvent;
   el.clientSearch.oninput=()=>{state.cf.search=el.clientSearch.value;renderClients()};
   el.clientStageFilter.onchange=()=>{state.cf.stage=el.clientStageFilter.value;renderClients()};
-  el.selectedClient.onchange=()=>{commercialUx.clientDetailId='';state.selectedClientId=el.selectedClient.value;renderClients();renderClientDetail()};
+  el.selectedClient.onchange=()=>{openClientProfile(el.selectedClient.value);renderClients()};
   el.clientModal.onclick=e=>{if(e.target===el.clientModal)e.stopPropagation()};
   el.eventModal.onclick=e=>{if(e.target===el.eventModal)e.stopPropagation()};
 }
@@ -190,6 +190,8 @@ function ensureCrmFormFields(){
     field.dataset.clientScope=field.closest('#clientPreferenceFields')||['clientBudget','clientBudgetMin','clientBudgetMax'].includes(name)?'preferences':['clientName','clientPhone','clientEmail','clientOrigin','clientOriginManual'].includes(name)?'identity':name==='clientAgent'?'agent':['clientNif','clientNationality','clientAgency','clientNotes'].includes(name)?'additional':['clientNextStep','clientNextFollowup'].includes(name)?'plan':name==='clientStage'?'stage':name==='clientFractions'?'associate':'full';
   });
   ['clientPreferenceFields','clientInitialRequestFields'].forEach((name,index)=>{const section=document.getElementById(name);if(section)section.dataset.clientScope=index?'full':'preferences'});
+  const initial=document.getElementById('clientInitialRequestFields');
+  if(initial&&window.THE_VIEW_CLIENT_WORKFLOW){initial.dataset.clientScope='initial';initial.querySelectorAll('.field').forEach(field=>field.dataset.clientScope='initial')}
   const clientModal=document.getElementById('clientModal');
   if(clientModal&&!document.getElementById('clientAdditionalFields')){
     const details=document.createElement('details');details.id='clientAdditionalFields';details.dataset.clientScope='additional-section';details.className='crm-client-additional';
@@ -271,9 +273,9 @@ function renderEventSelectedFractionChips(){
 function clientOriginDisplayValue(value){return norm(value)==='portal imobiliario'?'Website The View':safe(value)}
 function populateClientOriginSelect(value=''){
   const select=el.clientOrigin||document.getElementById('clientOrigin');if(!select)return;
-  const selected=clientOriginDisplayValue(value)||'Website The View';
-  select.innerHTML=CLIENT_ORIGINS.map(origin=>`<option value="${attr(origin)}">${esc(origin)}</option>`).join('');
-  if(!CLIENT_ORIGINS.includes(selected))select.add(new Option(`${selected} (registo anterior)`,selected));
+  const selected=clientOriginDisplayValue(value);
+  select.innerHTML='<option value="">Não informada</option>'+CLIENT_ORIGINS.map(origin=>`<option value="${attr(origin)}">${esc(origin)}</option>`).join('');
+  if(selected&&!CLIENT_ORIGINS.includes(selected))select.add(new Option(`${selected} (registo anterior)`,selected));
   select.value=selected;
 }
 function toggleClientOriginManual(){
@@ -806,6 +808,7 @@ function applyUpdatedInitialPriceMigration(){
 function emptyPreferences(){return{typology:'',floor:'',orientation:'',objective:'',decisionTime:'',summary:''}}
 function cleanPreferences(value={}){
   return {
+    ...value,
     typology:safe(value.typology),
     floor:safe(value.floor),
     orientation:safe(value.orientation),
@@ -814,7 +817,7 @@ function cleanPreferences(value={}){
     summary:safe(value.summary)
   };
 }
-function hasPreferenceData(value={}){return Object.values(cleanPreferences(value)).some(Boolean)}
+function hasPreferenceData(value={}){return ['typology','floor','orientation','objective','decisionTime','summary'].some(key=>!!safe(value[key]))}
 function normalizeClientStage(stage){
   const value=norm(stage);
   const aliases={
@@ -832,10 +835,12 @@ function isReservationCancellationEvent(ev){return ev?.type==='Reserva cancelada
 function isAbandonmentEvent(ev){return ev?.type==='Desistência'}
 function stageFromEvent(ev){
   if(!ev)return '';
+  if(ev.negotiationVersion===1&&isAbandonmentEvent(ev))return '';
   if(isSaleEvent(ev))return 'Vendido';
   if(isReservationEvent(ev))return 'Reservado';
   if(isAbandonmentEvent(ev))return 'Desistiu';
-  if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida'].includes(ev.type))return 'Em negociação';
+  if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Nova proposta recebida','Aceitação','Rejeição'].includes(ev.type))return 'Em negociação';
+  if(ev.presentationHistory&&!isPresentationDraft(ev))return 'Apresentado';
   if(['Reunião realizada','Frações apresentadas','Preços informados','Reunião com cliente','Visita'].includes(ev.type))return 'Apresentado';
   if(['Preferências recebidas','Interessado'].includes(ev.type))return 'Qualificado';
   if(ev.type==='Pedido de informação recebido')return 'Novo Lead';
@@ -844,6 +849,8 @@ function stageFromEvent(ev){
 function sortedClientEvents(clientId){
   return (state.data.events||[]).map((ev,index)=>({ev,index})).filter(item=>item.ev.clientId===clientId).sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index))).map(item=>item.ev);
 }
+function eventInformedPrices(ev){return window.THE_VIEW_CLIENT_WORKFLOW?window.THE_VIEW_CLIENT_WORKFLOW.prices(ev):(ev?.informedPrices||[])}
+function isPresentationDraft(ev){return !!window.THE_VIEW_CLIENT_WORKFLOW?.isDraft(ev)}
 function eventFractionsPresented(ev){
   return ['Apresentação comercial','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva','Venda concluída','Venda','Visita','Reunião com cliente'].includes(ev.type);
 }
@@ -853,22 +860,24 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   const before=JSON.stringify(c);
   const events=sortedClientEvents(clientId);
   const manualPreferences=cleanPreferences(c.manualPreferences||c.preferences||{});
-  let preferences={...manualPreferences};
+  const consolidatedManual={...manualPreferences,...(c.preferences||{}),...Object.fromEntries(Object.keys(emptyPreferences()).map(key=>[key,manualPreferences[key]]))};
+  let preferences={...consolidatedManual};
   let budget=Number(c.manualBudget??c.budget)||0;
   let derivedStage=(hasPreferenceData(manualPreferences)||budget>0||(c.manualFractions||[]).length)?'Qualificado':'Novo Lead';
   const presented=new Set();
   const linkedFractions=new Set((c.manualFractions||c.fractions||[]).map(Number).filter(Boolean));
   const latestPrices=new Map();
 
-  events.forEach(ev=>{
+  events.filter(ev=>!isPresentationDraft(ev)).forEach(ev=>{
     (ev.fractions||[]).map(Number).filter(Boolean).forEach(n=>linkedFractions.add(n));
     if(eventFractionsPresented(ev))(ev.fractions||[]).forEach(n=>presented.add(Number(n)));
     if(ev.type==='Preferências recebidas'){
       const eventPreferences=cleanPreferences(ev.preferences||{});
-      Object.keys(eventPreferences).forEach(key=>{if(eventPreferences[key])preferences[key]=eventPreferences[key]});
+      Object.keys(emptyPreferences()).forEach(key=>{if(eventPreferences[key])preferences[key]=eventPreferences[key]});
       if(Number(ev.preferenceBudget)>0)budget=Number(ev.preferenceBudget);
     }
-    (ev.informedPrices||[]).forEach(item=>{
+    // Managed presentations are projected at read time; never rewrite legacy cached snapshots.
+    (ev.presentationHistory?[]:eventInformedPrices(ev)).forEach(item=>{
       const n=Number(item.fraction||item.unitId);
       if(n)latestPrices.set(n,{fraction:n,officialPrice:Number(item.officialPrice)||0,informedPrice:Number(item.informedPrice)||0,observation:safe(item.observation),date:ev.date||'',eventId:ev.id});
     });
@@ -879,8 +888,8 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
     }
   });
   if(c.preferencesManuallyEdited){
-    preferences={...manualPreferences};
-    budget=Number(c.manualBudget)||0;
+    preferences={...consolidatedManual};
+    budget=Number(manualPreferences.selectionV1?.version===1?c.budget:(c.manualBudget??c.budget))||0;
   }
 
   const criticalDerived=['Reservado','Vendido','Desistiu'].includes(derivedStage);
@@ -893,10 +902,11 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   c.preferences=preferences;
   c.budget=budget;
   c.fractions=uniqNum([...linkedFractions]);
-  const lastContact=events.slice().reverse().find(ev=>ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
+  const lastContact=window.THE_VIEW_CLIENT_WORKFLOW?window.THE_VIEW_CLIENT_WORKFLOW.contactInfo(c,events,today()).lastContact:events.slice().reverse().find(ev=>!isPresentationDraft(ev)&&ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
   const nextAction=clientSummaryFollowupInfo(c);
   const previousSummary=c.commercialSummary||{};
   c.commercialSummary={
+    ...previousSummary,
     presentedFractions:uniqNum([...presented]),
     lastInformedPrices:[...latestPrices.values()].sort((a,b)=>a.fraction-b.fraction),
     lastContact,
@@ -1301,12 +1311,13 @@ function renderClientActionBar(){
 }
 
 function clientSummaryFollowupContext(){
-  return window.THE_VIEW_RECOMMENDATIONS?.buildContext({events:state.data.events||[],now:new Date().toISOString()});
+  return window.THE_VIEW_RECOMMENDATIONS?.buildContext({events:(state.data.events||[]).filter(ev=>!isPresentationDraft(ev)),now:new Date().toISOString()});
 }
 function clientSummaryFollowupInfo(c,context=clientSummaryFollowupContext()){
   return context?window.THE_VIEW_RECOMMENDATIONS.followupInfo(c,context):{status:'none',date:'',step:'',label:'Sem ação',needsReview:false};
 }
 function clientSummaryLastContact(c,context=clientSummaryFollowupContext()){
+  if(window.THE_VIEW_CLIENT_WORKFLOW)return window.THE_VIEW_CLIENT_WORKFLOW.contactInfo(c,state.data.events||[],today()).lastContact;
   return context?window.THE_VIEW_RECOMMENDATIONS.lastContactDate?.(c,context)||'':'';
 }
 function clientSummaryPreferencesText(c){
@@ -1320,6 +1331,7 @@ function clientSummaryPreferencesText(c){
 }
 function clientSummaryFractionsText(c){
   const summary=c.commercialSummary||{},prices=new Map((summary.lastInformedPrices||[]).map(item=>[Number(item.fraction),Number(item.informedPrice)||0]));
+  sortedClientEvents(c.id).forEach(ev=>eventInformedPrices(ev).forEach(row=>prices.set(Number(row.fraction||row.unitId),Number(row.informedPrice)||0)));
   const fractions=uniqNum([...(summary.presentedFractions||[]),...prices.keys()]);
   return fractions.map(n=>prices.get(n)?`Apt. ${n}: ${money(prices.get(n))}`:`Apt. ${n}`).join(' · ')||'—';
 }
@@ -1341,10 +1353,11 @@ function buildClientSummaryRows(options={}){
     const manual=[evaluated?.primary,...(evaluated?.secondary||[])].find(rec=>rec?.code.startsWith('manual-'));
     const presented=clientPresentedFractionRows(c),linked=agent(c.agentId);
     const prices=new Map((c.commercialSummary?.lastInformedPrices||[]).map(item=>[Number(item.fraction),item]));
-    sortedClientEvents(c.id).forEach(ev=>(ev.informedPrices||[]).forEach(item=>prices.set(Number(item.fraction||item.unitId),item)));
+    sortedClientEvents(c.id).forEach(ev=>eventInformedPrices(ev).forEach(item=>prices.set(Number(item.fraction||item.unitId),item)));
     return{
       id:c.id,agentId:c.agentId||'',agent:uniq([linked?.name||c.agent,linked?.agency||c.agency]).join(' · ')||'—',origin:clientOriginLabel(c)||'—',
       client:c.name||'Cliente sem nome',status:normalizeClientStage(c.stage),preferences:clientSummaryPreferencesText(c),fractions:clientSummaryFractionsText(c),
+      ...(window.THE_VIEW_CLIENT_WORKFLOW?{contactState:window.THE_VIEW_CLIENT_WORKFLOW.contactInfo(c,state.data.events,today()).state,priorityClient:window.THE_VIEW_CLIENT_WORKFLOW.priority(c),priorityLabel:window.THE_VIEW_CLIENT_WORKFLOW.priority(c)?'Sim':'Não',daysWithoutContact:window.THE_VIEW_CLIENT_WORKFLOW.contactInfo(c,state.data.events,today()).days??'Sem contacto'}:{}),
       lastContact,lastContactLabel:formatCommercialDate(lastContact),followupStatus:followup.status,followupDate:followup.date,followupNeedsReview:followup.needsReview,
       followupLabel:followup.label+(followup.date?`: ${formatCommercialDate(followup.date)}`:''),
       nextStep:safe(followup.step)||'—',contact:uniq([c.phone,c.email]).join(' · ')||'—',
@@ -1363,11 +1376,12 @@ function clientReportOperationalRank(row){
 }
 function filterClientReportRows(rows,options={}){
   const statuses=new Set(options.statuses||STAGES.filter(stage=>!['Vendido','Desistiu'].includes(stage))),query=norm(options.search||''),followupFilter=options.followupFilter||'all';
-  const filtered=rows.filter(row=>statuses.has(row.status)&&(!query||norm(row.client).includes(query))&&(!options.agentId||options.agentId==='all'||row.agentId===options.agentId)&&(!options.priority||options.priority==='all'||row.priority===options.priority)&&(followupFilter==='all'||followupFilter==='undated-review'&&row.followupStatus==='undated'&&row.followupNeedsReview||row.followupStatus===followupFilter));
+  const filtered=rows.filter(row=>statuses.has(row.status)&&(!query||norm(row.client).includes(query))&&(!options.contactState||options.contactState==='all'||row.contactState===options.contactState)&&(!options.priorityClient||options.priorityClient==='all'||row.priorityClient===(options.priorityClient==='yes'))&&(!options.agentId||options.agentId==='all'||row.agentId===options.agentId)&&(!options.priority||options.priority==='all'||row.priority===options.priority)&&(followupFilter==='all'||followupFilter==='undated-review'&&row.followupStatus==='undated'&&row.followupNeedsReview||row.followupStatus===followupFilter));
   const statusOrder=new Map(STAGES.map((stage,index)=>[stage,index]));
   const priorities={'Alta':0,'Média':1,'Baixa':2,'—':3};
   const tie=(a,b)=>a.client.localeCompare(b.client,'pt-PT',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||''));
   filtered.sort((a,b)=>{
+    if(options.model==='portfolio'||options.sort==='portfolio')return(statusOrder.get(a.status)-statusOrder.get(b.status))||Number(b.priorityClient)-Number(a.priorityClient)||(a.lastContact||'0000').localeCompare(b.lastContact||'0000')||tie(a,b);
     if(options.sort==='name')return tie(a,b);
     if(options.sort==='status')return(statusOrder.get(a.status)-statusOrder.get(b.status))||tie(a,b);
     if(options.sort==='agent')return a.agent.localeCompare(b.agent,'pt-PT')||tie(a,b);
@@ -1385,12 +1399,13 @@ function clientReportIndicators(rows){
 }
 const CLIENT_REPORT_COLUMNS=[
   ['client','Cliente',40],['status','Estado comercial',27],['phone','Telefone',32],['email','E-mail',50],['origin','Origem',35],['agent','Agente',40],
+  ['contactState','Estado do Contacto',42],['priorityLabel','Cliente prioritário',25],['daysWithoutContact','Dias sem contacto',28],
   ['typology','Tipologia',23],['budget','Orçamento / investimento',38],['floor','Piso',24],['orientation','Orientação',28],['related','Frações relacionadas',45],['presented','Frações apresentadas',45],['informedPrices','Últimos preços informados',60],
   ['lastContactLabel','Último contacto efetivo',30],['nextStep','Próxima ação manual',60],['followupDateLabel','Data de follow-up',30],['followupState','Estado do follow-up',45],['automatic','Recomendação automática',64],['priority','Prioridade',24],['note','Nota resumida',60]
 ];
 function openClientsSummaryPdfModal(){
   document.getElementById('clientsSummaryPdfModal')?.remove();
-  const statusOptions=STAGES.map(stage=>[stage,!['Vendido','Desistiu'].includes(stage)]);
+  const statusOptions=STAGES.map(stage=>[stage,!!window.THE_VIEW_CLIENT_WORKFLOW||!['Vendido','Desistiu'].includes(stage)]);
   const defaults=['client','status','related','lastContactLabel','nextStep','followupState'];
   const baseRows=buildClientSummaryRows({statuses:STAGES});
   const agents=(state.data.agents||[]).slice().sort((a,b)=>safe(a.name).localeCompare(safe(b.name),'pt-PT'));
@@ -1406,11 +1421,16 @@ function openClientsSummaryPdfModal(){
   const style=document.createElement('style');style.textContent=`#clientsSummaryPdfModal .clients-summary-modal{width:min(960px,100%)}#clientsSummaryPdfModal .client-report-models{border:0;padding:0;margin:18px 0;display:flex;gap:8px;flex-wrap:wrap}#clientsSummaryPdfModal legend{font-size:14px;margin-bottom:8px}#clientsSummaryPdfModal .client-report-models label{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #dfe7f0;border-radius:6px;cursor:pointer}#clientsSummaryPdfModal .client-report-models label:has(input:checked){background:#eef5f1;border-color:#26795e}#clientsSummaryPdfModal .clients-summary-options{border-top:1px solid #dfe7f0;padding-top:14px;margin-top:16px}#clientsSummaryPdfModal h3{margin:0 0 12px;font-size:15px;color:#0e2444}#clientsSummaryPdfModal .clients-summary-check-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 12px}#clientsSummaryPdfModal .check-option{display:flex;align-items:flex-start;gap:8px;font-size:14px}#clientsSummaryPdfModal input[type=checkbox],#clientsSummaryPdfModal input[type=radio]{width:16px;height:16px;margin:2px 0 0;flex-shrink:0}#clientsSummaryPdfModal .clients-summary-filters{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}#clientsSummaryPdfModal .clients-summary-result{margin-top:16px;padding:12px 0;border-top:1px solid #dfe7f0;font-size:14px}#clientsSummaryPdfModal [hidden]{display:none!important}@media(max-width:720px){#clientsSummaryPdfModal .clients-summary-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#clientsSummaryPdfModal .clients-summary-filters{grid-template-columns:1fr}#clientsSummaryPdfModal .client-report-models label{width:100%}}`;
   modal.appendChild(style);document.body.appendChild(modal);document.body.style.overflow='hidden';
   const readOptions=()=>({model:modal.querySelector('[name=clientReportModel]:checked').value,statuses:[...modal.querySelectorAll('[data-client-summary-status]:checked')].map(input=>input.value),columns:[...modal.querySelectorAll('[data-client-summary-column]:checked')].map(input=>input.value),search:modal.querySelector('#clientSummarySearch').value,agentId:modal.querySelector('#clientSummaryAgent').value,followupFilter:modal.querySelector('#clientSummaryFollowup').value,priority:modal.querySelector('#clientSummaryPriority').value,sort:modal.querySelector('#clientSummarySort').value,includeContacts:modal.querySelector('#clientReportContacts').checked});
-  const updateCount=()=>{const options=readOptions(),count=filterClientReportRows(baseRows,options).length;modal.querySelector('[data-client-summary-count]').textContent=`${count} clientes incluídos no relatório.`;modal.querySelectorAll('[data-report-model-options]').forEach(section=>section.hidden=!section.dataset.reportModelOptions.split(' ').includes(options.model))};
+  if(window.THE_VIEW_CLIENT_WORKFLOW){
+    const models=modal.querySelector('.client-report-models');models.querySelectorAll('input').forEach(input=>input.checked=false);models.insertAdjacentHTML('afterbegin','<label><input type="radio" name="clientReportModel" value="portfolio" checked><span>Carteira Comercial por Estado</span></label>');
+    modal.querySelector('.clients-summary-filters').insertAdjacentHTML('beforeend',`<label class="field"><span>Estado do Contacto</span><select id="clientSummaryContactState"><option value="all">Todos</option>${window.THE_VIEW_CLIENT_WORKFLOW.contactStates.map(value=>`<option>${esc(value)}</option>`).join('')}</select></label><label class="field"><span>Cliente prioritário</span><select id="clientSummaryPriorityClient"><option value="all">Todos</option><option value="yes">Sim</option><option value="no">Não</option></select></label>`);
+  }
+  const withPortfolio=options=>({...options,...(options.model==='portfolio'?{priority:'all',followupFilter:'all'}:{}),contactState:modal.querySelector('#clientSummaryContactState')?.value||'all',priorityClient:modal.querySelector('#clientSummaryPriorityClient')?.value||'all'});
+  const updateCount=()=>{const options=withPortfolio(readOptions()),count=filterClientReportRows(baseRows,options).length;modal.querySelector('[data-client-summary-count]').textContent=`${count} clientes incluídos no relatório.`;modal.querySelectorAll('[data-report-model-options]').forEach(section=>section.hidden=!section.dataset.reportModelOptions.split(' ').includes(options.model));for(const name of ['clientSummaryFollowup','clientSummaryPriority'])modal.querySelector('#'+name).closest('.field').hidden=options.model==='portfolio'};
   const close=()=>{modal.remove();document.body.style.overflow=''};
   modal.querySelectorAll('[data-close-clients-summary]').forEach(button=>button.onclick=close);
   modal.querySelectorAll('input,select').forEach(input=>{input.addEventListener('input',updateCount);input.addEventListener('change',updateCount)});
-  modal.querySelector('[data-generate-clients-summary]').onclick=()=>{const options=readOptions();if(!options.statuses.length){notifyUser('Selecione pelo menos um estado comercial.','Relatórios de Clientes');return}const rows=filterClientReportRows(baseRows,{...options,sort:options.model==='management'?'operational':options.sort});if(generateClientsSummaryPdf(rows,options.columns,options))close()};
+  modal.querySelector('[data-generate-clients-summary]').onclick=()=>{const options=withPortfolio(readOptions());if(!options.statuses.length){notifyUser('Selecione pelo menos um estado comercial.','Relatórios de Clientes');return}const rows=filterClientReportRows(baseRows,{...options,sort:options.model==='management'?'operational':options.sort});if(generateClientsSummaryPdf(rows,options.columns,options))close()};
   updateCount();
 }
 function clientReportColumnGroups(columns){
@@ -1428,6 +1448,7 @@ function clientReportTable(title,columns,rows,cell){
   return`<section data-report-table><h2>${esc(title)}</h2><table><colgroup>${columns.map(col=>`<col style="width:${col[2]/width*100}%">`).join('')}</colgroup><thead><tr>${columns.map(col=>`<th>${esc(col[1])}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${columns.map(col=>`<td>${cell(row,col[0])}</td>`).join('')}</tr>`).join('')}</tbody></table>${!rows.length?'<p>Sem registos para apresentar.</p>':''}</section>`;
 }
 function clientReportFilterLabel(options){
+  if(options.model==='portfolio')return`Estados: ${(options.statuses||STAGES).join(', ')} | Contacto: ${options.contactState&&options.contactState!=='all'?options.contactState:'Todos'} | Prioritário: ${options.priorityClient==='yes'?'Sim':options.priorityClient==='no'?'Não':'Todos'} | Ordem: Estado comercial, prioridade manual e contacto mais antigo${options.search?' | Pesquisa: '+options.search:''}`;
   const followups={all:'Todos',future:'Agendado',overdue:'Vencido',undated:'Sem data','undated-review':'Sem data - necessita revisão',none:'Sem ação'};
   const sorts={operational:'Relevância operacional',followup:'Relevância operacional',name:'Nome',status:'Estado comercial',lastContact:'Último contacto',agent:'Agente',priority:'Prioridade'};
   return`Estados: ${(options.statuses||STAGES.filter(stage=>!['Vendido','Desistiu'].includes(stage))).join(', ')} | Agente: ${options.agentId&&options.agentId!=='all'?agent(options.agentId)?.name||'Agente selecionado':'Todos'}${options.search?` | Nome: ${options.search}`:''} | Follow-up: ${followups[options.followupFilter||'all']} | Prioridade: ${options.priority&&options.priority!=='all'?options.priority:'Todas'} | Ordem: ${sorts[options.model==='management'?'operational':options.sort||'operational']}`;
@@ -1436,6 +1457,7 @@ function clientReportSourceMarkup(){return`<p class="filters">${esc(commercialDa
 function clientReportMarkup(rows,options={}){
   const model=options.model||'listing',indicators=clientReportIndicators(rows);
   const text=value=>esc(value===0?0:value||'—'),line=(label,value)=>`<p><b>${esc(label)}</b> ${text(value)}</p>`;
+  if(model==='portfolio')return{landscape:true,title:'Carteira Comercial por Estado',body:STAGES.map(stage=>{const group=filterClientReportRows(rows,{...options,statuses:[stage],sort:'portfolio'});return group.length?clientReportTable(`${stage} · ${group.length} clientes · ${group.filter(row=>row.priorityClient).length} prioritários`,[['client','Cliente',64],['status','Estado Comercial',32],['contactState','Estado do Contacto',65],['priorityLabel','Prioritário',25],['lastContactLabel','Último contacto',45],['daysWithoutContact','Dias sem contacto',40]],group,(row,key)=>text(row[key])):''}).join('')};
   const metrics=items=>`<section data-report-block class="report-metrics">${items.map(([label,value])=>`<div><strong>${value}</strong><span>${esc(label)}</span></div>`).join('')}</section>`;
   const brief=value=>model==='management'?clientSummaryShortText(value,180):value;
   const action=row=>`${row.followupStatus!=='none'?line('Manual:',brief(row.nextStep==='—'?'Contactar':row.nextStep)):''}${row.automatic&&row.automatic!=='—'?line('Sistema:',row.automatic)+(model==='management'?'':`<p class="subtle">${text(row.recommendationReason)}</p>`):''}${row.followupStatus==='none'&&(!row.automatic||row.automatic==='—')?'—':''}`;
@@ -1542,7 +1564,7 @@ function renderSalesEventsPanel(){
       ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
       ${eventChannelDetailsHtml(ev)}
       ${commercialDetails}
-      ${(ev.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(ev.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
+      ${eventInformedPrices(ev).length?`<p><strong>Preços informados:</strong> ${esc(eventInformedPrices(ev).map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
       ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
       ${ev.objections?`<p><strong>Objeções:</strong> ${esc(ev.objections)}</p>`:''}
       ${ev.notes?`<p>${esc(ev.notes)}</p>`:''}
@@ -1770,20 +1792,32 @@ function renderCompareToolbar(fractions){
 }
 function renderClientSelects(){const opts=state.data.clients.map(c=>[c.id,c.name||'Cliente sem nome']);fillMulti(el.selectedClient,opts);fillMulti(el.eventClientId,opts);if(!state.selectedClientId&&state.data.clients[0])state.selectedClientId=state.data.clients[0].id;el.selectedClient.value=state.selectedClientId;el.eventClientId.value=state.selectedClientId;}
 function renderClients(){
+  ensurePortfolioFilters();
   const s=norm(state.cf.search),st=state.cf.stage;
-  const cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.originManual,c.agent,c.agency,c.notes,c.preferences?.typology,c.preferences?.floor,c.preferences?.orientation,c.preferences?.objective,(c.fractions||[]).join(' ')].join(' ')).includes(s))&&(!commercialUx.clientFocus||clientSummaryFollowupInfo(c).status==='future'&&!['Vendido','Desistiu','Perdido'].includes(c.stage)));
+  let cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.originManual,c.agent,c.agency,c.notes,c.preferences?.typology,c.preferences?.floor,c.preferences?.orientation,c.preferences?.objective,(c.fractions||[]).join(' ')].join(' ')).includes(s))&&(!commercialUx.clientFocus||clientSummaryFollowupInfo(c).status==='future'&&!['Vendido','Desistiu','Perdido'].includes(c.stage)));
+  const model=window.THE_VIEW_CLIENT_WORKFLOW,portfolio=model?.portfolio(cs,state.data.events,today(),{contact:state.cf.contact||'all',priority:state.cf.priority||'all'});
+  if(portfolio)cs=portfolio.map(row=>row.client);
   el.clientsList.innerHTML=cs.length?cs.map(c=>`<div class="client-card ${c.id===state.selectedClientId?'active':''}" data-client="${attr(c.id)}" role="button" tabindex="0" aria-label="Abrir ${attr(c.name||'cliente')}"><div class="section-heading compact"><div><strong>${esc(c.name||'Cliente sem nome')}</strong><p class="muted small">${esc(c.phone||'')} · ${esc(c.email||'')}</p><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span></div><button class="ghost-button ux-icon-button" type="button" data-edit-client-card="${attr(c.id)}" aria-label="Editar ${attr(c.name||'cliente')}" title="Editar cliente">${uxIcon('pencil')}</button></div></div>`).join(''):`<div class="empty-state"><strong>${state.data.clients.length?'Nenhum cliente encontrado':'Nenhum cliente registado'}</strong><p>${state.data.clients.length?'Não existem clientes que correspondam aos filtros.':'Crie o primeiro cliente para iniciar o acompanhamento.'}</p><button class="ghost-button" type="button" data-ux-client-list="${state.data.clients.length?'clear':'new'}">${state.data.clients.length?'Limpar filtros':'Criar cliente'}</button></div>`;
-  el.clientsList.querySelectorAll('[data-client]').forEach(card=>{card.onclick=e=>{if(e.target.closest('[data-edit-client-card]'))return;commercialUx.clientDetailId='';state.selectedClientId=card.dataset.client;el.selectedClient.value=state.selectedClientId;renderClients();renderClientDetail()};card.onkeydown=e=>{if(e.target===card&&['Enter',' '].includes(e.key)){e.preventDefault();card.click()}}});
+  if(portfolio?.length)el.clientsList.innerHTML=STAGES.map(stage=>{const group=portfolio.filter(row=>normalizeClientStage(row.client.stage)===stage);return group.length?`<h3 class="ux-portfolio-heading">${esc(stage)}<span>${group.length} · ${group.filter(row=>row.priority).length} prioritários</span></h3>`+group.map(row=>`<div class="client-card ${row.client.id===state.selectedClientId?'active':''} ${row.state==='Resposta nossa pendente'?'ux-contact-pending':''}" data-client="${attr(row.client.id)}" role="button" tabindex="0" aria-label="Abrir ${attr(row.client.name||'cliente')}"><div class="section-heading compact"><div><strong>${row.priority?`<span class="ux-client-priority" title="Cliente prioritário">${uxIcon('star')}</span>`:''}${esc(row.client.name||'Cliente sem nome')}</strong><p class="muted small">${esc(row.client.phone||'')} · ${esc(row.client.email||'')}</p><span class="badge badge--neutral">${esc(stage)}</span><p class="small">${esc(row.state)}</p><p class="muted small">${row.lastContact?`${formatCommercialDate(row.lastContact)} · ${row.days} dias sem contacto`:'Sem contacto registado'}</p></div><button class="ghost-button ux-icon-button" type="button" data-edit-client-card="${attr(row.client.id)}" aria-label="Editar ${attr(row.client.name||'cliente')}" title="Editar cliente">${uxIcon('pencil')}</button></div></div>`).join(''):''}).join('');
+  el.clientsList.querySelectorAll('[data-client]').forEach(card=>{card.onclick=e=>{if(e.target.closest('[data-edit-client-card]'))return;openClientProfile(card.dataset.client);renderClients()};card.onkeydown=e=>{if(e.target===card&&['Enter',' '].includes(e.key)){e.preventDefault();card.click()}}});
   el.clientsList.querySelectorAll('[data-edit-client-card]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();state.selectedClientId=btn.dataset.editClientCard;el.selectedClient.value=state.selectedClientId;openClientModal(state.selectedClientId)});
   let results=document.getElementById('clientFilterSummary');if(!results){results=document.createElement('div');results.id='clientFilterSummary';results.className='ux-filter-status';el.clientSearch.closest('.filters-grid').after(results)}
   results.innerHTML=`<span>${cs.length===state.data.clients.length?`${cs.length} clientes`:`${cs.length} de ${state.data.clients.length} clientes`}</span>${s||st!=='all'||commercialUx.clientFocus?'<button class="ux-text-button" type="button" data-ux-client-list="clear">Limpar filtros</button>':''}${commercialUx.clientFocus?'<span class="ux-filter-chip">Próximos follow-ups</span>':''}`;
+  if(model){results.innerHTML+=`<div class="ux-portfolio-counts">${STAGES.map(stage=>{const group=portfolio.filter(row=>normalizeClientStage(row.client.stage)===stage);return`<span>${esc(stage)}: ${group.length} (${group.filter(row=>row.priority).length} prioritários)</span>`}).join('')}</div>`;const contact=document.getElementById('clientContactFilter'),priority=document.getElementById('clientPriorityFilter');if(contact)contact.value=state.cf.contact||'all';if(priority)priority.value=state.cf.priority||'all'}
   renderUxIcons();
+}
+function ensurePortfolioFilters(){
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;if(!model||document.getElementById('clientContactFilter'))return;
+  const grid=el.clientSearch?.closest('.filters-grid');if(!grid)return;
+  const label=document.createElement('label');label.className='field';label.innerHTML=`<span>Estado do Contacto</span><select id="clientContactFilter"><option value="all">Todos</option>${model.contactStates.map(value=>`<option>${esc(value)}</option>`).join('')}</select>`;
+  const priority=document.createElement('label');priority.className='field';priority.innerHTML='<span>Prioridade manual</span><select id="clientPriorityFilter"><option value="all">Todos</option><option value="yes">Prioritários</option><option value="no">Não prioritários</option></select>';
+  grid.append(label,priority);label.querySelector('select').onchange=e=>{state.cf.contact=e.target.value;renderClients()};priority.querySelector('select').onchange=e=>{state.cf.priority=e.target.value;renderClients()};
 }
 function clientFractionCommercialRows(c,events){
   return uniqNum([...(c.fractions||[]),...(c.commercialSummary?.presentedFractions||[])]).map(n=>{
     const related=events.filter(ev=>(ev.fractions||[]).includes(n));
     const latest=related.slice().reverse().find(ev=>eventFractionsPresented(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))||null;
-    const informed=related.flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,date:ev.date,eventId:ev.id}))).pop();
+    const informed=related.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,date:ev.date,eventId:ev.id}))).pop();
     let status='Interesse';
     if(latest){
       if(isSaleEvent(latest))status='Venda';
@@ -1797,54 +1831,302 @@ function clientFractionCommercialRows(c,events){
     return{fraction:n,status,informedPrice:Number(informed?.informedPrice)||0,date:informed?.date||latest?.date||'',observation:safe(informed?.observation||latest?.notes)};
   });
 }
+function openClientProfile(cid=state.selectedClientId){
+  if(!client(cid))return;
+  if(!commercialUx.clientProfileOpen)commercialUx.clientListPosition={y:window.scrollY||0,list:el.clientsList?.scrollTop||0};
+  commercialUx.clientProfileOpen=true;state.selectedClientId=cid;
+  if(el.selectedClient)el.selectedClient.value=cid;
+  renderClientDetail();
+  window.requestAnimationFrame?.(()=>el.clientDetail.scrollIntoView?.({block:'start',behavior:'instant'}));
+}
+function closeClientProfile(){
+  commercialUx.clientProfileOpen=false;renderClientDetail();
+  window.requestAnimationFrame?.(()=>{
+    const position=commercialUx.clientListPosition||{};
+    if(el.clientsList)el.clientsList.scrollTop=position.list||0;
+    window.scrollTo?.({top:position.y||0,behavior:'instant'});
+    [...(el.clientsList?.querySelectorAll('[data-client]')||[])].find(card=>card.dataset.client===state.selectedClientId)?.focus({preventScroll:true});
+  });
+}
+function renderClientProfileLayout(){
+  el.clientDetail?.closest?.('.panel')?.classList.toggle('ux-client-profile-active',!!commercialUx.clientProfileOpen);
+}
+function clientPreferenceDisplay(label,value){
+  const text=safe(value),indifferent=/^(indiferente|qualquer|sem preferencia|todos|todas)$/i.test(norm(text));
+  const parts=indifferent?['Indiferente']:text?text.split(/\s+(?:ou|e)\s+|[,;|]+/i).map(part=>part.trim()).filter(Boolean):[];
+  return `<div class="ux-preference-display"><dt>${esc(label)}</dt><dd class="${!text?'is-uninformed':indifferent?'is-indifferent':''}">${parts.length?parts.map(part=>`<span class="ux-preference-value">${esc(part)}</span>`).join(''):'<span>Não informada</span>'}</dd></div>`;
+}
+function preferenceOptionsMarkup(values,current){
+  const options=uniq(['',...values,...(current&&!values.includes(current)?[current]:[])]);
+  return options.map(value=>`<option value="${attr(value)}" ${value===current?'selected':''}>${esc(value||'Não informado')}</option>`).join('');
+}
+function archivedPreferencesMarkup(c){
+  const previous={...(c.manualPreferences?.legacyText||{}),...(c.preferences?.legacyText||{})};
+  const labels={typology:'Tipologias',floor:'Pisos',orientation:'Orientações',objective:'Objetivo da aquisição',decisionTime:'Prazo de decisão',summary:'Outras preferências'};
+  const rows=Object.keys(labels).filter(key=>previous[key]!==undefined&&previous[key]!==''&&previous[key]!==null).map(key=>[labels[key],typeof previous[key]==='string'?previous[key]:JSON.stringify(previous[key])]);
+  return rows.length?`<details id="clientArchivedPreferences" class="ux-client-details"><summary>Textos anteriores preservados</summary>${clientFactsMarkup(rows)}</details>`:'';
+}
+function inlinePreferencesMarkup(c){
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;if(!api)return'';
+  const record=commercialUx.preferenceDraft?.clientId===c.id?commercialUx.preferenceDraft:null;
+  if(!record)return`<div class="crm-detail-section__heading"><h3>Preferências</h3><button class="ghost-button compact-button" type="button" data-preferences-edit>${uxIcon('sliders-horizontal')}Editar preferências</button></div>`;
+  const d=record.values,labels={typology:'Tipologias',floor:'Pisos',orientation:'Orientações'};
+  return`<form id="clientPreferencesEditor"><div class="crm-detail-section__heading"><h3>Editar preferências</h3></div>${Object.keys(api.options).map(key=>`<fieldset class="ux-preference-selector"><legend>${labels[key]}</legend><div role="group" aria-label="${labels[key]}">${[...api.options[key],'Indiferente'].map(value=>`<button class="ux-preference-chip" type="button" data-preference-key="${key}" data-preference-value="${attr(value)}" aria-pressed="${value==='Indiferente'?d.choices[key].state==='indifferent':d.choices[key].state==='selected'&&d.choices[key].values.includes(value)}">${esc(key==='floor'&&value!=='Indiferente'?'Piso '+value:value)}</button>`).join('')}</div><p class="muted small">${d.choices[key].state==='legacy'?`Texto anterior preservado: ${esc(d.choices[key].legacyText)}`:d.choices[key].state==='unreported'?'Não informado':d.choices[key].state==='indifferent'?'Indiferente':esc(api.projection(d.choices[key]))}</p></fieldset>`).join('')}<div class="ux-preference-fields"><label class="field"><span>Investimento mínimo (€)</span><input name="budgetMin" inputmode="decimal" value="${attr(d.budgetMin?new Intl.NumberFormat('pt-PT').format(d.budgetMin):'')}" /></label><label class="field"><span>Investimento máximo (€)</span><input name="budgetMax" inputmode="decimal" value="${attr(d.budgetMax?new Intl.NumberFormat('pt-PT').format(d.budgetMax):'')}" /></label><label class="field"><span>Objetivo de aquisição</span><select name="objective">${preferenceOptionsMarkup(api.objectives,d.objective)}</select></label><label class="field"><span>Prazo de decisão</span><select name="decisionTime">${preferenceOptionsMarkup(api.deadlines,d.decisionTime)}</select></label><label class="field ux-preference-notes"><span>Outras preferências</span><textarea name="summary">${esc(d.summary)}</textarea></label></div>${c.budget?`<p class="muted small">Orçamento indicativo anterior: ${displayMoney(c.budget)}</p>`:''}<div class="ux-client-secondary-actions"><button class="primary-button" type="submit" ${record.saving?'disabled':''}>${uxIcon('check')}Guardar preferências</button><button class="ghost-button" type="button" data-preferences-cancel ${record.saving?'disabled':''}>Cancelar</button></div><p class="error-box hidden" id="clientPreferencesError" role="alert"></p></form>`;
+}
+function startInlinePreferences(c){
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;if(!api)return;
+  commercialUx.preferenceDraft={clientId:c.id,values:api.draft(c),original:JSON.stringify(c)};
+  activateClientDetailTab('preferences');renderClientDetail();
+}
+function parsePreferenceInvestment(value){
+  const input=safe(value).trim();if(!input)return 0;
+  const compact=input.replace(/[\s\u00a0\u202f€]/g,'');
+  if(!/^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(compact))return NaN;
+  return Number(compact.replace(/\./g,'').replace(',','.'));
+}
+function bindInlinePreferences(c){
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;if(!api)return;
+  el.clientDetail.querySelector('[data-preferences-edit]')?.addEventListener('click',()=>startInlinePreferences(c));
+  const form=el.clientDetail.querySelector('#clientPreferencesEditor'),record=commercialUx.preferenceDraft;
+  if(!form||record?.clientId!==c.id)return;
+  for(const key of ['budgetMin','budgetMax','objective','decisionTime','summary'])form.elements.namedItem(key).oninput=event=>{record.values[key]=key.startsWith('budget')?parsePreferenceInvestment(event.target.value):event.target.value;form.querySelector('#clientPreferencesError').classList.add('hidden')};
+  form.querySelectorAll('[data-preference-key]').forEach(button=>button.onclick=()=>{
+    if(record.saving)return;
+    const key=button.dataset.preferenceKey,value=button.dataset.preferenceValue;record.values.choices[key]=api.toggle(key,record.values.choices[key],value);renderClientDetail();
+    el.clientDetail.querySelector(`[data-preference-key="${key}"][data-preference-value="${value}"]`)?.focus({preventScroll:true});
+  });
+  form.querySelector('[data-preferences-cancel]').onclick=()=>{if(!record.saving){commercialUx.preferenceDraft=null;renderClientDetail()}};
+  form.onsubmit=async event=>{
+    event.preventDefault();if(record.saving)return;
+    const error=form.querySelector('#clientPreferencesError');
+    if(record.original!==JSON.stringify(client(c.id))){error.textContent='O cliente mudou durante a edição. Cancele e reabra as preferências antes de guardar.';error.classList.remove('hidden');return}
+    let updated;try{updated=api.buildUpdate(c,record.values)}catch(problem){error.textContent=problem.message==='UNSUPPORTED_PREFERENCE_VERSION'?'Esta versão das preferências não é compatível com o editor. Os dados anteriores foram preservados.':problem.message==='INVALID_INVESTMENT'?'Indique investimentos válidos. O máximo deve ser igual ou superior ao mínimo.':'Não foi possível validar as seleções. Os dados anteriores foram preservados.';error.classList.remove('hidden');return}
+    if(!updated){commercialUx.preferenceDraft=null;renderClientDetail();return}
+    record.saving=true;form.querySelectorAll('button,input,select,textarea').forEach(control=>control.disabled=true);
+    recordClientPreferenceChange(c,updated);
+    const confirmed=await persistClientChange();commercialUx.preferenceDraft=null;RenderFlow.clientChanged();clientSaveFeedback(confirmed,'Preferências guardadas na base partilhada.');
+  };
+}
+function recordClientPreferenceChange(c,updated){
+  const previousPreferences=JSON.parse(JSON.stringify(c.preferences||{})),previousManualPreferences=JSON.parse(JSON.stringify(c.manualPreferences||{}));
+  Object.assign(c,updated,{updated:new Date().toLocaleString('pt-PT'),updatedAt:new Date().toISOString()});
+  state.data.events.push({id:id(),clientId:c.id,type:'Preferências recebidas',administrative:true,actualCommunication:false,date:today(),time:currentTimeValue(),fractions:[],preferences:JSON.parse(JSON.stringify(c.preferences)),previousPreferences,previousManualPreferences,preferenceBudget:Number(c.budget)||0,...(Object.hasOwn(c,'budgetMin')?{budgetMin:c.budgetMin}:{}),...(Object.hasOwn(c,'budgetMax')?{budgetMax:c.budgetMax}:{}),notes:''});
+  recalculateResumoCliente(c.id);
+}
+function clientFractionSource(){
+  const current=sharedSync.verified&&sharedSync.phase==='synced'&&!sharedSync.dirty&&!sharedSync.busy;
+  return commercialRecommendationInput().fractions.map(row=>{
+    const f=getF(row.number),rawPrice=state.data.finalPrices?.[row.number],recorded=Object.hasOwn(state.data.finalPrices||{},row.number)&&Number.isFinite(Number(rawPrice))&&Number(rawPrice)>0;
+    const status=state.data.statuses?.[row.number],statusRecorded=Object.hasOwn(state.data.statuses||{},row.number)&&STATUS.includes(status);
+    return{...row,currentPrice:recorded?finalPrice(f):null,priceConfirmed:recorded&&current,status:statusRecorded?status:null,statusConfirmed:statusRecorded&&current,sourceCurrent:current,floorLabel:f.floorLabel,abp:f.abp,parking:f.parking,totalArea:f.totalArea,terrace:f.terrace};
+  });
+}
+function clientFractionBrowse(c){
+  if(commercialUx.fractionBrowse?.clientId!==c.id)commercialUx.fractionBrowse={clientId:c.id,filter:'all',search:'',manualOpen:false};
+  return commercialUx.fractionBrowse;
+}
+function clientFractionDraft(c){return commercialUx.fractionSelectionDraft?.clientId===c.id?commercialUx.fractionSelectionDraft:null}
+function clientFractionSelected(c){return clientFractionDraft(c)?.values||presentationSelection(c)}
+function clientFractionStatus(row){return row.status?(row.statusConfirmed?row.status:row.status+' · por confirmar'):'Disponibilidade não confirmada'}
+function clientFractionPrice(row){return row.currentPrice?displayMoney(row.currentPrice)+(row.priceConfirmed?'':' · cópia local, por confirmar'):'Preço comercial não confirmado'}
+function clientFractionCards(c,rows){
+  const selected=new Set(clientFractionSelected(c)),busy=!!clientFractionDraft(c)?.saving||!!clientFractionDraft(c)?.checking;
+  return rows.map(row=>`<article class="ux-fraction-option" data-client-fraction="${row.number}"><header><h4>Apt. ${row.number}</h4><span class="${row.statusConfirmed?badge(row.status):'badge badge--neutral'}">${esc(clientFractionStatus(row))}</span></header><p>${esc(row.typology)} · Piso ${esc(row.floorLabel||'não informado')} · ${esc(row.orientation||'Orientação não informada')}</p><p class="muted small">${row.abp>0?'ABP '+area(row.abp):'ABP não informada'}</p><strong class="ux-fraction-option-price">${esc(clientFractionPrice(row))}</strong>${row.explanation?`<p class="ux-fraction-explanation">${esc(row.explanation)}</p>`:''}<footer><button class="ux-text-button" type="button" data-fraction-details="${row.number}">${uxIcon('eye')}Detalhes</button><button class="ghost-button compact-button" type="button" data-fraction-select="${row.number}" aria-pressed="${selected.has(row.number)}" ${busy?'disabled':''}>${uxIcon(selected.has(row.number)?'check':'plus')}${selected.has(row.number)?'Retirar':'Selecionar'}</button></footer></article>`).join('');
+}
+function clientFractionWorkspaceMarkup(c){
+  const engine=window.THE_VIEW_FRACTION_RECOMMENDATIONS,p=engine.profile(c),browse=clientFractionBrowse(c);
+  const preference=(key,label)=>[label,p.choices[key].state==='selected'?window.THE_VIEW_CLIENT_PREFERENCES.projection(p.choices[key]):p.choices[key].state==='indifferent'?'Indiferente':p.choices[key].state==='legacy'?p.choices[key].legacyText:'Não informado'];
+  const filterUnavailable=key=>key==='within'&&!p.min&&!p.max||key==='plus5'&&p.maxSource!=='declared';
+  return`<section id="clientFractionWorkspace"><div class="crm-detail-section__heading"><h3>Frações</h3><button class="ux-text-button" type="button" data-fraction-preferences>${uxIcon('sliders-horizontal')}Preferências</button></div>${clientFactsMarkup([preference('typology','Tipologias'),['Investimento mínimo',p.min?displayMoney(p.min):'Não informado'],[p.maxSource==='legacy'?'Orçamento legado (limite)':'Investimento máximo',p.max?displayMoney(p.max):'Não informado'],preference('floor','Pisos'),preference('orientation','Orientações'),['Alternativas até +5%',p.maxSource==='declared'?displayMoney(p.alternativeMax):'Sem tolerância calculada']])}<p class="muted small" id="clientFractionSourceNotice" role="status"></p><div id="clientFractionSelection" aria-live="polite"></div><div class="ux-fraction-filters" role="group" aria-label="Filtrar recomendações">${[['all','Todas as recomendações'],['main','Correspondências principais'],['alternatives','Alternativas próximas'],['within','Dentro do orçamento'],['plus5','Até +5%']].map(([key,label])=>`<button class="ghost-button compact-button" type="button" data-fraction-filter="${key}" aria-pressed="${browse.filter===key}" ${filterUnavailable(key)?'disabled title="Investimento não informado para este filtro"':''}>${label}</button>`).join('')}</div><div id="clientFractionRecommendations"></div><details id="clientFractionManual" class="ux-client-details" ${browse.manualOpen?'open':''}><summary>Consultar todas as frações (${state.fractions.length})</summary><label class="field"><span>Pesquisar fração</span><input id="clientFractionSearch" type="search" value="${attr(browse.search)}" placeholder="Fração, tipologia, piso ou orientação"></label><div id="clientFractionManualCount" class="muted small" role="status"></div><div id="clientFractionManualResults" class="ux-fraction-manual-results"></div></details></section>`;
+}
+function refreshClientFractionResults(){
+  refreshClientPreparedConditions();
+  const root=el.clientDetail?.querySelector('#clientFractionWorkspace'),c=client(state.selectedClientId),engine=window.THE_VIEW_FRACTION_RECOMMENDATIONS;
+  if(!root||!c||!engine)return;
+  const rows=clientFractionSource(),result=engine.evaluate(c,rows),browse=clientFractionBrowse(c),draft=clientFractionDraft(c),selected=clientFractionSelected(c),filtered=engine.filter(result,browse.filter);
+  root.querySelector('#clientFractionSourceNotice').textContent=rows[0]?.sourceCurrent?'Preços e estados explícitos da última base confirmada. Valores em falta não são inferidos.':'Base por confirmar: os valores registados são cópias locais, não condições comerciais verificadas. As recomendações exigem confirmação da fonte.';
+  const selection=root.querySelector('#clientFractionSelection');
+  selection.innerHTML=`<div class="ux-fraction-selection-heading"><strong>${selected.length} ${selected.length===1?'fração selecionada':'frações selecionadas'}${draft?' · por guardar':''}</strong><div class="top-actions">${draft?`<button class="primary-button compact-button" type="button" data-fraction-save ${draft.saving||draft.checking?'disabled':''}>${uxIcon('check')}Guardar seleção</button><button class="ghost-button compact-button" type="button" data-fraction-cancel ${draft.saving||draft.checking?'disabled':''}>Cancelar</button>`:''}<button class="ux-text-button" type="button" data-ux-client-action="select-presentation">${uxIcon('list-checks')}Adicionar frações</button></div></div>${selected.length?`<div class="ux-fraction-selected">${selected.map(n=>{const row=rows.find(f=>f.number===n);return`<button class="ux-preference-chip" type="button" data-fraction-select="${n}" ${draft?.saving||draft?.checking?'disabled':''}>Apt. ${n} ${uxIcon('x')}</button>${!row||!row.statusConfirmed||row.status!=='Disponível'?`<span class="ux-fraction-warning">Apt. ${n}: ${esc(row?clientFractionStatus(row):'referência não encontrada')}. Seleção mantida; confirmar condições.</span>`:''}`}).join('')}</div>`:''}`;
+  root.querySelector('#clientFractionRecommendations').innerHTML=!result.profile.known?`<p class="muted">${esc(result.profile.message)}</p>`:[['main','Correspondências principais'],['alternative','Alternativas próximas']].map(([group,label])=>{const groupRows=filtered.filter(row=>row.group===group);return`<section class="ux-client-section"><h3>${label} <span class="muted small">${groupRows.length}</span></h3>${groupRows.length?`<div class="ux-fraction-options">${clientFractionCards(c,groupRows)}</div>`:'<p class="muted small">Nenhuma fração com condições confirmadas neste grupo e filtro.</p>'}</section>`}).join('');
+  const manual=engine.search(rows,browse.search);root.querySelector('#clientFractionManualCount').textContent=`${manual.length} ${manual.length===1?'fração encontrada':'frações encontradas'}`;
+  root.querySelector('#clientFractionManualResults').innerHTML=manual.length?clientFractionCards(c,manual):'<p class="muted">Nenhuma fração encontrada.</p>';
+  root.querySelectorAll('[data-fraction-filter]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.fractionFilter===browse.filter));renderUxIcons();
+}
+function refreshClientPreparedConditions(){
+  if(!window.THE_VIEW_FRACTION_RECOMMENDATIONS||!el.clientDetail)return;
+  const rows=clientFractionSource();
+  el.clientDetail.querySelectorAll('[data-prepared-price]').forEach(cell=>{const row=rows.find(f=>f.number===Number(cell.dataset.preparedPrice));if(row)cell.textContent=clientFractionPrice(row)});
+  el.clientDetail.querySelectorAll('[data-prepared-status]').forEach(cell=>{const row=rows.find(f=>f.number===Number(cell.dataset.preparedStatus));if(row)cell.innerHTML=`<span class="${row.statusConfirmed?badge(row.status):'badge badge--neutral'}">${esc(clientFractionStatus(row))}</span>`});
+}
+async function confirmClientFractionAddition(n,approvals){
+  const row=clientFractionSource().find(f=>f.number===n);if(!row)return false;
+  if(row.statusConfirmed&&row.status==='Disponível')return true;
+  const signature=JSON.stringify([row.status,row.statusConfirmed,sharedSync.revision]);
+  if(approvals.get(n)===signature)return true;
+  const allowed=await confirmUser(`Apt. ${n}: ${clientFractionStatus(row)}. Esta fração não está confirmada como disponível para comercialização normal. Incluir apenas na seleção preparatória do cliente? Isto não altera disponibilidade, reservas, vendas ou autorizações comerciais.`,'Confirmar inclusão na seleção');
+  if(allowed)approvals.set(n,signature);return allowed;
+}
+async function saveClientFractionSelection(clientId,values,original,approvals){
+  const c=client(clientId);
+  if(!c||JSON.stringify(presentationSelection(c))!==original){await notifyUser('A seleção mudou durante a edição. Cancele e reabra antes de guardar. Nenhuma seleção foi substituída.','Rever seleção');return false}
+  for(const n of values)if(!getF(n)){await notifyUser(`Apt. ${n}: referência não encontrada. Reveja a seleção antes de guardar.`,'Rever seleção');return false}
+  const previous=presentationSelection(c);
+  for(const n of values)if(!previous.includes(n)&&!await confirmClientFractionAddition(n,approvals))return false;
+  // A confirmation dialog may span a remote refresh; do not overwrite a changed selection.
+  if(c!==client(clientId)||JSON.stringify(presentationSelection(c))!==original){await notifyUser('A base mudou. Reabra a seleção antes de guardar.','Rever seleção');return false}
+  if(updatePresentationSelection(c,values)){const confirmed=await persistClientChange();clientSaveFeedback(confirmed,'Seleção guardada na base partilhada.')}
+  return true;
+}
+function openClientFractionDetails(n){
+  const row=clientFractionSource().find(f=>f.number===n);if(!row)return;
+  document.getElementById('clientFractionInfo')?.remove();const modal=document.createElement('div');modal.id='clientFractionInfo';modal.className='modal-backdrop';
+  modal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="clientFractionInfoTitle"><button class="modal-close" type="button" aria-label="Fechar">${uxIcon('x')}</button><h2 id="clientFractionInfoTitle">Apt. ${n}</h2><p>${esc(clientFractionStatus(row))}</p><strong>${esc(clientFractionPrice(row))}</strong>${clientFactsMarkup([['Tipologia',row.typology],['Piso',row.floorLabel],['Orientação',row.orientation],['ABP',row.abp>0?area(row.abp):''],['Varanda / Terraço',row.terrace>0?area(row.terrace):''],['Estacionamento',row.parking]])}</div>`;
+  const confirmedAt=Date.parse(sharedSync.lastConfirmedAt);if(Number.isFinite(confirmedAt)){const reference=document.createElement('p');reference.className='muted small';reference.textContent='Referência da última leitura: '+new Date(confirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'});modal.querySelector('.modal').appendChild(reference)}
+  const overflow=document.body.style.overflow,trigger=document.activeElement;modal.querySelector('button').onclick=()=>{modal.remove();document.body.style.overflow=overflow;if(trigger?.isConnected)trigger.focus({preventScroll:true})};document.body.appendChild(modal);document.body.style.overflow='hidden';renderUxIcons();modal.querySelector('button').focus();
+}
+function bindClientFractionWorkspace(c){
+  const root=el.clientDetail.querySelector('#clientFractionWorkspace');if(!root)return;
+  refreshClientFractionResults();const browse=clientFractionBrowse(c);
+  root.querySelector('#clientFractionSearch').oninput=event=>{browse.search=event.target.value;refreshClientFractionResults()};
+  root.querySelector('#clientFractionManual').ontoggle=event=>{browse.manualOpen=event.target.open};
+  root.onclick=async event=>{
+    const button=event.target.closest('[data-fraction-filter],[data-fraction-select],[data-fraction-save],[data-fraction-cancel],[data-fraction-preferences],[data-fraction-details]');if(!button)return;
+    event.preventDefault();event.stopPropagation();const data=button.dataset;let draft=clientFractionDraft(c);
+    if(data.fractionFilter){browse.filter=data.fractionFilter;refreshClientFractionResults();return}
+    if('fractionPreferences'in data){activateClientDetailTab('preferences',true);return}
+    if(data.fractionDetails){openClientFractionDetails(Number(data.fractionDetails));return}
+    if(draft?.saving||draft?.checking)return;
+    if('fractionCancel'in data){commercialUx.fractionSelectionDraft=null;refreshClientFractionResults();return}
+    if('fractionSave'in data){if(!draft)return;draft.saving=true;refreshClientFractionResults();const saved=await saveClientFractionSelection(c.id,draft.values,draft.original,draft.approvals);draft.saving=false;if(saved)commercialUx.fractionSelectionDraft=null;RenderFlow.clientChanged();return}
+    const n=Number(data.fractionSelect);
+    if(!draft)draft={clientId:c.id,original:JSON.stringify(presentationSelection(c)),values:[...presentationSelection(c)],approvals:new Map()};
+    if(draft.values.includes(n))draft.values=draft.values.filter(value=>value!==n);
+    else{draft.checking=true;commercialUx.fractionSelectionDraft=draft;refreshClientFractionResults();const allowed=await confirmClientFractionAddition(n,draft.approvals);draft.checking=false;if(!allowed){if(JSON.stringify(uniqNum(draft.values))===draft.original)commercialUx.fractionSelectionDraft=null;refreshClientFractionResults();return}draft.values.push(n)}
+    commercialUx.fractionSelectionDraft=draft;refreshClientFractionResults();
+  };
+}
+function clientNegotiationMarkup(c,events,fractions){
+  const closing=events.filter(ev=>/proposta|reserva|venda|desist/i.test(ev.type||''));
+  return fractions.length?fractions.map(f=>{
+    const history=events.filter(ev=>(ev.fractions||[]).map(Number).includes(f.number));
+    const negotiations=closing.filter(ev=>(ev.fractions||[]).map(Number).includes(f.number));
+    const prices=history.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===f.number));
+    const proposal=negotiations.slice().reverse().find(ev=>/proposta recebida/i.test(ev.type||''));
+    const counter=negotiations.slice().reverse().find(ev=>/contra-proposta enviada/i.test(ev.type||''));
+    const latest=negotiations.at(-1);
+    const value=ev=>ev?.amount?displayMoney(ev.amount)+(ev.fractions?.length>1?' (evento com várias frações)':''):'';
+    return `<section class="ux-client-section ux-unit-negotiation"><div class="crm-detail-section__heading"><h3>${fractionReference(f)} <span class="muted small">${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span></h3><span class="badge badge--neutral">${esc(latest?.type||'Sem negociação registada')}</span></div>${clientFactsMarkup([['Último preço informado',prices.at(-1)?.informedPrice?displayMoney(prices.at(-1).informedPrice):''],['Proposta do cliente',value(proposal)],['Contraproposta',value(counter)]])}${latest?.notes?`<p class="ux-event-notes muted">${esc(latest.notes)}</p>`:''}${negotiations.length?`<details class="ux-client-details" id="clientNegotiationHistory-${f.number}"><summary>Histórico de valores · ${negotiations.length}</summary><div class="timeline ux-client-timeline">${negotiations.slice().reverse().map(clientTimelineItem).join('')}</div></details>`:'<p class="muted small">Sem propostas ou contrapropostas registadas para esta fração.</p>'}</section>`;
+  }).join(''):'<p class="muted">Ainda não existem frações relacionadas com este cliente.</p>';
+}
 function renderClientDetail(){
-  const money=displayMoney;
-  renderClientActionBar();
+  renderClientActionBar();renderClientProfileLayout();
   const c=client(state.selectedClientId);
   if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}
-  const entering= commercialUx.clientDetailId!==c.id;
-  if(entering){commercialUx.clientDetailId=c.id;commercialUx.clientDetailTab='summary'}
+  const entering=commercialUx.clientDetailId!==c.id;
+  if(entering){commercialUx.clientDetailId=c.id;commercialUx.clientDetailTab=commercialUx.clientProfileTabs?.[c.id]||'data'}
   const detailStates=el.clientDetail.dataset.clientId===c.id?[...el.clientDetail.querySelectorAll('details[id]')].map(details=>[details.id,details.open]):[];
   const matchingScroll=el.clientDetail.dataset.clientId===c.id?el.clientDetail.querySelector('.ux-suggested-fractions')?.scrollTop||0:0;
   el.clientDetail.dataset.clientId=c.id;
-  const chronological=sortedClientEvents(c.id),evs=chronological.slice().reverse(),summary=c.commercialSummary||{},prefs=cleanPreferences(c.preferences||{}),fractionRows=clientFractionCommercialRows(c,chronological);
-  const associatedAgent=agent(c.agentId);
-  const recommendation=commercialClientRecommendation(c),related=relatedClientFractions(c),followup=clientSummaryFollowupInfo(c);
+  const chronological=sortedClientEvents(c.id),evs=chronological.slice().reverse(),summary=c.commercialSummary||{},prefs=cleanPreferences(c.preferences||{});
+  const associatedAgent=agent(c.agentId),recommendation=commercialClientRecommendation(c),related=relatedClientFractions(c),followup=clientSummaryFollowupInfo(c);
   const compatible=recommendation?(recommendation.matching.known?recommendation.matching.matches.map(item=>getF(item.number)).filter(Boolean):null):compatibleClientFractions(c);
   const preparation=presentationSelection(c).map(getF).filter(Boolean),presented=clientPresentedFractionRows(c,chronological);
   const action=(key,label,icon)=>`<button class="ghost-button compact-button" type="button" data-ux-client-action="${key}">${uxIcon(icon)}${label}</button>`;
   const heading=(title,buttons='')=>`<div class="crm-detail-section__heading"><h3>${title}</h3>${buttons?`<div class="top-actions">${buttons}</div>`:''}</div>`;
-  const recommendedFractions=`<section class="ux-client-section" id="clientMatchingFractions"><details id="clientMatchingDetails" class="ux-client-details" ${!preparation.length?'open':''}><summary>Frações recomendadas${compatible===null?'':` (${compatible.length})`}</summary>${compatible===null?'<p class="muted small">Registe as preferências do cliente para identificar frações compatíveis.</p><button class="ghost-button compact-button" type="button" data-ux-client-action="preferences">Completar preferências</button>':clientSuggestedFractionTiles(compatible,recommendation?.matching.matches)}</details></section>`;
-  const recentActivities=evs.length?`<ol class="ux-client-recent">${evs.slice(0,3).map(ev=>`<li><div><strong>${esc(ev.type)}</strong><time>${esc(formatTimelineDate(ev.date,ev.time))}</time>${ev.notes?`<p>${esc(safe(ev.notes).slice(0,130))}</p>`:''}</div><button class="ghost-button compact-button" type="button" data-edit-client-event="${attr(ev.id)}" aria-label="Ver / Editar ${attr(ev.type)}">${uxIcon('arrow-up-right')}Ver evento</button></li>`).join('')}</ol>`:'<p class="muted small">Sem atividade registada.</p>';
+  const recommendedFractions=`<section id="clientMatchingFractions">${heading('Correspondências principais')}${compatible===null?'<p class="muted">Registe as preferências do cliente para identificar frações compatíveis.</p><button class="ghost-button compact-button" type="button" data-ux-client-action="preferences">Completar preferências</button>':clientSuggestedFractionTiles(compatible,recommendation?.matching.matches)}</section>`;
+  const presentationEvents=evs.filter(ev=>eventFractionsPresented(ev)||isCommercialPresentationEvent(ev)||ev.type==='Documentação enviada');
+  const latest=evs[0],registered=safe(c.createdAt||c.createdDate||c.created);
+  const overview=clientFactsMarkup([['Último contacto',formatCommercialDate(window.THE_VIEW_CLIENT_WORKFLOW?clientSummaryLastContact(c):summary.lastContact)],['Investimento',clientInvestmentLabel(c)],['Frações apresentadas',presented.length]]);
+  const fractionRows=clientFractionCommercialRows(c,chronological);
+  const fractionHistory=fractionRows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Fração</th><th>Estado com cliente</th><th>Preço informado</th><th>Data</th><th>Observação</th></tr></thead><tbody>${fractionRows.map(row=>`<tr><td>${getF(row.fraction)?fractionReference(getF(row.fraction)):`Apt. ${row.fraction}`}</td><td>${esc(row.status)}</td><td>${row.informedPrice?displayMoney(row.informedPrice):'—'}</td><td>${esc(formatCommercialDate(row.date))}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:'';
+  const alternativeAccess=window.THE_VIEW_FRACTION_RECOMMENDATIONS?`<button class="ux-text-button" type="button" data-open-client-profile data-profile-tab="fractions">${uxIcon('arrow-up-right')}Abrir recomendações</button>`:'<p class="muted small">O motor de alternativas próximas será disponibilizado na Fase 2.</p>';
   const panels={
-    data:heading('Dados do cliente',`<button class="ghost-button compact-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar dados</button>`)+clientFactsMarkup([['Nome completo',c.name],['Telefone',c.phone],['E-mail',c.email],['Origem',clientOriginLabel(c)],['Agente',associatedAgent?.name||c.agent]])+`<details id="clientDataDetails" class="ux-client-details"><summary>Dados adicionais</summary>${clientFactsMarkup([['Nacionalidade',c.nationality],['NIF',c.nif],['Agência',c.agency||associatedAgent?.agency]])}<p class="ux-event-notes muted">${esc(c.notes||'Sem notas adicionais.')}</p></details>`,
-    preferences:heading('Preferências do cliente',action('preferences','Editar preferências','sliders-horizontal'))+clientFactsMarkup([['Tipologia pretendida',prefs.typology],['Orçamento indicativo',c.budget?money(c.budget):''],['Investimento mínimo',c.budgetMin?money(c.budgetMin):''],['Investimento máximo',c.budgetMax?money(c.budgetMax):''],['Piso preferido',prefs.floor],['Orientação',prefs.orientation],['Objetivo da compra',prefs.objective],['Prazo de decisão',prefs.decisionTime]])+`<div class="ux-client-observations"><h4>Preferências adicionais</h4><p>${esc(prefs.summary||'Sem preferências adicionais registadas.')}</p></div>`,
-    fractions:heading('Frações',action('presentation','Registar apresentação comercial','presentation'))+recommendedFractions+`<section class="ux-client-section" id="clientPreparedFractions">${heading(`Selecionadas para apresentar <span class="muted small">${preparation.length}</span>`,action('select-presentation','Selecionar frações','list-checks'))}${clientFractionTiles(preparation,'Ainda não existem frações selecionadas para apresentação.')}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Frações efetivamente apresentadas <span class="muted small">${presented.length}</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientRelatedDetails" class="ux-client-details"><summary>Frações relacionadas e preços informados (${related.length})</summary><div class="top-actions">${action('associate','Editar frações de interesse','link')}</div>${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionRows.length?`<div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Fração</th><th>Estado com cliente</th><th>Preço informado</th><th>Data</th><th>Observação</th></tr></thead><tbody>${fractionRows.map(row=>`<tr><td>${getF(row.fraction)?fractionReference(getF(row.fraction)):`Apt. ${row.fraction}`}</td><td>${esc(row.status)}</td><td>${row.informedPrice?money(row.informedPrice):'—'}</td><td>${esc(formatCommercialDate(row.date))}</td><td>${esc(row.observation||'—')}</td></tr>`).join('')}</tbody></table></div>`:''}</details>`,
-    followup:heading('Acompanhamento comercial')+clientNextActionMarkup(followup,recommendation)+`<section class="ux-client-section">${heading('Contactos e apresentações')}<div class="ux-client-secondary-actions">${action('contact','Registar contacto','phone')}${action('presentation','Registar apresentação comercial','presentation')}${action('documentation','Registar envio de documentação','send')}${action('note','Adicionar observação','message-square')}</div></section><section class="ux-client-section">${heading('Negociação',action('proposal','Criar proposta','file-text')+action('stage','Atualizar estado comercial','tag'))}<div class="ux-client-negotiation"><label class="field"><span>Evento comercial</span><select id="clientNegotiationType">${['Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência'].map(type=>`<option>${esc(type)}</option>`).join('')}</select></label>${action('negotiation','Registar evento','plus')}</div></section><section class="ux-client-section">${heading(`Histórico completo <span class="muted small">${evs.length}</span>`,action('event','Adicionar evento','plus'))}<div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<p class="muted small">Sem interações registadas.</p>'}</div></section>`,
-    summary:heading('Resumo comercial')+clientFactsMarkup([['Último contacto',formatCommercialDate(summary.lastContact)],['Tipologia',prefs.typology],['Investimento',clientInvestmentLabel(c)],['Frações apresentadas',presented.length],['Negociação',c.stage==='Em negociação'?'Em negociação':'Sem negociação ativa registada']])+`<div id="clientRecommendation">${clientRecommendationMarkup(clientAutomaticRecommendation(recommendation))}</div>`+clientNextActionMarkup(followup,recommendation,true)+`<section class="ux-client-section">${heading('Atividade recente',`<button class="ux-text-button" type="button" data-ux-client-tab="followup">Ver histórico completo ${uxIcon('arrow-right')}</button>`)}${recentActivities}</section><div class="ux-client-secondary-actions"><button class="ghost-button compact-button" type="button" data-ux-client-tab="fractions">${uxIcon('building-2')}Ver frações</button>${action('contact','Registar contacto','phone')}</div>`
+    data:heading('Informação principal',`<button class="ghost-button compact-button" data-edit-client="${attr(c.id)}" type="button">${uxIcon('pencil')}Editar dados</button>`)+clientFactsMarkup([['Nome completo',c.name],['Telefone / WhatsApp',c.phone],['Email',c.email],['Origem do contacto',c.origin||c.originManual?clientOriginLabel(c):''],['Estado comercial',c.stage]])+`<details id="clientDataDetails" class="ux-client-details"><summary>Informações complementares</summary>${clientFactsMarkup([['Nacionalidade',c.nationality],['NIF',c.nif],['Agente',associatedAgent?.name||c.agent],['Imobiliária',c.agency||associatedAgent?.agency]])}<div class="ux-client-observations"><h4>Observações gerais</h4><p>${esc(c.notes||'Sem observações registadas.')}</p></div></details><section class="ux-client-section">${heading('Resumo comercial')}${overview}<div id="clientRecommendation">${clientRecommendationMarkup(clientAutomaticRecommendation(recommendation))}</div>${clientNextActionMarkup(followup,recommendation,true)}</section>`,
+    preferences:heading('Preferências',action('preferences','Editar preferências','sliders-horizontal'))+`<dl class="ux-preference-grid">${clientPreferenceDisplay('Tipologias',prefs.typology)}${clientPreferenceDisplay('Pisos',prefs.floor)}${clientPreferenceDisplay('Orientações',prefs.orientation)}</dl>${clientFactsMarkup([['Orçamento indicativo',c.budget?displayMoney(c.budget):''],['Investimento mínimo',c.budgetMin?displayMoney(c.budgetMin):''],['Investimento máximo',c.budgetMax||c.budget?displayMoney(c.budgetMax||c.budget):''],['Objetivo da aquisição',prefs.objective],['Prazo de decisão',prefs.decisionTime]])}<div class="ux-client-observations"><h4>Outras preferências</h4><p>${esc(prefs.summary||'Não informadas.')}</p></div>`,
+    fractions:heading('Frações',action('select-presentation','Selecionar frações','list-checks'))+recommendedFractions+`<section class="ux-client-section">${heading('Alternativas próximas',action('select-presentation','Consultar outras frações','building-2'))}${alternativeAccess}</section><section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`,
+    presentation:heading('Apresentação',action('presentation','Registar apresentação','presentation')+action('documentation','Registar documentação','send'))+`<section id="clientPreparedFractions">${heading(`Apresentação preparada <span class="muted small">${preparation.length} frações</span>`,action('select-presentation','Adicionar / retirar frações','list-checks'))}${preparation.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipologia / Piso</th><th>Preço comercial oficial</th><th>Disponibilidade</th></tr></thead><tbody>${preparation.map(f=>`<tr><td>${fractionReference(f)}</td><td>${esc(f.typology)} · ${esc(f.floorLabel)}</td><td data-prepared-price="${f.number}">${displayMoney(finalPrice(f))}</td><td data-prepared-status="${f.number}"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span></td></tr>`).join('')}</tbody></table></div><div class="ux-client-secondary-actions">${action('proposal','Definir preços e gerar PDF','file-text')}</div>`:'<p class="muted">Ainda não existem frações selecionadas para apresentação.</p>'}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Apresentações realizadas <span class="muted small">${presented.length} frações</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientPresentationHistory" class="ux-client-details"><summary>Histórico de apresentações e documentação (${presentationEvents.length})</summary><div class="timeline ux-client-timeline">${presentationEvents.length?presentationEvents.map(clientTimelineItem).join(''):'<p class="muted">Sem apresentações ou documentação registadas.</p>'}</div></details>`,
+    negotiation:heading('Negociação',action('proposal','Criar proposta','file-text')+action('stage','Atualizar estado comercial','tag'))+clientNegotiationMarkup(c,chronological,related)+`<section class="ux-client-section">${heading('Registar negociação')}<div class="ux-client-negotiation"><label class="field"><span>Evento comercial</span><select id="clientNegotiationType">${['Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência'].map(type=>`<option>${esc(type)}</option>`).join('')}</select></label>${action('negotiation','Registar evento','plus')}</div></section><section class="ux-client-section">${heading('Próxima ação do cliente')}${clientNextActionMarkup(followup,recommendation)}<div class="ux-client-secondary-actions">${action('contact','Registar contacto','phone')}${action('note','Adicionar observação','message-square')}</div></section><details id="clientFullHistory" class="ux-client-details" open><summary>Histórico comercial completo (${evs.length})</summary><div class="top-actions">${action('event','Adicionar evento','plus')}</div><div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<p class="muted">Sem interações registadas.</p>'}</div></details>`
   };
-  el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-breadcrumb" aria-label="Localização">Clientes <span aria-hidden="true">›</span> ${esc(c.name||'Cliente sem nome')}</nav><header class="client-detail-header"><div class="ux-client-title"><h2>${esc(c.name||'Cliente sem nome')}</h2><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span></div><p class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}<span>Origem: ${esc(clientOriginLabel(c))}</span>${associatedAgent?.name||c.agent?`<span>Agente: ${esc(associatedAgent?.name||c.agent)}</span>`:''}</p></header><div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div></div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key,label])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
+  const workflow=commercialUx.clientProfileOpen?clientWorkflow():null;
+  if(workflow){panels.data=workflow.contactMarkup(c)+`<details class="ux-client-details"><summary>Dados e ferramentas complementares</summary>${panels.data}</details>`;panels.presentation=workflow.presentationMarkup(c);panels.negotiation=workflow.negotiationMarkup(c)}
+  if(commercialUx.clientProfileOpen&&window.THE_VIEW_CLIENT_PREFERENCES){
+    const content=panels.preferences;
+    panels.preferences=inlinePreferencesMarkup(c)+(commercialUx.preferenceDraft?.clientId===c.id?'':content.slice(content.indexOf('<dl')))+archivedPreferencesMarkup(c);
+  }
+  if(commercialUx.clientProfileOpen&&window.THE_VIEW_FRACTION_RECOMMENDATIONS)panels.fractions=clientFractionWorkspaceMarkup(c)+`<section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`;
+  el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-client-return" aria-label="Navegação do cliente"><button class="ux-text-button" type="button" data-client-return>${uxIcon('arrow-left')}Voltar aos clientes</button><span>Ficha de cliente</span><button class="ghost-button compact-button ux-client-open" type="button" data-open-client-profile>${uxIcon('arrow-up-right')}Abrir ficha completa</button></nav><header class="client-detail-header"><div class="ux-client-title"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2 tabindex="-1">${esc(c.name||'Cliente sem nome')}</h2></div><button class="ghost-button compact-button" type="button" data-client-header-edit>${uxIcon('pencil')}Editar dados</button></div><div class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}${c.origin||c.originManual?`<span>Origem: ${esc(clientOriginLabel(c))}</span>`:''}${registered?`<span>Registo: ${esc(formatCommercialDate(registered.slice(0,10))==='—'?registered:formatCommercialDate(registered.slice(0,10)))}</span>`:''}</div>${latest?`<p class="ux-client-last-interaction"><span>Última interação</span> ${esc(latest.type||'Evento')} <time>${esc(formatTimelineDate(latest.date,latest.time))}</time></p>`:''}</header></div><div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
-  el.clientDetail.querySelectorAll('[data-edit-client-event]').forEach(btn=>btn.addEventListener('click',()=>{activateClientDetailTab('followup');openEventModal(btn.dataset.editClientEvent,'client')}));
+  el.clientDetail.querySelector('[data-client-header-edit]')?.addEventListener('click',()=>openClientModal(c.id));
+  if(window.THE_VIEW_CLIENT_WORKFLOW?.priority(c)){const mark=document.createElement('span');mark.className='ux-client-priority';mark.title='Cliente prioritário';mark.innerHTML=uxIcon('star')+'Cliente prioritário';el.clientDetail.querySelector('.ux-client-title>div')?.appendChild(mark)}
+  el.clientDetail.querySelector('[data-client-return]')?.addEventListener('click',closeClientProfile);
+  el.clientDetail.querySelectorAll('[data-open-client-profile]').forEach(button=>button.addEventListener('click',()=>{openClientProfile(c.id);if(button.dataset.profileTab)activateClientDetailTab(button.dataset.profileTab,true)}));
+  el.clientDetail.querySelectorAll('[data-edit-client-event]').forEach(btn=>btn.addEventListener('click',()=>openEventModal(btn.dataset.editClientEvent,'client')));
   el.clientDetail.querySelector('.ux-client-tabs').onkeydown=event=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.target.getAttribute('role')!=='tab')return;
     event.preventDefault();const keys=CLIENT_DETAIL_TABS.map(([key])=>key),index=keys.indexOf(event.target.dataset.uxClientTab);
-    const next=event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowRight'?1:-1)+keys.length)%keys.length;
-    activateClientDetailTab(keys[next],true);
+    activateClientDetailTab(keys[event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowRight'?1:-1)+keys.length)%keys.length],true);
   };
   detailStates.forEach(([id,open])=>{const details=el.clientDetail.querySelector(`#${id}`);if(details)details.open=open});
   const matchingList=el.clientDetail.querySelector('.ux-suggested-fractions');if(matchingList)matchingList.scrollTop=matchingScroll;
-  renderUxIcons();
-  activateClientDetailTab(commercialUx.clientDetailTab);
-  if(window.requestAnimationFrame)window.requestAnimationFrame(()=>{
-    if(commercialUx.clientDetailId!==c.id)return;
-    activateClientDetailTab(commercialUx.clientDetailTab);
-    if(entering&&state.tab==='sales'&&state.salesSubtab==='clients'&&window.matchMedia('(max-width:760px)').matches&&!document.querySelector('.modal-backdrop:not(.hidden)'))el.clientDetail.scrollIntoView({block:'start',behavior:'instant'});
+  renderUxIcons();activateClientDetailTab(commercialUx.clientDetailTab);
+  bindInlinePreferences(c);
+  bindClientFractionWorkspace(c);
+  workflow?.bind(c,el.clientDetail);
+}
+let clientWorkflowController;
+function clientWorkflow(){
+  if(!window.createClientWorkflow)return null;
+  if(!clientWorkflowController)clientWorkflowController=window.createClientWorkflow({
+    esc,icon:uxIcon,id,today,money:displayMoney,client,event:eid=>state.data.events.find(ev=>ev.id===eid),events:()=>state.data.events,agents:()=>state.data.agents,
+    preferences:window.THE_VIEW_CLIENT_PREFERENCES,
+    notify:message=>notifyUser(message,'Acompanhamento comercial'),
+    applyCommunication:(ev,old,updated)=>{
+      if(updated)Object.assign(client(ev.clientId),updated);
+      if(old)state.data.events[state.data.events.findIndex(item=>item.id===old.id)]=ev;else state.data.events.push(ev);
+      const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;recalculateResumoCliente(c.id);c.preferences=preferences;c.budget=budget;
+    },
+    rows:clientFractionSource,selection:presentationSelection,revision:()=>sharedSync.revision,
+    recommend:(c,rows)=>window.THE_VIEW_FRACTION_RECOMMENDATIONS.evaluate(c,rows),status:r=>r?clientFractionStatus(r):'Não confirmada',price:r=>r?clientFractionPrice(r):'Não confirmado',
+    timeline:clientTimelineItem,facts:clientFactsMarkup,reference:n=>getF(n)?fractionReference(getF(n)):`Apt. ${n}`,render:()=>RenderFlow.eventChanged(),tab:activateClientDetailTab,
+    followup:(cid,events)=>{
+      const engine=window.THE_VIEW_RECOMMENDATIONS;
+      return engine?.followupInfo({id:cid},engine.buildContext({events,now:new Date().toISOString()}));
+    },
+    general:c=>`<section class="ux-client-section"><h3>Acompanhamento geral do cliente</h3>${clientNextActionMarkup(clientSummaryFollowupInfo(c),commercialClientRecommendation(c))}<div class="ux-client-secondary-actions"><button class="ux-text-button" type="button" data-ux-client-action="stage">${uxIcon('tag')}Atualizar estado do cliente</button><button class="ux-text-button" type="button" data-ux-client-action="contact">${uxIcon('phone')}Registar contacto</button><button class="ux-text-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar observação</button></div></section>`,
+    nextAction:(ev,step,date)=>nextActionMetadata(ev,step,date,'event'),commission:calculateCommission,closing:ev=>isCommercialClosingEvent(ev)&&!isAbandonmentEvent(ev),
+    confirm:confirmUser,confirmClosing:confirmWorkflowClosing,persist:persistClientChange,feedback:clientSaveFeedback,recalculate:recalculateResumoCliente,
+    apply:(ev,old)=>{
+      const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;
+      if(old)replaceEventAndReapplyBusinessRules(old,ev);else applyEventBusinessRules(ev);
+      c.preferences=preferences;c.budget=budget;
+      // Only the first realization consumes preparation; historical edits leave it intact.
+      if(ev.presentationHistory&&!isPresentationDraft(ev)&&(!old||isPresentationDraft(old)))consumePresentationSelection(c,ev);
+    },
+    pdf:()=>openClientUxAction('proposal'),oldEvent:()=>openEventModal('','client')
   });
+  return clientWorkflowController;
+}
+async function confirmWorkflowClosing(ev,old,revision){
+  if(old&&!hasCriticalCommercialEventChange(old,ev))return true;
+  const ensure=async()=>{
+    if(!sharedSync.verified||sharedSync.dirty||sharedSync.busy||sharedSync.phase!=='synced'||!sharedSync.canWrite)throw Error('Confirme primeiro a sincronização da base comercial.');
+    const result=await requestCommercialData();
+    if(result.revision!==revision||sharedSync.revision!==revision||sharedSync.dirty)throw Error('A base comercial mudou. Atualize a consulta, reveja as condições e reabra o formulário.');
+    const error=window.THE_VIEW_CLIENT_WORKFLOW.closingError(ev,old,state.data,sharedSync.revision,revision,commercialEffectForFraction);
+    if(error)throw Error(error);
+    if(!result.canWrite)throw Error('A fonte não permite gravações neste momento.');
+  };
+  await ensure();
+  const target=isReservationCancellationEvent(ev)?'Disponível':isSaleEvent(ev)?'Vendido':isReservationEvent(ev)?'Reservado':'recalculado';
+  if(!await confirmUser(`Ao confirmar, ${uniqNum([...(ev.fractions||[]),...(old?.fractions||[])]).map(n=>'Apt. '+n).join(', ')} terá o estado global ${target}. O evento, os valores e as comissões associados serão guardados em conjunto. Confirmar?`,'Confirmar alteração global'))return false;
+  await ensure();return true;
 }
 function activateClientDetailTab(key,focus=false){
-  if(!CLIENT_DETAIL_TABS.some(([id])=>id===key))key='summary';
+  key=({followup:'negotiation',summary:'data'})[key]||key;
+  if(!CLIENT_DETAIL_TABS.some(([id])=>id===key))key='data';
   commercialUx.clientDetailTab=key;
+  commercialUx.clientProfileTabs=commercialUx.clientProfileTabs||{};
+  commercialUx.clientProfileTabs[state.selectedClientId]=key;
   el.clientDetail.querySelectorAll('[role="tab"]').forEach(button=>{const active=button.dataset.uxClientTab===key;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1});
   el.clientDetail.querySelectorAll('[data-client-panel]').forEach(panel=>panel.hidden=panel.dataset.clientPanel!==key);
   const button=el.clientDetail.querySelector(`#clientTab-${key}`),nav=el.clientDetail.querySelector('.ux-client-tabs');
@@ -1865,7 +2147,7 @@ function clientPresentedFractionRows(c,events=sortedClientEvents(c.id)){
   return uniqNum([...(c.commercialSummary?.presentedFractions||[]),...events.filter(eventFractionsPresented).flatMap(ev=>ev.fractions||[])]).map(n=>{
     const related=events.filter(ev=>(ev.fractions||[]).map(Number).includes(n));
     const presentation=related.slice().reverse().find(ev=>isCommercialPresentationEvent(ev)||['Frações apresentadas','Visita','Reunião realizada','Reunião com cliente'].includes(ev.type));
-    const informed=related.flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,eventId:ev.id}))).pop();
+    const informed=related.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,eventId:ev.id}))).pop();
     return{fraction:n,date:presentation?.date||'',informedPrice:Number(informed?.informedPrice)||0,interest:related.slice().reverse().find(ev=>ev.interest)?.interest||'',eventId:presentation?.id||informed?.eventId||related.slice().reverse().find(eventFractionsPresented)?.id||''};
   });
 }
@@ -1904,25 +2186,28 @@ function clientSuggestedFractionTiles(fractions,matches=[]){
 }
 function openPresentationSelectionModal(){
   const c=client(state.selectedClientId);if(!c)return;
-  const selected=new Set(presentationSelection(c)),matches=commercialClientRecommendation(c)?.matching.matches||[],suggested=new Set(matches.map(f=>f.number));
+  const enhanced=!!window.THE_VIEW_FRACTION_RECOMMENDATIONS,original=JSON.stringify(presentationSelection(c)),approvals=clientFractionDraft(c)?.approvals||new Map();
+  const selected=new Set(enhanced?clientFractionSelected(c):presentationSelection(c)),matches=enhanced?window.THE_VIEW_FRACTION_RECOMMENDATIONS.evaluate(c,clientFractionSource()).main:commercialClientRecommendation(c)?.matching.matches||[],suggested=new Set(matches.map(f=>f.number));
   document.getElementById('presentationSelectionModal')?.remove();
   const backdrop=document.createElement('div');backdrop.id='presentationSelectionModal';backdrop.className='modal-backdrop';
   backdrop.innerHTML=`<div class="modal"><button class="modal-close" type="button" data-close-selection aria-label="Fechar">${uxIcon('x')}</button><h2>Selecionar frações para apresentar</h2><label class="field"><span>Pesquisar fração</span><input type="search" id="presentationSelectionSearch" placeholder="Fração, tipologia, piso ou orientação"></label><div class="ux-selection-tools"><span id="presentationSelectionCount" role="status" aria-live="polite"></span><button class="ux-text-button" type="button" data-select-suggested>${uxIcon('list-checks')}Selecionar recomendadas</button><button class="ux-text-button" type="button" data-clear-selection>${uxIcon('eraser')}Limpar</button></div><div class="ux-presentation-picker"></div><div class="modal-actions"><button class="ghost-button" type="button" data-close-selection>Cancelar</button><button class="primary-button" type="button" data-save-selection>Guardar seleção</button></div></div>`;
   const render=()=>{
     const search=norm(backdrop.querySelector('input').value);
-    const fractions=state.fractions.filter(f=>!search||norm([`Apt. ${f.number}`,f.name,f.typology,`Piso ${f.floorLabel}`,f.orientation].join(' ')).includes(search));
+    const fractions=enhanced?window.THE_VIEW_FRACTION_RECOMMENDATIONS.search(clientFractionSource(),search).map(row=>getF(row.number)):state.fractions.filter(f=>!search||norm([`Apt. ${f.number}`,f.name,f.typology,`Piso ${f.floorLabel}`,f.orientation].join(' ')).includes(search));
     backdrop.querySelector('#presentationSelectionCount').textContent=`${selected.size} ${selected.size===1?'fração selecionada':'frações selecionadas'}`;
-    backdrop.querySelector('.ux-presentation-picker').innerHTML=fractions.length?fractions.map(f=>`<button class="ux-presentation-choice" type="button" data-pick-fraction="${f.number}" aria-pressed="${selected.has(f.number)}"><span><strong>Apt. ${f.number}</strong> · ${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span><span>${displayMoney(finalPrice(f))}${suggested.has(f.number)?' · Recomendada':''}</span>${uxIcon(selected.has(f.number)?'check':'plus')}</button>`).join(''):'<p class="muted">Nenhuma fração encontrada.</p>';
+    const rows=enhanced?clientFractionSource():[];
+    backdrop.querySelector('.ux-presentation-picker').innerHTML=fractions.length?fractions.map(f=>{const row=rows.find(row=>row.number===f.number);return`<button class="ux-presentation-choice" type="button" data-pick-fraction="${f.number}" aria-pressed="${selected.has(f.number)}"><span><strong>Apt. ${f.number}</strong> · ${esc(f.typology)} · Piso ${esc(f.floorLabel)}</span><span class="${row&&!row.statusConfirmed?'badge badge--neutral':badge(statusOf(f))}">${esc(row?clientFractionStatus(row):statusOf(f))}</span><span>${row?esc(clientFractionPrice(row)):displayMoney(finalPrice(f))}${suggested.has(f.number)?' · Recomendada':''}</span>${uxIcon(selected.has(f.number)?'check':'plus')}</button>`}).join(''):'<p class="muted">Nenhuma fração encontrada.</p>';
     renderUxIcons();
   };
   const close=()=>{backdrop.remove();document.body.style.overflow='';document.querySelector('[data-ux-client-action="select-presentation"]')?.focus({preventScroll:true})};
-  backdrop.onclick=event=>{
+  backdrop.onclick=async event=>{
     const button=event.target.closest('button');if(!button)return;
+    if(backdrop.dataset.saving==='true')return;
     if(button.hasAttribute('data-close-selection'))close();
-    else if(button.hasAttribute('data-pick-fraction')){const n=Number(button.dataset.pickFraction);selected.has(n)?selected.delete(n):selected.add(n);render();backdrop.querySelector(`[data-pick-fraction="${n}"]`)?.focus({preventScroll:true})}
+    else if(button.hasAttribute('data-pick-fraction')){const n=Number(button.dataset.pickFraction);if(selected.has(n))selected.delete(n);else{backdrop.dataset.saving='true';const allowed=!enhanced||await confirmClientFractionAddition(n,approvals);backdrop.dataset.saving='false';if(!allowed)return;selected.add(n)}render();backdrop.querySelector(`[data-pick-fraction="${n}"]`)?.focus({preventScroll:true})}
     else if(button.hasAttribute('data-select-suggested')){suggested.forEach(n=>selected.add(n));render()}
     else if(button.hasAttribute('data-clear-selection')){selected.clear();render()}
-    else if(button.hasAttribute('data-save-selection')){if(updatePresentationSelection(c,[...selected]))save();close();RenderFlow.clientChanged()}
+    else if(button.hasAttribute('data-save-selection')){if(enhanced){backdrop.dataset.saving='true';button.disabled=true;const saved=await saveClientFractionSelection(c.id,[...selected],original,approvals);backdrop.dataset.saving='false';button.disabled=false;if(!saved)return;commercialUx.fractionSelectionDraft=null}else if(updatePresentationSelection(c,[...selected]))save();close();RenderFlow.clientChanged()}
   };
   backdrop.querySelector('input').oninput=render;document.body.appendChild(backdrop);document.body.style.overflow='hidden';render();ensureCommercialModalLabels();backdrop.querySelector('input').focus();
 }
@@ -1957,7 +2242,7 @@ function clientTimelineItem(e){
   const fractions=(e.fractions||[]).map(n=>getF(Number(n))?fractionReference(getF(Number(n))):`<span>Apt. ${esc(n)}</span>`);
   return`<article class="timeline-item"><div class="ux-timeline-heading"><div><time>${esc(formatTimelineDate(e.date,e.time))}</time><h4>${esc(e.type||'Evento')}</h4></div><button class="ghost-button compact-button" type="button" data-edit-client-event="${attr(e.id)}">${uxIcon('pencil')}Ver / Editar</button></div>
     ${fractions.length?`<div class="ux-timeline-fractions">${fractions.join('')}</div>`:''}${e.amount?`<p><strong>${money(e.amount)}</strong></p>`:''}
-    ${(e.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(e.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}
+    ${eventInformedPrices(e).length?`<p><strong>Preços informados:</strong> ${esc(eventInformedPrices(e).map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}
     ${e.notes?`<p class="ux-event-notes">${esc(e.notes)}</p>`:''}${eventChannelDetailsHtml(e)}${eventRequestDetailsHtml(e)}
     ${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}${e.nextStep||e.followup||e.followupDate?`<p class="muted small">Próximo passo: ${esc(e.nextStep||e.followup||'—')}${e.followupDate?` · ${esc(formatCommercialDate(e.followupDate))}`:''}</p>`:''}${e.interest?`<p class="muted small">Interesse: ${esc(e.interest)}</p>`:''}${e.agentId?`<p class="muted small">Agente: ${esc(agent(e.agentId)?.name||'—')}</p>`:''}${e.commissionAmount?`<p class="muted small">Comissão: ${money(e.commissionAmount)}</p>`:''}</article>`;
 }
@@ -1968,6 +2253,7 @@ function formatTimelineDate(date,time=''){
 }
 function openClientContact(){
   if(!client(state.selectedClientId)){notifyUser('Selecione um cliente para registar o contacto.','Registar contacto');return}
+  if(clientWorkflow()){openClientProfile(state.selectedClientId);clientWorkflow().newContact(state.selectedClientId);return}
   openEventModal('','client');el.eventType.value='Outro';toggleEventSpecificFields();el.eventChannel.value='Telefone';
   const modal=el.eventModal.querySelector('.modal');if(modal)modal.scrollTop=0;el.eventChannel.focus({preventScroll:true});
 }
@@ -1975,7 +2261,7 @@ function openClientContact(){
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
 function agent(id){return (state.data.agents||[]).find(a=>a.id===id)}
 function calculateCommission(amount,type,value){amount=+amount||0;value=+value||0;return type==='percent'?amount*value/100:value}
-function isCommercialClosingEvent(ev){return !!ev&&(isReservationEvent(ev)||isSaleEvent(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))}
+function isCommercialClosingEvent(ev){return !!ev&&(isReservationEvent(ev)||isSaleEvent(ev)||isReservationCancellationEvent(ev)||(isAbandonmentEvent(ev)&&ev.releaseReservation))}
 function commercialStatusFromEvent(ev){return isReservationEvent(ev)?'Reservado':isSaleEvent(ev)?'Vendido':''}
 function eventDerivedStage(ev){return stageFromEvent(ev)}
 function applyClientEventStage(c){if(c)recalculateResumoCliente(c.id)}
@@ -1997,11 +2283,12 @@ function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[
 function applyEventBusinessRules(ev){
   if(isCommercialClosingEvent(ev))ensureLegacyCommercialEventLinks(ev.fractions||[]);
   state.data.events.push(ev);
+  if(isPresentationDraft(ev))return;
   if(ev.type==='Preferências recebidas'&&client(ev.clientId))client(ev.clientId).preferencesManuallyEdited=false;
   applyClientEventStage(client(ev.clientId),ev);
   if(isReservationEvent(ev))applyReservationEvent(ev);
   else if(isSaleEvent(ev))applySaleEvent(ev);
-  else if(isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))reapplyCommercialEffectsForFractions(ev.fractions||[]);
+  else if(isReservationCancellationEvent(ev)||(isAbandonmentEvent(ev)&&ev.releaseReservation))reapplyCommercialEffectsForFractions(ev.fractions||[]);
 }
 function eventSortKey(ev,index=0){return`${ev.date||''} ${ev.time||''} ${String(index).padStart(6,'0')}`}
 function commercialEffectForFraction(n){
@@ -2009,7 +2296,7 @@ function commercialEffectForFraction(n){
   (state.data.events||[]).map((event,index)=>({event,index})).filter(item=>(item.event.fractions||[]).includes(n)).sort((a,b)=>eventSortKey(a.event,a.index).localeCompare(eventSortKey(b.event,b.index))).forEach(({event})=>{
     if(isReservationEvent(event))effect={status:'Reservado',amount:Number(event.amount)||0,event};
     else if(isSaleEvent(event))effect={status:'Vendido',amount:Number(event.amount)||0,event};
-    else if(isReservationCancellationEvent(event)&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
+    else if(isReservationCancellationEvent(event)&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=event.negotiationVersion===1?{status:'Disponível',amount:0,event}:null;
     else if(isAbandonmentEvent(event)&&event.releaseReservation&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
   });
   return effect;
@@ -2069,6 +2356,8 @@ function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEf
 function hasCriticalCommercialEventChange(oldEv,newEv){
   if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
   return oldEv.type!==newEv.type ||
+    oldEv.clientId!==newEv.clientId || oldEv.date!==newEv.date || (oldEv.time||'')!==(newEv.time||'') ||
+    !!oldEv.releaseReservation!==!!newEv.releaseReservation ||
     JSON.stringify(uniqNum(oldEv.fractions||[]))!==JSON.stringify(uniqNum(newEv.fractions||[])) ||
     Number(oldEv.amount||0)!==Number(newEv.amount||0) ||
     !!oldEv.withAgent!==!!newEv.withAgent ||
@@ -2079,11 +2368,11 @@ function hasCriticalCommercialEventChange(oldEv,newEv){
 function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
-  if(isCommercialClosingEvent(oldEv)||isCommercialClosingEvent(newEv))ensureLegacyCommercialEventLinks(uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]));
+  if(hasCriticalCommercialEventChange(oldEv,newEv))ensureLegacyCommercialEventLinks(uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]));
   state.data.events[idx]=newEv;
   if(newEv.type==='Preferências recebidas'&&client(newEv.clientId))client(newEv.clientId).preferencesManuallyEdited=false;
   reapplyClientLinksAfterEventEdit(oldEv,newEv);
-  reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
+  if(hasCriticalCommercialEventChange(oldEv,newEv))reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
   return true;
 }
 function createManualStatusEvent(n,oldStatus,newStatus){
@@ -2147,22 +2436,19 @@ function currentTimeValue(){
 }
 function clientPhoneDigits(v){return safe(v).replace(/\D/g,'')}
 function sameClientPhone(a,b){
-  const x=clientPhoneDigits(a),y=clientPhoneDigits(b);
-  return x.length>=5&&y.length>=5&&(x===y||x.endsWith(y)||y.endsWith(x));
+  const normalize=value=>clientPhoneDigits(value).replace(/^00/,'').replace(/^351(?=\d{9}$)/,'');
+  const x=normalize(a),y=normalize(b);
+  return x.length>=5&&x===y;
 }
 function findPotentialDuplicateClient(candidate={},excludeId=''){
-  const email=norm(candidate.email),name=norm(candidate.name);
+  const email=safe(candidate.email).trim().toLowerCase();
   const clients=(state.data.clients||[]).filter(c=>c.id!==excludeId);
   if(email){
-    const found=clients.find(c=>norm(c.email)===email);
+    const found=clients.find(c=>safe(c.email).trim().toLowerCase()===email);
     if(found)return{client:found,reason:'email'};
   }
   const phoneFound=clients.find(c=>sameClientPhone(c.phone,candidate.phone));
   if(phoneFound)return{client:phoneFound,reason:'contacto'};
-  if(name){
-    const found=clients.find(c=>norm(c.name)===name);
-    if(found)return{client:found,reason:'nome'};
-  }
   return null;
 }
 function chooseDuplicateClientAction(duplicate,candidate={},reason=''){
@@ -2217,9 +2503,10 @@ function buildInitialRequestEvent(clientId,c={}){
     id:id(),
     clientId,
     type:EVENT_TYPES[0],
-    date:el.clientInitialRequestDate?.value||today(),
-    time:el.clientInitialRequestTime?.value||currentTimeValue(),
-    channel:el.clientModal?.dataset.clientMode==='quick'?clientOriginLabel(c):el.clientInitialRequestChannel?.value||clientOriginLabel(c),
+    ...(window.THE_VIEW_CLIENT_WORKFLOW?{communicationVersion:1,actualCommunication:!!el.clientInitialRequestDate?.value}:{}),
+    date:window.THE_VIEW_CLIENT_WORKFLOW?(el.clientInitialRequestDate?.value||''):el.clientInitialRequestDate?.value||today(),
+    time:el.clientInitialRequestTime?.value||'',
+    channel:el.clientInitialRequestChannel?.value||(c.origin?clientOriginLabel(c):''),
     amount:0,
     interest:preferences.typology||'',
     nextStep:'',
@@ -2606,7 +2893,7 @@ function collectEventPriceDraft(){
   });
 }
 function previousLowerInformedPrice(n,excludeEventId=''){
-  const records=(state.data.events||[]).filter(ev=>ev.id!==excludeEventId).flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n&&Number(item.informedPrice)>0).map(item=>({price:Number(item.informedPrice),date:ev.date||'',client:client(ev.clientId)?.name||'Cliente sem nome'})));
+  const records=(state.data.events||[]).filter(ev=>ev.id!==excludeEventId).flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n&&Number(item.informedPrice)>0).map(item=>({price:Number(item.informedPrice),date:ev.date||'',client:client(ev.clientId)?.name||'Cliente sem nome'})));
   const current=finalPrice(getF(n));
   return records.filter(item=>item.price<current).sort((a,b)=>a.price-b.price)[0]||null;
 }
@@ -2704,7 +2991,7 @@ function renderSales(){
 }
 function getHistoricoComercialFracao(unitId,options={}){
   const eventRows=(state.data.events||[]).filter(ev=>(ev.fractions||[]).includes(unitId)).map(ev=>{
-    const price=(ev.informedPrices||[]).find(item=>Number(item.fraction||item.unitId)===unitId);
+    const price=eventInformedPrices(ev).find(item=>Number(item.fraction||item.unitId)===unitId);
     const official=Number(price?.officialPrice)||0,informed=Number(price?.informedPrice)||0;
     return{source:'event',eventId:ev.id,date:ev.date||'',time:ev.time||'',type:ev.type||'Evento',client:client(ev.clientId)?.name||'Sem cliente associado',officialPrice:official,informedPrice:informed,amount:Number(ev.amount)||0,difference:informed&&official?informed-official:0,hasDifference:!!(informed&&official),observation:safe(price?.observation||ev.notes)};
   });
@@ -2761,6 +3048,7 @@ async function completeClientNextAction(){
   recalculateResumoCliente(c.id);save();RenderFlow.clientChanged();
 }
 function openClientModal(cid='',mode='identity'){
+  if(state.clientSaving)return;
   state.definingNextAction=false;
   ensureClientAgentSelect();
   populateClientAgentSelect();
@@ -2777,7 +3065,7 @@ function openClientModal(cid='',mode='identity'){
   el.clientEmail.value=isEdit?(c.email||''):'';
   el.clientNif.value=isEdit?(c.nif||''):'';
   el.clientNationality.value=isEdit?(c.nationality||''):'';
-  populateClientOriginSelect(isEdit?(c.origin||''):'Website The View');
+  populateClientOriginSelect(isEdit?(c.origin||''):'');
   el.clientOriginManual.value=isEdit?(c.originManual||''):'';
   toggleClientOriginManual();
   if(el.clientAgent)el.clientAgent.value=aid;
@@ -2795,9 +3083,10 @@ function openClientModal(cid='',mode='identity'){
   el.clientNextFollowup.value=isEdit?(c.manualNextFollowup??c.nextFollowup??''):'';
   el.clientInitialRequestFields?.classList.toggle('hidden',isEdit);
   if(!isEdit){
-    if(el.clientInitialRequestDate)el.clientInitialRequestDate.value=today();
-    if(el.clientInitialRequestTime)el.clientInitialRequestTime.value=currentTimeValue();
-    if(el.clientInitialRequestChannel)el.clientInitialRequestChannel.value='Website The View';
+    state.clientCreationDraft={id:id(),eventId:id(),createdAt:new Date().toISOString()};
+    if(el.clientInitialRequestDate)el.clientInitialRequestDate.value=window.THE_VIEW_CLIENT_WORKFLOW?'':today();
+    if(el.clientInitialRequestTime)el.clientInitialRequestTime.value='';
+    if(el.clientInitialRequestChannel)el.clientInitialRequestChannel.value='';
     if(el.clientInitialRequestNotes)el.clientInitialRequestNotes.value='';
     if(el.clientSkipInitialRequest)el.clientSkipInitialRequest.checked=!!state.pendingEventClientCreation;
   }
@@ -2823,14 +3112,54 @@ function openClientModal(cid='',mode='identity'){
   document.body.style.overflow='hidden';
   el.clientModal.querySelector('.modal').scrollTop=0;
   state.clientFormSnapshot=readClientEditValues();
+  installClientDuplicateWarning();
   ({preferences:el.clientTypologyPreference,plan:el.clientNextStep,associate:el.clientFractions,stage:el.clientStage}[mode]||el.clientName).focus({preventScroll:true});
 }
 function closeClientModal(){state.definingNextAction=false;state.pendingEventClientCreation=false;state.clientFormSnapshot=null;el.clientModal.classList.add('hidden');el.clientModal.style.zIndex='';if(el.eventModal&&el.eventModal.classList.contains('hidden'))document.body.style.overflow=''}
 async function saveClient(){
+  if(state.clientSaving)return;
+  state.clientSaving=true;
+  const button=document.getElementById('saveClient');if(button)button.disabled=true;
+  try{await saveClientForm()}finally{state.clientSaving=false;if(button)button.disabled=false}
+}
+async function persistClientChange(){
+  save();clearTimeout(saveTimer);
+  const confirmed=await syncRemote();
+  return confirmed&&sharedSync.phase==='synced'&&!sharedSync.dirty;
+}
+function clientSaveFeedback(confirmed,message){commercialUxToast(confirmed?message:sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local. Mantenha a página aberta e exporte uma cópia dos dados.':'Alterações locais preservadas. Sincronização por confirmar.')}
+function installClientDuplicateWarning(){
+  let box=document.getElementById('clientDuplicateWarning');
+  if(!box){box=document.createElement('div');box.id='clientDuplicateWarning';box.className='ux-client-duplicate-warning hidden';box.setAttribute('role','status');el.clientPhone.closest('.form-grid')?.after(box)}
+  const update=()=>{
+    const found=findPotentialDuplicateClient({phone:el.clientPhone.value,email:el.clientEmail.value},el.clientId.value);
+    box.classList.toggle('hidden',!found);if(!found){box.innerHTML='';return}
+    box.innerHTML=`<span>Possível duplicado (${esc(found.reason)}): <strong>${esc(found.client.name)}</strong></span><button class="ux-text-button" type="button">Abrir ficha existente</button>`;
+    box.querySelector('button').onclick=()=>{
+      const fromEvent=state.pendingEventClientCreation;state.selectedClientId=found.client.id;renderClientSelects();
+      if(fromEvent&&el.eventClientId)el.eventClientId.value=found.client.id;
+      closeClientModal();RenderFlow.clientChanged();if(!fromEvent)openClientProfile(found.client.id);
+    };
+  };
+  el.clientPhone.oninput=update;el.clientEmail.oninput=update;update();
+}
+function initialClientRequestEvent(cid,c,draft){
+  if(state.pendingEventClientCreation&&!state.editingEventId&&el.eventType?.value==='Pedido de informação recebido')return buildEventFromForm(cid,getMulti(el.eventFractions).map(Number),draft.eventId);
+  return{...buildInitialRequestEvent(cid,c),id:draft.eventId};
+}
+function resumeInitialRequestInEvent(event){
+  if(!state.pendingEventClientCreation||state.editingEventId||el.eventType?.value!=='Pedido de informação recebido')return;
+  state.editingEventId=event.id;state.eventEditSource='client';
+  document.getElementById('saveEvent').textContent='Atualizar evento';
+  el.eventModal.querySelector('h2').textContent='Editar evento';
+}
+async function saveClientForm(){
   if(el.clientModal.dataset.clientMode==='preferences'){await saveClientPreferences();return}
   if(el.clientId.value){await saveClientEdit();return}
   const isNew=!el.clientId.value;
-  let cid=el.clientId.value||id();
+  const draft=state.clientCreationDraft||(state.clientCreationDraft={id:id(),eventId:id(),createdAt:new Date().toISOString()});
+  if(draft.applied&&!el.clientId.value){if(sharedSync.dirty)clientSaveFeedback(await persistClientChange(),'Cliente guardado na base partilhada.');return}
+  let cid=el.clientId.value||draft.id;
   const existing=client(cid)||{};
   const selectedAgentId=el.clientAgent?.value||'';
   const selectedAgent=agent(selectedAgentId);
@@ -2841,7 +3170,7 @@ async function saveClient(){
   const stageChanged=selectedStage!==(el.clientStage.dataset.original||'Novo Lead');
   const c={
     ...existing,
-    ...(isNew?{legacyStageFallback:'Novo Lead'}:{}),
+    ...(isNew?{legacyStageFallback:'Novo Lead',createdAt:draft.createdAt}:{}),
     id:cid,
     name:el.clientName.value.trim(),
     phone:el.clientPhone.value.trim(),
@@ -2895,7 +3224,8 @@ async function saveClient(){
         try{
           state.data.clients=state.data.clients||[];
           state.data.events=state.data.events||[];
-          applyEventBusinessRules(buildInitialRequestEvent(duplicate.client.id,c));
+          const event=initialClientRequestEvent(duplicate.client.id,c,draft);
+          if(!state.data.events.some(item=>item.id===event.id))applyEventBusinessRules(event);
           recalculateResumoCliente(duplicate.client.id);
         }catch(err){
           state.data.clients=clientsBefore;
@@ -2905,19 +3235,22 @@ async function saveClient(){
           return;
         }
         state.selectedClientId=duplicate.client.id;
-        save();
+        draft.applied=true;
+        const confirmed=await persistClientChange();
         renderClientSelects();
         if(state.pendingEventClientCreation&&el.eventClientId){
           el.eventClientId.value=duplicate.client.id;
+          resumeInitialRequestInEvent(state.data.events.find(event=>event.id===draft.eventId));
           state.pendingEventClientCreation=false;
         }
         closeClientModal();
         RenderFlow.clientChanged();
+        clientSaveFeedback(confirmed,'Pedido guardado na base partilhada.');
         return;
       }
     }
   }
-  const initialEvent=isNew&&!(el.clientSkipInitialRequest?.checked)?buildInitialRequestEvent(cid,c):null;
+  const initialEvent=isNew?initialClientRequestEvent(cid,c,draft):null;
   const clientsBefore=JSON.parse(JSON.stringify(state.data.clients||[]));
   const eventsBefore=JSON.parse(JSON.stringify(state.data.events||[]));
   try{
@@ -2925,7 +3258,7 @@ async function saveClient(){
     state.data.events=state.data.events||[];
     const idx=state.data.clients.findIndex(x=>x.id===cid);
     idx>=0?state.data.clients[idx]=c:state.data.clients.push(c);
-    if(initialEvent)applyEventBusinessRules(initialEvent);
+    if(initialEvent&&!state.data.events.some(event=>event.id===initialEvent.id))applyEventBusinessRules(initialEvent);
     else recalculateResumoCliente(cid);
   }catch(err){
     state.data.clients=clientsBefore;
@@ -2935,11 +3268,13 @@ async function saveClient(){
     return;
   }
   state.selectedClientId=cid;
-  save();
+  draft.applied=true;
+  const confirmed=await persistClientChange();
   renderClientSelects();
   const fromEvent=state.pendingEventClientCreation;
   if(fromEvent&&el.eventClientId){
     el.eventClientId.value=cid;
+    if(initialEvent)resumeInitialRequestInEvent(initialEvent);
     state.pendingEventClientCreation=false;
   }
   closeClientModal();
@@ -2947,7 +3282,8 @@ async function saveClient(){
   if(isNew&&!fromEvent)contextualCommercialNavigation('sales',()=>{
     state.salesSubtab='clients';commercialUx.clientFocus='';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all';
   });
-  commercialUxToast(isNew?'Cliente criado e guardado.':'Cliente atualizado.');
+  if(isNew&&!fromEvent)openClientProfile(cid);
+  clientSaveFeedback(confirmed,isNew?'Cliente criado e guardado na base partilhada.':'Cliente atualizado na base partilhada.');
 }
 function readClientEditValues(){
   return{name:el.clientName.value.trim(),phone:el.clientPhone.value.trim(),email:el.clientEmail.value.trim(),origin:el.clientOrigin.value,originManual:el.clientOriginManual.value.trim(),nif:el.clientNif.value.trim(),nationality:el.clientNationality.value.trim(),agentId:el.clientAgent.value,agency:el.clientAgency.value.trim(),notes:el.clientNotes.value.trim(),manualNextStep:el.clientNextStep.value.trim(),manualNextFollowup:el.clientNextFollowup.value,stage:el.clientStage.value,manualFractions:uniqNum(getMulti(el.clientFractions))};
@@ -2972,9 +3308,9 @@ async function saveClientEdit(){
   }
   if(Object.hasOwn(patch,'stage'))Object.assign(patch,{stage:normalizeClientStage(patch.stage),stageManual:true,manualStage:normalizeClientStage(patch.stage)});
   if(!Object.keys(patch).length){closeClientModal();return}
-  Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT')});
+  Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT'),updatedAt:new Date().toISOString()});
   if(mode!=='identity')recalculateResumoCliente(c.id);
-  save();closeClientModal();RenderFlow.clientChanged();commercialUxToast(mode==='identity'?'Dados do cliente atualizados.':'Acompanhamento atualizado.');
+  const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,mode==='identity'?'Dados do cliente atualizados na base partilhada.':'Acompanhamento atualizado na base partilhada.');
 }
 function clientInvestmentInterval(existing){
   const min=num(document.getElementById('clientBudgetMin').value),max=num(document.getElementById('clientBudgetMax').value),budget=num(el.clientBudget.value);
@@ -2987,13 +3323,27 @@ function clientInvestmentInterval(existing){
 async function saveClientPreferences(){
   const c=client(el.clientId.value);if(!c)return;
   const interval=clientInvestmentInterval(c);if(!interval)return;
-  const preferences=cleanPreferences({typology:el.clientTypologyPreference.value,floor:el.clientFloorPreference.value,orientation:el.clientOrientationPreference.value,objective:el.clientPurchaseObjective.value,decisionTime:el.clientDecisionTime.value,summary:el.clientPreferenceSummary.value});
+  const preferences=cleanPreferences({...c.preferences,typology:el.clientTypologyPreference.value,floor:el.clientFloorPreference.value,orientation:el.clientOrientationPreference.value,objective:el.clientPurchaseObjective.value,decisionTime:el.clientDecisionTime.value,summary:el.clientPreferenceSummary.value});
   const budget=num(el.clientBudget.value);
   if(JSON.stringify(preferences)===JSON.stringify(cleanPreferences(c.preferences||{}))&&budget===(Number(c.budget)||0)&&Object.entries(interval).every(([key,value])=>value===(Number(c[key])||0))){closeClientModal();return}
-  Object.assign(c,interval,{manualPreferences:preferences,preferences,preferencesManuallyEdited:true,manualBudget:budget,budget,updated:new Date().toLocaleString('pt-PT')});
-  recalculateResumoCliente(c.id);save();closeClientModal();RenderFlow.clientChanged();commercialUxToast('Preferências guardadas.');
+  const api=window.THE_VIEW_CLIENT_PREFERENCES;
+  let updated={...c,...interval,preferences,manualPreferences:{...c.manualPreferences,...preferences},preferencesManuallyEdited:true};
+  if(api){
+    const draft=api.draft(c);
+    for(const key of Object.keys(api.options))draft.choices[key]=api.fromLegacy(key,preferences[key]);
+    for(const key of ['objective','decisionTime','summary'])draft[key]=preferences[key];
+    for(const key of ['budgetMin','budgetMax'])if(Object.hasOwn(interval,key))draft[key]=interval[key];
+    try{updated=api.buildUpdate(c,draft)||updated}catch{await notifyUser('Não foi possível validar o formato das preferências. Nenhum dado foi alterado.','Preferências');return}
+  }
+  if(budget!==(Number(c.budget)||0))Object.assign(updated,{manualBudget:budget,budget});
+  recordClientPreferenceChange(c,updated);const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,'Preferências guardadas na base partilhada.');
 }
 function openEventModal(eventId='',source=''){
+  const managed=(state.data.events||[]).find(ev=>ev.id===eventId);
+  if(managed&&(managed.presentationHistory||managed.negotiationVersion===1||managed.communicationHistory)&&clientWorkflow()){
+    openClientProfile(managed.clientId);clientWorkflow().edit(managed);return;
+  }
+  state.eventOpeningRevision=sharedSync.revision;
   ensureEventAgentFields();
   ensureEventClientQuickCreate();
   populateAgentSelect();
@@ -3058,6 +3408,13 @@ function closeEventModal(){
   document.body.style.overflow='';
 }
 async function saveEvent(){
+  if(state.eventSaving)return;
+  state.eventSaving=true;
+  const button=document.getElementById('saveEvent');if(button)button.disabled=true;
+  try{await saveEventForm()}catch(error){await notifyUser(error.message||'Não foi possível guardar o evento.','Evento comercial')}
+  finally{state.eventSaving=false;if(button)button.disabled=false}
+}
+async function saveEventForm(){
   const cid=el.eventClientId.value;
   if(!cid&&el.eventType.value!=='Alteração de estado'){await notifyUser('Escolha um cliente.','Evento comercial');return}
   const frs=getMulti(el.eventFractions).map(Number);
@@ -3071,26 +3428,30 @@ async function saveEvent(){
     await notifyUser('Escolha o formato da apresentação comercial.','Apresentação comercial');el.eventChannel.focus();return;
   }
   const ev=buildEventFromForm(cid,frs,editingId);
+  if(window.THE_VIEW_CLIENT_WORKFLOW&&(isCommercialClosingEvent(ev)||isCommercialClosingEvent(oldEv))&&(!isAbandonmentEvent(ev)||isCommercialClosingEvent(oldEv))){
+    if(!await confirmWorkflowClosing(ev,oldEv,state.eventOpeningRevision))return;
+  }
   if(type==='Preços informados'&&ev.informedPrices.some(item=>!item.informedPrice)){await notifyUser('Indique o preço informado para cada fração.','Preços informados');return}
   const reservationCandidates=isAbandonmentEvent(ev)&&!frs.length?state.fractions.map(f=>f.number):frs;
   const activeReservations=reservationCandidates.filter(n=>{const effect=commercialEffectForFraction(n);return effect?.status==='Reservado'&&effect.event.clientId===cid});
   if(isReservationCancellationEvent(ev)&&activeReservations.length){
-    if(!await confirmUser(`A reserva será cancelada e ${activeReservations.map(n=>'Apt. '+n).join(', ')} voltará ao estado disponível. Confirmar?`,'Cancelar reserva'))return;
+    if(!window.THE_VIEW_CLIENT_WORKFLOW&&!await confirmUser(`A reserva será cancelada e ${activeReservations.map(n=>'Apt. '+n).join(', ')} voltará ao estado disponível. Confirmar?`,'Cancelar reserva'))return;
     ev.releaseReservation=true;
   }
   if(isAbandonmentEvent(ev)&&activeReservations.length){
     ev.releaseReservation=await confirmUser(`Este cliente tem reserva ativa em ${activeReservations.map(n=>'Apt. '+n).join(', ')}. Pretende libertar a reserva ao registar a desistência?`,'Desistência com reserva');
     if(ev.releaseReservation)ev.fractions=uniqNum([...(ev.fractions||[]),...activeReservations]);
+    if(ev.releaseReservation&&window.THE_VIEW_CLIENT_WORKFLOW&&!await confirmWorkflowClosing(ev,oldEv,state.eventOpeningRevision))return;
   }
   if(oldEv){
     const oldSnapshot=JSON.parse(JSON.stringify(oldEv));
-    if(hasCriticalCommercialEventChange(oldSnapshot,ev)){
+    if(hasCriticalCommercialEventChange(oldSnapshot,ev)&&!window.THE_VIEW_CLIENT_WORKFLOW){
       const msg='Está a alterar campos com efeitos comerciais: tipo, frações, valor, agente ou comissão.\n\nAo confirmar, os estados das frações, preço de reserva/venda e comissão serão recalculados para refletir o evento editado.';
       if(!await confirmUser(msg,'Atualizar evento comercial'))return;
     }
     replaceEventAndReapplyBusinessRules(oldSnapshot,ev);
   }else{
-    if(isReservationEvent(ev)||isSaleEvent(ev)){
+    if((isReservationEvent(ev)||isSaleEvent(ev))&&!window.THE_VIEW_CLIENT_WORKFLOW){
       const action=isSaleEvent(ev)?'venda':'reserva';
       if(!await confirmUser(`Confirmar ${action} de ${frs.map(n=>'Apt. '+n).join(', ')} para ${client(cid)?.name||'o cliente selecionado'}${ev.amount?' pelo valor de '+money(ev.amount):''}?`,`Confirmar ${action}`))return;
     }
@@ -3100,10 +3461,12 @@ async function saveEvent(){
   if(returnSource==='events')state.salesSubtab='events';
   if(returnSource==='history')state.salesSubtab='history';
   if(returnSource==='client'){state.salesSubtab='clients';state.selectedClientId=ev.clientId}
-  save();
+  // Keep the same event id even if the remote confirmation fails.
+  state.editingEventId=ev.id;
+  const confirmed=await persistClientChange();
   closeEventModal();
   RenderFlow.eventChanged();
-  commercialUxToast(oldEv?'Evento atualizado.':'Evento registado.');
+  clientSaveFeedback(confirmed,oldEv?'Evento atualizado e sincronizado.':'Evento registado e sincronizado.');
 }
 function buildEventFromForm(cid,frs,eventId=''){
   const existing=eventId?(state.data.events||[]).find(ev=>ev.id===eventId)||{}:{};
@@ -3550,7 +3913,7 @@ function operationalActionsMarkup(){
   return commercialRecommendationQueueMarkup()+`<section class="ux-operational-actions"><h3>Consultas comerciais</h3><div class="ux-action-groups">${groups.map(([title,key,items])=>`<section><h4><button class="ux-text-button" type="button" data-ux-operational="${key}">${esc(title)}</button> <span>${items.length}</span></h4><div class="ux-action-list">${items.length?items.join(''):'<p class="muted small">Sem pendências nesta categoria.</p>'}</div></section>`).join('')}</div></section>`;
 }
 function commercialRecommendationInput(){
-  return{clients:state.data.clients||[],events:state.data.events||[],priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
+  return{clients:state.data.clients||[],events:(state.data.events||[]).filter(ev=>!isPresentationDraft(ev)).map(ev=>ev.presentationHistory?{...ev,informedPrices:eventInformedPrices(ev)}:ev),priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
 }
 function commercialClientRecommendation(c){
   const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return null;
@@ -3573,7 +3936,9 @@ function refreshClientRecommendations(){
   const container=document.getElementById('clientRecommendation'),c=client(state.selectedClientId);if(!container||!c)return;
   container.innerHTML=clientRecommendationMarkup(clientAutomaticRecommendation(commercialClientRecommendation(c)));renderUxIcons();
 }
-function commercialRecommendationQueueMarkup(){
+function commercialRecommendationQueueMarkup(legacy=false){
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;
+  if(model&&!legacy){const rows=model.portfolio(state.data.clients,state.data.events,today()),pending=rows.filter(row=>row.state==='Resposta nossa pendente');return`<section class="ux-recommendation-queue"><header><h3>Carteira Comercial por Estado</h3><span>${rows.length} clientes · ${rows.filter(row=>row.priority).length} prioritários</span></header><div class="top-actions"><button type="button" class="ghost-button compact-button" data-ux-client-list="pending">Resposta nossa pendente (${pending.length})</button><button type="button" class="ghost-button compact-button" data-ux-client-list="all">Consultar carteira</button></div>${STAGES.map(stage=>{const group=rows.filter(row=>normalizeClientStage(row.client.stage)===stage);return`<section class="ux-client-section"><h4>${esc(stage)} · ${group.length} clientes · ${group.filter(row=>row.priority).length} prioritários</h4><div class="ux-action-list">${group.slice(0,5).map(row=>`<button type="button" class="ux-recommendation-row ${row.state==='Resposta nossa pendente'?'ux-contact-pending':''}" data-ux-client="${attr(row.client.id)}"><strong>${row.priority?uxIcon('star'):''}${esc(row.client.name)}</strong><span>${esc(row.state)}</span><span>${row.lastContact?`${formatCommercialDate(row.lastContact)} · ${row.days} dias sem contacto`:'Sem contacto registado'}</span></button>`).join('')}</div></section>`}).join('')}<details class="ux-client-details"><summary>Sugestões e prazos opcionais existentes</summary>${commercialRecommendationQueueMarkup(true)}</details></section>`}
   const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return'';
   const report=engine.evaluate(commercialRecommendationInput()),priority=commercialUx.recommendationPriority||'all';
   const queue=report.queue.filter(item=>priority==='all'||item.recommendation.primary.priority===priority);
@@ -3695,11 +4060,12 @@ function openContextPresentation(numbers){
 }
 function openClientUxAction(action){
   const c=client(state.selectedClientId);if(!c)return;
-  const destinations={preferences:'preferences','select-presentation':'fractions',associate:'fractions',contact:'followup',complete:'followup',documentation:'followup',note:'followup',plan:'followup',stage:'followup',event:'followup',proposal:'followup',negotiation:'followup'};
+  if(['contact','received-contact'].includes(action)&&clientWorkflow()){clientWorkflow().newContact(c.id,action==='received-contact');return}
+  if(action==='presentation'&&commercialUx.clientProfileOpen&&clientWorkflow()){clientWorkflow().newPresentation(c.id);return}
+  const destinations={preferences:'preferences','select-presentation':'fractions',associate:'fractions',contact:'negotiation',complete:'negotiation',documentation:'presentation',note:'negotiation',plan:'negotiation',stage:'negotiation',event:'negotiation',proposal:'presentation',negotiation:'negotiation',presentation:'presentation'};
   if(destinations[action])activateClientDetailTab(destinations[action]);
-  if(action==='presentation'&&commercialUx.clientDetailTab!=='followup')activateClientDetailTab('fractions');
   if(action==='complete'){completeClientNextAction();return}
-  if(action==='preferences'){openClientModal(c.id,'preferences');return}
+  if(action==='preferences'){if(commercialUx.clientProfileOpen&&window.THE_VIEW_CLIENT_PREFERENCES)startInlinePreferences(c);else openClientModal(c.id,'preferences');return}
   if(action==='select-presentation'){openPresentationSelectionModal();return}
   if(action==='event'){openEventModal('','client');return}
   if(action==='negotiation'){const type=document.getElementById('clientNegotiationType').value;if(!EVENT_TYPES.includes(type))return;openEventModal('','client');el.eventType.value=type;toggleEventSpecificFields();return}
@@ -3749,7 +4115,7 @@ function bindCommercialUx(){
     else if('uxClose'in data)closeFractionDrawer();
     else if(data.uxHistory)contextualCommercialNavigation('history',()=>{state.hf={search:'',status:'all',selected:String(data.uxHistory)}});
     else if(data.uxPrices)contextualCommercialNavigation('prices',()=>{commercialUx.priceFocus='';state.rf={search:getF(Number(data.uxPrices))?.name||'',typology:'all',floor:'all',status:'all'};el.priceSearch.value=state.rf.search;['priceTypology','priceFloor','priceStatus'].forEach(id=>el[id].value='all')});
-    else if(data.uxClient){closeCommercialSearch();contextualCommercialNavigation('sales',()=>{commercialUx.clientDetailId='';commercialUx.clientFocus='';state.selectedClientId=data.uxClient;state.salesSubtab='clients';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all'})}
+    else if(data.uxClient){closeCommercialSearch();contextualCommercialNavigation('sales',()=>{commercialUx.clientDetailId='';commercialUx.clientProfileOpen=true;commercialUx.clientFocus='';state.selectedClientId=data.uxClient;state.salesSubtab='clients';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all'})}
     else if(data.uxClearFilter)clearCommercialFilter(data.uxClearFilter);
     else if(data.uxClearOne)clearCommercialFilter(data.uxClearOne,data.filterField);
     else if(data.uxSort){const previous=commercialUx.sort[data.uxSort];commercialUx.sort[data.uxSort]={field:data.sortField,direction:previous?.field===data.sortField?-previous.direction:1};data.uxSort==='prices'?renderPrices():renderSales()}
@@ -3759,7 +4125,7 @@ function bindCommercialUx(){
     else if(data.prepareFraction){const c=client(state.selectedClientId),n=Number(data.prepareFraction);if(c&&getF(n)){const selected=presentationSelection(c);if(updatePresentationSelection(c,selected.includes(n)?selected.filter(value=>value!==n):[...selected,n])){save();RenderFlow.clientChanged();el.clientDetail.querySelector(`[data-prepare-fraction="${n}"]`)?.focus({preventScroll:true})}}}
     else if(data.uxRecommendationAction)openRecommendationAction(button);
     else if(data.uxRecommendationFilter){commercialUx.recommendationPriority=data.uxRecommendationFilter;const queue=document.getElementById('commercialRecommendationQueue');if(queue)queue.outerHTML=commercialRecommendationQueueMarkup()}
-    else if(data.uxClientList){if(data.uxClientList==='new')openClientModal('');else{commercialUx.clientFocus='';state.cf={search:'',stage:'all'};el.clientSearch.value='';el.clientStageFilter.value='all';renderClients()}}
+    else if(data.uxClientList){if(data.uxClientList==='new')openClientModal('');else{commercialUx.clientFocus='';state.cf={search:'',stage:'all',contact:data.uxClientList==='pending'?'Resposta nossa pendente':'all',priority:'all'};state.salesSubtab='clients';switchTab('sales');el.clientSearch.value='';el.clientStageFilter.value='all';renderClients()}}
     else if(data.uxEditEvent){closeFractionDrawer();if(state.tab==='sales'&&state.salesSubtab==='clients')activateClientDetailTab('followup');openEventModal(data.uxEditEvent,state.tab==='history'?'history':state.tab==='sales'&&state.salesSubtab==='clients'?'client':'')}
     else if(data.uxExport){const menu=button.closest('.ux-export-menu');if(menu)menu.open=false;if(data.uxExport==='proposal')contextualCommercialNavigation('proposals');else if(data.uxExport==='comparison-proposal')openContextPresentation(selectedCompareFractions().map(f=>f.number));
       else if(data.uxExport==='comparison-price-list')openPriceListModal(selectedCompareFractions().map(f=>f.number));else if(data.uxExport==='price-list')openPriceListModal();else if(data.uxExport==='clients')openClientsSummaryPdfModal();else if(data.uxExport==='price-history')exportPriceHistory();else if(data.uxExport==='events')exportSalesEvents()}
@@ -3790,7 +4156,7 @@ function filterFractions(fil={}){
 
 function syncProposal(){const next={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};if(Object.keys(next).every(key=>next[key]===state.pf[key]))return;state.pf=next;renderProposals()}
 function syncPrice(){const next={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};if(Object.keys(next).every(key=>next[key]===state.rf[key]))return;state.rf=next;renderPrices()}
-function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCommercialPresentationEvent).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
+function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCommercialPresentationEvent).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
 function getF(n){return state.fractions.find(f=>f.number===n)}
 function client(id){return state.data.clients.find(c=>c.id===id)}
@@ -3908,6 +4274,10 @@ function sharedStoreMayRegress(local,remote,meta,remoteRevision){
   function editablePath(path){
     if(path.length===3&&editable[path[0]]?.has(path[2]))return true;
     if(path.length===4&&path[0]==='clients'&&['preferences','manualPreferences'].includes(path[2])&&preferenceFields.has(path[3]))return true;
+    if(path[0]==='clients'&&['preferences','manualPreferences'].includes(path[2])&&path[3]==='selectionV1'){
+      if(path.length===5&&path[4]==='version')return true;
+      if(path.length===6&&['typology','floor','orientation'].includes(path[4])&&['state','values','legacyText'].includes(path[5]))return true;
+    }
     if(path.length===4&&path[0]==='clients'&&path[2]==='commercialSummary'&&['lastContact','nextFollowup','nextStep','presentedFractions'].includes(path[3]))return true;
     return path.length===2&&['finalPrices','statuses','salePrices','unavailableReasons','statusEventIds','salePriceEventIds'].includes(path[0]);
   }
@@ -4120,6 +4490,7 @@ function renderSharedSyncStatus(){
   bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};
   const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
   const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);renderAll()}};
+  refreshClientFractionResults();
 }
 
 function appDialog({title='Aviso',message='',confirmText='OK',cancelText='',input=false,defaultValue='',danger=false}={}){

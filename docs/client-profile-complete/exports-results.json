@@ -1,0 +1,11 @@
+{
+  "proposalPTEN": true,
+  "proposalPTFR": true,
+  "presentationPriceUsed": true,
+  "plantsLoaded": true,
+  "clientReportIncludesManagedPresentationPrice": true,
+  "priceListA4Portrait": true,
+  "noBusinessWrites": true,
+  "errors": [],
+  "production": false
+}

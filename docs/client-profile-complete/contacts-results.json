@@ -1,0 +1,21 @@
+{
+  "initialFictitiousClients": 64,
+  "retroactiveInitialRequest": true,
+  "oneInitialEvent": true,
+  "sentAndReceived": true,
+  "oneResponseWithPreferences": true,
+  "lastEffectiveContact": true,
+  "backdatedContactSafe": true,
+  "administrativeEditsExcluded": true,
+  "manualStatePersists": true,
+  "manualPriorityPersists": true,
+  "portfolioOrderFiltersCounts": true,
+  "cleanBrowserUpdate": true,
+  "conflictStatus": 409,
+  "secondLocalPreserved": true,
+  "failureRetryIdempotent": true,
+  "reloadRecovery": true,
+  "mobileOverflow": false,
+  "errors": [],
+  "production": false
+}

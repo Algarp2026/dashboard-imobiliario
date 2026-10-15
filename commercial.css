@@ -446,6 +446,42 @@ body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#
 .ux-priority--high{color:#943b32;background:#faeeeb}.ux-priority--medium{color:#765616;background:#f8f3e7}.ux-priority--low{color:#46615d;background:#edf3f1}
 .ux-recommendation-open{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#245b45}
 .ux-client-recommendation{margin-bottom:18px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+
+/* Client profile: layout state only, within the existing commercial workspace. */
+.ux-client-profile-active>.section-heading,.ux-client-profile-active>.filters-grid,.ux-client-profile-active>#clientFilterSummary{display:none}
+.ux-client-profile-active .client-layout{display:block}
+.ux-client-profile-active #clientsList{display:none}
+.ux-app-shell .ux-client-profile-active #clientDetail{border:0;border-radius:0;background:transparent;width:100%}
+.ux-client-profile-active .ux-client-workspace__top{position:static;padding:22px 0 18px;border-radius:0;background:transparent}
+.ux-client-profile-active .ux-client-tabs{position:sticky;top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 12px);z-index:10;background:rgba(249,251,252,.98);border-bottom:1px solid #dce0df;padding:0;backdrop-filter:blur(10px)}
+.ux-client-profile-active .ux-client-tabs>button{flex:0 0 auto;font-size:14px;padding:16px 22px;color:#666766}
+.ux-client-profile-active .ux-client-tabs>button[aria-selected=true]{color:#343333;border-bottom-color:#343333;background:#eef0ee}
+.ux-client-profile-active .ux-client-workspace__content{padding:28px 0;max-width:1240px}
+.ux-client-profile-active .ux-client-title{align-items:flex-start}
+.ux-app-shell .ux-client-profile-active .ux-client-title h2{font-size:30px;color:#343333;margin:12px 0 0;line-height:1.2}
+.ux-client-return{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;color:var(--muted);margin-bottom:22px}
+.ux-client-return>span{margin-left:auto}
+.ux-client-return .ux-text-button{display:inline-flex;gap:8px;align-items:center}
+.ux-client-profile-active .ux-client-open{display:none}
+.panel:not(.ux-client-profile-active) .ux-client-return>[data-client-return]{display:none}
+.panel:not(.ux-client-profile-active) .ux-client-workspace__top{position:static}
+.ux-client-profile-active .ux-client-contact{font-size:13px;display:flex;gap:10px 22px;flex-wrap:wrap;margin:16px 0 0}
+.ux-client-last-interaction{font-size:12px;color:var(--text);margin:14px 0 0;display:flex;gap:8px 14px;flex-wrap:wrap;line-height:1.6}
+.ux-client-last-interaction>span,.ux-client-last-interaction>time{color:var(--muted)}
+.ux-client-profile-active #clientDetail .ux-client-facts{grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin:22px 0 28px}
+.ux-preference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:0;margin:24px 0}
+.ux-preference-display{min-width:0;padding:18px 0;border-top:1px solid var(--line)}
+.ux-preference-display dt{font-size:12px;color:var(--muted);margin-bottom:12px}
+.ux-preference-display dd{display:flex;flex-wrap:wrap;gap:8px;margin:0;font-size:13px;line-height:1.5}
+.ux-preference-value{display:inline-flex;padding:6px 10px;background:#eef2f0;border:1px solid #d9e2dc;border-radius:5px;color:#343333;overflow-wrap:anywhere;max-width:100%}
+.ux-preference-display .is-uninformed{color:#7b817e;font-style:italic}
+.ux-preference-display .is-indifferent .ux-preference-value{background:#f3f4f4;border-color:#dfe2e1;color:#5a635e}
+.ux-unit-negotiation h3 .muted{font-weight:400;margin-left:10px}
+.ux-client-profile-active .ux-client-details>summary{font-size:14px;padding:16px 0}
+.ux-client-profile-active .primary-button{background:#343333}
+.ux-client-profile-active .client-sticky-actions{background:#fff;border-color:#e0e3e1}
+@media(max-width:1100px){.ux-client-profile-active .ux-client-tabs>button{padding:15px;font-size:13px}.ux-client-profile-active .ux-client-workspace__content{padding:22px 0}.ux-preference-grid{gap:14px}}
+@media(max-width:760px){.ux-client-profile-active .ux-client-workspace__top{padding:16px 0}.ux-app-shell .ux-client-profile-active .ux-client-title h2{font-size:25px}.ux-client-profile-active .ux-client-title{display:flex;gap:12px;flex-wrap:wrap}.ux-client-return{margin-bottom:18px}.ux-client-return>span{display:none}.ux-client-profile-active .ux-client-tabs>button{padding:14px 12px;font-size:12px}.ux-client-profile-active .ux-client-workspace__content{padding:20px 0}.ux-client-profile-active #clientDetail .ux-client-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.ux-preference-grid{grid-template-columns:1fr;gap:0}.ux-client-profile-active .ux-client-contact{font-size:12px;gap:10px}.ux-unit-negotiation .crm-detail-section__heading{align-items:flex-start}.ux-unit-negotiation h3 .muted{display:block;margin:6px 0 0}}
 .ux-recommendation-item h4{font-size:15px;line-height:1.45;margin:0;overflow-wrap:anywhere}
 .ux-recommendation-item p{font-size:13px;color:var(--muted);line-height:1.65;margin:10px 0;overflow-wrap:anywhere}
 .ux-recommendation-references{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
@@ -466,3 +502,132 @@ body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#
 .ux-sync-indicator[data-phase=pending]{color:#8c6b23;border-color:#8c6b23}
 .ux-sync-indicator:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 @media(max-width:760px){#commercialSyncStatus{align-items:flex-start;flex-direction:column}#commercialSyncStatus .top-actions{flex-wrap:wrap}}
+
+/* Compact chrome only while the full client profile is the visible workspace. */
+.initial-request-skip{display:none}
+#clientModal[data-client-mode="quick"] [data-client-scope="additional-section"]{display:block}
+#clientModal[data-client-mode="quick"] [data-client-scope="additional"],#clientModal[data-client-mode="quick"] [data-client-scope="agent"]{display:flex}
+.ux-preference-selector{border:0;border-bottom:1px solid var(--line);margin:0;padding:18px 0;min-width:0}
+.ux-preference-selector legend{font-size:13px;font-weight:600;padding:0}
+.ux-preference-selector>div{display:flex;gap:8px;flex-wrap:wrap}
+.ux-preference-chip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid #dce1de;border-radius:6px;color:#5a635e;background:#fff;font:inherit;font-size:13px;cursor:pointer}
+.ux-preference-chip[aria-pressed=true]{background:#eaf2ee;border-color:#28765b;color:#20553f;font-weight:600}
+.ux-preference-chip:focus-visible{outline:2px solid #28765b;outline-offset:2px}
+.ux-fraction-filters,.ux-fraction-selected{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.ux-fraction-filters [aria-pressed=true]{background:#eaf2ee;border-color:#28765b;color:#20553f}
+.ux-fraction-filters button:disabled{opacity:.45;cursor:default}
+#clientFractionWorkspace .ux-text-button{display:inline-flex;align-items:center;gap:6px}
+.ux-fraction-selection-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;border-block:1px solid var(--line);padding:14px 0;margin-top:18px}
+.ux-fraction-selected .ux-preference-chip{gap:6px}
+.ux-fraction-warning{width:100%;font-size:12px;color:#93651d}
+.ux-fraction-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ux-fraction-option{border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0;background:#fff}
+.ux-fraction-option header,.ux-fraction-option footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ux-fraction-option h4{font-size:16px;margin:0}
+.ux-fraction-option p{font-size:13px;line-height:1.5;margin:10px 0}
+.ux-fraction-option-price{display:block;font-size:16px;overflow-wrap:anywhere}
+.ux-fraction-option .ux-fraction-explanation{font-size:12px;color:#536458;min-height:36px}
+.ux-fraction-option footer{margin-top:14px}
+.ux-fraction-option footer .compact-button{min-width:112px}
+.ux-fraction-manual-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:480px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:10px 2px}
+#clientFractionManual .field{margin:18px 0 10px}
+@media(max-width:760px){.ux-fraction-options,.ux-fraction-manual-results{grid-template-columns:1fr}.ux-fraction-selection-heading{align-items:flex-start;flex-direction:column}.ux-fraction-filters{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.ux-fraction-filters button{flex-shrink:0}.ux-fraction-option header{align-items:flex-start}.ux-fraction-option header .badge{max-width:100%;white-space:normal}}
+.ux-preference-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:22px 0}
+.ux-preference-notes{grid-column:1/-1}
+.ux-client-duplicate-warning{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;padding:12px;border-left:3px solid #b27517;background:#faf6ec;font-size:13px}
+@media(max-width:760px){.ux-preference-fields{grid-template-columns:1fr;gap:14px}.ux-client-duplicate-warning{align-items:flex-start;flex-direction:column}}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .hero{height:auto;min-height:0;padding:0 24px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .topbar{flex-direction:row;gap:12px;padding:8px 0}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .brand-pill{padding:6px 10px;font-size:12px;min-width:0;line-height:1.3}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .brand-dot{flex-shrink:0}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .topbar__actions{gap:6px;flex-wrap:nowrap;flex-shrink:0}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .topbar .ghost-link{padding:6px 10px;font-size:12px;min-height:32px;white-space:nowrap}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #dataStatus{display:none}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #commercialSyncStatus{padding:6px 0;margin-bottom:4px;gap:8px;font-size:11px;flex-direction:row;align-items:center}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #commercialSyncStatus p{margin:2px 0;font-size:11px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #commercialSyncStatus small{display:block}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #commercialSyncStatus .compact-button{min-height:32px;padding:6px 9px;font-size:11px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .ux-app-header{min-height:48px;padding:6px 0;gap:6px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .ux-main-content{gap:4px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesQuickActions{padding:6px 0;margin-bottom:4px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesQuickActions .section-heading>div:first-child{display:none}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesQuickActions .section-heading{display:block}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesQuickActions .top-actions{justify-content:flex-start;gap:6px;flex-wrap:nowrap;overflow-x:auto}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesQuickActions button{flex-shrink:0;min-height:34px;padding:7px 10px;font-size:12px;white-space:nowrap}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesSubTabs{flex-wrap:nowrap;overflow-x:auto;padding:4px;margin-bottom:6px}
+body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesSubTabs .module-tab{flex-shrink:0;padding:7px 10px;white-space:nowrap}
+.ux-main-content>.tab-section>.ux-client-profile-active{padding-top:0}
+.ux-client-profile-active .client-sticky-actions{padding:6px;margin-bottom:4px;justify-content:flex-end}
+.ux-client-profile-active .client-sticky-actions__context,
+.ux-client-profile-active #openClientModal,
+.ux-client-profile-active #clientStickyNewAgent,
+.ux-client-profile-active [data-client-header-edit],
+.ux-client-profile-active #clientPanel-data [data-edit-client]{display:none}
+.ux-client-profile-active #clientStickyEditClient{order:-1;background:#343333;color:#fff;border-color:#343333}
+.ux-client-profile-active #openEventModalBtn{background:#fff;color:#343333;border:1px solid var(--line)}
+.ux-client-profile-active .client-sticky-actions__buttons{flex-wrap:nowrap}
+.ux-client-profile-active .client-sticky-actions__buttons>button{flex-shrink:0;white-space:nowrap}
+.ux-client-profile-active .client-layout{margin-top:0}
+.ux-client-profile-active .ux-client-workspace__top{padding:12px 0}
+.ux-client-profile-active .ux-client-return{margin-bottom:12px}
+.ux-app-shell .ux-client-profile-active .ux-client-title h2{margin-top:8px}
+.ux-client-profile-active .ux-client-contact{margin-top:10px;gap:8px 18px}
+.ux-client-profile-active .ux-client-last-interaction{margin-top:8px}
+.ux-client-profile-active .ux-client-tabs{top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 4px)}
+.ux-client-profile-active .ux-client-tabs>button{padding:12px 18px}
+.ux-client-profile-active .ux-client-workspace__content{padding-top:20px}
+.ux-app-shell .ux-client-profile-active #clientDetail{scroll-margin-top:calc(var(--commercial-header-height,68px) + var(--client-actions-height,58px) + 4px)}
+@media(max-width:760px){
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .hero{padding:0 12px}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .topbar{gap:6px}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .brand-pill{font-size:11px;padding:5px 7px;gap:6px}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .topbar .ghost-link{font-size:11px;padding:6px 7px}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .ux-sidebar{padding:6px 0}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) .ux-app-header{padding:4px 0;gap:4px}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #commercialSyncStatus{align-items:flex-start;flex-wrap:wrap}
+  .ux-client-profile-active .client-sticky-actions__buttons>button{padding:8px 10px;font-size:12px}
+  .ux-client-profile-active .ux-client-workspace__top{padding:10px 0}
+  .ux-client-profile-active .ux-client-return{margin-bottom:10px}
+  .ux-client-profile-active .ux-client-title{gap:0}
+  .ux-client-profile-active .ux-client-tabs>button{padding:11px 12px}
+  .ux-client-profile-active .ux-client-workspace__content{padding-top:16px}
+}
+/* The completed client journey stays inside the approved profile layout. */
+.ux-workflow { min-width: 0; }
+#clientModal[data-client-mode="quick"] #clientInitialRequestFields { display: block; }
+#clientModal[data-client-mode="quick"] .field[data-client-scope="initial"] { display: flex; }
+.ux-contact-controls { padding-block: 16px; border-block: 1px solid var(--line); margin-block: 16px; }
+.ux-contact-controls .form-grid { align-items: end; }
+.ux-contact-controls, .ux-contact-controls form, .ux-contact-controls .field { min-width: 0; }
+.ux-contact-controls fieldset { min-width: 0; border: 0; padding: 0; margin: 14px 0; }
+.ux-contact-controls .field input, .ux-contact-controls .field select, .ux-contact-controls .field textarea { max-width: 100%; }
+.ux-contact-controls .ux-fraction-filters { flex-wrap: wrap; }
+.ux-contact-controls fieldset>.field { margin-block: 12px; }
+.ux-contact-controls fieldset>label:not(.field) { display: flex; gap: 8px; align-items: flex-start; margin-block: 14px; }
+.ux-client-priority { color: #8e6a34; display: inline-flex; align-items: center; gap: 6px; }
+.ux-portfolio-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 13px; }
+.ux-contact-pending { border-left: 3px solid #b27517; }
+.ux-portfolio-counts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0; font-size: 12px; }
+.ux-workflow fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ux-workflow form { border-block: 1px solid var(--border, #dfe5e9); padding-block: 18px; margin-block: 12px 20px; }
+.ux-workflow .field { min-width: 0; position: relative; }
+.ux-workflow .field input, .ux-workflow .field select, .ux-workflow .field textarea { max-width: 100%; }
+.ux-workflow table input { width: 150px; min-width: 110px; }
+.ux-workflow-add { display: flex; align-items: end; gap: 10px; margin-block: 16px; }
+.ux-workflow-add .field { flex: 1; max-width: 420px; }
+.ux-workflow-warning { color: #805614; display: block; max-width: 32em; }
+.ux-workflow-feedback { color: #215d4e; white-space: pre-line; overflow-wrap: anywhere; }
+.ux-workflow-overdue { border-left-color: #a43a37; }
+.ux-workflow .timeline p, .ux-workflow details p { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .ux-workflow .form-grid { grid-template-columns: 1fr; }
+  .ux-workflow-add { align-items: stretch; flex-direction: column; }
+  .ux-workflow .top-actions { flex-wrap: wrap; }
+  .ux-workflow .data-table thead { display: none; }
+  .ux-workflow .data-table, .ux-workflow .data-table tbody { display: block; width: 100%; }
+  .ux-workflow .data-table tr { display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .ux-workflow .data-table td { display: block; border: 0; min-width: 0; }
+  .ux-workflow .data-table td[data-label]::before { content: attr(data-label); display: block; color: var(--muted); margin-bottom: 6px; font-size: 12px; }
+  .ux-workflow .data-table .ux-sr-only { position: static!important; width: auto; height: auto; clip: auto; clip-path: none; white-space: normal; overflow: visible; }
+  .ux-workflow .data-table input[type=number] { width: 100%; text-align: left; }
+}

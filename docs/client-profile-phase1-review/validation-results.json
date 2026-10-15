@@ -1,0 +1,116 @@
+[
+  {
+    "mode": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "tabs": 5,
+    "previousTabsTop": 818.171875,
+    "compactGeometry": {
+      "hero": 48,
+      "tabs": 523.625,
+      "header": 382.9375
+    },
+    "singleMainEdit": true,
+    "moduleNavigationFunctional": true,
+    "listingIdenticalToBaseline": true,
+    "listingChromeRestored": true,
+    "listingPanelsAccessible": true,
+    "listingModalsFunctional": true,
+    "filtersAndSelectionPreserved": true,
+    "listScrollPreserved": true,
+    "phase2Message": true,
+    "legacyFractionRows": true,
+    "legacyModalValues": true,
+    "eventModalFunctional": true,
+    "emptyAndIndifferent": true,
+    "unchangedBusinessCache": true,
+    "businessPosts": 0,
+    "errors": [],
+    "meta": {
+      "clients": 64,
+      "events": 5,
+      "reads": 21,
+      "writes": 0,
+      "source": "fictitious in-memory, read-only",
+      "productionNetwork": false
+    }
+  },
+  {
+    "mode": "tablet",
+    "viewport": {
+      "width": 820,
+      "height": 1080
+    },
+    "tabs": 5,
+    "previousTabsTop": 875.171875,
+    "compactGeometry": {
+      "hero": 48,
+      "tabs": 523.625,
+      "header": 382.9375
+    },
+    "singleMainEdit": true,
+    "moduleNavigationFunctional": true,
+    "listingIdenticalToBaseline": true,
+    "listingChromeRestored": true,
+    "listingPanelsAccessible": true,
+    "listingModalsFunctional": true,
+    "filtersAndSelectionPreserved": true,
+    "listScrollPreserved": true,
+    "phase2Message": true,
+    "legacyFractionRows": true,
+    "legacyModalValues": true,
+    "eventModalFunctional": true,
+    "emptyAndIndifferent": true,
+    "unchangedBusinessCache": true,
+    "businessPosts": 0,
+    "errors": [],
+    "meta": {
+      "clients": 64,
+      "events": 5,
+      "reads": 23,
+      "writes": 0,
+      "source": "fictitious in-memory, read-only",
+      "productionNetwork": false
+    }
+  },
+  {
+    "mode": "mobile",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "tabs": 5,
+    "previousTabsTop": 1366.375,
+    "compactGeometry": {
+      "hero": 48,
+      "tabs": 647.421875,
+      "header": 460.234375
+    },
+    "singleMainEdit": true,
+    "moduleNavigationFunctional": true,
+    "listingIdenticalToBaseline": true,
+    "listingChromeRestored": true,
+    "listingPanelsAccessible": true,
+    "listingModalsFunctional": true,
+    "filtersAndSelectionPreserved": true,
+    "listScrollPreserved": true,
+    "phase2Message": true,
+    "legacyFractionRows": true,
+    "legacyModalValues": true,
+    "eventModalFunctional": true,
+    "emptyAndIndifferent": true,
+    "unchangedBusinessCache": true,
+    "businessPosts": 0,
+    "errors": [],
+    "meta": {
+      "clients": 64,
+      "events": 5,
+      "reads": 25,
+      "writes": 0,
+      "source": "fictitious in-memory, read-only",
+      "productionNetwork": false
+    }
+  }
+]

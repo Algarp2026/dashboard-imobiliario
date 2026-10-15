@@ -1,4 +1,12 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "codex/client-profile-phase1": false,
+      "codex/client-profile-phase2a": false,
+      "codex/client-profile-phase2b": false,
+      "codex/client-profile-complete": false
+    }
+  },
   "functions": {
     "api/commercial-data.js": {
       "maxDuration": 60

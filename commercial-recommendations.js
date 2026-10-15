@@ -6,8 +6,8 @@
 })(typeof window==='object'?window:globalThis,function(){
   const DEFAULTS=Object.freeze({firstContactDays:1,documentationDays:3,presentationDays:3,proposalDays:4,inactiveDays:10,undatedActionDays:3,contactIntervalHours:48,timeZone:'Europe/Lisbon',secondaryLimit:2});
   const PRIORITIES={Alta:0,'Média':1,Baixa:2};
-  const CONTACT_TYPES=new Set(['Preferências recebidas','Apresentação comercial','Documentação enviada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Proposta enviada','Reserva','Reserva efetuada','Reserva cancelada','Venda','Venda concluída','Desistência','Contacto efetuado','Follow-up','Interessado','Visita','Reunião realizada','Reunião com cliente']);
-  const ADVANCED_TYPES=new Set(['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída','Visita','Reunião realizada','Reunião com cliente']);
+  const CONTACT_TYPES=new Set(['Preferências recebidas','Apresentação comercial','Documentação enviada','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Nova proposta recebida','Aceitação','Rejeição','Proposta enviada','Reserva','Reserva efetuada','Reserva cancelada','Venda','Venda concluída','Desistência','Contacto efetuado','Follow-up','Interessado','Visita','Reunião realizada','Reunião com cliente']);
+  const ADVANCED_TYPES=new Set(['Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Nova proposta recebida','Aceitação','Rejeição','Proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída','Visita','Reunião realizada','Reunião com cliente']);
   const CLOSED_STAGES=new Set(['vendido','desistiu','desistente','desistencia','perdido','encerrado','concluido','sem interesse']);
   const CLOSED_PROPOSALS=new Set(['aceite','aceita','accepted','recusada','recusado','declined','concluida','concluido','closed','cancelada','cancelado','cancelled']);
   const text=value=>String(value??'').trim();
@@ -38,6 +38,10 @@
     return +p.year===y&&+p.month===m&&+p.day===d&&+p.hour===h&&+p.minute===min?stamp:null;
   }
   function isContact(event){
+    const workflow=typeof window==='object'?window.THE_VIEW_CLIENT_WORKFLOW:null;
+    if(workflow)return workflow.isEffectiveContact(event);
+    if(event.actualCommunication===false||event.administrative===true||event.previousPreferences)return false;
+    if(event.communicationVersion===1||['Contacto recebido','Contacto enviado'].includes(event.type))return true;
     return CONTACT_TYPES.has(event.type)||(event.type==='Outro'&&['telefone','whatsapp','email','presencial','reuniao','videoconferencia'].includes(norm(event.channel)));
   }
   function lastContactDate(client,context){
@@ -99,6 +103,7 @@
     const newEventPlan=plans.some(plan=>plan.source==='event'&&Number.isFinite(definitionStamp(plan))&&definitionStamp(plan)<=context.now);
     // Explicit new definitions supersede older snapshots without deleting them.
     const current=plans.filter(plan=>{
+      if(plan.row?.event.negotiationVersion===1&&plans.some(other=>other.row?.event.negotiationVersion===1&&other.index>plan.index&&(other.row.event.fractions||[]).some(n=>(plan.row.event.fractions||[]).includes(n))))return false;
       if(plan.source==='client')return !(dateDay(plan.date)===null&&!Number.isFinite(ownStamp)&&newEventPlan);
       if(!Number.isFinite(ownStamp)||ownStamp>context.now)return true;
       const stamp=definitionStamp(plan);
@@ -106,7 +111,7 @@
       return plan.row.stamp===null||plan.row.day>context.day||plan.row.stamp>ownStamp;
     });
     // A later recorded contact can satisfy a historical event follow-up, not a manual plan.
-    const satisfied=plan=>plan.source==='event'&&rows.some(row=>row.day<=context.day&&row.stamp!==null&&(!text(row.event.time)||row.stamp<=context.now)&&row.stamp>(Number.isFinite(definitionStamp(plan))?definitionStamp(plan):plan.row.stamp??Infinity)&&(plan.eventId&&row.event.completedNextActionEventId===plan.eventId||dateDay(plan.date)!==null&&isContact(row.event)&&row.day>dateDay(plan.date)));
+    const satisfied=plan=>plan.source==='event'&&rows.some(row=>(plan.row?.event.negotiationVersion!==1||(row.event.fractions||[]).some(n=>(plan.row.event.fractions||[]).includes(n)))&&row.day<=context.day&&row.stamp!==null&&(!text(row.event.time)||row.stamp<=context.now)&&row.stamp>(Number.isFinite(definitionStamp(plan))?definitionStamp(plan):plan.row.stamp??Infinity)&&(plan.eventId&&row.event.completedNextActionEventId===plan.eventId||dateDay(plan.date)!==null&&isContact(row.event)&&row.day>dateDay(plan.date)));
     const valid=current.filter(plan=>!plan.completed&&!satisfied(plan)&&dateDay(plan.date)!==null);
     const future=valid.filter(plan=>plan.date>=context.today).sort((a,b)=>a.date.localeCompare(b.date)||a.index-b.index)[0];
     const overdue=valid.filter(plan=>plan.date<context.today).sort((a,b)=>b.date.localeCompare(a.date)||a.index-b.index)[0];
