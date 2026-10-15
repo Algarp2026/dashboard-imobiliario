@@ -20,6 +20,7 @@ try{
     await page.locator('#clientPanel-negotiation [data-ux-client-action="stage"]').click();await page.locator('#clientStage').selectOption('Desistiu');await page.locator('#saveClient').click();
     await page.getByText(/Encerra interesses não concluídos/).waitFor();await page.locator('[data-dialog-cancel]').last().click();assert.equal(await cache(),before);
     await page.reload();await page.locator('.client-detail-header').waitFor();assert.equal(await page.locator('.client-detail-header .badge').innerText(),'Em negociação');assert.equal(await cache(),before);
+    await page.locator('[data-client-return]').click();await page.locator('[data-client="demo-3"]').click();await page.getByRole('tab',{name:'Negociação',exact:true}).click();await page.locator('#clientPanel-negotiation [data-ux-client-action="stage"]').click();await page.locator('#clientStage').selectOption('Qualificado');await page.locator('#saveClient').click();await page.getByText(/Inicia um novo ciclo como Qualificado/).waitFor();await page.locator('[data-dialog-cancel]').last().click();assert.equal(await cache(),before);
     const meta=await(await context.request.get(origin+'/api/test-meta')).json();assert.equal(meta.writes,0);await context.close();
   }
   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);

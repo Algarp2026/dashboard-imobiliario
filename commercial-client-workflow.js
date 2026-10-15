@@ -12,11 +12,14 @@
   const unitNumbers=ev=>(ev?.fractions||[]).map(Number);
   const eventKey=ev=>[ev?.date||'',ev?.time||'',ev?.createdAt||'',String(ev?.id||''),JSON.stringify(Object.keys(ev||{}).sort().map(key=>[key,ev[key]]))].join('\u0000');
   const ordered=events=>[...(events||[])].sort((a,b)=>eventKey(a)<eventKey(b)?-1:eventKey(a)>eventKey(b)?1:0);
-  const globalWithdrawal=ev=>ev?.type==='Desistência'&&validDate(ev.date)&&!ev.releaseReservation&&(ev.globalWithdrawal===true||ev.scope==='global'||ev.globalWithdrawal===undefined&&ev.scope===undefined&&!ev.administrative&&!unitNumbers(ev).length&&ev.negotiationVersion!==1);
+  const withdrawalConflict=ev=>ev?.type==='Desistência'&&(ev.globalWithdrawal===false&&ev.scope==='global'||ev.globalWithdrawal===true&&ev.scope!==undefined&&ev.scope!=='global'||ev.globalWithdrawal!==undefined&&typeof ev.globalWithdrawal!=='boolean'||ev.scope!==undefined&&!['global','fraction'].includes(ev.scope));
+  const globalWithdrawal=ev=>ev?.type==='Desistência'&&!withdrawalConflict(ev)&&validDate(ev.date)&&!ev.releaseReservation&&(ev.globalWithdrawal===true||ev.scope==='global'||ev.globalWithdrawal===undefined&&ev.scope===undefined&&!ev.administrative&&!unitNumbers(ev).length&&ev.negotiationVersion!==1);
+  const confirmedRequalification=ev=>ev?.type==='Preferências recebidas'&&ev.requalificationConfirmed===true&&validDate(ev.date)&&!isDraft(ev);
   const movementStates={'Proposta recebida':'Em negociação','Nova proposta recebida':'Em negociação','Contra-proposta recebida':'Em negociação','Contra-proposta enviada':'Aguardar decisão','Aceitação':'Aceite','Rejeição':'Em negociação','Desistência':'Desistiu','Reserva cancelada':'Interessado'};
   const presentedEvent=ev=>!isDraft(ev)&&(!!latest(ev)||['Frações apresentadas','Preços informados','Visita','Reunião realizada','Reunião com cliente','Apresentação comercial'].includes(ev.type));
   const reopensOpportunity=ev=>validDate(ev.date)&&unitNumbers(ev).some(n=>Number.isInteger(n)&&n>=1&&n<=39)&&!isDraft(ev)&&!ev.administrative&&ev.actualCommunication!==false&&(presentedEvent(ev)||['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Aceitação','Interessado'].includes(ev.type)||ev.type==='Acompanhamento da fração'&&['Interessado','Em negociação','Aguardar decisão','Aceite'].includes(ev.interest));
   function movementState(ev){
+    if(withdrawalConflict(ev))return'';
     if(reserve(ev))return'Reservado';
     if(sale(ev))return'Vendido';
     return movementStates[ev?.type]||(ev?.type==='Acompanhamento da fração'&&['Interessado','Em negociação','Aguardar decisão','Aceite','Sem interesse','Desistiu'].includes(ev.interest)?ev.interest:'');
@@ -69,7 +72,9 @@
     const review=[];
     if(!Number.isInteger(Number(number))||Number(number)<1||Number(number)>39)review.push('Fração desconhecida');
     const withdrawal=ordered((data.events||[]).filter(ev=>ev.clientId===clientId&&globalWithdrawal(ev))).at(-1);
-    const relevant=withdrawal?history.filter(ev=>eventKey(ev)>eventKey(withdrawal)):history;
+    const qualification=ordered((data.events||[]).filter(ev=>ev.clientId===clientId&&confirmedRequalification(ev)&&(!withdrawal||eventKey(ev)>eventKey(withdrawal)))).at(-1);
+    const boundary=qualification||withdrawal;
+    const relevant=boundary?history.filter(ev=>eventKey(ev)>eventKey(boundary)):history;
     const record=relevant.filter(ev=>movementState(ev)&&!ev.administrative).at(-1);
     const historicalState=movementState(record)||'Interessado';
     const effect=effectiveEffect(data,number),availability=data.statuses?.[number];
@@ -79,16 +84,16 @@
     if(source&&sources.length!==1)review.push('Referência de origem ausente ou ambígua');
     let state=historicalState;
     const opportunity=relevant.some(ev=>reopensOpportunity(ev)||!withdrawal&&ev.type==='Rejeição'&&!ev.administrative);
-    if(withdrawal&&!opportunity)state='Desistiu';
+    if(withdrawal&&!qualification&&!opportunity)state='Desistiu';
     if(['Reservado','Vendido'].includes(state)){
       state='Interessado';
       if(effect?.event.clientId!==clientId)review.push('Operação histórica sem efeito atual confirmado');
     }
     if(effect?.event.clientId===clientId)state=effect.status;
     if(effect?.status==='Vendido'&&history.some(ev=>eventKey(ev)>eventKey(effect.event)&&(reserve(ev)||ev.type==='Reserva cancelada'||ev.type==='Desistência'&&ev.releaseReservation)))review.push('Movimento posterior incompatível com venda efetiva');
-    const presented=history.some(presentedEvent);
+    const presented=relevant.some(presentedEvent),historicallyPresented=history.some(presentedEvent);
     const active=!review.includes('Fração desconhecida')&&(['Reservado','Vendido'].includes(state)||opportunity&&!['Reservado','Vendido','Indisponível'].includes(availability)&&!['Desistiu','Sem interesse'].includes(state));
-    return{number:Number(number),history,state,historicalState,availability,effect:effect?.event.clientId===clientId?effect:null,presented,active,review};
+    return{number:Number(number),history,state,historicalState,availability,effect:effect?.event.clientId===clientId?effect:null,presented,historicallyPresented,active,review};
   }
   function clientProjection(data,c){
     const events=ordered((data.events||[]).filter(ev=>ev.clientId===c.id&&!isDraft(ev)));
@@ -96,22 +101,24 @@
     const relations=numbers.map(n=>relation(data,c.id,n));
     const review=relations.flatMap(row=>row.review.map(reason=>`Apt. ${row.number}: ${reason}`));
     if(events.some(ev=>!unitNumbers(ev).length&&movementState(ev)&&!globalWithdrawal(ev)))review.push('Movimento comercial sem fração identificada');
-    if(events.some(ev=>ev.type==='Desistência'&&(ev.globalWithdrawal===true||ev.scope==='global')&&!globalWithdrawal(ev)))review.push('Desistência global sem cronologia ou efeitos coerentes; revisão necessária');
+    if(events.some(withdrawalConflict))review.push('Indicadores de desistência contraditórios; revisão necessária');
+    if(events.some(ev=>ev.type==='Desistência'&&!withdrawalConflict(ev)&&(ev.globalWithdrawal===true||ev.scope==='global')&&!globalWithdrawal(ev)))review.push('Desistência global sem cronologia ou efeitos coerentes; revisão necessária');
     const active=relations.filter(row=>row.active);
     const negotiationStates=['Em negociação','Aguardar decisão','Aceite'];
     const manual=c.stageManual?c.manualStage||c.stage:'';
     const withdrawal=events.filter(globalWithdrawal).at(-1);
+    const qualification=events.filter(ev=>confirmedRequalification(ev)&&(!withdrawal||eventKey(ev)>eventKey(withdrawal))).at(-1);
     let stage='Novo Lead';
     if(active.some(row=>row.state==='Vendido'))stage='Vendido';
     else if(active.some(row=>row.state==='Reservado'))stage='Reservado';
-    else if(active.some(row=>negotiationStates.includes(row.state))||manual==='Em negociação'&&!withdrawal)stage='Em negociação';
-    else if(withdrawal&&!active.length)stage='Desistiu';
-    else if(relations.some(row=>row.presented)||manual==='Apresentado')stage='Apresentado';
-    else if(numbers.length||Number(c.budget)>0||Number(c.budgetMin)>0||Number(c.budgetMax)>0||['typology','floor','orientation','objective','decisionTime','summary'].some(key=>typeof c.preferences?.[key]==='string'&&!!c.preferences[key].trim())||events.some(ev=>ev.type==='Preferências recebidas')||manual==='Qualificado')stage='Qualificado';
+    else if(active.some(row=>negotiationStates.includes(row.state))||manual==='Em negociação'&&!withdrawal&&!qualification)stage='Em negociação';
+    else if(withdrawal&&!qualification&&!active.length)stage='Desistiu';
+    else if(relations.some(row=>row.presented)||manual==='Apresentado'&&!withdrawal&&!qualification)stage='Apresentado';
+    else if(qualification||numbers.length||Number(c.budget)>0||Number(c.budgetMin)>0||Number(c.budgetMax)>0||['typology','floor','orientation','objective','decisionTime','summary'].some(key=>typeof c.preferences?.[key]==='string'&&!!c.preferences[key].trim())||events.some(ev=>ev.type==='Preferências recebidas')||manual==='Qualificado')stage='Qualificado';
     if(['Reservado','Vendido'].includes(manual)&&manual!==stage)review.push('Estado manual sem operação efetiva confirmada');
     if(!manual&&['Reservado','Vendido','Desistiu'].includes(c.stage)&&c.stage!==stage)review.push('Estado legado divergente da situação efetiva');
     if(manual==='Desistiu'&&stage!=='Desistiu')review.push(active.length?'Desistência manual incompatível com oportunidade ativa':'Desistência manual sem confirmação global e cronologia suficientes');
-    if(manual==='Em negociação'&&withdrawal&&stage!=='Em negociação')review.push('Decisão manual de negociação sem cronologia própria; desistência global prevalece');
+    if(manual==='Em negociação'&&(withdrawal||qualification)&&stage!=='Em negociação')review.push('Decisão manual de negociação sem cronologia própria; ciclo atual prevalece');
     return{stage,relations,review,manualStage:manual||null};
   }
   function buildPresentation(existing,input){
@@ -198,7 +205,7 @@
     if(JSON.stringify(existing?.communicationHistory?.at(-1))===JSON.stringify(snapshot))return clone(existing);
     return{...clone(existing||{}),id:input.id,clientId:input.clientId,type:input.direction==='received'?'Contacto recebido':'Contacto enviado',communicationVersion:1,actualCommunication:true,date:input.date,time:input.time||'',channel:input.channel,notes:input.notes||'',fractions:existing?.fractions||[],communicationHistory:[...(existing?.communicationHistory||[]),snapshot]};
   }
-  const api={latest,isDraft,prices,channels,movementTypes,states,buildPresentation,negotiation,closingError,contactStates,validDate,isEffectiveContact,contactInfo,priority,validateDecisions,decision,portfolio,buildCommunication,eventKey,ordered,globalWithdrawal,reopensOpportunity,movementState,effectiveEffect,effectTransition,relation,clientProjection};
+  const api={latest,isDraft,prices,channels,movementTypes,states,buildPresentation,negotiation,closingError,contactStates,validDate,isEffectiveContact,contactInfo,priority,validateDecisions,decision,portfolio,buildCommunication,eventKey,ordered,globalWithdrawal,confirmedRequalification,reopensOpportunity,movementState,effectiveEffect,effectTransition,relation,clientProjection};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.THE_VIEW_CLIENT_WORKFLOW=api;
 })(typeof window==='object'?window:null);

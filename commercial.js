@@ -2019,7 +2019,7 @@ function missingClientModules(){
   const required=[
     ['Preferências',window.THE_VIEW_CLIENT_PREFERENCES,['draft','toggle','buildUpdate','projection']],
     ['Frações',window.THE_VIEW_FRACTION_RECOMMENDATIONS,['evaluate','filter','search']],
-    ['Acompanhamento comercial',window.THE_VIEW_CLIENT_WORKFLOW,['contactInfo','portfolio','buildCommunication','buildPresentation','closingError','clientProjection','relation','effectiveEffect','effectTransition','globalWithdrawal','reopensOpportunity']],
+    ['Acompanhamento comercial',window.THE_VIEW_CLIENT_WORKFLOW,['contactInfo','portfolio','buildCommunication','buildPresentation','closingError','clientProjection','relation','effectiveEffect','effectTransition','globalWithdrawal','confirmedRequalification','reopensOpportunity']],
     ['Recomendações comerciais',window.THE_VIEW_RECOMMENDATIONS,['buildContext','followupInfo','recommendClient']],
     ['Interface comercial',{create:window.createClientWorkflow},['create']]
   ];
@@ -3339,13 +3339,22 @@ function clientEditPatch(before,values,mode){
 }
 async function prepareManualClientWithdrawal(c){
   const model=window.THE_VIEW_CLIENT_WORKFLOW;
-  if(!model?.globalWithdrawal||!model?.reopensOpportunity)throw Error('Motor comercial indisponível. Recarregue a página.');
+  if(!model?.globalWithdrawal||!model?.reopensOpportunity||!model?.confirmedRequalification)throw Error('Motor comercial indisponível. Recarregue a página.');
   const events=model.ordered((state.data.events||[]).filter(ev=>ev.clientId===c.id)),last=events.filter(model.globalWithdrawal).at(-1);
-  if(last&&!events.some(ev=>model.eventKey(ev)>model.eventKey(last)&&model.reopensOpportunity(ev)))return null;
+  if(last&&!events.some(ev=>model.eventKey(ev)>model.eventKey(last)&&(model.reopensOpportunity(ev)||model.confirmedRequalification(ev))))return null;
   const revision=sharedSync.revision,snapshot=JSON.stringify(state.data);
   if(!await confirmUser('Confirma a desistência global deste cliente? Encerra interesses não concluídos, preserva as associações e não liberta reservas nem reverte vendas. Uma nova oportunidade comercial pode reabrir o acompanhamento.','Desistência global'))return false;
   if(revision!==sharedSync.revision||snapshot!==JSON.stringify(state.data))throw Error('A base comercial mudou. Reveja a decisão.');
   return{id:id(),clientId:c.id,type:'Desistência',date:today(),time:new Date().toTimeString().slice(0,8),createdAt:new Date().toISOString(),fractions:[],globalWithdrawal:true,administrative:true,source:'manual-stage',notes:'Desistência global confirmada na edição do estado do cliente.'};
+}
+async function prepareManualClientRequalification(c){
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;
+  if(!model?.confirmedRequalification)throw Error('Motor comercial indisponível. Recarregue a página.');
+  if(model.clientProjection(state.data,c).stage!=='Desistiu')return null;
+  const revision=sharedSync.revision,snapshot=JSON.stringify(state.data);
+  if(!await confirmUser('Confirma a requalificação deste cliente? Inicia um novo ciclo como Qualificado, sem recuperar negociações ou apresentações do ciclo anterior e sem alterar reservas, vendas ou preferências.','Requalificação do cliente'))return false;
+  if(revision!==sharedSync.revision||snapshot!==JSON.stringify(state.data))throw Error('A base comercial mudou. Reveja a decisão.');
+  return{id:id(),clientId:c.id,type:'Preferências recebidas',date:today(),time:new Date().toTimeString().slice(0,8),createdAt:new Date().toISOString(),fractions:[],requalificationConfirmed:true,administrative:true,actualCommunication:false,source:'manual-stage',notes:'Requalificação confirmada na edição do estado do cliente.'};
 }
 async function saveClientEdit(){
   const c=client(el.clientId.value);if(!c){await notifyUser('Não encontrei o cliente original. Reabra a ficha e tente novamente.','Cliente / Lead');return}
@@ -3365,10 +3374,17 @@ async function saveClientEdit(){
     withdrawal=await prepareManualClientWithdrawal(c);if(withdrawal===false)return;
     if(withdrawal)patch.stage='Desistiu';
   }
+  let qualification=null;
+  if(mode==='stage'&&normalizeClientStage(values.stage)==='Qualificado'){
+    qualification=await prepareManualClientRequalification(c);if(qualification===false)return;
+    if(qualification)patch.stage='Qualificado';
+  }
   if(Object.hasOwn(patch,'stage'))Object.assign(patch,{stage:normalizeClientStage(patch.stage),stageManual:true,manualStage:normalizeClientStage(patch.stage)});
   if(!Object.keys(patch).length){closeClientModal();return}
   Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT'),updatedAt:new Date().toISOString()});
   if(withdrawal)applyEventBusinessRules(withdrawal);
+  // This administrative decision must not replay historical preference snapshots.
+  if(qualification)state.data.events.push(qualification);
   if(mode!=='identity')recalculateResumoCliente(c.id);
   const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,mode==='identity'?'Dados do cliente atualizados na base partilhada.':'Acompanhamento atualizado na base partilhada.');
 }

@@ -58,3 +58,23 @@ Cancelamentos com disponibilidade anterior desconhecida, referências já órfã
 Antes da publicação da branch, verificar `git.deploymentEnabled["codex/fix-commercial-audit-defects"] === false`, branch atual e diff. A regra é suportada pela [documentação oficial da Vercel](https://vercel.com/docs/project-configuration/git-configuration#git.deploymentenabled). Não há workflows GitHub neste checkout. A regra não autoriza deployments manuais ou publicação na main.
 
 Não houve consulta/escrita na Google Sheet real, publicação de branch, merge, deployment ou promoção durante esta implementação. Os testes utilizaram exclusivamente fonte fictícia isolada. A criação da única PR para `main` depende da publicação desta branch pelo GitHub Desktop, conforme preferência do utilizador.
+
+## Revisão complementar da PR #10
+
+Correção localizada sobre `4fe64ec`, na mesma branch e PR:
+
+- Indicadores contraditórios (`globalWithdrawal: false` com `scope: global`, ou `true` com `scope: fraction`) não produzem encerramento global nem encerramento implícito da fração. São preservados e sinalizados para revisão. Indicadores desconhecidos também não são aceites como prova de encerramento.
+- Preferências administrativas continuam sem reabrir o cliente. A opção Qualificado no editor de estado de um cliente desistente exige confirmação de requalificação; acrescenta um evento administrativo no formato existente, `Preferências recebidas`, com `requalificationConfirmed: true`, data/hora e origem manual. Não é contacto efetivo, não altera preferências nem reaplica snapshots antigos. Não existe conversão automática de dados legados.
+- A requalificação confirmada delimita um novo ciclo. Uma desistência posterior pode encerrá-lo novamente. Repetir a gravação não duplica a decisão.
+- `relation().presented` considera apenas apresentações do ciclo atual; `historicallyPresented` e o histórico integral conservam as anteriores. Reabrir como Interessado resulta em Qualificado, não em Apresentado. Um estado manual Apresentado antigo também não ultrapassa esta fronteira.
+- Reservas/vendas confirmadas, controlos de revisão, cancelamentos e fontes comerciais continuam protegidos.
+
+Testes direcionados em `commercial-cycle-boundaries.test.js`: contradições com/sem frações, combinações coerentes, atualização administrativa vs requalificação confirmada, requalificação retroativa, novo encerramento, Interessado legado/version 1, nova apresentação/proposta, decisão manual antiga, ordem invertida, histórico preservado, imutabilidade e precedência de reservas/vendas. Todos aprovados.
+
+O adapter real de edição de estado foi testado com confirmação/cancelamento/repetição, preservação de preferências editadas manualmente e dos quatro eventos anteriores, preços, estados, fontes e comissões. O teste local de navegador inclui agora cancelar a requalificação em desktop/mobile: cache intacta, zero POSTs comerciais e erros JS.
+
+Regressão: **29 suites aprovadas**, incluindo os testes anteriores de auditoria, motor, relatórios, sincronização e concorrência. Sintaxe aprovada. Sem alteração à API, Apps Script, autenticação, dados, plantas ou bloco de sincronização. Não foram repetidas capturas nem a auditoria visual completa.
+
+Ficheiros desta revisão: `commercial-client-workflow.js`, `commercial.js`, novo `tests/commercial-cycle-boundaries.test.js`, extensões dos dois testes de auditoria e este relatório. A alteração em `commercial.js` limita-se à confirmação/registo da requalificação no editor existente, à idempotência de um encerramento posterior e à verificação de compatibilidade dos módulos.
+
+Os casos legados contraditórios ou sem evidência de confirmação continuam a exigir revisão. O marcador novo é aditivo em eventos novos, preservado pelo JSON existente; nenhuma migração é necessária ou executada. Sem acesso à base real, merge, deployment ou promoção. Atualização da PR existente pendente do Push origin pelo utilizador.
