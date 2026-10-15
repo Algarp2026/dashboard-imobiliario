@@ -6,7 +6,8 @@
       "codex/client-profile-phase2b": false,
       "codex/client-profile-complete": false,
       "codex/fix-client-profile-routing": false,
-      "codex/fix-commercial-home-entry": false
+      "codex/fix-commercial-home-entry": false,
+      "codex/fix-client-list-report-grouping": false
     }
   },
   "redirects": [

@@ -1,0 +1,93 @@
+{
+  "continuousDashboard": true,
+  "commercialSortPreserved": true,
+  "filters": true,
+  "priorityAndContactVisible": true,
+  "profileAndEdit": true,
+  "actualModalFilters": true,
+  "results": [
+    {
+      "model": "operational",
+      "clients": 14,
+      "groups": 7,
+      "blocks": 1,
+      "pages": 4,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "listing",
+      "clients": 14,
+      "groups": 7,
+      "blocks": 2,
+      "pages": 4,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "listing",
+      "clients": 7,
+      "groups": 7,
+      "blocks": 1,
+      "pages": 1,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "operational",
+      "clients": 1,
+      "groups": 1,
+      "blocks": 1,
+      "pages": 1,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "operational",
+      "clients": 0,
+      "groups": 0,
+      "blocks": 1,
+      "pages": 1,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "listing",
+      "clients": 0,
+      "groups": 0,
+      "blocks": 1,
+      "pages": 1,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "listing",
+      "clients": 98,
+      "groups": 7,
+      "blocks": 4,
+      "pages": 33,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    },
+    {
+      "model": "operational",
+      "clients": 1,
+      "groups": 1,
+      "blocks": 1,
+      "pages": 8,
+      "allRowsOncePerBlock": true,
+      "noOrphanHeadings": true,
+      "noBlankOrOverflowPages": true
+    }
+  ],
+  "errors": [],
+  "commercialWrites": 0,
+  "productionAccess": false
+}
