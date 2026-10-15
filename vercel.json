@@ -9,7 +9,8 @@
       "codex/fix-commercial-home-entry": false,
       "codex/fix-client-list-report-grouping": false,
       "codex/fix-commercial-stage-engine": false,
-      "codex/fix-commercial-audit-defects": false
+      "codex/fix-commercial-audit-defects": false,
+      "codex/visual-crm-unification": false
     }
   },
   "redirects": [

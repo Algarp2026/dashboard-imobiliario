@@ -50,3 +50,16 @@ assert.deepEqual(copy(adapter.client('untouched')),selectionBaseline.clients[1])
 for(const field of ['finalPrices','statuses','salePrices','saleCommissions','priceHistory'])assert.deepEqual(copy(selectionApp.state.data[field]),selectionBaseline[field]);
 assert.deepEqual(copy(adapter.client('selection-client').priorityHistory),selectionBaseline.clients[0].priorityHistory);
 console.log('Selection regression: subset realization, drafts, historical edits, retry, repeat and reload preserve unrelated preparation and commercial data.');
+delete adapter.client('selection-client').budget;
+adapter.apply(model.buildPresentation(null,{...selectionInput,id:'optional-budget-draft'}),null);
+assert.equal(Object.hasOwn(adapter.client('selection-client'),'budget'),false,'Absent optional budget must not become an undefined JSON property during presentation writes');
+adapter.applyCommunication({id:'optional-contact',clientId:'selection-client',type:'Contacto recebido',communicationVersion:1,actualCommunication:true,date:'2026-10-16',fractions:[]},null,null);
+assert.equal(Object.hasOwn(adapter.client('selection-client'),'budget'),false,'Contact writes must also preserve an absent budget');
+delete adapter.client('selection-client').preferences;
+adapter.apply(model.buildPresentation(null,{...selectionInput,id:'optional-preferences-draft'}),null);
+assert.equal(Object.hasOwn(adapter.client('selection-client'),'preferences'),false,'Absent preferences must remain absent');
+for(const budget of [0,null,750000]){
+  adapter.client('selection-client').budget=budget;
+  adapter.apply(model.buildPresentation(null,{...selectionInput,id:'budget-'+String(budget)}),null);
+  assert.equal(adapter.client('selection-client').budget,budget,'Existing optional values must remain unchanged');
+}
