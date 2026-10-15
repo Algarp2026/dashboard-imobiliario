@@ -11,12 +11,12 @@ async function session(){
   await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');
   await p.getByRole('button',{name:'Entrar',exact:true}).click();await ready(p);return p;
 }
-async function ready(p){await p.locator('[data-client="demo-0"]').waitFor();await synced(p)}
+async function ready(p){await p.locator('[data-client="demo-0"]').waitFor({state:'attached'});await synced(p)}
 async function synced(p){await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced')}
 const remote=p=>p.evaluate(async()=>await(await fetch('/api/commercial-data')).json());
 const cache=p=>p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
 const tab=(p,name)=>p.getByRole('tab',{name,exact:true}).click();
-async function profile(p,cid){await p.locator(`[data-client="${cid}"]`).click()}
+async function profile(p,cid){if(await p.locator('.ux-client-profile-active:not(.sales-view-hidden)').count())await p.locator('[data-client-return]').click();await p.locator(`[data-client="${cid}"]`).click()}
 async function savePresentation(p,state){const f=p.locator('[data-workflow-form="presentation"]');await f.locator('[name="state"]').selectOption(state);await f.locator('[type="submit"]').click();await f.locator('[name="state"]').waitFor({state:'detached'});await synced(p)}
 async function editPresentation(p,id){await p.locator(`#clientPanel-presentation [data-edit-client-event="${id}"]`).click()}
 async function saveContact(p){const f=p.locator('[data-contact-form]');await f.locator('[type="submit"]').click();await f.waitFor({state:'detached'});await synced(p)}
