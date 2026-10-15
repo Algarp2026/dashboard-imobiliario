@@ -833,10 +833,12 @@ function isReservationCancellationEvent(ev){return ev?.type==='Reserva cancelada
 function isAbandonmentEvent(ev){return ev?.type==='Desistência'}
 function stageFromEvent(ev){
   if(!ev)return '';
+  if(ev.negotiationVersion===1&&isAbandonmentEvent(ev))return '';
   if(isSaleEvent(ev))return 'Vendido';
   if(isReservationEvent(ev))return 'Reservado';
   if(isAbandonmentEvent(ev))return 'Desistiu';
-  if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida'].includes(ev.type))return 'Em negociação';
+  if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Nova proposta recebida','Aceitação','Rejeição'].includes(ev.type))return 'Em negociação';
+  if(ev.presentationHistory&&!isPresentationDraft(ev))return 'Apresentado';
   if(['Reunião realizada','Frações apresentadas','Preços informados','Reunião com cliente','Visita'].includes(ev.type))return 'Apresentado';
   if(['Preferências recebidas','Interessado'].includes(ev.type))return 'Qualificado';
   if(ev.type==='Pedido de informação recebido')return 'Novo Lead';
@@ -845,6 +847,8 @@ function stageFromEvent(ev){
 function sortedClientEvents(clientId){
   return (state.data.events||[]).map((ev,index)=>({ev,index})).filter(item=>item.ev.clientId===clientId).sort((a,b)=>eventSortKey(a.ev,a.index).localeCompare(eventSortKey(b.ev,b.index))).map(item=>item.ev);
 }
+function eventInformedPrices(ev){return window.THE_VIEW_CLIENT_WORKFLOW?window.THE_VIEW_CLIENT_WORKFLOW.prices(ev):(ev?.informedPrices||[])}
+function isPresentationDraft(ev){return !!window.THE_VIEW_CLIENT_WORKFLOW?.isDraft(ev)}
 function eventFractionsPresented(ev){
   return ['Apresentação comercial','Frações apresentadas','Preços informados','Contra-proposta recebida','Contra-proposta enviada','Proposta recebida','Reserva efetuada','Reserva','Venda concluída','Venda','Visita','Reunião com cliente'].includes(ev.type);
 }
@@ -862,7 +866,7 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   const linkedFractions=new Set((c.manualFractions||c.fractions||[]).map(Number).filter(Boolean));
   const latestPrices=new Map();
 
-  events.forEach(ev=>{
+  events.filter(ev=>!isPresentationDraft(ev)).forEach(ev=>{
     (ev.fractions||[]).map(Number).filter(Boolean).forEach(n=>linkedFractions.add(n));
     if(eventFractionsPresented(ev))(ev.fractions||[]).forEach(n=>presented.add(Number(n)));
     if(ev.type==='Preferências recebidas'){
@@ -870,7 +874,8 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
       Object.keys(emptyPreferences()).forEach(key=>{if(eventPreferences[key])preferences[key]=eventPreferences[key]});
       if(Number(ev.preferenceBudget)>0)budget=Number(ev.preferenceBudget);
     }
-    (ev.informedPrices||[]).forEach(item=>{
+    // Managed presentations are projected at read time; never rewrite legacy cached snapshots.
+    (ev.presentationHistory?[]:eventInformedPrices(ev)).forEach(item=>{
       const n=Number(item.fraction||item.unitId);
       if(n)latestPrices.set(n,{fraction:n,officialPrice:Number(item.officialPrice)||0,informedPrice:Number(item.informedPrice)||0,observation:safe(item.observation),date:ev.date||'',eventId:ev.id});
     });
@@ -895,7 +900,7 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   c.preferences=preferences;
   c.budget=budget;
   c.fractions=uniqNum([...linkedFractions]);
-  const lastContact=events.slice().reverse().find(ev=>ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
+  const lastContact=events.slice().reverse().find(ev=>!isPresentationDraft(ev)&&ev.date&&ev.date<=today()&&ev.type!=='Reunião agendada')?.date||'';
   const nextAction=clientSummaryFollowupInfo(c);
   const previousSummary=c.commercialSummary||{};
   c.commercialSummary={
@@ -1304,7 +1309,7 @@ function renderClientActionBar(){
 }
 
 function clientSummaryFollowupContext(){
-  return window.THE_VIEW_RECOMMENDATIONS?.buildContext({events:state.data.events||[],now:new Date().toISOString()});
+  return window.THE_VIEW_RECOMMENDATIONS?.buildContext({events:(state.data.events||[]).filter(ev=>!isPresentationDraft(ev)),now:new Date().toISOString()});
 }
 function clientSummaryFollowupInfo(c,context=clientSummaryFollowupContext()){
   return context?window.THE_VIEW_RECOMMENDATIONS.followupInfo(c,context):{status:'none',date:'',step:'',label:'Sem ação',needsReview:false};
@@ -1323,6 +1328,7 @@ function clientSummaryPreferencesText(c){
 }
 function clientSummaryFractionsText(c){
   const summary=c.commercialSummary||{},prices=new Map((summary.lastInformedPrices||[]).map(item=>[Number(item.fraction),Number(item.informedPrice)||0]));
+  sortedClientEvents(c.id).forEach(ev=>eventInformedPrices(ev).forEach(row=>prices.set(Number(row.fraction||row.unitId),Number(row.informedPrice)||0)));
   const fractions=uniqNum([...(summary.presentedFractions||[]),...prices.keys()]);
   return fractions.map(n=>prices.get(n)?`Apt. ${n}: ${money(prices.get(n))}`:`Apt. ${n}`).join(' · ')||'—';
 }
@@ -1344,7 +1350,7 @@ function buildClientSummaryRows(options={}){
     const manual=[evaluated?.primary,...(evaluated?.secondary||[])].find(rec=>rec?.code.startsWith('manual-'));
     const presented=clientPresentedFractionRows(c),linked=agent(c.agentId);
     const prices=new Map((c.commercialSummary?.lastInformedPrices||[]).map(item=>[Number(item.fraction),item]));
-    sortedClientEvents(c.id).forEach(ev=>(ev.informedPrices||[]).forEach(item=>prices.set(Number(item.fraction||item.unitId),item)));
+    sortedClientEvents(c.id).forEach(ev=>eventInformedPrices(ev).forEach(item=>prices.set(Number(item.fraction||item.unitId),item)));
     return{
       id:c.id,agentId:c.agentId||'',agent:uniq([linked?.name||c.agent,linked?.agency||c.agency]).join(' · ')||'—',origin:clientOriginLabel(c)||'—',
       client:c.name||'Cliente sem nome',status:normalizeClientStage(c.stage),preferences:clientSummaryPreferencesText(c),fractions:clientSummaryFractionsText(c),
@@ -1545,7 +1551,7 @@ function renderSalesEventsPanel(){
       ${ev.commissionAmount?`<p class="muted small">Comissão: ${money(ev.commissionAmount)} · Receita líquida: ${money((ev.amount||0)-ev.commissionAmount)}</p>`:''}
       ${eventChannelDetailsHtml(ev)}
       ${commercialDetails}
-      ${(ev.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(ev.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
+      ${eventInformedPrices(ev).length?`<p><strong>Preços informados:</strong> ${esc(eventInformedPrices(ev).map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)} (oficial: ${money(item.officialPrice)})`).join(' · '))}</p>`:''}
       ${ev.followup?`<p><strong>Follow-up:</strong> ${esc(ev.followup)} ${ev.followupDate?'· '+esc(ev.followupDate):''}</p>`:''}
       ${ev.objections?`<p><strong>Objeções:</strong> ${esc(ev.objections)}</p>`:''}
       ${ev.notes?`<p>${esc(ev.notes)}</p>`:''}
@@ -1786,7 +1792,7 @@ function clientFractionCommercialRows(c,events){
   return uniqNum([...(c.fractions||[]),...(c.commercialSummary?.presentedFractions||[])]).map(n=>{
     const related=events.filter(ev=>(ev.fractions||[]).includes(n));
     const latest=related.slice().reverse().find(ev=>eventFractionsPresented(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))||null;
-    const informed=related.flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,date:ev.date,eventId:ev.id}))).pop();
+    const informed=related.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,date:ev.date,eventId:ev.id}))).pop();
     let status='Interesse';
     if(latest){
       if(isSaleEvent(latest))status='Venda';
@@ -1979,7 +1985,7 @@ function clientNegotiationMarkup(c,events,fractions){
   return fractions.length?fractions.map(f=>{
     const history=events.filter(ev=>(ev.fractions||[]).map(Number).includes(f.number));
     const negotiations=closing.filter(ev=>(ev.fractions||[]).map(Number).includes(f.number));
-    const prices=history.flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===f.number));
+    const prices=history.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===f.number));
     const proposal=negotiations.slice().reverse().find(ev=>/proposta recebida/i.test(ev.type||''));
     const counter=negotiations.slice().reverse().find(ev=>/contra-proposta enviada/i.test(ev.type||''));
     const latest=negotiations.at(-1);
@@ -2016,6 +2022,8 @@ function renderClientDetail(){
     presentation:heading('Apresentação',action('presentation','Registar apresentação','presentation')+action('documentation','Registar documentação','send'))+`<section id="clientPreparedFractions">${heading(`Apresentação preparada <span class="muted small">${preparation.length} frações</span>`,action('select-presentation','Adicionar / retirar frações','list-checks'))}${preparation.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipologia / Piso</th><th>Preço comercial oficial</th><th>Disponibilidade</th></tr></thead><tbody>${preparation.map(f=>`<tr><td>${fractionReference(f)}</td><td>${esc(f.typology)} · ${esc(f.floorLabel)}</td><td data-prepared-price="${f.number}">${displayMoney(finalPrice(f))}</td><td data-prepared-status="${f.number}"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span></td></tr>`).join('')}</tbody></table></div><div class="ux-client-secondary-actions">${action('proposal','Definir preços e gerar PDF','file-text')}</div>`:'<p class="muted">Ainda não existem frações selecionadas para apresentação.</p>'}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Apresentações realizadas <span class="muted small">${presented.length} frações</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientPresentationHistory" class="ux-client-details"><summary>Histórico de apresentações e documentação (${presentationEvents.length})</summary><div class="timeline ux-client-timeline">${presentationEvents.length?presentationEvents.map(clientTimelineItem).join(''):'<p class="muted">Sem apresentações ou documentação registadas.</p>'}</div></details>`,
     negotiation:heading('Negociação',action('proposal','Criar proposta','file-text')+action('stage','Atualizar estado comercial','tag'))+clientNegotiationMarkup(c,chronological,related)+`<section class="ux-client-section">${heading('Registar negociação')}<div class="ux-client-negotiation"><label class="field"><span>Evento comercial</span><select id="clientNegotiationType">${['Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência'].map(type=>`<option>${esc(type)}</option>`).join('')}</select></label>${action('negotiation','Registar evento','plus')}</div></section><section class="ux-client-section">${heading('Próxima ação do cliente')}${clientNextActionMarkup(followup,recommendation)}<div class="ux-client-secondary-actions">${action('contact','Registar contacto','phone')}${action('note','Adicionar observação','message-square')}</div></section><details id="clientFullHistory" class="ux-client-details" open><summary>Histórico comercial completo (${evs.length})</summary><div class="top-actions">${action('event','Adicionar evento','plus')}</div><div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<p class="muted">Sem interações registadas.</p>'}</div></details>`
   };
+  const workflow=commercialUx.clientProfileOpen?clientWorkflow():null;
+  if(workflow){panels.presentation=workflow.presentationMarkup(c);panels.negotiation=workflow.negotiationMarkup(c)}
   if(commercialUx.clientProfileOpen&&window.THE_VIEW_CLIENT_PREFERENCES){
     const content=panels.preferences;
     panels.preferences=inlinePreferencesMarkup(c)+(commercialUx.preferenceDraft?.clientId===c.id?'':content.slice(content.indexOf('<dl')))+archivedPreferencesMarkup(c);
@@ -2037,6 +2045,47 @@ function renderClientDetail(){
   renderUxIcons();activateClientDetailTab(commercialUx.clientDetailTab);
   bindInlinePreferences(c);
   bindClientFractionWorkspace(c);
+  workflow?.bind(c,el.clientDetail);
+}
+let clientWorkflowController;
+function clientWorkflow(){
+  if(!window.createClientWorkflow)return null;
+  if(!clientWorkflowController)clientWorkflowController=window.createClientWorkflow({
+    esc,icon:uxIcon,id,today,money:displayMoney,client,event:eid=>state.data.events.find(ev=>ev.id===eid),events:()=>state.data.events,agents:()=>state.data.agents,
+    rows:clientFractionSource,selection:presentationSelection,revision:()=>sharedSync.revision,
+    recommend:(c,rows)=>window.THE_VIEW_FRACTION_RECOMMENDATIONS.evaluate(c,rows),status:r=>r?clientFractionStatus(r):'Não confirmada',price:r=>r?clientFractionPrice(r):'Não confirmado',
+    timeline:clientTimelineItem,facts:clientFactsMarkup,reference:n=>getF(n)?fractionReference(getF(n)):`Apt. ${n}`,render:()=>RenderFlow.eventChanged(),tab:activateClientDetailTab,
+    followup:(cid,events)=>{
+      const engine=window.THE_VIEW_RECOMMENDATIONS;
+      return engine?.followupInfo({id:cid},engine.buildContext({events,now:new Date().toISOString()}));
+    },
+    general:c=>`<section class="ux-client-section"><h3>Acompanhamento geral do cliente</h3>${clientNextActionMarkup(clientSummaryFollowupInfo(c),commercialClientRecommendation(c))}<div class="ux-client-secondary-actions"><button class="ux-text-button" type="button" data-ux-client-action="stage">${uxIcon('tag')}Atualizar estado do cliente</button><button class="ux-text-button" type="button" data-ux-client-action="contact">${uxIcon('phone')}Registar contacto</button><button class="ux-text-button" type="button" data-ux-client-action="note">${uxIcon('message-square')}Adicionar observação</button></div></section>`,
+    nextAction:(ev,step,date)=>nextActionMetadata(ev,step,date,'event'),commission:calculateCommission,closing:ev=>isCommercialClosingEvent(ev)&&!isAbandonmentEvent(ev),
+    confirm:confirmUser,confirmClosing:confirmWorkflowClosing,persist:persistClientChange,feedback:clientSaveFeedback,recalculate:recalculateResumoCliente,
+    apply:(ev,old)=>{
+      const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;
+      if(old)replaceEventAndReapplyBusinessRules(old,ev);else applyEventBusinessRules(ev);
+      c.preferences=preferences;c.budget=budget;
+      if(ev.presentationHistory){updatePresentationSelection(client(ev.clientId),ev.fractions);if(!isPresentationDraft(ev))consumePresentationSelection(client(ev.clientId),ev)}
+    },
+    pdf:()=>openClientUxAction('proposal'),oldEvent:()=>openEventModal('','client')
+  });
+  return clientWorkflowController;
+}
+async function confirmWorkflowClosing(ev,old,revision){
+  if(old&&!hasCriticalCommercialEventChange(old,ev))return true;
+  const ensure=async()=>{
+    if(!sharedSync.verified||sharedSync.dirty||sharedSync.busy||sharedSync.phase!=='synced'||!sharedSync.canWrite)throw Error('Confirme primeiro a sincronização da base comercial.');
+    const result=await requestCommercialData();
+    if(result.revision!==revision||sharedSync.revision!==revision||sharedSync.dirty)throw Error('A base comercial mudou. Atualize a consulta, reveja as condições e reabra o formulário.');
+    const error=window.THE_VIEW_CLIENT_WORKFLOW.closingError(ev,old,state.data,sharedSync.revision,revision,commercialEffectForFraction);
+    if(error)throw Error(error);
+    if(!result.canWrite)throw Error('A fonte não permite gravações neste momento.');
+  };
+  await ensure();
+  const target=isReservationCancellationEvent(ev)?'Disponível':isSaleEvent(ev)?'Vendido':isReservationEvent(ev)?'Reservado':'recalculado';
+  if(!await confirmUser(`Ao confirmar, ${uniqNum([...(ev.fractions||[]),...(old?.fractions||[])]).map(n=>'Apt. '+n).join(', ')} terá o estado global ${target}. O evento, os valores e as comissões associados serão guardados em conjunto. Confirmar?`,'Confirmar alteração global'))return false;
+  await ensure();return true;
 }
 function activateClientDetailTab(key,focus=false){
   key=({followup:'negotiation',summary:'data'})[key]||key;
@@ -2064,7 +2113,7 @@ function clientPresentedFractionRows(c,events=sortedClientEvents(c.id)){
   return uniqNum([...(c.commercialSummary?.presentedFractions||[]),...events.filter(eventFractionsPresented).flatMap(ev=>ev.fractions||[])]).map(n=>{
     const related=events.filter(ev=>(ev.fractions||[]).map(Number).includes(n));
     const presentation=related.slice().reverse().find(ev=>isCommercialPresentationEvent(ev)||['Frações apresentadas','Visita','Reunião realizada','Reunião com cliente'].includes(ev.type));
-    const informed=related.flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,eventId:ev.id}))).pop();
+    const informed=related.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,eventId:ev.id}))).pop();
     return{fraction:n,date:presentation?.date||'',informedPrice:Number(informed?.informedPrice)||0,interest:related.slice().reverse().find(ev=>ev.interest)?.interest||'',eventId:presentation?.id||informed?.eventId||related.slice().reverse().find(eventFractionsPresented)?.id||''};
   });
 }
@@ -2159,7 +2208,7 @@ function clientTimelineItem(e){
   const fractions=(e.fractions||[]).map(n=>getF(Number(n))?fractionReference(getF(Number(n))):`<span>Apt. ${esc(n)}</span>`);
   return`<article class="timeline-item"><div class="ux-timeline-heading"><div><time>${esc(formatTimelineDate(e.date,e.time))}</time><h4>${esc(e.type||'Evento')}</h4></div><button class="ghost-button compact-button" type="button" data-edit-client-event="${attr(e.id)}">${uxIcon('pencil')}Ver / Editar</button></div>
     ${fractions.length?`<div class="ux-timeline-fractions">${fractions.join('')}</div>`:''}${e.amount?`<p><strong>${money(e.amount)}</strong></p>`:''}
-    ${(e.informedPrices||[]).length?`<p><strong>Preços informados:</strong> ${esc(e.informedPrices.map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}
+    ${eventInformedPrices(e).length?`<p><strong>Preços informados:</strong> ${esc(eventInformedPrices(e).map(item=>`Apt. ${item.fraction||item.unitId}: ${money(item.informedPrice)}`).join(' · '))}</p>`:''}
     ${e.notes?`<p class="ux-event-notes">${esc(e.notes)}</p>`:''}${eventChannelDetailsHtml(e)}${eventRequestDetailsHtml(e)}
     ${e.objections?`<p><strong>Objeções:</strong> ${esc(e.objections)}</p>`:''}${e.nextStep||e.followup||e.followupDate?`<p class="muted small">Próximo passo: ${esc(e.nextStep||e.followup||'—')}${e.followupDate?` · ${esc(formatCommercialDate(e.followupDate))}`:''}</p>`:''}${e.interest?`<p class="muted small">Interesse: ${esc(e.interest)}</p>`:''}${e.agentId?`<p class="muted small">Agente: ${esc(agent(e.agentId)?.name||'—')}</p>`:''}${e.commissionAmount?`<p class="muted small">Comissão: ${money(e.commissionAmount)}</p>`:''}</article>`;
 }
@@ -2177,7 +2226,7 @@ function openClientContact(){
 function commissionOf(n){return state.data.saleCommissions?.[n]||{amount:0}}
 function agent(id){return (state.data.agents||[]).find(a=>a.id===id)}
 function calculateCommission(amount,type,value){amount=+amount||0;value=+value||0;return type==='percent'?amount*value/100:value}
-function isCommercialClosingEvent(ev){return !!ev&&(isReservationEvent(ev)||isSaleEvent(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))}
+function isCommercialClosingEvent(ev){return !!ev&&(isReservationEvent(ev)||isSaleEvent(ev)||isReservationCancellationEvent(ev)||(isAbandonmentEvent(ev)&&ev.releaseReservation))}
 function commercialStatusFromEvent(ev){return isReservationEvent(ev)?'Reservado':isSaleEvent(ev)?'Vendido':''}
 function eventDerivedStage(ev){return stageFromEvent(ev)}
 function applyClientEventStage(c){if(c)recalculateResumoCliente(c.id)}
@@ -2199,11 +2248,12 @@ function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[
 function applyEventBusinessRules(ev){
   if(isCommercialClosingEvent(ev))ensureLegacyCommercialEventLinks(ev.fractions||[]);
   state.data.events.push(ev);
+  if(isPresentationDraft(ev))return;
   if(ev.type==='Preferências recebidas'&&client(ev.clientId))client(ev.clientId).preferencesManuallyEdited=false;
   applyClientEventStage(client(ev.clientId),ev);
   if(isReservationEvent(ev))applyReservationEvent(ev);
   else if(isSaleEvent(ev))applySaleEvent(ev);
-  else if(isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))reapplyCommercialEffectsForFractions(ev.fractions||[]);
+  else if(isReservationCancellationEvent(ev)||(isAbandonmentEvent(ev)&&ev.releaseReservation))reapplyCommercialEffectsForFractions(ev.fractions||[]);
 }
 function eventSortKey(ev,index=0){return`${ev.date||''} ${ev.time||''} ${String(index).padStart(6,'0')}`}
 function commercialEffectForFraction(n){
@@ -2211,7 +2261,7 @@ function commercialEffectForFraction(n){
   (state.data.events||[]).map((event,index)=>({event,index})).filter(item=>(item.event.fractions||[]).includes(n)).sort((a,b)=>eventSortKey(a.event,a.index).localeCompare(eventSortKey(b.event,b.index))).forEach(({event})=>{
     if(isReservationEvent(event))effect={status:'Reservado',amount:Number(event.amount)||0,event};
     else if(isSaleEvent(event))effect={status:'Vendido',amount:Number(event.amount)||0,event};
-    else if(isReservationCancellationEvent(event)&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
+    else if(isReservationCancellationEvent(event)&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=event.negotiationVersion===1?{status:'Disponível',amount:0,event}:null;
     else if(isAbandonmentEvent(event)&&event.releaseReservation&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
   });
   return effect;
@@ -2271,6 +2321,8 @@ function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEf
 function hasCriticalCommercialEventChange(oldEv,newEv){
   if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
   return oldEv.type!==newEv.type ||
+    oldEv.clientId!==newEv.clientId || oldEv.date!==newEv.date || (oldEv.time||'')!==(newEv.time||'') ||
+    !!oldEv.releaseReservation!==!!newEv.releaseReservation ||
     JSON.stringify(uniqNum(oldEv.fractions||[]))!==JSON.stringify(uniqNum(newEv.fractions||[])) ||
     Number(oldEv.amount||0)!==Number(newEv.amount||0) ||
     !!oldEv.withAgent!==!!newEv.withAgent ||
@@ -2281,11 +2333,11 @@ function hasCriticalCommercialEventChange(oldEv,newEv){
 function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
-  if(isCommercialClosingEvent(oldEv)||isCommercialClosingEvent(newEv))ensureLegacyCommercialEventLinks(uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]));
+  if(hasCriticalCommercialEventChange(oldEv,newEv))ensureLegacyCommercialEventLinks(uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]));
   state.data.events[idx]=newEv;
   if(newEv.type==='Preferências recebidas'&&client(newEv.clientId))client(newEv.clientId).preferencesManuallyEdited=false;
   reapplyClientLinksAfterEventEdit(oldEv,newEv);
-  reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
+  if(hasCriticalCommercialEventChange(oldEv,newEv))reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
   return true;
 }
 function createManualStatusEvent(n,oldStatus,newStatus){
@@ -2805,7 +2857,7 @@ function collectEventPriceDraft(){
   });
 }
 function previousLowerInformedPrice(n,excludeEventId=''){
-  const records=(state.data.events||[]).filter(ev=>ev.id!==excludeEventId).flatMap(ev=>(ev.informedPrices||[]).filter(item=>Number(item.fraction||item.unitId)===n&&Number(item.informedPrice)>0).map(item=>({price:Number(item.informedPrice),date:ev.date||'',client:client(ev.clientId)?.name||'Cliente sem nome'})));
+  const records=(state.data.events||[]).filter(ev=>ev.id!==excludeEventId).flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n&&Number(item.informedPrice)>0).map(item=>({price:Number(item.informedPrice),date:ev.date||'',client:client(ev.clientId)?.name||'Cliente sem nome'})));
   const current=finalPrice(getF(n));
   return records.filter(item=>item.price<current).sort((a,b)=>a.price-b.price)[0]||null;
 }
@@ -2903,7 +2955,7 @@ function renderSales(){
 }
 function getHistoricoComercialFracao(unitId,options={}){
   const eventRows=(state.data.events||[]).filter(ev=>(ev.fractions||[]).includes(unitId)).map(ev=>{
-    const price=(ev.informedPrices||[]).find(item=>Number(item.fraction||item.unitId)===unitId);
+    const price=eventInformedPrices(ev).find(item=>Number(item.fraction||item.unitId)===unitId);
     const official=Number(price?.officialPrice)||0,informed=Number(price?.informedPrice)||0;
     return{source:'event',eventId:ev.id,date:ev.date||'',time:ev.time||'',type:ev.type||'Evento',client:client(ev.clientId)?.name||'Sem cliente associado',officialPrice:official,informedPrice:informed,amount:Number(ev.amount)||0,difference:informed&&official?informed-official:0,hasDifference:!!(informed&&official),observation:safe(price?.observation||ev.notes)};
   });
@@ -3251,6 +3303,11 @@ async function saveClientPreferences(){
   recordClientPreferenceChange(c,updated);const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,'Preferências guardadas na base partilhada.');
 }
 function openEventModal(eventId='',source=''){
+  const managed=(state.data.events||[]).find(ev=>ev.id===eventId);
+  if(managed&&(managed.presentationHistory||managed.negotiationVersion===1)&&clientWorkflow()){
+    openClientProfile(managed.clientId);clientWorkflow().edit(managed);return;
+  }
+  state.eventOpeningRevision=sharedSync.revision;
   ensureEventAgentFields();
   ensureEventClientQuickCreate();
   populateAgentSelect();
@@ -3315,6 +3372,13 @@ function closeEventModal(){
   document.body.style.overflow='';
 }
 async function saveEvent(){
+  if(state.eventSaving)return;
+  state.eventSaving=true;
+  const button=document.getElementById('saveEvent');if(button)button.disabled=true;
+  try{await saveEventForm()}catch(error){await notifyUser(error.message||'Não foi possível guardar o evento.','Evento comercial')}
+  finally{state.eventSaving=false;if(button)button.disabled=false}
+}
+async function saveEventForm(){
   const cid=el.eventClientId.value;
   if(!cid&&el.eventType.value!=='Alteração de estado'){await notifyUser('Escolha um cliente.','Evento comercial');return}
   const frs=getMulti(el.eventFractions).map(Number);
@@ -3328,26 +3392,30 @@ async function saveEvent(){
     await notifyUser('Escolha o formato da apresentação comercial.','Apresentação comercial');el.eventChannel.focus();return;
   }
   const ev=buildEventFromForm(cid,frs,editingId);
+  if(window.THE_VIEW_CLIENT_WORKFLOW&&(isCommercialClosingEvent(ev)||isCommercialClosingEvent(oldEv))&&(!isAbandonmentEvent(ev)||isCommercialClosingEvent(oldEv))){
+    if(!await confirmWorkflowClosing(ev,oldEv,state.eventOpeningRevision))return;
+  }
   if(type==='Preços informados'&&ev.informedPrices.some(item=>!item.informedPrice)){await notifyUser('Indique o preço informado para cada fração.','Preços informados');return}
   const reservationCandidates=isAbandonmentEvent(ev)&&!frs.length?state.fractions.map(f=>f.number):frs;
   const activeReservations=reservationCandidates.filter(n=>{const effect=commercialEffectForFraction(n);return effect?.status==='Reservado'&&effect.event.clientId===cid});
   if(isReservationCancellationEvent(ev)&&activeReservations.length){
-    if(!await confirmUser(`A reserva será cancelada e ${activeReservations.map(n=>'Apt. '+n).join(', ')} voltará ao estado disponível. Confirmar?`,'Cancelar reserva'))return;
+    if(!window.THE_VIEW_CLIENT_WORKFLOW&&!await confirmUser(`A reserva será cancelada e ${activeReservations.map(n=>'Apt. '+n).join(', ')} voltará ao estado disponível. Confirmar?`,'Cancelar reserva'))return;
     ev.releaseReservation=true;
   }
   if(isAbandonmentEvent(ev)&&activeReservations.length){
     ev.releaseReservation=await confirmUser(`Este cliente tem reserva ativa em ${activeReservations.map(n=>'Apt. '+n).join(', ')}. Pretende libertar a reserva ao registar a desistência?`,'Desistência com reserva');
     if(ev.releaseReservation)ev.fractions=uniqNum([...(ev.fractions||[]),...activeReservations]);
+    if(ev.releaseReservation&&window.THE_VIEW_CLIENT_WORKFLOW&&!await confirmWorkflowClosing(ev,oldEv,state.eventOpeningRevision))return;
   }
   if(oldEv){
     const oldSnapshot=JSON.parse(JSON.stringify(oldEv));
-    if(hasCriticalCommercialEventChange(oldSnapshot,ev)){
+    if(hasCriticalCommercialEventChange(oldSnapshot,ev)&&!window.THE_VIEW_CLIENT_WORKFLOW){
       const msg='Está a alterar campos com efeitos comerciais: tipo, frações, valor, agente ou comissão.\n\nAo confirmar, os estados das frações, preço de reserva/venda e comissão serão recalculados para refletir o evento editado.';
       if(!await confirmUser(msg,'Atualizar evento comercial'))return;
     }
     replaceEventAndReapplyBusinessRules(oldSnapshot,ev);
   }else{
-    if(isReservationEvent(ev)||isSaleEvent(ev)){
+    if((isReservationEvent(ev)||isSaleEvent(ev))&&!window.THE_VIEW_CLIENT_WORKFLOW){
       const action=isSaleEvent(ev)?'venda':'reserva';
       if(!await confirmUser(`Confirmar ${action} de ${frs.map(n=>'Apt. '+n).join(', ')} para ${client(cid)?.name||'o cliente selecionado'}${ev.amount?' pelo valor de '+money(ev.amount):''}?`,`Confirmar ${action}`))return;
     }
@@ -3357,10 +3425,12 @@ async function saveEvent(){
   if(returnSource==='events')state.salesSubtab='events';
   if(returnSource==='history')state.salesSubtab='history';
   if(returnSource==='client'){state.salesSubtab='clients';state.selectedClientId=ev.clientId}
-  save();
+  // Keep the same event id even if the remote confirmation fails.
+  state.editingEventId=ev.id;
+  const confirmed=await persistClientChange();
   closeEventModal();
   RenderFlow.eventChanged();
-  commercialUxToast(oldEv?'Evento atualizado.':'Evento registado.');
+  clientSaveFeedback(confirmed,oldEv?'Evento atualizado e sincronizado.':'Evento registado e sincronizado.');
 }
 function buildEventFromForm(cid,frs,eventId=''){
   const existing=eventId?(state.data.events||[]).find(ev=>ev.id===eventId)||{}:{};
@@ -3807,7 +3877,7 @@ function operationalActionsMarkup(){
   return commercialRecommendationQueueMarkup()+`<section class="ux-operational-actions"><h3>Consultas comerciais</h3><div class="ux-action-groups">${groups.map(([title,key,items])=>`<section><h4><button class="ux-text-button" type="button" data-ux-operational="${key}">${esc(title)}</button> <span>${items.length}</span></h4><div class="ux-action-list">${items.length?items.join(''):'<p class="muted small">Sem pendências nesta categoria.</p>'}</div></section>`).join('')}</div></section>`;
 }
 function commercialRecommendationInput(){
-  return{clients:state.data.clients||[],events:state.data.events||[],priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
+  return{clients:state.data.clients||[],events:(state.data.events||[]).filter(ev=>!isPresentationDraft(ev)).map(ev=>ev.presentationHistory?{...ev,informedPrices:eventInformedPrices(ev)}:ev),priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
 }
 function commercialClientRecommendation(c){
   const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return null;
@@ -3952,6 +4022,7 @@ function openContextPresentation(numbers){
 }
 function openClientUxAction(action){
   const c=client(state.selectedClientId);if(!c)return;
+  if(action==='presentation'&&commercialUx.clientProfileOpen&&clientWorkflow()){clientWorkflow().newPresentation(c.id);return}
   const destinations={preferences:'preferences','select-presentation':'fractions',associate:'fractions',contact:'negotiation',complete:'negotiation',documentation:'presentation',note:'negotiation',plan:'negotiation',stage:'negotiation',event:'negotiation',proposal:'presentation',negotiation:'negotiation',presentation:'presentation'};
   if(destinations[action])activateClientDetailTab(destinations[action]);
   if(action==='complete'){completeClientNextAction();return}
@@ -4046,7 +4117,7 @@ function filterFractions(fil={}){
 
 function syncProposal(){const next={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};if(Object.keys(next).every(key=>next[key]===state.pf[key]))return;state.pf=next;renderProposals()}
 function syncPrice(){const next={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};if(Object.keys(next).every(key=>next[key]===state.rf[key]))return;state.rf=next;renderPrices()}
-function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCommercialPresentationEvent).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
+function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCommercialPresentationEvent).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
 function getF(n){return state.fractions.find(f=>f.number===n)}
 function client(id){return state.data.clients.find(c=>c.id===id)}

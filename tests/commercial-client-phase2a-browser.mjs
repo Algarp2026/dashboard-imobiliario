@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const origin=process.env.PHASE2A_TEST_ORIGIN||'http://127.0.0.1:5194',key='theView.crmCommercial.v2';
-if(!/^http:\/\/127\.0\.0\.1:519[46]$/.test(origin))throw Error('Only isolated Phase 2A localhost ports are allowed');
+if(!/^http:\/\/127\.0\.0\.1:519[468]$/.test(origin))throw Error('Only isolated Phase 2A localhost ports are allowed');
 const output=process.env.PHASE2A_ARTIFACTS||path.join(os.tmpdir(),'the-view-phase2a');await fs.mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
 const contexts=[],errors=[],reports=[];

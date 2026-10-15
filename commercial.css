@@ -592,3 +592,28 @@ body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidde
   .ux-client-profile-active .ux-client-tabs>button{padding:11px 12px}
   .ux-client-profile-active .ux-client-workspace__content{padding-top:16px}
 }
+/* The completed client journey stays inside the approved profile layout. */
+.ux-workflow { min-width: 0; }
+.ux-workflow fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.ux-workflow form { border-block: 1px solid var(--border, #dfe5e9); padding-block: 18px; margin-block: 12px 20px; }
+.ux-workflow .field { min-width: 0; position: relative; }
+.ux-workflow .field input, .ux-workflow .field select, .ux-workflow .field textarea { max-width: 100%; }
+.ux-workflow table input { width: 150px; min-width: 110px; }
+.ux-workflow-add { display: flex; align-items: end; gap: 10px; margin-block: 16px; }
+.ux-workflow-add .field { flex: 1; max-width: 420px; }
+.ux-workflow-warning { color: #805614; display: block; max-width: 32em; }
+.ux-workflow-feedback { color: #215d4e; white-space: pre-line; overflow-wrap: anywhere; }
+.ux-workflow-overdue { border-left-color: #a43a37; }
+.ux-workflow .timeline p, .ux-workflow details p { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .ux-workflow .form-grid { grid-template-columns: 1fr; }
+  .ux-workflow-add { align-items: stretch; flex-direction: column; }
+  .ux-workflow .top-actions { flex-wrap: wrap; }
+  .ux-workflow .data-table thead { display: none; }
+  .ux-workflow .data-table, .ux-workflow .data-table tbody { display: block; width: 100%; }
+  .ux-workflow .data-table tr { display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .ux-workflow .data-table td { display: block; border: 0; min-width: 0; }
+  .ux-workflow .data-table td[data-label]::before { content: attr(data-label); display: block; color: var(--muted); margin-bottom: 6px; font-size: 12px; }
+  .ux-workflow .data-table .ux-sr-only { position: static!important; width: auto; height: auto; clip: auto; clip-path: none; white-space: normal; overflow: visible; }
+  .ux-workflow .data-table input[type=number] { width: 100%; text-align: left; }
+}

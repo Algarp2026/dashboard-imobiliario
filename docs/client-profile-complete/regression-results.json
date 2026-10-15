@@ -1,0 +1,55 @@
+{
+  "base": "5582825fb27555b336ac5495e4bd3ddb9503c3ad",
+  "suiteCount": 22,
+  "suites": [
+    "access-routes.test.js",
+    "commercial-capacity.test.js",
+    "commercial-chunk-storage.test.js",
+    "commercial-client-preferences.test.js",
+    "commercial-client-reports.test.js",
+    "commercial-client-tabs.test.js",
+    "commercial-client-workflow.test.js",
+    "commercial-concurrency.test.js",
+    "commercial-construction.test.js",
+    "commercial-followups.test.js",
+    "commercial-fraction-recommendations.test.js",
+    "commercial-progressive-flow.test.js",
+    "commercial-recommendations-ui.test.js",
+    "commercial-recommendations.test.js",
+    "commercial-smoke.test.js",
+    "commercial-sync-api.test.js",
+    "commercial-sync-client.test.js",
+    "commercial-ux.test.js",
+    "commercial-write-integrity.test.js",
+    "compset.test.js",
+    "google-read-check.test.js",
+    "pricing-analysis.test.js"
+  ],
+  "syntax": [
+    "commercial.js",
+    "commercial-client-workflow.js",
+    "commercial-client-workflow-ui.js",
+    "commercial-recommendations.js",
+    "app.js",
+    "config.js",
+    "tests/commercial-client-complete-browser.mjs",
+    "tests/commercial-client-complete-exports.mjs"
+  ],
+  "protectedPathsUnchanged": [
+    "api",
+    "server",
+    "google_apps_script.gs",
+    "config.js",
+    "data.json",
+    "plantas",
+    "middleware.ts"
+  ],
+  "syncBlockUnchanged": true,
+  "hashes": {
+    "commercial.js": "9489cd32acef7d5c66da5961e3742f5870dbbf8e618f693756148455a3b80fc5",
+    "commercial-client-workflow.js": "dfd5f6cbb384128df6a09d39853f0a67835bf7f5ea6d444b152117031c9925d3",
+    "commercial-client-workflow-ui.js": "91fc41a53e50b880929732bb5fb648cda77948748f9a9a9f98e3c5c1fb95bdb9",
+    "commercial-recommendations.js": "1a0b49f4d3630e72ea1067eebe11d6e0ab1377af29fa82d6fddf979d443be9b9"
+  },
+  "productionAccess": false
+}

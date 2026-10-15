@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5195',key='theView.crmCommercial.v2',output=process.env.PHASE2B_ARTIFACTS||path.join(os.tmpdir(),'the-view-phase2b');await fs.mkdir(output,{recursive:true});
+const origin=process.env.PHASE2B_TEST_ORIGIN||'http://127.0.0.1:5195',key='theView.crmCommercial.v2',output=process.env.PHASE2B_ARTIFACTS||path.join(os.tmpdir(),'the-view-phase2b');await fs.mkdir(output,{recursive:true});
+if(!/^http:\/\/127\.0\.0\.1:519[57]$/.test(origin))throw Error('Only isolated test origins are permitted');
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})}),contexts=[],errors=[];
 async function session(viewport={width:1440,height:1000}){
   const context=await browser.newContext({viewport});contexts.push(context);await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
