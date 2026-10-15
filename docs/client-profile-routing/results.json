@@ -1,0 +1,60 @@
+{
+  "reproducedBeforeFix": [
+    "initial selection opens legacy preferences",
+    "refresh loses full-profile state"
+  ],
+  "results": [
+    {
+      "mode": "desktop",
+      "fiveNewComponents": true,
+      "multiSelect": true,
+      "cancel": true,
+      "reload": true,
+      "listReturn": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile",
+      "fiveNewComponents": true,
+      "multiSelect": true,
+      "cancel": true,
+      "reload": true,
+      "listReturn": true,
+      "overflow": false
+    },
+    {
+      "blockedModule": "commercial-client-preferences.js",
+      "explicitError": true,
+      "legacyFallback": false,
+      "writes": 0
+    },
+    {
+      "blockedModule": "commercial-fraction-recommendations.js",
+      "explicitError": true,
+      "legacyFallback": false,
+      "writes": 0
+    },
+    {
+      "blockedModule": "commercial-client-workflow.js",
+      "explicitError": true,
+      "legacyFallback": false,
+      "writes": 0
+    },
+    {
+      "blockedModule": "commercial-client-workflow-ui.js",
+      "explicitError": true,
+      "legacyFallback": false,
+      "writes": 0
+    },
+    {
+      "blockedModule": "invalid-factory",
+      "explicitError": true,
+      "legacyFallback": false,
+      "writes": 0
+    }
+  ],
+  "normalModuleFailures": [],
+  "pageErrors": [],
+  "externalRequests": [],
+  "production": false
+}
