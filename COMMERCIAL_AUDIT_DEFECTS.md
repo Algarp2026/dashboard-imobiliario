@@ -78,3 +78,19 @@ Regressão: **29 suites aprovadas**, incluindo os testes anteriores de auditoria
 Ficheiros desta revisão: `commercial-client-workflow.js`, `commercial.js`, novo `tests/commercial-cycle-boundaries.test.js`, extensões dos dois testes de auditoria e este relatório. A alteração em `commercial.js` limita-se à confirmação/registo da requalificação no editor existente, à idempotência de um encerramento posterior e à verificação de compatibilidade dos módulos.
 
 Os casos legados contraditórios ou sem evidência de confirmação continuam a exigir revisão. O marcador novo é aditivo em eventos novos, preservado pelo JSON existente; nenhuma migração é necessária ou executada. Sem acesso à base real, merge, deployment ou promoção. Atualização da PR existente pendente do Push origin pelo utilizador.
+
+## Integridade da edição de eventos referenciados
+
+Correção localizada sobre `0c0e96d`, na mesma PR #10:
+
+- O teste reproduziu a conversão de Alteração de estado para Outro com `statusEventIds[9]` ainda referenciado. A validação passa a verificar os três mapas de origem (`statusEventIds`, `salePriceEventIds`, `saleCommissions`) independentemente de o tipo ser uma operação de fecho.
+- Eventos administrativos, desistências globais (incluindo o formato legado inequívoco) e registos de requalificação não permitem alterações silenciosas de tipo, cliente, frações, data/hora, marcadores, criação, fonte ou metadados desconhecidos. Nessas situações a edição é bloqueada antes da mutação e exige revisão.
+- Notas e objeções continuam editáveis. A edição destes eventos substitui apenas esses campos, conserva o snapshot original e não recalcula clientes/preferências/efeitos. Campos vazios acrescentados automaticamente pelo formulário genérico não são tratados como alterações e não são gravados sobre o original.
+- Operações de fecho continuam no percurso existente de confirmação/revisão/plano validado. Alterações a metadados de origem fora desse plano ficam bloqueadas; `commissionAmount` passa também a ser classificado como crítico.
+- O adapter de comunicações verifica a proteção antes de modificar o cliente, impedindo esse caminho alternativo de contornar a validação. IDs duplicados bloqueiam a edição em vez de alterar a primeira ocorrência.
+
+`tests/commercial-event-provenance.test.js` aprovado: cada mapa de origem isoladamente; alterações estruturais e metadados; bloqueio atómico com JSON intacto; notas/objeções seguras; desistência administrativa/legada e requalificação; adapter de comunicação; IDs ambíguos; produtor real do formulário genérico para Alteração de estado e requalificação. Zero pedidos de rede ou escritas em armazenamento nos testes direcionados.
+
+Regressão: **30 suites aprovadas**, incluindo motor, ciclos, contactos, relatórios, concorrência e sincronização. Sintaxe aprovada. Não foi necessária uma nova auditoria visual: nenhum controlo ou layout foi alterado, e o produtor real do formulário foi exercitado em VM.
+
+Ficheiros desta correção: `commercial.js`, novo `tests/commercial-event-provenance.test.js` e este relatório. Nenhuma alteração à API, Apps Script, autenticação, protocolo de sincronização, dados ou main. Sem acesso à base real, merge ou deployment. Casos legados que precisem de alterações estruturais à proveniência/ciclo permanecem bloqueados para revisão específica. Atualização da mesma PR pendente do Push origin.

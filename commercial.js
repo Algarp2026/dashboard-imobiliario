@@ -2108,6 +2108,7 @@ function clientWorkflow(){
     preferences:window.THE_VIEW_CLIENT_PREFERENCES,
     notify:message=>notifyUser(message,'Acompanhamento comercial'),
     applyCommunication:(ev,old,updated)=>{
+      if(old&&hasCriticalCommercialEventChange(old,ev))throw Error(protectedEventEditError(old,ev)||'A origem comercial exige edição pelo evento original, com validação de integridade.');
       if(updated)Object.assign(client(ev.clientId),updated);
       if(old)state.data.events[state.data.events.findIndex(item=>item.id===old.id)]=ev;else state.data.events.push(ev);
       const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;recalculateResumoCliente(c.id);c.preferences=preferences;c.budget=budget;
@@ -2372,7 +2373,38 @@ function reapplyCommercialEffectsForFractions(numbers,oldEv=null,newEv=null,plan
   });
 }
 function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEffectsForFractions(uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]),oldEv,newEv)}
+function eventHasCommercialReferences(eventId){
+  if(!eventId)return false;
+  return Object.values(state.data.statusEventIds||{}).includes(eventId)||Object.values(state.data.salePriceEventIds||{}).includes(eventId)||Object.values(state.data.saleCommissions||{}).some(entry=>entry?.eventId===eventId);
+}
+function restrictedEventEdit(oldEv,newEv){
+  const boundary=ev=>ev&&(ev.type==='Alteração de estado'||ev.type==='Desistência'&&(window.THE_VIEW_CLIENT_WORKFLOW?.globalWithdrawal(ev)||ev.administrative||ev.globalWithdrawal!==undefined||ev.scope!==undefined)||ev.requalificationConfirmed!==undefined);
+  return boundary(oldEv)||boundary(newEv)||eventHasCommercialReferences(oldEv?.id)&&!isCommercialClosingEvent(oldEv);
+}
+function eventEditChangedFields(oldEv,newEv){
+  const defaults={time:'',amount:0,interest:'',channel:'',followup:'',followupDate:'',nextStep:'',nextActionDefinedAt:'',nextActionCompletedAt:'',preferenceBudget:0,informedPrices:[],fractions:[],withAgent:false,agentId:'',commissionType:'',commissionValue:0,commissionAmount:0};
+  const emptyPrefs=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(key=>Object.hasOwn(emptyPreferences(),key)&&value[key]==='');
+  return uniq([...Object.keys(oldEv),...Object.keys(newEv)]).filter(key=>{
+    const a=oldEv[key],b=newEv[key];
+    if(JSON.stringify(a)===JSON.stringify(b))return false;
+    if(key==='fractions'&&Array.isArray(a)&&Array.isArray(b)&&JSON.stringify(a.map(Number).sort((x,y)=>x-y))===JSON.stringify(b.map(Number).sort((x,y)=>x-y)))return false;
+    // Generic forms add empty fields. They are not edits and must not replace the original snapshot.
+    if((a===undefined||a===null)&&Object.hasOwn(defaults,key)&&JSON.stringify(b)===JSON.stringify(defaults[key]))return false;
+    if(key==='preferences'&&(a===undefined||a===null||emptyPrefs(a))&&emptyPrefs(b))return false;
+    return true;
+  });
+}
+function protectedEventEditError(oldEv,newEv){
+  if(!oldEv||!newEv)return'';
+  if(oldEv.id!==newEv.id)return'A identidade da origem do evento não pode ser alterada.';
+  const changed=eventEditChangedFields(oldEv,newEv).filter(key=>!['notes','objections'].includes(key));
+  if(restrictedEventEdit(oldEv,newEv)&&changed.length)return'Evento administrativo ou de ciclo protegido: a alteração compromete a proveniência. Apenas notas e objeções podem ser editadas; os restantes campos exigem revisão.';
+  const closingFields=['type','clientId','date','time','fractions','releaseReservation','amount','withAgent','agentId','commissionType','commissionValue','commissionAmount'];
+  if(eventHasCommercialReferences(oldEv.id)&&changed.some(key=>!closingFields.includes(key)))return'A alteração modifica metadados da origem comercial e exige revisão de integridade.';
+  return'';
+}
 function hasCriticalCommercialEventChange(oldEv,newEv){
+  if(protectedEventEditError(oldEv,newEv))return true;
   if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
   return oldEv.type!==newEv.type ||
     oldEv.clientId!==newEv.clientId || oldEv.date!==newEv.date || (oldEv.time||'')!==(newEv.time||'') ||
@@ -2382,11 +2414,18 @@ function hasCriticalCommercialEventChange(oldEv,newEv){
     !!oldEv.withAgent!==!!newEv.withAgent ||
     (oldEv.agentId||'')!==(newEv.agentId||'') ||
     (oldEv.commissionType||'')!==(newEv.commissionType||'') ||
-    Number(oldEv.commissionValue||0)!==Number(newEv.commissionValue||0);
+    Number(oldEv.commissionValue||0)!==Number(newEv.commissionValue||0)||
+    Number(oldEv.commissionAmount||0)!==Number(newEv.commissionAmount||0);
 }
 function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
+  if(state.data.events.filter(ev=>ev.id===oldEv.id).length!==1)throw Error('A origem do evento é ambígua. A integridade exige revisão antes da edição.');
+  const error=protectedEventEditError(oldEv,newEv);if(error)throw Error(error);
+  if(restrictedEventEdit(oldEv,newEv)){
+    state.data.events[idx]={...oldEv,...Object.fromEntries(['notes','objections'].filter(key=>Object.hasOwn(newEv,key)).map(key=>[key,newEv[key]]))};
+    return true;
+  }
   const affected=uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]);
   const plan=hasCriticalCommercialEventChange(oldEv,newEv)?commercialTransitionPlan(affected,oldEv,newEv):null;
   state.data.events[idx]=newEv;
