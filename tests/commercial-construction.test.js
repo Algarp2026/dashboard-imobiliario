@@ -12,7 +12,7 @@ let requests = 0;
 const context = {
   console,
   document: {readyState:'loading', addEventListener(){}},
-  window: {THE_VIEW_CONFIG:{}, THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'), addEventListener(){}},
+  window: {THE_VIEW_CONFIG:{}, THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'), THE_VIEW_CLIENT_WORKFLOW:require('../commercial-client-workflow.js'), addEventListener(){}},
   localStorage: {
     getItem(key){return storage.get(key) || null},
     setItem(key,value){storage.set(key,value)}
@@ -21,7 +21,7 @@ const context = {
 };
 vm.createContext(context);
 const end = source.lastIndexOf('})();');
-const exposed = ['state','EVENT_TYPES','PRESENTATION_FORMATS','parseRow','normalizeData','loadDataLocal','saveLocalOnly','isCommercialPresentationEvent','commercialInteractionCounts','eventChannelOptions','eventChannelDetailsHtml','eventFractionsPresented','stageFromEvent','recalculateResumoTodosClientes','applyEventBusinessRules','replaceEventAndReapplyBusinessRules','metrics','clientTimelineItem','getHistoricoComercialFracao','salesColumnDefinitions'];
+const exposed = ['state','EVENT_TYPES','PRESENTATION_FORMATS','parseRow','normalizeData','loadDataLocal','saveLocalOnly','isCommercialPresentationEvent','commercialInteractionCounts','eventChannelOptions','eventChannelDetailsHtml','eventFractionsPresented','stageFromEvent','recalculateResumoTodosClientes','clientCommercialProjection','applyEventBusinessRules','replaceEventAndReapplyBusinessRules','metrics','clientTimelineItem','getHistoricoComercialFracao','salesColumnDefinitions'];
 vm.runInContext(source.slice(0,end) + 'globalThis.constructionTest={' + exposed.join(',') + '};' + source.slice(end),context);
 const app = context.constructionTest;
 app.state.rows = rows.map(app.parseRow);
@@ -130,13 +130,14 @@ for (const name of ['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistor
 
 // Existing closing rules still apply only to explicit negotiation/reservation/sale events.
 app.state.data = app.normalizeData(JSON.parse(JSON.stringify(restored)));
+app.state.data.statuses[24]='Disponível';
 app.applyEventBusinessRules({id:'negotiation-test',clientId:'client-active',type:'Contra-proposta recebida',date:'2026-10-09',fractions:[24],amount:680000});
 assert.ok(app.metrics(24).proposals > 0);
 app.applyEventBusinessRules({id:'reservation-test',clientId:'client-active',type:'Reserva efetuada',date:'2026-10-10',fractions:[24],amount:700000});
 assert.equal(app.state.data.statuses[24],'Reservado');
 assert.equal(app.state.data.salePrices[24],700000);
 app.applyEventBusinessRules({id:'cancellation-test',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-11',fractions:[24]});
-assert.equal(app.state.data.statuses[24],undefined);
+assert.equal(app.state.data.statuses[24],'Disponível');
 app.applyEventBusinessRules({id:'sale-test',clientId:'client-active',type:'Venda concluída',date:'2026-10-12',fractions:[24],amount:700000,withAgent:true,agentId:'agent-old',commissionType:'percent',commissionValue:3,commissionAmount:21000});
 assert.equal(app.state.data.statuses[24],'Vendido');
 assert.equal(app.state.data.saleCommissions[24].amount,21000);
@@ -145,42 +146,29 @@ assert.equal(app.state.data.saleCommissions[24].agentId,'agent-old');
 app.applyEventBusinessRules({id:'post-sale-presentation',clientId:'client-active',type:'Apresentação comercial',date:'2026-10-13',channel:'Telefone',fractions:[24]});
 assert.equal(app.state.data.statuses[24],'Vendido');
 assert.equal(app.state.data.saleCommissions[24].eventId,'sale-test');
-assert.equal(app.state.data.clients.find(client => client.id === 'client-active').stage,'Vendido');
+assert.equal(app.clientCommercialProjection(app.state.data.clients.find(client => client.id === 'client-active')).stage,'Vendido');
 assert.equal(app.state.data.statuses[30],'Indisponível');
 assert.equal(JSON.stringify(app.state.data.finalPrices),JSON.stringify(initial.finalPrices));
 assert.equal(JSON.stringify(app.state.data.priceHistory),JSON.stringify(initial.priceHistory));
 
-// Legacy event ownership is recovered on explicit edits, never during a read/startup migration.
+// Ambiguous legacy ownership must never be inferred, including during explicit edits.
 const legacyReservation={id:'legacy-reservation',clientId:'client-active',type:'Reserva efetuada',date:'2026-10-01',fractions:[24],amount:700000};
-const legacyData=()=>({...JSON.parse(JSON.stringify(initial)),events:[legacyReservation],statuses:{24:'Reservado',30:'Indisponível'},salePrices:{24:700000},statusEventIds:{},salePriceEventIds:{},saleCommissions:{}});
+const legacyData=()=>({...JSON.parse(JSON.stringify(initial)),events:[legacyReservation],statuses:{24:'Reservado',25:'Disponível',30:'Indisponível'},salePrices:{24:700000},statusEventIds:{},salePriceEventIds:{},saleCommissions:{}});
 app.state.data=app.normalizeData(legacyData());
-app.replaceEventAndReapplyBusinessRules(legacyReservation,{...legacyReservation,fractions:[25]});
-assert.equal(app.state.data.statuses[24],undefined);
-assert.equal(app.state.data.salePrices[24],undefined);
-assert.equal(app.state.data.statuses[25],'Reservado');
-assert.equal(app.state.data.salePrices[25],700000);
-assert.equal(app.state.data.statuses[30],'Indisponível');
-assert.equal(app.state.data.events.length,1);
-app.state.data=app.normalizeData(legacyData());
-app.applyEventBusinessRules({id:'legacy-cancellation',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-02',fractions:[24]});
-assert.equal(app.state.data.statuses[24],undefined);
-assert.equal(app.state.data.salePrices[24],undefined);
-app.state.data=app.normalizeData(legacyData());
+const ambiguousBefore=JSON.stringify(app.state.data);
+assert.throws(()=>app.replaceEventAndReapplyBusinessRules(legacyReservation,{...legacyReservation,fractions:[25]}),/origem/);
+assert.throws(()=>app.applyEventBusinessRules({id:'legacy-cancellation',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-02',fractions:[24]}),/reserva ativa/);
+assert.equal(JSON.stringify(app.state.data),ambiguousBefore);
 app.state.data.statuses[24]='Indisponível';
-app.applyEventBusinessRules({id:'manual-cancellation',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-02',fractions:[24]});
-assert.equal(app.state.data.statuses[24],'Indisponível');
-assert.equal(app.state.data.salePrices[24],700000);
-const legacySale={...legacyReservation,id:'legacy-sale',type:'Venda concluída',withAgent:true,agentId:'agent-old',commissionType:'percent',commissionValue:3,commissionAmount:21000};
-app.state.data=app.normalizeData({...legacyData(),events:[legacySale],statuses:{24:'Vendido',30:'Indisponível'},saleCommissions:{24:{eventId:'legacy-sale',amount:21000}}});
-app.replaceEventAndReapplyBusinessRules(legacySale,{...legacySale,fractions:[25]});
-assert.equal(app.state.data.statuses[24],undefined);
-assert.equal(app.state.data.salePrices[24],undefined);
-assert.equal(app.state.data.saleCommissions[24],undefined);
-assert.equal(app.state.data.statuses[25],'Vendido');
-assert.equal(app.state.data.saleCommissions[25].amount,21000);
-assert.equal(app.state.data.saleCommissions[25].netRevenue,679000);
-assert.equal(app.state.data.events.length,1);
+assert.throws(()=>app.applyEventBusinessRules({id:'manual-cancellation',clientId:'client-active',type:'Reserva cancelada',date:'2026-10-02',fractions:[24]}),/reserva ativa/);
+assert.equal(app.state.data.statuses[24],'Indisponível');assert.equal(app.state.data.salePrices[24],700000);
+// Confirmed provenance permits a scoped edit, without touching unrelated commercial fields.
+app.state.data=app.normalizeData({...legacyData(),statusEventIds:{24:legacyReservation.id},salePriceEventIds:{24:legacyReservation.id}});
+app.replaceEventAndReapplyBusinessRules(legacyReservation,{...legacyReservation,fractions:[25]});
+assert.equal(app.state.data.statuses[24],'Disponível');assert.equal(app.state.data.salePrices[24],undefined);
+assert.equal(app.state.data.statuses[25],'Reservado');assert.equal(app.state.data.salePrices[25],700000);
+assert.equal(app.state.data.statuses[30],'Indisponível');assert.equal(app.state.data.events.length,1);
 assert.equal(JSON.stringify(app.state.data.finalPrices),JSON.stringify(initial.finalPrices));
 assert.equal(JSON.stringify(app.state.data.priceHistory),JSON.stringify(initial.priceHistory));
 assert.equal(requests,0);
-console.log('construction CRM tests passed: formats, historical visits, separate counts, unchanged stages/prices, editing, reservation/sale/commission and local/Apps Script round-trip');
+console.log('Construction CRM passed: historical compatibility, read-time stages, confirmed closing effects, ambiguous legacy operations rejected, protected prices and round-trip.');

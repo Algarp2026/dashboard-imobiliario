@@ -9,13 +9,13 @@ let writes = 0;
 const context = {
   console,
   document: {readyState:'loading',addEventListener(){},querySelector(){return null}},
-  window: {THE_VIEW_CONFIG:{},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js')},
+  window: {THE_VIEW_CONFIG:{},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'),THE_VIEW_CLIENT_WORKFLOW:require('../commercial-client-workflow.js')},
   localStorage: {getItem(){return null},setItem(){writes++}},
   fetch(){throw new Error('Unexpected request')}
 };
 vm.createContext(context);
 const end = source.lastIndexOf('})();');
-vm.runInContext(source.slice(0, end) + 'globalThis.testFlow={state,parseRow,presentationSelection,updatePresentationSelection,consumePresentationSelection,recalculateResumoCliente,commercialClientRecommendation,clientInvestmentLabel,clientRecommendationMarkup,normalizeData,clientEditPatch};' + source.slice(end), context);
+vm.runInContext(source.slice(0, end) + 'globalThis.testFlow={state,parseRow,presentationSelection,updatePresentationSelection,consumePresentationSelection,recalculateResumoCliente,clientCommercialProjection,commercialClientRecommendation,clientInvestmentLabel,clientRecommendationMarkup,normalizeData,clientEditPatch};' + source.slice(end), context);
 const app = context.testFlow;
 app.state.fractions = rows.map(app.parseRow).filter(f=>f.isTheView);
 const legacy = {id:'legacy',name:'Legacy fixture',stage:'Apresentado',manualFractions:[24],fractions:[24],commercialSummary:{presentedFractions:[24]},budget:750000,manualBudget:750000,preferences:{typology:'T2'},manualPreferences:{typology:'T2'},preferencesManuallyEdited:true};
@@ -45,7 +45,8 @@ assert.equal(app.state.data.events.length,1);
 const lead = {id:'new',name:'New fixture',preferences:{typology:'T2'},manualPreferences:{typology:'T2'},manualBudget:750000,budget:750000,preferencesManuallyEdited:true,fractions:[],manualFractions:[],manualNextStep:'Preserved action',manualNextFollowup:'2099-01-01'};
 app.state.data.clients.push(lead);
 app.recalculateResumoCliente(lead.id);
-assert.equal(lead.stage,'Qualificado');
+assert.equal(app.clientCommercialProjection(lead).stage,'Qualificado');
+assert.equal(lead.stage,undefined,'Derivation must not regularize persisted stages');
 assert.deepEqual(Array.from(lead.commercialSummary.presentedFractions),[]);
 assert.equal(lead.manualNextStep,'Preserved action');
 assert.equal(app.state.data.events.length,1);

@@ -74,7 +74,8 @@ const f=app.state.fractions.find(f=>f.number===24);
 assert.match(app.clientFractionTiles([f],'', [{number:24,preferred:['Piso','Orientação']}]),/Preferências coincidentes: Piso · Orientação/);
 assert.equal(JSON.stringify(app.state.data),snapshot);assert.equal(JSON.stringify(rows),rowSnapshot);assert.equal(writes,0);assert.equal(requests,0);
 assert.equal(app.state.fractions.length,39);
-app.state.data={...app.state.data,statuses:{...app.state.data.statuses,24:'Reservado'},clients:[
+context.window.THE_VIEW_CLIENT_WORKFLOW=require('../commercial-client-workflow.js');
+app.state.data={...app.state.data,statuses:{...app.state.data.statuses,24:'Reservado'},statusEventIds:{24:'current-reservation'},clients:[
   {id:'old-owner',name:'Old reservation fixture',stage:'Reservado',preferences:{},budget:0,fractions:[24]},
   {id:'new-owner',name:'Current reservation fixture',stage:'Reservado',preferences:{},budget:0,fractions:[24]}
 ],events:[

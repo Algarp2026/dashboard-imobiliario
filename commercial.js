@@ -828,7 +828,11 @@ function normalizeClientStage(stage){
   };
   return aliases[value]||'Novo Lead';
 }
-function stageRank(stage){return Math.max(0,STAGES.indexOf(normalizeClientStage(stage)))}
+function clientCommercialProjection(c){
+  const result=window.THE_VIEW_CLIENT_WORKFLOW?.clientProjection?.(state.data,c);
+  return result?{...c,stage:result.stage,commercialReview:result.review}:{...c};
+}
+function commercialClients(){return(state.data.clients||[]).map(clientCommercialProjection)}
 function isReservationEvent(ev){return !!ev&&['Reserva','Reserva efetuada'].includes(ev.type)}
 function isSaleEvent(ev){return !!ev&&['Venda','Venda concluída'].includes(ev.type)}
 function isReservationCancellationEvent(ev){return ev?.type==='Reserva cancelada'}
@@ -863,7 +867,6 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
   const consolidatedManual={...manualPreferences,...(c.preferences||{}),...Object.fromEntries(Object.keys(emptyPreferences()).map(key=>[key,manualPreferences[key]]))};
   let preferences={...consolidatedManual};
   let budget=Number(c.manualBudget??c.budget)||0;
-  let derivedStage=(hasPreferenceData(manualPreferences)||budget>0||(c.manualFractions||[]).length)?'Qualificado':'Novo Lead';
   const presented=new Set();
   const linkedFractions=new Set((c.manualFractions||c.fractions||[]).map(Number).filter(Boolean));
   const latestPrices=new Map();
@@ -881,24 +884,13 @@ function recalculateResumoCliente(clientId,{preserveNextAction=false}={}){
       const n=Number(item.fraction||item.unitId);
       if(n)latestPrices.set(n,{fraction:n,officialPrice:Number(item.officialPrice)||0,informedPrice:Number(item.informedPrice)||0,observation:safe(item.observation),date:ev.date||'',eventId:ev.id});
     });
-    if(isReservationCancellationEvent(ev)&&derivedStage==='Reservado')derivedStage='Apresentado';
-    else{
-      const next=stageFromEvent(ev);
-      if(next==='Desistiu'||next==='Reservado'||next==='Vendido'||stageRank(next)>stageRank(derivedStage))derivedStage=next||derivedStage;
-    }
   });
   if(c.preferencesManuallyEdited){
     preferences={...consolidatedManual};
     budget=Number(manualPreferences.selectionV1?.version===1?c.budget:(c.manualBudget??c.budget))||0;
   }
 
-  const criticalDerived=['Reservado','Vendido','Desistiu'].includes(derivedStage);
-  if(criticalDerived)c.stage=derivedStage;
-  else if(c.stageManual&&c.manualStage)c.stage=normalizeClientStage(c.manualStage);
-  else{
-    const fallback=normalizeClientStage(c.legacyStageFallback||'Novo Lead');
-    c.stage=stageRank(derivedStage)>=stageRank(fallback)?derivedStage:fallback;
-  }
+  // Stage is a read-time projection, not a persisted regularization.
   c.preferences=preferences;
   c.budget=budget;
   c.fractions=uniqNum([...linkedFractions]);
@@ -1347,7 +1339,7 @@ function clientSummaryShortText(value,max=100){const text=safe(value);return tex
 function buildClientSummaryRows(options={}){
   const engine=window.THE_VIEW_RECOMMENDATIONS,context=engine?.buildContext(commercialRecommendationInput());
   const fractionLabel=numbers=>numbers.map(n=>`Apt. ${n}`).join(' · ')||'—';
-  const rows=(state.data.clients||[]).map(c=>{
+  const rows=commercialClients().map(c=>{
     const followup=clientSummaryFollowupInfo(c,context),lastContact=clientSummaryLastContact(c,context),preferences=cleanPreferences(c.preferences||{});
     const evaluated=context?engine.recommendClient(c,context):null,recommendation=clientAutomaticRecommendation(evaluated)?.primary||null;
     const manual=[evaluated?.primary,...(evaluated?.secondary||[])].find(rec=>rec?.code.startsWith('manual-'));
@@ -1802,7 +1794,7 @@ function renderClientSelects(){const opts=state.data.clients.map(c=>[c.id,c.name
 function renderClients(){
   ensurePortfolioFilters();
   const s=norm(state.cf.search),st=state.cf.stage;
-  let cs=state.data.clients.filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.originManual,c.agent,c.agency,c.notes,c.preferences?.typology,c.preferences?.floor,c.preferences?.orientation,c.preferences?.objective,(c.fractions||[]).join(' ')].join(' ')).includes(s))&&(!commercialUx.clientFocus||clientSummaryFollowupInfo(c).status==='future'&&!['Vendido','Desistiu','Perdido'].includes(c.stage)));
+  let cs=commercialClients().filter(c=>(st==='all'||c.stage===st)&&(!s||norm([c.name,c.email,c.phone,c.origin,c.originManual,c.agent,c.agency,c.notes,c.preferences?.typology,c.preferences?.floor,c.preferences?.orientation,c.preferences?.objective,(c.fractions||[]).join(' ')].join(' ')).includes(s))&&(!commercialUx.clientFocus||clientSummaryFollowupInfo(c).status==='future'&&!['Vendido','Desistiu','Perdido'].includes(c.stage)));
   const model=window.THE_VIEW_CLIENT_WORKFLOW,portfolio=model?.portfolio(cs,state.data.events,today(),{contact:state.cf.contact||'all',priority:state.cf.priority||'all'});
   if(portfolio)cs=portfolio.map(row=>row.client);
   const contactRows=new Map((portfolio||[]).map(row=>[row.client.id,row]));
@@ -1825,21 +1817,11 @@ function ensurePortfolioFilters(){
   grid.append(label,priority);label.querySelector('select').onchange=e=>{state.cf.contact=e.target.value;renderClients()};priority.querySelector('select').onchange=e=>{state.cf.priority=e.target.value;renderClients()};
 }
 function clientFractionCommercialRows(c,events){
-  return uniqNum([...(c.fractions||[]),...(c.commercialSummary?.presentedFractions||[])]).map(n=>{
-    const related=events.filter(ev=>(ev.fractions||[]).includes(n));
-    const latest=related.slice().reverse().find(ev=>eventFractionsPresented(ev)||isReservationCancellationEvent(ev)||isAbandonmentEvent(ev))||null;
-    const informed=related.flatMap(ev=>eventInformedPrices(ev).filter(item=>Number(item.fraction||item.unitId)===n).map(item=>({...item,date:ev.date,eventId:ev.id}))).pop();
-    let status='Interesse';
-    if(latest){
-      if(isSaleEvent(latest))status='Venda';
-      else if(isReservationEvent(latest))status='Reserva';
-      else if(isReservationCancellationEvent(latest))status='Reserva cancelada';
-      else if(isAbandonmentEvent(latest))status='Desistência';
-      else if(['Contra-proposta recebida','Contra-proposta enviada','Proposta recebida'].includes(latest.type))status='Negociação';
-      else if(informed)status='Preço informado';
-      else if(eventFractionsPresented(latest))status='Apresentada';
-    }
-    return{fraction:n,status,informedPrice:Number(informed?.informedPrice)||0,date:informed?.date||latest?.date||'',observation:safe(informed?.observation||latest?.notes)};
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;
+  if(!model?.clientProjection)return[];
+  return model.clientProjection(state.data,c).relations.map(row=>{
+    const info=model.negotiation(state.data.events,c.id,row.number,today(),state.data),last=info.history.at(-1);
+    return{fraction:row.number,status:info.state,informedPrice:Number(info.informed?.informedPrice)||0,date:info.informed?.date||last?.date||'',observation:[safe(info.informed?.observation||last?.notes),info.review.length?'Necessita de revisão: '+info.review.join('; '):''].filter(Boolean).join(' · ')};
   });
 }
 function openClientProfile(cid=state.selectedClientId){
@@ -2037,7 +2019,7 @@ function missingClientModules(){
   const required=[
     ['Preferências',window.THE_VIEW_CLIENT_PREFERENCES,['draft','toggle','buildUpdate','projection']],
     ['Frações',window.THE_VIEW_FRACTION_RECOMMENDATIONS,['evaluate','filter','search']],
-    ['Acompanhamento comercial',window.THE_VIEW_CLIENT_WORKFLOW,['contactInfo','portfolio','buildCommunication','buildPresentation','closingError']],
+    ['Acompanhamento comercial',window.THE_VIEW_CLIENT_WORKFLOW,['contactInfo','portfolio','buildCommunication','buildPresentation','closingError','clientProjection','relation','effectiveEffect','effectTransition']],
     ['Recomendações comerciais',window.THE_VIEW_RECOMMENDATIONS,['buildContext','followupInfo','recommendClient']],
     ['Interface comercial',{create:window.createClientWorkflow},['create']]
   ];
@@ -2050,7 +2032,7 @@ function requireClientModules(){
 }
 function renderClientDetail(){
   renderClientActionBar();renderClientProfileLayout();
-  const c=client(state.selectedClientId);
+  const rawClient=client(state.selectedClientId),c=rawClient?clientCommercialProjection(rawClient):null;
   if(!c){el.clientDetail.innerHTML='<div class="empty-state">Selecione ou crie um cliente.</div>';return}
   const missing=missingClientModules();
   let workflow;
@@ -2099,7 +2081,7 @@ function renderClientDetail(){
     panels.preferences=inlinePreferencesMarkup(c)+(commercialUx.preferenceDraft?.clientId===c.id?'':content.slice(content.indexOf('<dl')))+archivedPreferencesMarkup(c);
   }
   panels.fractions=clientFractionWorkspaceMarkup(c)+`<section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`;
-  el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-client-return" aria-label="Navegação do cliente"><button class="ux-text-button" type="button" data-client-return>${uxIcon('arrow-left')}Voltar aos clientes</button><span>Ficha de cliente</span><button class="ghost-button compact-button ux-client-open" type="button" data-open-client-profile>${uxIcon('arrow-up-right')}Abrir ficha completa</button></nav><header class="client-detail-header"><div class="ux-client-title"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2 tabindex="-1">${esc(c.name||'Cliente sem nome')}</h2></div><button class="ghost-button compact-button" type="button" data-client-header-edit>${uxIcon('pencil')}Editar dados</button></div><div class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}${c.origin||c.originManual?`<span>Origem: ${esc(clientOriginLabel(c))}</span>`:''}${registered?`<span>Registo: ${esc(formatCommercialDate(registered.slice(0,10))==='—'?registered:formatCommercialDate(registered.slice(0,10)))}</span>`:''}</div>${latest?`<p class="ux-client-last-interaction"><span>Última interação</span> ${esc(latest.type||'Evento')} <time>${esc(formatTimelineDate(latest.date,latest.time))}</time></p>`:''}</header></div><div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
+  el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-client-return" aria-label="Navegação do cliente"><button class="ux-text-button" type="button" data-client-return>${uxIcon('arrow-left')}Voltar aos clientes</button><span>Ficha de cliente</span><button class="ghost-button compact-button ux-client-open" type="button" data-open-client-profile>${uxIcon('arrow-up-right')}Abrir ficha completa</button></nav><header class="client-detail-header"><div class="ux-client-title"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2 tabindex="-1">${esc(c.name||'Cliente sem nome')}</h2></div><button class="ghost-button compact-button" type="button" data-client-header-edit>${uxIcon('pencil')}Editar dados</button></div><div class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}${c.origin||c.originManual?`<span>Origem: ${esc(clientOriginLabel(c))}</span>`:''}${registered?`<span>Registo: ${esc(formatCommercialDate(registered.slice(0,10))==='—'?registered:formatCommercialDate(registered.slice(0,10)))}</span>`:''}</div>${latest?`<p class="ux-client-last-interaction"><span>Última interação</span> ${esc(latest.type||'Evento')} <time>${esc(formatTimelineDate(latest.date,latest.time))}</time></p>`:''}</header></div>${c.commercialReview?.length?`<p role="status" class="muted" data-commercial-review>Necessita de revisão: ${c.commercialReview.map(esc).join('; ')}</p>`:''}<div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
   el.clientDetail.querySelector('[data-client-header-edit]')?.addEventListener('click',()=>openClientModal(c.id));
   if(window.THE_VIEW_CLIENT_WORKFLOW?.priority(c)){const mark=document.createElement('span');mark.className='ux-client-priority';mark.title='Cliente prioritário';mark.innerHTML=uxIcon('star')+'Cliente prioritário';el.clientDetail.querySelector('.ux-client-title>div')?.appendChild(mark)}
@@ -2114,9 +2096,9 @@ function renderClientDetail(){
   detailStates.forEach(([id,open])=>{const details=el.clientDetail.querySelector(`#${id}`);if(details)details.open=open});
   const matchingList=el.clientDetail.querySelector('.ux-suggested-fractions');if(matchingList)matchingList.scrollTop=matchingScroll;
   renderUxIcons();activateClientDetailTab(commercialUx.clientDetailTab);
-  bindInlinePreferences(c);
-  bindClientFractionWorkspace(c);
-  workflow?.bind(c,el.clientDetail);
+  bindInlinePreferences(rawClient);
+  bindClientFractionWorkspace(rawClient);
+  workflow?.bind(rawClient,el.clientDetail);
 }
 let clientWorkflowController;
 function clientWorkflow(){
@@ -2130,7 +2112,7 @@ function clientWorkflow(){
       if(old)state.data.events[state.data.events.findIndex(item=>item.id===old.id)]=ev;else state.data.events.push(ev);
       const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;recalculateResumoCliente(c.id);c.preferences=preferences;c.budget=budget;
     },
-    rows:clientFractionSource,selection:presentationSelection,revision:()=>sharedSync.revision,
+    rows:clientFractionSource,data:()=>state.data,selection:presentationSelection,revision:()=>sharedSync.revision,
     recommend:(c,rows)=>window.THE_VIEW_FRACTION_RECOMMENDATIONS.evaluate(c,rows),status:r=>r?clientFractionStatus(r):'Não confirmada',price:r=>r?clientFractionPrice(r):'Não confirmado',
     timeline:clientTimelineItem,facts:clientFactsMarkup,reference:n=>getF(n)?fractionReference(getF(n)):`Apt. ${n}`,render:()=>RenderFlow.eventChanged(),tab:key=>{if(!commercialUx.clientProfileOpen)openClientProfile();activateClientDetailTab(key)},
     followup:(cid,events)=>{
@@ -2314,10 +2296,11 @@ function isCommercialClosingEvent(ev){return !!ev&&(isReservationEvent(ev)||isSa
 function commercialStatusFromEvent(ev){return isReservationEvent(ev)?'Reservado':isSaleEvent(ev)?'Vendido':''}
 function eventDerivedStage(ev){return stageFromEvent(ev)}
 function applyClientEventStage(c){if(c)recalculateResumoCliente(c.id)}
-function applyReservationEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[])}
+function applyReservationEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[],null,ev)}
 function setSaleCommissionForFraction(n,ev){
   state.data.saleCommissions=state.data.saleCommissions||{};
   state.data.saleCommissions[n]={
+    ...(state.data.saleCommissions[n]?.eventId===ev.id?state.data.saleCommissions[n]:{}),
     withAgent:!!ev.withAgent,
     agentId:ev.agentId||'',
     commissionType:ev.commissionType||'',
@@ -2328,43 +2311,27 @@ function setSaleCommissionForFraction(n,ev){
     date:ev.date
   };
 }
-function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[])}
+function applySaleEvent(ev){reapplyCommercialEffectsForFractions(ev.fractions||[],null,ev)}
 function applyEventBusinessRules(ev){
-  if(isCommercialClosingEvent(ev))ensureLegacyCommercialEventLinks(ev.fractions||[]);
+  if(state.data.events.some(item=>item.id===ev.id))return;
+  // Compute every effect before mutating anything; ambiguity rejects the whole operation.
+  const plan=isCommercialClosingEvent(ev)?commercialTransitionPlan(ev.fractions||[],null,ev):null;
   state.data.events.push(ev);
   if(isPresentationDraft(ev))return;
   if(ev.type==='Preferências recebidas'&&client(ev.clientId))client(ev.clientId).preferencesManuallyEdited=false;
   applyClientEventStage(client(ev.clientId),ev);
-  if(isReservationEvent(ev))applyReservationEvent(ev);
-  else if(isSaleEvent(ev))applySaleEvent(ev);
-  else if(isReservationCancellationEvent(ev)||(isAbandonmentEvent(ev)&&ev.releaseReservation))reapplyCommercialEffectsForFractions(ev.fractions||[]);
+  if(plan)reapplyCommercialEffectsForFractions(ev.fractions||[],null,ev,plan);
 }
-function eventSortKey(ev,index=0){return`${ev.date||''} ${ev.time||''} ${String(index).padStart(6,'0')}`}
+function eventSortKey(ev){return window.THE_VIEW_CLIENT_WORKFLOW?.eventKey(ev)||`${ev.date||''} ${ev.time||''} ${ev.id||''}`}
 function commercialEffectForFraction(n){
-  let effect=null;
-  (state.data.events||[]).map((event,index)=>({event,index})).filter(item=>(item.event.fractions||[]).includes(n)).sort((a,b)=>eventSortKey(a.event,a.index).localeCompare(eventSortKey(b.event,b.index))).forEach(({event})=>{
-    if(isReservationEvent(event))effect={status:'Reservado',amount:Number(event.amount)||0,event};
-    else if(isSaleEvent(event))effect={status:'Vendido',amount:Number(event.amount)||0,event};
-    else if(isReservationCancellationEvent(event)&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=event.negotiationVersion===1?{status:'Disponível',amount:0,event}:null;
-    else if(isAbandonmentEvent(event)&&event.releaseReservation&&effect?.status==='Reservado'&&effect.event.clientId===event.clientId)effect=null;
-  });
-  return effect;
+  return window.THE_VIEW_CLIENT_WORKFLOW?.effectiveEffect?.(state.data,n)||null;
 }
 function latestCommercialEventForFraction(n){
   return commercialEffectForFraction(n)?.event||null;
 }
 function ensureLegacyCommercialEventLinks(numbers){
-  state.data.statusEventIds=state.data.statusEventIds||{};
-  state.data.salePriceEventIds=state.data.salePriceEventIds||{};
-  uniqNum(numbers||[]).forEach(n=>{
-    const effect=commercialEffectForFraction(n);
-    if(!effect||state.data.statuses[n]!==effect.status)return;
-    const index=state.data.events.indexOf(effect.event),key=eventSortKey(effect.event,index);
-    if(state.data.events.some((ev,i)=>ev.type==='Alteração de estado'&&(ev.fractions||[]).includes(n)&&eventSortKey(ev,i)>key))return;
-    // Older stores lacked ownership IDs; infer them only before an explicit commercial edit.
-    if(!state.data.statusEventIds[n])state.data.statusEventIds[n]=effect.event.id;
-    if(!state.data.salePriceEventIds[n]&&effect.amount&&Number(state.data.salePrices[n])===effect.amount)state.data.salePriceEventIds[n]=effect.event.id;
-  });
+  // Compatibility entry point: never invent ownership for legacy operations.
+  return uniqNum(numbers||[]).map(commercialEffectForFraction);
 }
 function latestDerivedStageForClient(cid){
   return (state.data.events||[])
@@ -2377,31 +2344,31 @@ function reapplyClientLinksAfterEventEdit(oldEv,newEv){
   const affected=uniq([oldEv?.clientId,newEv?.clientId]);
   affected.forEach(cid=>recalculateResumoCliente(cid));
 }
-function reapplyCommercialEffectsForFractions(numbers){
+function commercialTransitionPlan(numbers,oldEv,newEv){
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;
+  if(!model?.effectTransition)throw Error('Motor comercial indisponível. Nenhuma operação foi aplicada.');
+  if(newEv&&isCommercialClosingEvent(newEv)&&!uniqNum(newEv.fractions||[]).length)throw Error('Escolha explicitamente a fração da operação comercial.');
+  return uniqNum(numbers||[]).map(n=>[n,model.effectTransition(state.data,n,oldEv,newEv)]);
+}
+function reapplyCommercialEffectsForFractions(numbers,oldEv=null,newEv=null,plan=commercialTransitionPlan(numbers,oldEv,newEv)){
   state.data.statuses=state.data.statuses||{};
   state.data.salePrices=state.data.salePrices||{};
   state.data.saleCommissions=state.data.saleCommissions||{};
   state.data.statusEventIds=state.data.statusEventIds||{};
   state.data.salePriceEventIds=state.data.salePriceEventIds||{};
-  uniqNum(numbers||[]).forEach(n=>{
-    const effect=commercialEffectForFraction(n);
+  plan.forEach(([n,effect])=>{
+    if(!effect)return;
     const priorStatusSource=state.data.statusEventIds[n];
     const priorPriceSource=state.data.salePriceEventIds[n];
-    if(effect){
-      state.data.statuses[n]=effect.status;
-      state.data.statusEventIds[n]=effect.event.id;
-      if(effect.amount){state.data.salePrices[n]=effect.amount;state.data.salePriceEventIds[n]=effect.event.id}
-      else if(priorPriceSource){delete state.data.salePrices[n];delete state.data.salePriceEventIds[n]}
-      if(isSaleEvent(effect.event))setSaleCommissionForFraction(n,effect.event);
-      else delete state.data.saleCommissions[n];
-      return;
-    }
-    if(priorStatusSource){delete state.data.statuses[n];delete state.data.statusEventIds[n]}
-    if(priorPriceSource){delete state.data.salePrices[n];delete state.data.salePriceEventIds[n]}
-    if(state.data.saleCommissions[n]?.eventId)delete state.data.saleCommissions[n];
+    state.data.statuses[n]=effect.status;
+    if(effect.event)state.data.statusEventIds[n]=effect.event.id;else delete state.data.statusEventIds[n];
+    if(effect.amount){state.data.salePrices[n]=effect.amount;state.data.salePriceEventIds[n]=effect.event.id}
+    else if(priorPriceSource&&[priorStatusSource,oldEv?.id].includes(priorPriceSource)){delete state.data.salePrices[n];delete state.data.salePriceEventIds[n]}
+    if(isSaleEvent(effect.event))setSaleCommissionForFraction(n,effect.event);
+    else if([priorStatusSource,oldEv?.id].filter(Boolean).includes(state.data.saleCommissions[n]?.eventId))delete state.data.saleCommissions[n];
   });
 }
-function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEffectsForFractions(uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]))}
+function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEffectsForFractions(uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]),oldEv,newEv)}
 function hasCriticalCommercialEventChange(oldEv,newEv){
   if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
   return oldEv.type!==newEv.type ||
@@ -2417,11 +2384,12 @@ function hasCriticalCommercialEventChange(oldEv,newEv){
 function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
-  if(hasCriticalCommercialEventChange(oldEv,newEv))ensureLegacyCommercialEventLinks(uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]));
+  const affected=uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]);
+  const plan=hasCriticalCommercialEventChange(oldEv,newEv)?commercialTransitionPlan(affected,oldEv,newEv):null;
   state.data.events[idx]=newEv;
   if(newEv.type==='Preferências recebidas'&&client(newEv.clientId))client(newEv.clientId).preferencesManuallyEdited=false;
   reapplyClientLinksAfterEventEdit(oldEv,newEv);
-  if(hasCriticalCommercialEventChange(oldEv,newEv))reapplyCommercialEffectsAfterEventEdit(oldEv,newEv);
+  if(plan)reapplyCommercialEffectsForFractions(affected,oldEv,newEv,plan);
   return true;
 }
 function createManualStatusEvent(n,oldStatus,newStatus){
@@ -2717,11 +2685,17 @@ async function deleteMaintenanceSelected(){
     (state.data.events||[]).forEach(ev=>{if(clientIds.includes(ev.clientId))finalEventIds.add(ev.id)});
   }
 
-  const msg=`Eliminar definitivamente:\n- ${clientIds.length} cliente(s)\n- ${agentIds.length} agente(s)\n- ${finalEventIds.size} evento(s)\n\nEsta ação não pode ser desfeita.`;
-  if(!await confirmUser(msg,'Confirmar eliminação'))return;
   const removedEvents=(state.data.events||[]).filter(ev=>finalEventIds.has(ev.id));
-  const affectedFractions=uniqNum(removedEvents.flatMap(ev=>ev.fractions||[]));
+  if(removedEvents.length&&!window.THE_VIEW_CLIENT_WORKFLOW?.effectTransition){await notifyUser('Motor comercial indisponível. Nenhum registo foi eliminado.','Limpar Testes');return}
+  let removalPlans;
+  try{removalPlans=removedEvents.map(ev=>[ev,commercialTransitionPlan(ev.fractions||[],ev,null)])}
+  catch(error){await notifyUser(error.message,'Limpar Testes');return}
   const affectedClients=uniq(removedEvents.map(ev=>ev.clientId));
+  const releases=removalPlans.flatMap(([,plan])=>plan.filter(([,effect])=>effect).map(([n])=>`Apt. ${n} (${state.data.statuses[n]} → Disponível)`));
+  const revision=sharedSync.revision,snapshot=JSON.stringify(state.data);
+  const msg=`Eliminar definitivamente:\n- ${clientIds.length} cliente(s)\n- ${agentIds.length} agente(s)\n- ${finalEventIds.size} evento(s)${releases.length?'\n\nEfeitos comerciais a remover: '+releases.join(', '):''}\n\nEsta ação não pode ser desfeita.`;
+  if(!await confirmUser(msg,'Confirmar eliminação'))return;
+  if(revision!==sharedSync.revision||snapshot!==JSON.stringify(state.data)){await notifyUser('A base comercial mudou. Reveja a seleção antes de eliminar.','Limpar Testes');return}
 
   if(clientIds.length){
     state.data.clients=(state.data.clients||[]).filter(c=>!clientIds.includes(c.id));
@@ -2750,7 +2724,7 @@ async function deleteMaintenanceSelected(){
     Object.keys(state.data.saleCommissions||{}).forEach(n=>{
       if(finalEventIds.has(state.data.saleCommissions[n]?.eventId))delete state.data.saleCommissions[n];
     });
-    reapplyCommercialEffectsForFractions(affectedFractions);
+    removalPlans.forEach(([ev,plan])=>reapplyCommercialEffectsForFractions(ev.fractions||[],ev,null,plan));
     affectedClients.forEach(cid=>recalculateResumoCliente(cid));
   }
 
@@ -3480,11 +3454,12 @@ async function saveEventForm(){
     await notifyUser('Escolha o formato da apresentação comercial.','Apresentação comercial');el.eventChannel.focus();return;
   }
   const ev=buildEventFromForm(cid,frs,editingId);
+  if(isAbandonmentEvent(ev)&&!frs.length&&!await confirmUser('Confirma a desistência global deste cliente? Esta decisão não liberta reservas nem reverte vendas. Oportunidades retomadas posteriormente serão consideradas no estado calculado.','Desistência global'))return;
   if(window.THE_VIEW_CLIENT_WORKFLOW&&(isCommercialClosingEvent(ev)||isCommercialClosingEvent(oldEv))&&(!isAbandonmentEvent(ev)||isCommercialClosingEvent(oldEv))){
     if(!await confirmWorkflowClosing(ev,oldEv,state.eventOpeningRevision))return;
   }
   if(type==='Preços informados'&&ev.informedPrices.some(item=>!item.informedPrice)){await notifyUser('Indique o preço informado para cada fração.','Preços informados');return}
-  const reservationCandidates=isAbandonmentEvent(ev)&&!frs.length?state.fractions.map(f=>f.number):frs;
+  const reservationCandidates=frs;
   const activeReservations=reservationCandidates.filter(n=>{const effect=commercialEffectForFraction(n);return effect?.status==='Reservado'&&effect.event.clientId===cid});
   if(isReservationCancellationEvent(ev)&&activeReservations.length){
     if(!window.THE_VIEW_CLIENT_WORKFLOW&&!await confirmUser(`A reserva será cancelada e ${activeReservations.map(n=>'Apt. '+n).join(', ')} voltará ao estado disponível. Confirmar?`,'Cancelar reserva'))return;
@@ -3492,7 +3467,6 @@ async function saveEventForm(){
   }
   if(isAbandonmentEvent(ev)&&activeReservations.length){
     ev.releaseReservation=await confirmUser(`Este cliente tem reserva ativa em ${activeReservations.map(n=>'Apt. '+n).join(', ')}. Pretende libertar a reserva ao registar a desistência?`,'Desistência com reserva');
-    if(ev.releaseReservation)ev.fractions=uniqNum([...(ev.fractions||[]),...activeReservations]);
     if(ev.releaseReservation&&window.THE_VIEW_CLIENT_WORKFLOW&&!await confirmWorkflowClosing(ev,oldEv,state.eventOpeningRevision))return;
   }
   if(oldEv){
@@ -3750,7 +3724,7 @@ function fractionReference(f,selection=false){
 }
 function relatedFractionClients(n){
   const eventClients=new Set(state.data.events.filter(ev=>(ev.fractions||[]).some(value=>Number(value)===n)).map(ev=>ev.clientId));
-  return state.data.clients.filter(c=>eventClients.has(c.id)||[...(c.fractions||[]),...(c.manualFractions||[]),...(c.commercialSummary?.presentedFractions||[])].some(value=>Number(value)===n));
+  return commercialClients().filter(c=>eventClients.has(c.id)||[...(c.fractions||[]),...(c.manualFractions||[]),...(c.commercialSummary?.presentedFractions||[])].some(value=>Number(value)===n));
 }
 function openFractionDrawer(n,trigger){
   const f=getF(Number(n));
@@ -3950,7 +3924,7 @@ function renderCommercialUx(){
 }
 function operationalCommercialSummary(){
   const available=state.fractions.filter(f=>statusOf(f)==='Disponível');
-  const active=state.data.clients.filter(c=>!['Vendido','Desistiu','Perdido'].includes(c.stage));
+  const active=commercialClients().filter(c=>!['Vendido','Desistiu','Perdido'].includes(c.stage));
   const newLeads=active.filter(c=>c.stage==='Novo Lead');
   const negotiations=active.filter(c=>c.stage==='Em negociação');
   const followups=active.map(c=>({client:c,followup:clientSummaryFollowupInfo(c)})).filter(item=>item.followup.status==='future').sort((a,b)=>a.followup.date.localeCompare(b.followup.date));
@@ -3970,11 +3944,11 @@ function operationalActionsMarkup(){
   return commercialRecommendationQueueMarkup()+`<section class="ux-operational-actions"><h3>Consultas comerciais</h3><div class="ux-action-groups">${groups.map(([title,key,items])=>`<section><h4><button class="ux-text-button" type="button" data-ux-operational="${key}">${esc(title)}</button> <span>${items.length}</span></h4><div class="ux-action-list">${items.length?items.join(''):'<p class="muted small">Sem pendências nesta categoria.</p>'}</div></section>`).join('')}</div></section>`;
 }
 function commercialRecommendationInput(){
-  return{clients:state.data.clients||[],events:(state.data.events||[]).filter(ev=>!isPresentationDraft(ev)).map(ev=>ev.presentationHistory?{...ev,informedPrices:eventInformedPrices(ev)}:ev),priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
+  return{clients:commercialClients(),events:(state.data.events||[]).filter(ev=>!isPresentationDraft(ev)).map(ev=>ev.presentationHistory?{...ev,informedPrices:eventInformedPrices(ev)}:ev),priceHistory:state.data.priceHistory||{},now:new Date().toISOString(),fractions:state.fractions.map(f=>({number:f.number,typology:f.typology,floor:f.floor,orientation:f.orientation,currentPrice:finalPrice(f),status:statusOf(f),statusConfirmed:Object.hasOwn(state.data.statuses||{},f.number)&&STATUS.includes(state.data.statuses[f.number]),reservationClientId:statusOf(f)==='Reservado'?commercialEffectForFraction(f.number)?.event.clientId||'':''}))};
 }
 function commercialClientRecommendation(c){
   const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return null;
-  return engine.recommendClient(c,engine.buildContext(commercialRecommendationInput()));
+  return engine.recommendClient(clientCommercialProjection(c),engine.buildContext(commercialRecommendationInput()));
 }
 function recommendationPriorityMarkup(priority){return`<span class="ux-priority ux-priority--${priority==='Alta'?'high':priority==='Média'?'medium':'low'}">Prioridade ${esc(priority.toLowerCase())}</span>`}
 function recommendationItemMarkup(rec,secondary=false){
@@ -3995,7 +3969,7 @@ function refreshClientRecommendations(){
 }
 function commercialRecommendationQueueMarkup(legacy=false){
   const model=window.THE_VIEW_CLIENT_WORKFLOW;
-  if(model&&!legacy){const rows=model.portfolio(state.data.clients,state.data.events,today()),pending=rows.filter(row=>row.state==='Resposta nossa pendente');return`<section class="ux-recommendation-queue"><header><h3>Carteira Comercial por Estado</h3><span>${rows.length} clientes · ${rows.filter(row=>row.priority).length} prioritários</span></header><div class="top-actions"><button type="button" class="ghost-button compact-button" data-ux-client-list="pending">Resposta nossa pendente (${pending.length})</button><button type="button" class="ghost-button compact-button" data-ux-client-list="all">Consultar carteira</button></div>${STAGES.map(stage=>{const group=rows.filter(row=>normalizeClientStage(row.client.stage)===stage);return`<section class="ux-client-section"><h4>${esc(stage)} · ${group.length} clientes · ${group.filter(row=>row.priority).length} prioritários</h4><div class="ux-action-list">${group.slice(0,5).map(row=>`<button type="button" class="ux-recommendation-row ${row.state==='Resposta nossa pendente'?'ux-contact-pending':''}" data-ux-client="${attr(row.client.id)}"><strong>${row.priority?uxIcon('star'):''}${esc(row.client.name)}</strong><span>${esc(row.state)}</span><span>${row.lastContact?`${formatCommercialDate(row.lastContact)} · ${row.days} dias sem contacto`:'Sem contacto registado'}</span></button>`).join('')}</div></section>`}).join('')}<details class="ux-client-details"><summary>Sugestões e prazos opcionais existentes</summary>${commercialRecommendationQueueMarkup(true)}</details></section>`}
+  if(model&&!legacy){const rows=model.portfolio(commercialClients(),state.data.events,today()),pending=rows.filter(row=>row.state==='Resposta nossa pendente');return`<section class="ux-recommendation-queue"><header><h3>Carteira Comercial por Estado</h3><span>${rows.length} clientes · ${rows.filter(row=>row.priority).length} prioritários</span></header><div class="top-actions"><button type="button" class="ghost-button compact-button" data-ux-client-list="pending">Resposta nossa pendente (${pending.length})</button><button type="button" class="ghost-button compact-button" data-ux-client-list="all">Consultar carteira</button></div>${STAGES.map(stage=>{const group=rows.filter(row=>normalizeClientStage(row.client.stage)===stage);return`<section class="ux-client-section"><h4>${esc(stage)} · ${group.length} clientes · ${group.filter(row=>row.priority).length} prioritários</h4><div class="ux-action-list">${group.slice(0,5).map(row=>`<button type="button" class="ux-recommendation-row ${row.state==='Resposta nossa pendente'?'ux-contact-pending':''}" data-ux-client="${attr(row.client.id)}"><strong>${row.priority?uxIcon('star'):''}${esc(row.client.name)}</strong><span>${esc(row.state)}</span><span>${row.lastContact?`${formatCommercialDate(row.lastContact)} · ${row.days} dias sem contacto`:'Sem contacto registado'}</span></button>`).join('')}</div></section>`}).join('')}<details class="ux-client-details"><summary>Sugestões e prazos opcionais existentes</summary>${commercialRecommendationQueueMarkup(true)}</details></section>`}
   const engine=window.THE_VIEW_RECOMMENDATIONS;if(!engine)return'';
   const report=engine.evaluate(commercialRecommendationInput()),priority=commercialUx.recommendationPriority||'all';
   const queue=report.queue.filter(item=>priority==='all'||item.recommendation.primary.priority===priority);
@@ -4026,7 +4000,7 @@ function renderGlobalCommercialSearch(){
   if(!commercialUx.ready){results.innerHTML='<p class="muted small">A carregar dados…</p>';return}
   const fractions=state.fractions.filter(f=>norm([f.name,`Apt. ${f.number}`,f.typology,`Piso ${f.floorLabel}`,f.orientation].join(' ')).includes(query)).sort((a,b)=>(b.number===Number(query)?1:0)-(a.number===Number(query)?1:0));
   const digits=normalizedPhone(query);
-  const clients=state.data.clients.filter(c=>norm([c.name,c.email,c.phone].join(' ')).includes(query)||(digits.length>=3&&normalizedPhone(c.phone).includes(digits)));
+  const clients=commercialClients().filter(c=>norm([c.name,c.email,c.phone].join(' ')).includes(query)||(digits.length>=3&&normalizedPhone(c.phone).includes(digits)));
   results.innerHTML=`${fractions.length?`<div role="group" aria-label="Frações"><h3>Frações (${fractions.length})</h3>${fractions.slice(0,8).map(f=>`<button id="ux-search-fraction-${f.number}" role="option" aria-selected="false" tabindex="-1" type="button" data-ux-open="${f.number}"><strong>Apt. ${f.number}</strong><span>${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${money(finalPrice(f))}</span></button>`).join('')}</div>`:''}${clients.length?`<div role="group" aria-label="Clientes"><h3>Clientes (${clients.length})</h3>${clients.slice(0,8).map((c,index)=>`<button id="ux-search-client-${index}" role="option" aria-selected="false" tabindex="-1" type="button" data-ux-client="${attr(c.id)}"><strong>${esc(c.name||'Cliente sem nome')}</strong><span>${esc(c.preferences?.typology||c.stage||'—')}${c.budget?` · ${money(c.budget)}`:''}</span></button>`).join('')}</div>`:''}${!fractions.length&&!clients.length?'<p class="muted small">Nenhum cliente ou fração encontrado.</p>':''}`;
 }
 function closeCommercialSearch(){
