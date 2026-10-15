@@ -1,6 +1,6 @@
 {
   "base": "5582825fb27555b336ac5495e4bd3ddb9503c3ad",
-  "suiteCount": 22,
+  "suiteCount": 23,
   "suites": [
     "access-routes.test.js",
     "commercial-capacity.test.js",
@@ -11,6 +11,7 @@
     "commercial-client-workflow.test.js",
     "commercial-concurrency.test.js",
     "commercial-construction.test.js",
+    "commercial-contacts.test.js",
     "commercial-followups.test.js",
     "commercial-fraction-recommendations.test.js",
     "commercial-progressive-flow.test.js",
@@ -33,7 +34,8 @@
     "app.js",
     "config.js",
     "tests/commercial-client-complete-browser.mjs",
-    "tests/commercial-client-complete-exports.mjs"
+    "tests/commercial-client-complete-exports.mjs",
+    "tests/commercial-contacts-browser.mjs"
   ],
   "protectedPathsUnchanged": [
     "api",
@@ -46,10 +48,10 @@
   ],
   "syncBlockUnchanged": true,
   "hashes": {
-    "commercial.js": "9489cd32acef7d5c66da5961e3742f5870dbbf8e618f693756148455a3b80fc5",
-    "commercial-client-workflow.js": "dfd5f6cbb384128df6a09d39853f0a67835bf7f5ea6d444b152117031c9925d3",
-    "commercial-client-workflow-ui.js": "91fc41a53e50b880929732bb5fb648cda77948748f9a9a9f98e3c5c1fb95bdb9",
-    "commercial-recommendations.js": "1a0b49f4d3630e72ea1067eebe11d6e0ab1377af29fa82d6fddf979d443be9b9"
+    "commercial.js": "051350ec425e63bf5e31230c85a296bc6aaf98fe0d3503f420ba3831bc57a601",
+    "commercial-client-workflow.js": "816b37cba7c89da7c0f7d7850bd9b6110e7b559d9d920d62017ecb612d4a0d44",
+    "commercial-client-workflow-ui.js": "3158568d3d0ccb9a13a684dc70c1dc238b88355e6dd2fde739f6f4295f5023f2",
+    "commercial-recommendations.js": "95bf3790da27f6bec8c662150cdf7ae8bd4e50cc5576f047bbc9a2f247efd103"
   },
   "productionAccess": false
 }

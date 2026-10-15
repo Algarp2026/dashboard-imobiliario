@@ -4,6 +4,24 @@ Branch: `codex/client-profile-complete`. Base: `codex/client-profile-phase2b`, c
 
 Uma única entrega para os cinco separadores. Destino da PR: `codex/client-profile-phase2b`, nunca `main`. Sem merge, deployment, dados pessoais reais ou operações na fonte de produção.
 
+## Decisões atualizadas: contactos e carteira
+
+Esta secção substitui a gestão diária centrada nos prazos e escalas automáticas descrita nos documentos anteriores. Datas de próximas ações continuam opcionais e os respetivos dados históricos não são removidos.
+
+- **Estado Comercial** mantém os estados existentes. **Estado do Contacto** é independente: Resposta nossa pendente, A aguardar cliente, Em acompanhamento ou Sem contacto.
+- A ficha permite corrigir manualmente o Estado do Contacto. O recálculo de resumos não o substitui. Uma nova comunicação permite escolher explicitamente o estado após essa interação.
+- **Cliente prioritário** é uma decisão manual binária. A estrela aparece na ficha e na lista; alterar o estado comercial não altera a prioridade.
+- Carteira no dashboard, lista lateral agrupada e relatório reutilizam os clientes existentes. Dentro de cada Estado Comercial: primeiro prioritários; dentro da mesma prioridade, sem contacto primeiro e depois contactos do mais antigo para o mais recente. Há filtros de estado comercial/contacto, prioridade e pesquisa, contagens e acesso à ficha.
+- O dashboard destaca Resposta nossa pendente. As sugestões e prazos anteriores estão numa área complementar, sem definir a prioridade manual do cliente.
+- O pedido inicial permite data efetiva retroativa e cria um único evento. Com data documentada, conta como contacto recebido e começa em Resposta nossa pendente. Sem data preenchida, criar apenas com nome continua possível e não inventa uma data de contacto.
+- Registar contacto permite recebido/enviado, data, hora opcional, canal, notas e estado após a comunicação. Uma resposta recebida começa com Resposta nossa pendente, editável pelo utilizador.
+- Registar resposta recebida pode atualizar preferências múltiplas, orçamento e finalidade no mesmo formulário. Resposta e preferências são gravadas numa só operação e criam um único evento de contacto, sem evento de preferências separado.
+- Alterações isoladas de preferências têm marcador administrativo. Editar ficha, preferências, preparação ou seleção não atualiza o último contacto. Contactos introduzidos mais tarde com data antiga não substituem o contacto cronologicamente mais recente.
+
+Modelo aditivo: `communicationHistory` preserva snapshots no próprio evento; `contactStateHistory` e `priorityHistory` preservam decisões no próprio cliente. São listas append-only para funcionar com a proteção existente de campos desconhecidos e deteção de regressão, sem modificar o protocolo de sincronização. Edições conservam o ID do contacto e acrescentam a versão. Não há uma segunda base de clientes/eventos nem migração durante a leitura.
+
+Resultados específicos: [contactos, prioridades, carteira, falhas e concorrência](docs/client-profile-complete/contacts-results.json). Os testes incluem 64 clientes fictícios iniciais, pedido retroativo, resposta com preferências, correção manual após refresh, ordenação/filtros, mudança de estado mantendo prioridade, atualização entre navegadores, conflito 409 e recuperação sem duplicação.
+
 ## Implementação
 
 - Dados, Preferências e Frações reutilizam a implementação aprovada. A listagem original mantém-se.
@@ -47,7 +65,7 @@ O estado de sucesso depende de confirmação efetiva. Falhas deixam o evento loc
 
 Fontes: API/autenticação existentes e Apps Script numa VM em memória. 64 clientes iniciais exclusivamente fictícios, características estruturais das 39 frações e preços/estados fictícios. Nenhuma credencial de produção, acesso à Sheet real ou fixture pessoal.
 
-- 22 suites `tests/*.test.js`, incluindo fases anteriores, blocos/backups, concorrência, API, revisão, relatórios, preços e novo workflow.
+- 23 suites `tests/*.test.js`, incluindo fases anteriores, blocos/backups, concorrência, API, revisão, relatórios, preços, workflow e novos contactos/carteira.
 - Jornada real de navegador: cliente apenas com nome, evento inicial único, T2/T2+1 e máximo 750.000, seleção recomendada/manual, preparação guardada, realização e refresh.
 - Duas apresentações com valores diferentes, correção com o mesmo ID, versões preservadas, atualização recebida por outro navegador limpo.
 - Ofertas/contrapropostas e estados independentes em duas frações; cliente legado com campos e eventos originais preservados.
@@ -63,8 +81,8 @@ Resultados e imagens: [galeria](docs/client-profile-complete/README.md), [jornad
 
 1. `node tests/helpers/client-complete-preview.cjs`.
 2. Abrir `http://127.0.0.1:5197/commercial.html`. Password **exclusivamente fictícia/local**: `View-Phase2A-Teste`.
-3. `node tests/commercial-client-complete-regression.cjs`: executa as 22 suites, valida sintaxe e compara o bloco de sincronização e os caminhos protegidos com a base. O teste específico é `node tests/commercial-client-workflow.test.js`.
-4. Com Playwright e Chrome disponíveis, `node tests/commercial-client-complete-browser.mjs`, seguido de `node tests/commercial-client-complete-exports.mjs`. O primeiro repõe a fonte fictícia e o segundo usa os seus registos, sem gravações comerciais.
+3. `node tests/commercial-client-complete-regression.cjs`: executa as 23 suites, valida sintaxe e compara o bloco de sincronização e os caminhos protegidos com a base. Testes direcionados: `node tests/commercial-client-workflow.test.js` e `node tests/commercial-contacts.test.js`.
+4. Com Playwright e Chrome disponíveis, `node tests/commercial-client-complete-browser.mjs`, seguido de `node tests/commercial-client-complete-exports.mjs`. O primeiro repõe a fonte fictícia e o segundo usa os seus registos, sem gravações comerciais. Depois, `node tests/commercial-contacts-browser.mjs` repõe a fonte e testa os novos requisitos. São execuções sequenciais com cenários fictícios independentes.
 5. Variáveis de ferramentas locais: `PLAYWRIGHT_MODULE`, `CHROME_EXECUTABLE`, `COMPLETE_ARTIFACTS`. Não usar variáveis/ficheiros de produção. O servidor recusa destinos Google reais e não lê ficheiros `.env`.
 6. Regressão 2A: helper 2A na porta 5198, `PHASE2A_TEST_ORIGIN=http://127.0.0.1:5198`. Regressão 2B: `PHASE2B_TEST_ORIGIN=http://127.0.0.1:5197`. Executar sequencialmente, pois os testes repõem a fonte em memória.
 
@@ -92,14 +110,14 @@ Sem conflito Git identificado. Isto não certifica aprovação comercial, regras
 
 ## Ficheiros e limites
 
-- `commercial-client-workflow.js`: modelo puro, snapshots, projeções e validação comercial.
-- `commercial-client-workflow-ui.js`: formulários e histórico de Apresentação/Negociação, através dos adaptadores existentes.
+- `commercial-client-workflow.js`: modelo puro, snapshots, projeções, contactos, prioridade, ordenação de carteira e validação comercial.
+- `commercial-client-workflow-ui.js`: formulários de Apresentação/Negociação, acompanhamento manual e resposta com preferências, através dos adaptadores existentes.
 - `commercial.js`: integração, leitores de preços históricos, confirmação/revalidação de fechos e mensagens de gravação; sem mudança do protocolo de sync.
 - `commercial-recommendations.js`: reconhecimento dos movimentos novos e âmbito das próximas ações por fração, mantendo os casos legados.
 - `commercial.html`, `commercial.css`: módulos novos e estilos limitados ao novo workflow.
 - `vercel.json`: deployments Git automáticos desativados nesta branch.
 - `tests/`: testes novos e adaptação do servidor fictício/portas para regressões. `docs/client-profile-complete/` e este documento: evidências e instruções.
 
-Não alterados: API, server, Apps Script, middleware/autenticação, config, data.json, plantas, preços estruturais e geradores PDF.
+Não alterados: API, server, Apps Script, middleware/autenticação, config, data.json, plantas, preços estruturais e geradores de proposta/lista de preços. O gerador existente de relatórios é reutilizado para o novo modelo Carteira Comercial.
 
 Limites antes da publicação: validação humana dos formulários e impressão nativa; cobertura real 39/39 só com autorização; confirmação da configuração Google real numa fonte de testes; revisão de permissões. As verificações de titularidade no cliente e o CAS existente não são uma nova autorização relacional no backend, que não foi alterado. O rascunho de formulário não guardado é apenas memória; guardar Em preparação é necessário para o conservar após refresh. Snapshots aumentam a base, sob os limites e proteções existentes. Conflitos não resolvidos continuam a exigir decisão explícita.

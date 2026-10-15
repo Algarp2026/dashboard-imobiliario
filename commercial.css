@@ -594,6 +594,20 @@ body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidde
 }
 /* The completed client journey stays inside the approved profile layout. */
 .ux-workflow { min-width: 0; }
+#clientModal[data-client-mode="quick"] #clientInitialRequestFields { display: block; }
+#clientModal[data-client-mode="quick"] .field[data-client-scope="initial"] { display: flex; }
+.ux-contact-controls { padding-block: 16px; border-block: 1px solid var(--line); margin-block: 16px; }
+.ux-contact-controls .form-grid { align-items: end; }
+.ux-contact-controls, .ux-contact-controls form, .ux-contact-controls .field { min-width: 0; }
+.ux-contact-controls fieldset { min-width: 0; border: 0; padding: 0; margin: 14px 0; }
+.ux-contact-controls .field input, .ux-contact-controls .field select, .ux-contact-controls .field textarea { max-width: 100%; }
+.ux-contact-controls .ux-fraction-filters { flex-wrap: wrap; }
+.ux-contact-controls fieldset>.field { margin-block: 12px; }
+.ux-contact-controls fieldset>label:not(.field) { display: flex; gap: 8px; align-items: flex-start; margin-block: 14px; }
+.ux-client-priority { color: #8e6a34; display: inline-flex; align-items: center; gap: 6px; }
+.ux-portfolio-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 13px; }
+.ux-contact-pending { border-left: 3px solid #b27517; }
+.ux-portfolio-counts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0; font-size: 12px; }
 .ux-workflow fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .ux-workflow form { border-block: 1px solid var(--border, #dfe5e9); padding-block: 18px; margin-block: 12px 20px; }
 .ux-workflow .field { min-width: 0; position: relative; }

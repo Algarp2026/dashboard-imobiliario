@@ -9,6 +9,50 @@
     const field=(label,name,value='',type='text',extra='')=>`<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
     const select=(label,name,values,value)=>`<label class="field"><span>${label}</span><select name="${name}">${options(values,value)}</select></label>`;
     const area=(label,name,value='')=>`<label class="field"><span>${label}</span><textarea name="${name}" rows="2">${esc(value)}</textarea></label>`;
+    function newContact(cid,received=false,event){
+      const old=event?.communicationHistory?.at(-1),c=a.client(cid);
+      drafts.set(cid+':contact',{id:event?.id||a.id(),clientId:cid,original:event?JSON.stringify(event):'',date:old?.date||a.today(),time:old?.time||'',direction:old?.direction||(received?'received':'sent'),channel:old?.channel||'Email',contactState:old?.contactState||(received?model.contactStates[0]:model.contactStates[1]),notes:old?.notes||'',preferencesDraft:a.preferences.draft(c),updatePreferences:false,preferenceOriginal:JSON.stringify([c.preferences,c.manualPreferences,c.budgetMin,c.budgetMax])});
+      a.render();a.tab('data');
+    }
+    function contactMarkup(c){
+      const info=model.contactInfo(c,a.events(),a.today()),d=draft(c.id,'contact'),prefs=d?.preferencesDraft;
+      return`<section class="ux-contact-controls"><div class="crm-detail-section__heading"><h3>Acompanhamento comercial</h3><div class="top-actions">${button('new-contact','Registar contacto','phone')}${button('received-contact','Registar resposta recebida','mail')}</div></div>${a.facts([['Estado Comercial',c.stage],['Estado do Contacto',info.state],['Último contacto efetivo',info.lastContact||'—'],['Dias sem contacto',info.days===null?'Sem contacto registado':info.days]])}<form data-contact-settings><div class="form-grid">${select('Estado do Contacto','contactState',model.contactStates,info.state)}<label class="ux-client-priority"><input name="priority" type="checkbox" ${model.priority(c)?'checked':''}>${a.icon('star')}Cliente prioritário</label></div><div class="top-actions"><button class="ghost-button compact-button" type="submit">${a.icon('check')}Guardar acompanhamento</button></div><p role="status" data-contact-settings-status></p></form>${d?`<form data-contact-form><h4>${d.original?'Editar comunicação':'Comunicação efetiva'}</h4><fieldset ${saving?'disabled':''}><div class="form-grid">${field('Data efetiva','date',d.date,'date','required')}${field('Hora','time',d.time,'time')}<label class="field"><span>Tipo</span><select name="direction"><option value="received" ${d.direction==='received'?'selected':''}>Recebido</option><option value="sent" ${d.direction==='sent'?'selected':''}>Enviado</option></select></label>${select('Canal','channel',model.channels,d.channel)}${select('Estado do Contacto após a interação','contactState',model.contactStates,d.contactState)}</div>${area('Observações','notes',d.notes)}<label><input name="updatePreferences" type="checkbox" ${d.updatePreferences?'checked':''}> Atualizar preferências nesta resposta</label><div data-contact-preferences ${d.updatePreferences?'':'hidden'}>${Object.entries(a.preferences.options).map(([key,values])=>`<fieldset><legend>${{typology:'Tipologias',floor:'Pisos',orientation:'Orientações'}[key]}</legend><div class="ux-fraction-filters">${[...values,'Indiferente'].map(value=>`<button type="button" class="ux-preference-chip" data-contact-choice="${key}" data-value="${esc(value)}" aria-pressed="${value==='Indiferente'?prefs.choices[key].state==='indifferent':prefs.choices[key].values.includes(value)}">${esc(value)}</button>`).join('')}</div>${prefs.choices[key].state==='legacy'?`<p class="muted small">Preferência antiga preservada: ${esc(prefs.choices[key].legacyText)}</p>`:''}</fieldset>`).join('')}<div class="form-grid">${field('Investimento mínimo','budgetMin',prefs.budgetMin,'number','min="0"')}${field('Investimento máximo','budgetMax',prefs.budgetMax,'number','min="0"')}${select('Finalidade','objective',[...new Set(['',...a.preferences.objectives,prefs.objective])],prefs.objective)}${select('Prazo de decisão (opcional)','decisionTime',[...new Set(['',...a.preferences.deadlines,prefs.decisionTime])],prefs.decisionTime)}</div>${area('Outras preferências','summary',prefs.summary)}</div><div class="top-actions"><button class="primary-button compact-button" type="submit">${a.icon('check')}Guardar comunicação</button>${button('cancel-contact','Fechar edição','x')}</div></fieldset><p role="status" data-contact-feedback>${esc(d.feedback||'')}</p></form>`:''}</section>`;
+    }
+    function collectContact(form,d){
+      for(const key of ['date','time','direction','channel','contactState','notes'])d[key]=form.elements[key].value;
+      d.updatePreferences=form.elements.updatePreferences.checked;
+      for(const key of ['budgetMin','budgetMax'])d.preferencesDraft[key]=Number(form.elements[key].value)||0;
+      for(const key of ['objective','decisionTime','summary'])d.preferencesDraft[key]=form.elements[key].value;
+    }
+    function bindContact(c,container){
+      const settings=container.querySelector('[data-contact-settings]');
+      if(settings)settings.onsubmit=async e=>{
+        e.preventDefault();if(saving)return;saving=true;const submit=settings.querySelector('[type="submit"]');submit.disabled=true;
+        try{const current=a.client(c.id),updated=copy(current),value=settings.elements.contactState.value,priority=settings.elements.priority.checked,stamp={id:a.id(),recordedAt:new Date().toISOString(),source:'manual'};
+          const changed=model.decision(updated,'contactStateHistory',value,stamp)|model.decision(updated,'priorityHistory',priority,stamp);
+          if(changed){Object.assign(current,updated);a.feedback(await a.persist(),'Acompanhamento guardado e sincronizado.')}
+        }catch(error){await a.notify(error.message)}finally{saving=false;a.render()}
+      };
+      const form=container.querySelector('[data-contact-form]'),d=draft(c.id,'contact');
+      if(!form||!d)return;
+      form.oninput=()=>collectContact(form,d);
+      form.onchange=e=>{const previous=d.direction;collectContact(form,d);if(e.target.name==='direction'&&previous!==d.direction){d.contactState=d.direction==='received'?model.contactStates[0]:model.contactStates[1];form.elements.contactState.value=d.contactState}form.querySelector('[data-contact-preferences]').hidden=!d.updatePreferences};
+      form.querySelectorAll('[data-contact-choice]').forEach(btn=>btn.onclick=()=>{collectContact(form,d);const key=btn.dataset.contactChoice;d.preferencesDraft.choices[key]=a.preferences.toggle(key,d.preferencesDraft.choices[key],btn.dataset.value);a.render()});
+      form.onsubmit=async e=>{
+        e.preventDefault();if(saving)return;collectContact(form,d);saving=true;form.querySelector('fieldset').disabled=true;
+        try{
+          const current=a.client(c.id),old=a.event(d.id);model.validateDecisions(current);if((old?JSON.stringify(old):'')!==d.original)throw Error('A comunicação mudou. Reabra o registo antes de editar.');
+          if(d.updatePreferences&&JSON.stringify([current.preferences,current.manualPreferences,current.budgetMin,current.budgetMax])!==d.preferenceOriginal)throw Error('As preferências mudaram. Reveja a ficha antes de guardar a resposta.');
+          const updated=d.updatePreferences?a.preferences.buildUpdate(current,d.preferencesDraft):null;
+          const ev=model.buildCommunication(old,{...d,...(updated?{preferencesSnapshot:{preferences:updated.preferences,budgetMin:updated.budgetMin,budgetMax:updated.budgetMax}}:{})});
+          if(JSON.stringify(ev)===d.original&&!updated){d.feedback='Sem alterações por guardar.';return}
+          a.applyCommunication(ev,old,updated);if(!old||d.contactState!==old.communicationHistory?.at(-1)?.contactState)model.decision(a.client(c.id),'contactStateHistory',d.contactState,{id:a.id(),eventId:ev.id,recordedAt:new Date().toISOString(),source:'communication'});
+          d.original=JSON.stringify(a.event(d.id));d.preferenceOriginal=JSON.stringify([a.client(c.id).preferences,a.client(c.id).manualPreferences,a.client(c.id).budgetMin,a.client(c.id).budgetMax]);
+          const ok=await a.persist();if(ok){drafts.delete(c.id+':contact');a.feedback(true,'Comunicação guardada e sincronizada.')}else d.feedback='Comunicação preservada localmente. Sincronização por confirmar. Retome pelo indicador de sincronização.';
+        }catch(error){d.feedback=error.message==='INVALID_INVESTMENT'?'Reveja o intervalo de investimento.':error.message}
+        finally{saving=false;a.render();a.tab('data')}
+      };
+    }
     function newPresentation(cid,event){
       const previous=model.latest(event),rows=a.rows(),numbers=previous?previous.rows.map(r=>r.fraction):a.selection(a.client(cid));
       drafts.set(cid+':presentation',{id:event?.id||a.id(),clientId:cid,original:event?JSON.stringify(event):'',revision:a.revision(),state:previous?.state||'draft',date:previous?.date||a.today(),time:previous?.time||'',channel:previous?.channel||'Email',notes:previous?.notes||'',documentation:previous?.documentation||'',rows:numbers.map(n=>previous?copy(previous.rows.find(r=>r.fraction===n)):priceRow(n,rows))});
@@ -78,6 +122,7 @@
       finally{saving=false;a.render();a.tab(kind)}
     }
     function bind(c,container){
+      bindContact(c,container);
       container.querySelectorAll('[data-workflow-form]').forEach(form=>{
         const kind=form.dataset.workflowForm,d=draft(c.id,kind);
         form.onsubmit=e=>{e.preventDefault();submit(c,kind,form)};
@@ -85,7 +130,10 @@
         form.onchange=form.oninput;if(d)warnings(form,d);
       });
       container.querySelectorAll('[data-workflow]').forEach(btn=>btn.onclick=async()=>{
-        if(saving)return;const section=btn.closest('[data-workflow-kind]'),kind=section.dataset.workflowKind,d=draft(c.id,kind),action=btn.dataset.workflow;
+        if(saving)return;const action=btn.dataset.workflow;
+        if(action==='new-contact'||action==='received-contact'){newContact(c.id,action==='received-contact');return}
+        if(action==='cancel-contact'){drafts.delete(c.id+':contact');a.render();return}
+        const section=btn.closest('[data-workflow-kind]'),kind=section?.dataset.workflowKind,d=draft(c.id,kind);
         if(action==='new-presentation'){newPresentation(c.id);return}
         if(action==='cancel-presentation'||action==='cancel-negotiation'){if(d&&!await a.confirm('Fechar esta edição? Os valores ainda não guardados neste formulário serão descartados.','Fechar edição'))return;drafts.delete(c.id+':'+kind);a.render();return}
         if(action==='add-unit'||action==='remove-unit'){
@@ -107,7 +155,7 @@
         if(action==='old-event')a.oldEvent();
       });
     }
-    function edit(ev){if(model.latest(ev)){newPresentation(ev.clientId,ev);return true}if(ev.negotiationVersion===1){newMovement(ev.clientId,ev.fractions?.[0],ev);return true}return false}
-    return{presentationMarkup,negotiationMarkup,bind,edit,newPresentation};
+    function edit(ev){if(ev.communicationHistory){newContact(ev.clientId,ev.type==='Contacto recebido',ev);return true}if(model.latest(ev)){newPresentation(ev.clientId,ev);return true}if(ev.negotiationVersion===1){newMovement(ev.clientId,ev.fractions?.[0],ev);return true}return false}
+    return{presentationMarkup,negotiationMarkup,contactMarkup,bind,edit,newPresentation,newContact};
   };
 })(window);

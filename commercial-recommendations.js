@@ -38,6 +38,10 @@
     return +p.year===y&&+p.month===m&&+p.day===d&&+p.hour===h&&+p.minute===min?stamp:null;
   }
   function isContact(event){
+    const workflow=typeof window==='object'?window.THE_VIEW_CLIENT_WORKFLOW:null;
+    if(workflow)return workflow.isEffectiveContact(event);
+    if(event.actualCommunication===false||event.administrative===true||event.previousPreferences)return false;
+    if(event.communicationVersion===1||['Contacto recebido','Contacto enviado'].includes(event.type))return true;
     return CONTACT_TYPES.has(event.type)||(event.type==='Outro'&&['telefone','whatsapp','email','presencial','reuniao','videoconferencia'].includes(norm(event.channel)));
   }
   function lastContactDate(client,context){

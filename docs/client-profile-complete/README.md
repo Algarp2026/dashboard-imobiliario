@@ -2,6 +2,19 @@
 
 Capturas reais de Chrome com dados exclusivamente fictícios. API autenticada e Apps Script em memória; sem acesso à Google Sheet real. Não são mockups.
 
+## Contactos e Carteira Comercial
+
+![Estado de contacto e prioridade manual](desktop-contactos-prioridade.png)
+![Resposta recebida com preferências](desktop-resposta-preferencias.png)
+![Carteira agrupada e contagens](desktop-carteira-estados.png)
+![Filtros da carteira](desktop-carteira-filtros.png)
+![Acompanhamento no telemóvel](mobile-contactos-prioridade.png)
+![Resposta recebida no telemóvel](mobile-resposta-preferencias.png)
+![Preferências na resposta](mobile-resposta-selecoes.png)
+![Carteira no telemóvel](mobile-carteira.png)
+
+[Resultados dos novos contactos e prioridades](contacts-results.json).
+
 ## Computador
 
 ![Dados](desktop-dados.png)
@@ -26,4 +39,4 @@ Capturas reais de Chrome com dados exclusivamente fictícios. API autenticada e 
 
 ![Negociação](tablet-negociacao.png)
 
-[Resultados da jornada](validation-results.json) · [Resultados das exportações](exports-results.json) · [22 suites e preservação do protocolo](regression-results.json) · [Relatório técnico, reprodução e limites](../../CLIENT_PROFILE_COMPLETE.md)
+[Resultados da jornada](validation-results.json) · [Resultados das exportações](exports-results.json) · [23 suites e preservação do protocolo](regression-results.json) · [Relatório técnico, reprodução e limites](../../CLIENT_PROFILE_COMPLETE.md)

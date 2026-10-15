@@ -54,7 +54,43 @@
     }
     return'';
   }
-  const api={latest,isDraft,prices,channels,movementTypes,states,buildPresentation,negotiation,closingError};
+  const contactStates=['Resposta nossa pendente','A aguardar cliente','Em acompanhamento','Sem contacto'];
+  const validDate=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return false;const d=new Date(value+'T12:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===value};
+  function isEffectiveContact(ev){
+    if(ev?.actualCommunication===false||isDraft(ev)||ev?.administrative===true||ev?.previousPreferences)return false;
+    if(ev?.communicationVersion===1)return ev.actualCommunication!==false;
+    if(ev?.type==='Pedido de informação recebido')return validDate(ev.date);
+    return ['Contacto recebido','Contacto enviado','Contacto efetuado','Preferências recebidas','Apresentação comercial','Documentação enviada','Frações apresentadas','Preços informados','Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Aceitação','Rejeição','Visita','Reunião realizada','Reunião com cliente'].includes(ev?.type)||ev?.type==='Outro'&&channels.some(v=>v.toLowerCase()===String(ev.channel||'').toLowerCase());
+  }
+  function contactInfo(c,events,today){
+    const history=events.filter(ev=>ev.clientId===c.id&&isEffectiveContact(ev)&&validDate(ev.date)&&ev.date<=today).map((ev,index)=>({ev,index})).sort((a,b)=>(a.ev.date+' '+(a.ev.time||'')).localeCompare(b.ev.date+' '+(b.ev.time||''))||a.index-b.index);
+    const last=history.at(-1)?.ev;
+    const manual=Array.isArray(c.contactStateHistory)?c.contactStateHistory.at(-1):null;
+    const state=contactStates.includes(manual?.value)?manual.value:last?.communicationHistory?.at(-1)?.contactState||(['Pedido de informação recebido','Contacto recebido'].includes(last?.type)?contactStates[0]:last?contactStates[2]:contactStates[3]);
+    return{state,lastContact:last?.date||'',days:last?Math.max(0,Math.floor((Date.parse(today+'T12:00:00Z')-Date.parse(last.date+'T12:00:00Z'))/86400000)):null};
+  }
+  function priority(c){return Array.isArray(c.priorityHistory)&&c.priorityHistory.at(-1)?.value===true}
+  function validateDecisions(c){
+    for(const key of ['contactStateHistory','priorityHistory'])if(c[key]!==undefined&&(!Array.isArray(c[key])||c[key].some(entry=>!entry||entry.version!==1)))throw Error('Histórico de acompanhamento não reconhecido. Os dados existentes foram preservados.');
+  }
+  function decision(c,key,value,entry){
+    validateDecisions(c);
+    const current=key==='priorityHistory'?priority(c):c.contactStateHistory?.at(-1)?.value;
+    if(current===value)return false;
+    c[key]=[...(c[key]||[]),{version:1,value,...clone(entry)}];return true;
+  }
+  function portfolio(clients,events,today,filters={}){
+    return clients.map(c=>({client:c,...contactInfo(c,events,today),priority:priority(c)})).filter(row=>(!filters.stage||filters.stage==='all'||row.client.stage===filters.stage)&&(!filters.contact||filters.contact==='all'||row.state===filters.contact)&&(!filters.priority||filters.priority==='all'||row.priority===(filters.priority==='yes'))&&(!filters.search||String(row.client.name||'').toLocaleLowerCase('pt-PT').includes(filters.search.toLocaleLowerCase('pt-PT')))).sort((a,b)=>Number(b.priority)-Number(a.priority)||(a.lastContact||'0000').localeCompare(b.lastContact||'0000')||String(a.client.name).localeCompare(String(b.client.name),'pt-PT')||String(a.client.id).localeCompare(String(b.client.id)));
+  }
+  function buildCommunication(existing,input){
+    if(!validDate(input.date))throw Error('Indique a data efetiva da comunicação.');
+    if(!['received','sent'].includes(input.direction)||!channels.includes(input.channel)||!contactStates.includes(input.contactState))throw Error('Escolha o tipo, canal e estado do contacto.');
+    if(existing?.communicationHistory?.at(-1)?.version!==undefined&&existing.communicationHistory.at(-1).version!==1)throw Error('Versão do contacto não suportada.');
+    const snapshot={...clone(existing?.communicationHistory?.at(-1)||{}),version:1,date:input.date,time:input.time||'',direction:input.direction,channel:input.channel,contactState:input.contactState,notes:input.notes||'',...(input.preferencesSnapshot?{preferencesSnapshot:clone(input.preferencesSnapshot)}:{})};
+    if(JSON.stringify(existing?.communicationHistory?.at(-1))===JSON.stringify(snapshot))return clone(existing);
+    return{...clone(existing||{}),id:input.id,clientId:input.clientId,type:input.direction==='received'?'Contacto recebido':'Contacto enviado',communicationVersion:1,actualCommunication:true,date:input.date,time:input.time||'',channel:input.channel,notes:input.notes||'',fractions:existing?.fractions||[],communicationHistory:[...(existing?.communicationHistory||[]),snapshot]};
+  }
+  const api={latest,isDraft,prices,channels,movementTypes,states,buildPresentation,negotiation,closingError,contactStates,validDate,isEffectiveContact,contactInfo,priority,validateDecisions,decision,portfolio,buildCommunication};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.THE_VIEW_CLIENT_WORKFLOW=api;
 })(typeof window==='object'?window:null);
