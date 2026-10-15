@@ -5,9 +5,15 @@
       "codex/client-profile-phase2a": false,
       "codex/client-profile-phase2b": false,
       "codex/client-profile-complete": false,
-      "codex/fix-client-profile-routing": false
+      "codex/fix-client-profile-routing": false,
+      "codex/fix-commercial-home-entry": false
     }
   },
+  "redirects": [
+    { "source": "/", "destination": "/commercial.html", "permanent": false },
+    { "source": "/index", "destination": "/commercial.html", "permanent": false },
+    { "source": "/index.html", "destination": "/commercial.html", "permanent": false }
+  ],
   "functions": {
     "api/commercial-data.js": {
       "maxDuration": 60
