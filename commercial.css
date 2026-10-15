@@ -605,9 +605,7 @@ body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidde
 .ux-contact-controls fieldset>.field { margin-block: 12px; }
 .ux-contact-controls fieldset>label:not(.field) { display: flex; gap: 8px; align-items: flex-start; margin-block: 14px; }
 .ux-client-priority { color: #8e6a34; display: inline-flex; align-items: center; gap: 6px; }
-.ux-portfolio-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 0 0; font-size: 13px; }
 .ux-contact-pending { border-left: 3px solid #b27517; }
-.ux-portfolio-counts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0; font-size: 12px; }
 .ux-workflow fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .ux-workflow form { border-block: 1px solid var(--border, #dfe5e9); padding-block: 18px; margin-block: 12px 20px; }
 .ux-workflow .field { min-width: 0; position: relative; }
