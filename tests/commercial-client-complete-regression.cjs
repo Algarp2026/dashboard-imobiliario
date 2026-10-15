@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_pro
 const repo=path.resolve(__dirname,'..'),output=path.join(repo,'docs/client-profile-complete');
 const run=args=>cp.execFileSync(process.execPath,args,{cwd:repo,encoding:'utf8',stdio:['ignore','pipe','pipe']});
 const syntax=['commercial.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','app.js','config.js','tests/commercial-client-complete-browser.mjs','tests/commercial-client-complete-exports.mjs','tests/commercial-contacts-browser.mjs'];
+syntax.push('tests/commercial-pr6-regression-browser.mjs');
 for(const file of syntax)run(['--check',file]);
 const suites=fs.readdirSync(__dirname).filter(file=>file.endsWith('.test.js')).sort();
 for(const file of suites){run([path.join('tests',file)]);console.log('PASS '+file)}

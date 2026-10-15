@@ -2099,7 +2099,8 @@ function clientWorkflow(){
       const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;
       if(old)replaceEventAndReapplyBusinessRules(old,ev);else applyEventBusinessRules(ev);
       c.preferences=preferences;c.budget=budget;
-      if(ev.presentationHistory){updatePresentationSelection(client(ev.clientId),ev.fractions);if(!isPresentationDraft(ev))consumePresentationSelection(client(ev.clientId),ev)}
+      // Only the first realization consumes preparation; historical edits leave it intact.
+      if(ev.presentationHistory&&!isPresentationDraft(ev)&&(!old||isPresentationDraft(old)))consumePresentationSelection(c,ev);
     },
     pdf:()=>openClientUxAction('proposal'),oldEvent:()=>openEventModal('','client')
   });

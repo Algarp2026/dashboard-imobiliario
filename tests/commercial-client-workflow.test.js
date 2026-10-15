@@ -30,3 +30,23 @@ const reserve={id:'reserve',clientId:'fiction',negotiationVersion:1,type:'Reserv
 app.applyEventBusinessRules({...sale,date:'2026-12-03',amount:660000,withAgent:true,agentId:'fiction-agent',commissionType:'percent',commissionValue:3,commissionAmount:19800});assert.equal(app.state.data.statuses[26],'Vendido');assert.equal(app.state.data.saleCommissions[26].amount,19800);assert.equal(app.state.data.finalPrices[26],700000);
 const contactBase=copy(app.state.data);contactBase.clients[0].contactStateHistory=[{version:1,value:'A aguardar cliente'}];contactBase.clients[0].priorityHistory=[{version:1,value:true}];const contactRemote=copy(contactBase);contactRemote.clients[0].contactStateHistory.push({version:1,value:'Em acompanhamento'});contactRemote.clients[0].priorityHistory.push({version:1,value:false});assert.equal(app.sharedStoreMayRegress(contactBase,contactRemote,{base:contactBase,revision:'base'},'new'),false);assert.equal(app.sharedStoreMayRegress(contactRemote,contactBase,{base:contactRemote,revision:'new'},'older'),true);
 console.log('Complete workflow: immutable draft/realized/corrected/repeated presentations, per-unit offers/counters/actions, legacy fields, clean browser updates and rollback protection, ownership/revision guards, reservation cancellation and agent sale passed.');
+
+// Capture the real integration adapter rather than reproducing its selection logic.
+context.window.createClientWorkflow=adapter=>adapter;
+vm.runInContext(source.slice(0,end)+'globalThis.workflowAdapter=clientWorkflow();globalThis.selectionApp={state,normalizeData};'+source.slice(end),context);
+const adapter=context.workflowAdapter,selectionInput={...input,id:'selection-event',clientId:'selection-client',rows:[{fraction:24,officialPrice:750000,informedPrice:700000}]};
+const selectionApp=context.selectionApp;
+selectionApp.state.data=selectionApp.normalizeData({clients:[{...client,id:'selection-client',presentationSelection:[9,24,30],priorityHistory:[{version:1,value:true}]},{...client,id:'untouched'}],events:[],agents:[],finalPrices:{24:750000},statuses:{24:'Disponível'}});
+selectionApp.state.fractions=[9,24,30].map(number=>({number}));
+const selectionBaseline=copy(selectionApp.state.data),selected=()=>copy(adapter.client('selection-client').presentationSelection);
+let selectionEvent=model.buildPresentation(null,selectionInput);adapter.apply(selectionEvent,null);assert.deepEqual(selected(),[9,24,30]);
+let selectionEdit=model.buildPresentation(selectionEvent,{...selectionInput,notes:'Draft correction'});adapter.apply(selectionEdit,selectionEvent);assert.deepEqual(selected(),[9,24,30]);
+selectionEvent=model.buildPresentation(selectionEdit,{...selectionInput,state:'realized'});adapter.apply(selectionEvent,selectionEdit);assert.deepEqual(selected(),[9,30]);
+selectionEdit=model.buildPresentation(selectionEvent,{...selectionInput,state:'realized',notes:'Historical correction',rows:[{fraction:9,officialPrice:750000,informedPrice:710000}]});adapter.apply(selectionEdit,selectionEvent);assert.deepEqual(selected(),[9,30]);
+adapter.apply(selectionEdit,selectionEdit);assert.deepEqual(selected(),[9,30]);assert.equal(selectionApp.state.data.events.filter(e=>e.id===selectionEvent.id).length,1);
+selectionApp.state.data=selectionApp.normalizeData(copy(selectionApp.state.data));assert.deepEqual(selected(),[9,30]);
+adapter.apply(model.buildPresentation(null,{...selectionInput,id:'repeat-selection',state:'realized'}),null);assert.deepEqual(selected(),[9,30]);assert.equal(selectionApp.state.data.events.length,2);
+assert.deepEqual(copy(adapter.client('untouched')),selectionBaseline.clients[1]);
+for(const field of ['finalPrices','statuses','salePrices','saleCommissions','priceHistory'])assert.deepEqual(copy(selectionApp.state.data[field]),selectionBaseline[field]);
+assert.deepEqual(copy(adapter.client('selection-client').priorityHistory),selectionBaseline.clients[0].priorityHistory);
+console.log('Selection regression: subset realization, drafts, historical edits, retry, repeat and reload preserve unrelated preparation and commercial data.');

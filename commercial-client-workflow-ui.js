@@ -46,7 +46,9 @@
           const updated=d.updatePreferences?a.preferences.buildUpdate(current,d.preferencesDraft):null;
           const ev=model.buildCommunication(old,{...d,...(updated?{preferencesSnapshot:{preferences:updated.preferences,budgetMin:updated.budgetMin,budgetMax:updated.budgetMax}}:{})});
           if(JSON.stringify(ev)===d.original&&!updated){d.feedback='Sem alterações por guardar.';return}
-          a.applyCommunication(ev,old,updated);if(!old||d.contactState!==old.communicationHistory?.at(-1)?.contactState)model.decision(a.client(c.id),'contactStateHistory',d.contactState,{id:a.id(),eventId:ev.id,recordedAt:new Date().toISOString(),source:'communication'});
+          a.applyCommunication(ev,old,updated);
+          // Correcting a historical snapshot is not a new current-state decision.
+          if(!old)model.decision(a.client(c.id),'contactStateHistory',d.contactState,{id:a.id(),eventId:ev.id,recordedAt:new Date().toISOString(),source:'communication'});
           d.original=JSON.stringify(a.event(d.id));d.preferenceOriginal=JSON.stringify([a.client(c.id).preferences,a.client(c.id).manualPreferences,a.client(c.id).budgetMin,a.client(c.id).budgetMax]);
           const ok=await a.persist();if(ok){drafts.delete(c.id+':contact');a.feedback(true,'Comunicação guardada e sincronizada.')}else d.feedback='Comunicação preservada localmente. Sincronização por confirmar. Retome pelo indicador de sincronização.';
         }catch(error){d.feedback=error.message==='INVALID_INVESTMENT'?'Reveja o intervalo de investimento.':error.message}
