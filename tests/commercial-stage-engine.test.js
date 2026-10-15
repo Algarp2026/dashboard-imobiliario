@@ -35,7 +35,7 @@ check('Retroactive movement and stable ID tie-break',data([event('z','Desistênc
 check('Legacy and version 1 use identical movement semantics',data([event('legacy','Proposta recebida',9),event('version1','Contra-proposta enviada',24,'2026-10-02',{negotiationVersion:1,interest:'Vendido'})]),'Em negociação');
 const stale=reserved([reserve]);stale.clients[0]={...customer,stage:'Desistiu',stageManual:true,manualStage:'Desistiu'};
 assert.ok(check('Stale manual withdrawal cannot hide reservation',stale,'Reservado').review.length);
-const manualWithdrawal=data([]);Object.assign(manualWithdrawal.clients[0],{stageManual:true,manualStage:'Desistiu'});
+const manualWithdrawal=data([global]);Object.assign(manualWithdrawal.clients[0],{stageManual:true,manualStage:'Desistiu'});
 check('Explicit manual withdrawal without active opportunities',manualWithdrawal,'Desistiu');
 const staleSale=data([sale],{statuses:{9:'Vendido'},statusEventIds:{9:sale.id}});Object.assign(staleSale.clients[0],{stageManual:true,manualStage:'Desistiu'});
 check('Manual withdrawal cannot hide confirmed sale',staleSale,'Vendido');
@@ -101,7 +101,7 @@ assert.equal(deletionPlan.status,'Disponível','Deletion plan must be captured b
 assert.match(model.closingError(cancel,null,app.state.data,'r2','r1',app.commercialEffectForFraction),/mudou/);
 assert.match(model.closingError(cancel,null,app.state.data,'r1','r1',app.commercialEffectForFraction),/outro cliente/);
 const oldForeign=app.state.data.events[0];app.state.data.events=[];
-app.reapplyCommercialEffectsForFractions([24],oldForeign,null);
+assert.throws(()=>app.reapplyCommercialEffectsForFractions([24],oldForeign,null),/referências de origem/);
 assert.equal(app.state.data.statuses[9],'Reservado','Deletion limited to explicitly affected unit');
 app.state.data=app.normalizeData(reserved([reserve,withdraw]));
 const beforeReads=JSON.stringify(app.state.data),view=app.clientCommercialProjection(app.state.data.clients[0]);

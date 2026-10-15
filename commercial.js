@@ -2019,7 +2019,7 @@ function missingClientModules(){
   const required=[
     ['Preferências',window.THE_VIEW_CLIENT_PREFERENCES,['draft','toggle','buildUpdate','projection']],
     ['Frações',window.THE_VIEW_FRACTION_RECOMMENDATIONS,['evaluate','filter','search']],
-    ['Acompanhamento comercial',window.THE_VIEW_CLIENT_WORKFLOW,['contactInfo','portfolio','buildCommunication','buildPresentation','closingError','clientProjection','relation','effectiveEffect','effectTransition']],
+    ['Acompanhamento comercial',window.THE_VIEW_CLIENT_WORKFLOW,['contactInfo','portfolio','buildCommunication','buildPresentation','closingError','clientProjection','relation','effectiveEffect','effectTransition','globalWithdrawal','confirmedRequalification','reopensOpportunity']],
     ['Recomendações comerciais',window.THE_VIEW_RECOMMENDATIONS,['buildContext','followupInfo','recommendClient']],
     ['Interface comercial',{create:window.createClientWorkflow},['create']]
   ];
@@ -2108,6 +2108,7 @@ function clientWorkflow(){
     preferences:window.THE_VIEW_CLIENT_PREFERENCES,
     notify:message=>notifyUser(message,'Acompanhamento comercial'),
     applyCommunication:(ev,old,updated)=>{
+      if(old&&hasCriticalCommercialEventChange(old,ev))throw Error(protectedEventEditError(old,ev)||'A origem comercial exige edição pelo evento original, com validação de integridade.');
       if(updated)Object.assign(client(ev.clientId),updated);
       if(old)state.data.events[state.data.events.findIndex(item=>item.id===old.id)]=ev;else state.data.events.push(ev);
       const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;recalculateResumoCliente(c.id);c.preferences=preferences;c.budget=budget;
@@ -2348,7 +2349,10 @@ function commercialTransitionPlan(numbers,oldEv,newEv){
   const model=window.THE_VIEW_CLIENT_WORKFLOW;
   if(!model?.effectTransition)throw Error('Motor comercial indisponível. Nenhuma operação foi aplicada.');
   if(newEv&&isCommercialClosingEvent(newEv)&&!uniqNum(newEv.fractions||[]).length)throw Error('Escolha explicitamente a fração da operação comercial.');
-  return uniqNum(numbers||[]).map(n=>[n,model.effectTransition(state.data,n,oldEv,newEv)]);
+  const referenced=oldEv?uniqNum([...Object.keys(state.data.statusEventIds||{}).filter(n=>state.data.statusEventIds[n]===oldEv.id),...Object.keys(state.data.salePriceEventIds||{}).filter(n=>state.data.salePriceEventIds[n]===oldEv.id),...Object.keys(state.data.saleCommissions||{}).filter(n=>state.data.saleCommissions[n]?.eventId===oldEv.id)]):[];
+  const affected=uniqNum(numbers||[]);
+  if(referenced.some(n=>!affected.includes(n)))throw Error('Existem referências de origem fora das frações indicadas. Revisão necessária; nenhuma operação foi aplicada.');
+  return affected.map(n=>[n,model.effectTransition(state.data,n,oldEv,newEv)]);
 }
 function reapplyCommercialEffectsForFractions(numbers,oldEv=null,newEv=null,plan=commercialTransitionPlan(numbers,oldEv,newEv)){
   state.data.statuses=state.data.statuses||{};
@@ -2369,7 +2373,38 @@ function reapplyCommercialEffectsForFractions(numbers,oldEv=null,newEv=null,plan
   });
 }
 function reapplyCommercialEffectsAfterEventEdit(oldEv,newEv){reapplyCommercialEffectsForFractions(uniqNum([...(oldEv?.fractions||[]),...(newEv?.fractions||[])]),oldEv,newEv)}
+function eventHasCommercialReferences(eventId){
+  if(!eventId)return false;
+  return Object.values(state.data.statusEventIds||{}).includes(eventId)||Object.values(state.data.salePriceEventIds||{}).includes(eventId)||Object.values(state.data.saleCommissions||{}).some(entry=>entry?.eventId===eventId);
+}
+function restrictedEventEdit(oldEv,newEv){
+  const boundary=ev=>ev&&(ev.type==='Alteração de estado'||ev.type==='Desistência'&&(window.THE_VIEW_CLIENT_WORKFLOW?.globalWithdrawal(ev)||ev.administrative||ev.globalWithdrawal!==undefined||ev.scope!==undefined)||ev.requalificationConfirmed!==undefined);
+  return boundary(oldEv)||boundary(newEv)||eventHasCommercialReferences(oldEv?.id)&&!isCommercialClosingEvent(oldEv);
+}
+function eventEditChangedFields(oldEv,newEv){
+  const defaults={time:'',amount:0,interest:'',channel:'',followup:'',followupDate:'',nextStep:'',nextActionDefinedAt:'',nextActionCompletedAt:'',preferenceBudget:0,informedPrices:[],fractions:[],withAgent:false,agentId:'',commissionType:'',commissionValue:0,commissionAmount:0};
+  const emptyPrefs=value=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(key=>Object.hasOwn(emptyPreferences(),key)&&value[key]==='');
+  return uniq([...Object.keys(oldEv),...Object.keys(newEv)]).filter(key=>{
+    const a=oldEv[key],b=newEv[key];
+    if(JSON.stringify(a)===JSON.stringify(b))return false;
+    if(key==='fractions'&&Array.isArray(a)&&Array.isArray(b)&&JSON.stringify(a.map(Number).sort((x,y)=>x-y))===JSON.stringify(b.map(Number).sort((x,y)=>x-y)))return false;
+    // Generic forms add empty fields. They are not edits and must not replace the original snapshot.
+    if((a===undefined||a===null)&&Object.hasOwn(defaults,key)&&JSON.stringify(b)===JSON.stringify(defaults[key]))return false;
+    if(key==='preferences'&&(a===undefined||a===null||emptyPrefs(a))&&emptyPrefs(b))return false;
+    return true;
+  });
+}
+function protectedEventEditError(oldEv,newEv){
+  if(!oldEv||!newEv)return'';
+  if(oldEv.id!==newEv.id)return'A identidade da origem do evento não pode ser alterada.';
+  const changed=eventEditChangedFields(oldEv,newEv).filter(key=>!['notes','objections'].includes(key));
+  if(restrictedEventEdit(oldEv,newEv)&&changed.length)return'Evento administrativo ou de ciclo protegido: a alteração compromete a proveniência. Apenas notas e objeções podem ser editadas; os restantes campos exigem revisão.';
+  const closingFields=['type','clientId','date','time','fractions','releaseReservation','amount','withAgent','agentId','commissionType','commissionValue','commissionAmount'];
+  if(eventHasCommercialReferences(oldEv.id)&&changed.some(key=>!closingFields.includes(key)))return'A alteração modifica metadados da origem comercial e exige revisão de integridade.';
+  return'';
+}
 function hasCriticalCommercialEventChange(oldEv,newEv){
+  if(protectedEventEditError(oldEv,newEv))return true;
   if(!isCommercialClosingEvent(oldEv)&&!isCommercialClosingEvent(newEv))return false;
   return oldEv.type!==newEv.type ||
     oldEv.clientId!==newEv.clientId || oldEv.date!==newEv.date || (oldEv.time||'')!==(newEv.time||'') ||
@@ -2379,11 +2414,18 @@ function hasCriticalCommercialEventChange(oldEv,newEv){
     !!oldEv.withAgent!==!!newEv.withAgent ||
     (oldEv.agentId||'')!==(newEv.agentId||'') ||
     (oldEv.commissionType||'')!==(newEv.commissionType||'') ||
-    Number(oldEv.commissionValue||0)!==Number(newEv.commissionValue||0);
+    Number(oldEv.commissionValue||0)!==Number(newEv.commissionValue||0)||
+    Number(oldEv.commissionAmount||0)!==Number(newEv.commissionAmount||0);
 }
 function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   const idx=state.data.events.findIndex(ev=>ev.id===oldEv.id);
   if(idx<0)return false;
+  if(state.data.events.filter(ev=>ev.id===oldEv.id).length!==1)throw Error('A origem do evento é ambígua. A integridade exige revisão antes da edição.');
+  const error=protectedEventEditError(oldEv,newEv);if(error)throw Error(error);
+  if(restrictedEventEdit(oldEv,newEv)){
+    state.data.events[idx]={...oldEv,...Object.fromEntries(['notes','objections'].filter(key=>Object.hasOwn(newEv,key)).map(key=>[key,newEv[key]]))};
+    return true;
+  }
   const affected=uniqNum([...(oldEv.fractions||[]),...(newEv.fractions||[])]);
   const plan=hasCriticalCommercialEventChange(oldEv,newEv)?commercialTransitionPlan(affected,oldEv,newEv):null;
   state.data.events[idx]=newEv;
@@ -2393,22 +2435,38 @@ function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   return true;
 }
 function createManualStatusEvent(n,oldStatus,newStatus){
-  return {id:id(),clientId:'',type:'Alteração de estado',date:today(),time:'',amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${oldStatus} para ${newStatus}`};
+  return {id:id(),clientId:'',type:'Alteração de estado',date:today(),time:new Date().toTimeString().slice(0,8),amount:0,interest:'',followup:'',followupDate:'',fractions:[n],objections:'',notes:`Estado alterado manualmente de ${oldStatus} para ${newStatus}`};
 }
 function applyManualStatusChange(n,oldStatus,newStatus,{unavailableReason=null,salePriceValue=null}={}){
+  const error=manualStatusChangeError(n,oldStatus,newStatus);
+  if(error)throw Error(error);
+  if(oldStatus===newStatus)return false;
+  if(newStatus==='Indisponível'&&!String(unavailableReason||'').trim())throw Error('Indique o motivo de indisponibilidade.');
+  const event=createManualStatusEvent(n,oldStatus||'Não confirmado',newStatus);
   state.data.statusEventIds=state.data.statusEventIds||{};
-  delete state.data.statusEventIds[n];
+  state.data.statusEventIds[n]=event.id;
   state.data.statuses[n]=newStatus;
   if(newStatus==='Indisponível'){
     state.data.unavailableReasons=state.data.unavailableReasons||{};
     if(unavailableReason!==null)state.data.unavailableReasons[n]=String(unavailableReason).trim();
   }
   if(newStatus==='Disponível'&&state.data.unavailableReasons)delete state.data.unavailableReasons[n];
-  if((newStatus==='Reservado'||newStatus==='Vendido')&&!state.data.salePrices[n]){
-    const f=getF(n);
-    state.data.salePrices[n]=salePriceValue?num(salePriceValue):finalPrice(f);
-  }
-  state.data.events.push(createManualStatusEvent(n,oldStatus,newStatus));
+  state.data.events.push(event);
+  return true;
+}
+function manualStatusChangeError(n,oldStatus,newStatus){
+  const actual=state.data.statuses?.[n];
+  if(!getF(Number(n))||!STATUS.includes(newStatus))return'Fração ou estado desconhecido. Reveja o ajuste.';
+  if(actual!==oldStatus)return'A disponibilidade mudou. Reveja a operação antes de confirmar.';
+  if(actual===newStatus)return'';
+  if(['Reservado','Vendido'].includes(actual)||['Reservado','Vendido'].includes(newStatus))return'Use o evento comercial correspondente. Reservas e vendas não podem ser alteradas por ajuste manual; operações ambíguas exigem revisão.';
+  if(actual!==undefined&&!['Disponível','Indisponível'].includes(actual))return'Disponibilidade não reconhecida. Revisão necessária.';
+  const source=state.data.statusEventIds?.[n],sources=(state.data.events||[]).filter(ev=>ev.id===source&&(ev.fractions||[]).map(Number).includes(Number(n)));
+  if(source&&(sources.length!==1||!['Alteração de estado','Reserva cancelada','Desistência'].includes(sources[0].type)))return'Origem comercial incompatível ou ambígua. Revisão necessária.';
+  if(source&&sources[0].type==='Desistência'&&!sources[0].releaseReservation)return'Desistência sem efeito de disponibilidade confirmado. Revisão necessária.';
+  if(state.data.salePriceEventIds?.[n]||state.data.saleCommissions?.[n])return'Existem preços/comissões com origem comercial. Resolva a operação antes do ajuste manual.';
+  if(!source&&(state.data.events||[]).some(ev=>(isReservationEvent(ev)||isSaleEvent(ev))&&(ev.fractions||[]).map(Number).includes(Number(n))))return'Histórico comercial sem origem confirmada. Revisão necessária antes do ajuste.';
+  return'';
 }
 
 function ensureClientAgentSelect(){
@@ -3036,20 +3094,20 @@ function openFractionHistoryModal(unitId){
   modal.querySelectorAll('[data-close-fraction-history]').forEach(btn=>btn.onclick=()=>{modal.remove();document.body.style.overflow=''});
 }
 async function handleManualStatusSelect(n,newStatus){
-  const f=getF(n),oldStatus=statusOf(f);
-  if(['Reservado','Vendido'].includes(newStatus)){
-    await notifyUser('Para registar uma reserva ou venda completa, use "Adicionar evento" e escolha o tipo Reserva ou Venda. Esta alteração manual ficará apenas como ajuste de estado.','Ajuste manual de estado');
-  }
-  let unavailableReason=null,salePriceValue=null;
-  if(newStatus==='Indisponível'){
-    unavailableReason=await promptUser(`${f.name} ficará indisponível. Indique o motivo:`,state.data.unavailableReasons?.[n]||'','Motivo de indisponibilidade');
-  }
-  if((newStatus==='Reservado'||newStatus==='Vendido')&&!state.data.salePrices[n]){
-    salePriceValue=await promptUser(`${f.name} foi marcado como ${newStatus}.\nPreço definido: ${money(finalPrice(f))}\nConfirme o preço real ou deixe vazio para usar o preço definido:`,Math.round(finalPrice(f)),'Preço real');
-  }
-  applyManualStatusChange(n,oldStatus,newStatus,{unavailableReason,salePriceValue});
-  save();
-  RenderFlow.salesChanged();
+  const f=getF(n),oldStatus=state.data.statuses?.[n],revision=sharedSync.revision,snapshot=JSON.stringify(state.data);
+  try{
+    const error=manualStatusChangeError(n,oldStatus,newStatus);if(error)throw Error(error);
+    if(oldStatus===newStatus)return;
+    let unavailableReason=null;
+    if(newStatus==='Indisponível'){
+      unavailableReason=await promptUser(`${f.name} ficará indisponível. Indique o motivo:`,state.data.unavailableReasons?.[n]||'','Motivo de indisponibilidade');
+      if(unavailableReason===null)return;
+      if(!String(unavailableReason).trim())throw Error('Indique o motivo de indisponibilidade.');
+    }else if(!await confirmUser(`Confirmar ${f.name} como Disponível?`,'Ajuste administrativo'))return;
+    if(revision!==sharedSync.revision||snapshot!==JSON.stringify(state.data))throw Error('A base comercial mudou. Reveja o ajuste.');
+    if(applyManualStatusChange(n,oldStatus,newStatus,{unavailableReason}))save();
+  }catch(error){await notifyUser(error.message,'Ajuste manual de estado')}
+  finally{RenderFlow.salesChanged()}
 }
 function clientNonActionFormSignature(){
   return JSON.stringify([...el.clientModal.querySelectorAll('input[id],select[id],textarea[id]')].filter(input=>!['clientNextStep','clientNextFollowup'].includes(input.id)).map(input=>[input.id,input.type==='checkbox'?input.checked:input.multiple?[...input.selectedOptions].map(option=>option.value):input.value]));
@@ -3318,6 +3376,25 @@ function clientEditPatch(before,values,mode){
   // Compare with the opened form, not the stored record: legacy display fallbacks must not become edits.
   return Object.fromEntries(fields.filter(key=>Object.hasOwn(before,key)&&JSON.stringify(before[key])!==JSON.stringify(values[key])).map(key=>[key,values[key]]));
 }
+async function prepareManualClientWithdrawal(c){
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;
+  if(!model?.globalWithdrawal||!model?.reopensOpportunity||!model?.confirmedRequalification)throw Error('Motor comercial indisponível. Recarregue a página.');
+  const events=model.ordered((state.data.events||[]).filter(ev=>ev.clientId===c.id)),last=events.filter(model.globalWithdrawal).at(-1);
+  if(last&&!events.some(ev=>model.eventKey(ev)>model.eventKey(last)&&(model.reopensOpportunity(ev)||model.confirmedRequalification(ev))))return null;
+  const revision=sharedSync.revision,snapshot=JSON.stringify(state.data);
+  if(!await confirmUser('Confirma a desistência global deste cliente? Encerra interesses não concluídos, preserva as associações e não liberta reservas nem reverte vendas. Uma nova oportunidade comercial pode reabrir o acompanhamento.','Desistência global'))return false;
+  if(revision!==sharedSync.revision||snapshot!==JSON.stringify(state.data))throw Error('A base comercial mudou. Reveja a decisão.');
+  return{id:id(),clientId:c.id,type:'Desistência',date:today(),time:new Date().toTimeString().slice(0,8),createdAt:new Date().toISOString(),fractions:[],globalWithdrawal:true,administrative:true,source:'manual-stage',notes:'Desistência global confirmada na edição do estado do cliente.'};
+}
+async function prepareManualClientRequalification(c){
+  const model=window.THE_VIEW_CLIENT_WORKFLOW;
+  if(!model?.confirmedRequalification)throw Error('Motor comercial indisponível. Recarregue a página.');
+  if(model.clientProjection(state.data,c).stage!=='Desistiu')return null;
+  const revision=sharedSync.revision,snapshot=JSON.stringify(state.data);
+  if(!await confirmUser('Confirma a requalificação deste cliente? Inicia um novo ciclo como Qualificado, sem recuperar negociações ou apresentações do ciclo anterior e sem alterar reservas, vendas ou preferências.','Requalificação do cliente'))return false;
+  if(revision!==sharedSync.revision||snapshot!==JSON.stringify(state.data))throw Error('A base comercial mudou. Reveja a decisão.');
+  return{id:id(),clientId:c.id,type:'Preferências recebidas',date:today(),time:new Date().toTimeString().slice(0,8),createdAt:new Date().toISOString(),fractions:[],requalificationConfirmed:true,administrative:true,actualCommunication:false,source:'manual-stage',notes:'Requalificação confirmada na edição do estado do cliente.'};
+}
 async function saveClientEdit(){
   const c=client(el.clientId.value);if(!c){await notifyUser('Não encontrei o cliente original. Reabra a ficha e tente novamente.','Cliente / Lead');return}
   const mode=el.clientModal.dataset.clientMode,values=readClientEditValues(),patch=clientEditPatch(state.clientFormSnapshot||{},values,mode);
@@ -3331,9 +3408,22 @@ async function saveClientEdit(){
     const redefine=state.definingNextAction&&state.nextActionFormSignature===clientNonActionFormSignature()&&clientSummaryFollowupInfo(c).reviewReason==='legacy';
     Object.assign(patch,nextActionMetadata(c,values.manualNextStep,values.manualNextFollowup,'client',undefined,redefine));
   }
+  let withdrawal=null;
+  if(mode==='stage'&&normalizeClientStage(values.stage)==='Desistiu'){
+    withdrawal=await prepareManualClientWithdrawal(c);if(withdrawal===false)return;
+    if(withdrawal)patch.stage='Desistiu';
+  }
+  let qualification=null;
+  if(mode==='stage'&&normalizeClientStage(values.stage)==='Qualificado'){
+    qualification=await prepareManualClientRequalification(c);if(qualification===false)return;
+    if(qualification)patch.stage='Qualificado';
+  }
   if(Object.hasOwn(patch,'stage'))Object.assign(patch,{stage:normalizeClientStage(patch.stage),stageManual:true,manualStage:normalizeClientStage(patch.stage)});
   if(!Object.keys(patch).length){closeClientModal();return}
   Object.assign(c,patch,{updated:new Date().toLocaleString('pt-PT'),updatedAt:new Date().toISOString()});
+  if(withdrawal)applyEventBusinessRules(withdrawal);
+  // This administrative decision must not replay historical preference snapshots.
+  if(qualification)state.data.events.push(qualification);
   if(mode!=='identity')recalculateResumoCliente(c.id);
   const confirmed=await persistClientChange();closeClientModal();RenderFlow.clientChanged();clientSaveFeedback(confirmed,mode==='identity'?'Dados do cliente atualizados na base partilhada.':'Acompanhamento atualizado na base partilhada.');
 }
