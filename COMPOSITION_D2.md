@@ -1,5 +1,9 @@
 # The View: Composicao D2
 
+Conclusao dos restantes modulos e ajustes da auditoria na mesma PR #12:
+[COMPOSITION_D2_PLATFORM.md](COMPOSITION_D2_PLATFORM.md). O texto abaixo regista
+a primeira etapa auditada em `125cba5`; a galeria dessa etapa foi preservada.
+
 ## Base e limites
 
 Branch `codex/composition-d2`, criada de `origin/main` em

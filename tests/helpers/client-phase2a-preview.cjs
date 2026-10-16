@@ -19,6 +19,7 @@ global.fetch=async(url,options)=>{
   return Response.json({done:true,response:{result:store.context[call.function](...call.parameters)}});
 };
 const allowed=new Set(['commercial.html','commercial.css','view-theme.css','commercial.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','data.json','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','vendor/lucide.min.js']);
+allowed.add('view-workspace.js');
 if(entryTests)for(const name of ['comparador.html','app.js','style.css'])allowed.add(name);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.jpg':'image/jpeg','.pdf':'application/pdf','.png':'image/png'};
 http.createServer(async(req,res)=>{
@@ -52,7 +53,8 @@ http.createServer(async(req,res)=>{
     if(name==='api/logout'){res.writeHead(302,{Location:'/access.html'});res.end();return}
     if(!allowed.has(name)&&name!=='config.js'&&!/^plantas\/planta-[a-z0-9.-]+$/.test(name)){res.writeHead(404);res.end();return}
     let content;
-    if(name==='config.js')content=Buffer.from('window.THE_VIEW_CONFIG={GOOGLE_SHEETS_WEBAPP_URL:"https://isolated-test.invalid/exec"};');
+    if(name==='data.json'&&process.env.D2_SYNTHETIC_CATALOG==='true')content=Buffer.from(JSON.stringify(require('./d2-synthetic-catalog.cjs')()));
+    else if(name==='config.js')content=Buffer.from('window.THE_VIEW_CONFIG={GOOGLE_SHEETS_WEBAPP_URL:"https://isolated-test.invalid/exec"};');
     else if(name==='commercial.js'){
       let source=fs.readFileSync(path.join(repo,name),'utf8');const begin=source.indexOf('const MAJUCA_IMPORT_RECORDS=['),end=source.indexOf('\n];',begin);if(begin<0||end<0)throw Error('Sanitization failed');source=source.slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+source.slice(end+3);content=Buffer.from(source);
     }else content=fs.readFileSync(path.join(repo,name));
