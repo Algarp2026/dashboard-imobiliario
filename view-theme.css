@@ -1,0 +1,174 @@
+/* Shared visual language, anchored in the commercial sidebar. No print rules. */
+@media screen {
+  :root {
+    --bg:#f6f8f7;--panel:#fff;--panel2:#fff;--text:#293530;--muted:#63716a;
+    --line:#dce3df;--success:#23785a;--danger:#a63f3b;
+    --shadow:0 4px 18px rgba(32,49,40,.05);--soft:0 2px 8px rgba(32,49,40,.04);
+    --radius-xl:8px;--radius-lg:8px;--radius-md:6px;
+  }
+  body,body:has(.ux-app-shell){background:var(--bg);font-size:14px;line-height:1.5}
+  h1,h2,h3,h4,p,span,button,a{letter-spacing:0}
+  h2{font-size:24px;line-height:1.3}h3{font-size:18px}h4{font-size:14px}
+  button,input,select,textarea,summary,a{touch-action:manipulation}
+  :is(button,input,select,textarea,summary,a):focus-visible{outline:2px solid #23785a;outline-offset:3px}
+  input[type=checkbox],input[type=radio]{accent-color:#23785a}
+  .primary-button,.ghost-button,.module-tab,.toggle-pill,.ghost-link{border-radius:6px;box-shadow:none;font-size:13px}
+  .primary-button{background:#245d48;min-height:38px;padding:10px 14px}
+  .primary-button:hover{background:#1c4d3b}
+  .ghost-button{background:#fff;min-height:38px;padding:9px 13px}
+  .ghost-button.ghost-button--light{background:#fff;color:#293530;border-color:#dce3df}
+  .ghost-button.ghost-button--light:hover{background:#e9f1ee;color:#18533d}
+  .primary-button:hover,.ghost-button:hover,.module-tab:hover{transform:none}
+  .module-tab.active{background:#e9f1ee;color:#18533d;box-shadow:inset 0 -2px #23785a}
+  .field>span{font-size:12px;font-weight:600}
+  .field input,.field select,.field textarea{border-radius:6px;border-color:var(--line);min-height:40px;padding:9px 11px;font-size:13px}
+  .field textarea{min-height:80px}
+  .table-wrap,.chart-wrap,.compare-panel,.fraction-history-sidebar,.modal,.error-box,.empty-state{border-radius:8px;box-shadow:none}
+  .data-table{font-size:13px;background:#fff}
+  .data-table th,.data-table td{padding:11px 12px}
+  .data-table thead th{background:#eff3f0;font-size:11px;text-transform:none;letter-spacing:0;color:#52635a}
+  .data-table tbody tr:hover{background:#f2f7f4}
+  .data-table input,.data-table select,.data-table textarea{border-radius:6px;max-width:100%}
+  .table-wrap{scrollbar-width:thin;overscroll-behavior-x:contain}
+  .kpi-card,.proposal-card,.fraction-card,.client-card,.agent-card,.decision-alert,.alert-card,.argument-card,.management-row,.mode-card{border-radius:8px;box-shadow:var(--soft);border-color:var(--line)}
+  .timeline-item{border-radius:6px;box-shadow:none;border-left-width:2px}
+  .badge{font-size:11px;line-height:1.45;border-radius:4px;letter-spacing:0}
+  .modal{background:#fff;box-shadow:0 16px 60px rgba(24,39,31,.2);padding:24px}
+  .modal-close{display:flex;align-items:center;justify-content:center;margin-left:auto;border-radius:6px;background:#edf3ef;color:var(--text);width:36px;height:36px;font-size:24px;z-index:2}
+  .modal .primary-button,.modal .ghost-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:normal}
+  #priceListModal.modal-backdrop .price-list-options section,#priceListModal.modal-backdrop .price-list-fractions-panel{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:14px 0;box-shadow:none}
+  #priceListModal.modal-backdrop .price-list-options h3,#priceListModal.modal-backdrop .price-list-fractions-head h3{color:var(--text)}
+  #priceListModal.modal-backdrop .price-list-fractions-head strong,#priceListModal.modal-backdrop .price-list-action-chip,#priceListModal.modal-backdrop .price-list-search,#priceListModal.modal-backdrop .price-list-fraction-chip{border-radius:6px;color:var(--text);border-color:var(--line)}
+  #priceListModal.modal-backdrop .price-list-fraction-chip.is-selected{background:#e9f1ee;border-color:#8fb29f;box-shadow:none}
+  #priceListModal.modal-backdrop .price-list-fraction-chip.is-selected strong,#priceListModal.modal-backdrop .price-list-fraction-chip.is-selected span{color:#18533d}
+  #clientsSummaryPdfModal.modal-backdrop h3{color:var(--text)}
+  .error-box{border-left:3px solid var(--danger)}
+  .panel{border:0;border-radius:0;box-shadow:none;backdrop-filter:none;background:transparent;padding:20px 0}
+  .panel+.panel{border-top:1px solid var(--line)}
+  .section-heading h2{font-size:24px;margin:4px 0 8px;line-height:1.3}
+  .section-heading .muted{font-size:13px;max-width:65em}
+  .eyebrow{font-size:10px;letter-spacing:0}
+  body:has(.ux-app-shell) .hero{height:76px;min-height:76px;padding:0 24px;justify-content:center}
+  body:has(.ux-app-shell) .hero .topbar{padding:12px 0;flex-direction:row;align-items:center}
+  .hero__image{object-position:center 58%}
+  .hero .brand-pill,.hero .status-pill{padding:6px 10px;border-radius:6px;font-size:12px}
+  .hero .ghost-link{padding:7px 10px;font-size:12px}
+  .hero .brand-dot{box-shadow:none}
+  body:has(.ux-app-shell) .hero #dataStatus{display:none}
+  #commercialSyncStatus[data-phase="synced"][data-can-write="true"]:not(.ux-sync-expanded){display:none}
+  #commercialSyncStatus small{display:block;margin-top:3px}
+  .ux-app-shell #salesSubTabs{display:none}
+  .ux-app-shell #salesQuickActions{padding:8px 0!important;margin-bottom:0!important}
+  .ux-management-menu{position:relative;display:flex;justify-content:flex-end;font-size:12px}
+  .ux-management-menu>summary{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--muted);padding:6px 0;list-style:none}
+  .ux-management-menu>summary::-webkit-details-marker{display:none}
+  .ux-management-menu[open]>.top-actions{margin:8px 0;padding:10px 0;border-block:1px solid var(--line);justify-content:flex-start}
+  .ux-app-shell{gap:24px}
+  .ux-app-shell .ux-sidebar{background:var(--bg)}
+  .ux-app-shell .primary-button{background:#245d48}
+  .ux-app-shell .primary-button:hover{background:#1c4d3b}
+  .ux-app-shell .ux-main-navigation .module-tab.active{box-shadow:inset 3px 0 #23785a}
+  .ux-app-shell .ux-app-header{background:rgba(246,248,247,.97);min-height:56px;padding:8px 0}
+  .ux-app-shell .client-sticky-actions{top:var(--commercial-header-height,56px);box-shadow:none;border:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--bg);padding:8px 0}
+  .ux-app-shell .client-sticky-actions__context{display:none}
+  .ux-app-shell .client-sticky-actions__buttons{justify-content:flex-start;flex-wrap:wrap}
+  .ux-app-shell .client-sticky-actions__buttons .ghost-button{white-space:normal}
+  .ux-app-shell #salesSubTabs{background:transparent;border-bottom:1px solid var(--line);border-radius:0;padding:4px 0;box-shadow:none}
+  .ux-app-shell #salesSubTabs .module-tab.active{background:#e9f1ee;color:#18533d}
+  .ux-app-shell .ux-report-options section{border:0;border-radius:0;box-shadow:none;padding:16px 0}
+  .ux-app-shell .fraction-history-sidebar{background:transparent;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none}
+  .ux-app-shell .ux-client-profile-active .client-sticky-actions{display:none}
+  .ux-app-shell .ux-client-profile-active [data-client-header-edit]{display:inline-flex;background:#245d48;color:#fff;border-color:#245d48}
+  .ux-client-profile-active #clientPanel-data [data-edit-client]{display:none}
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesQuickActions,
+  body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidden)) #salesSubTabs{display:none}
+  .ux-client-profile-active .ux-client-workspace__top{padding:12px 0 0}
+  .ux-client-profile-active .ux-client-return{margin-bottom:12px}
+  .ux-app-shell .ux-client-profile-active .ux-client-title{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:nowrap}
+  .ux-app-shell .ux-client-profile-active .ux-client-title h2{font-size:28px;margin-top:6px;color:var(--text);overflow-wrap:anywhere}
+  .ux-client-profile-active .ux-client-title>button{flex-shrink:0}
+  .ux-client-profile-active .ux-client-contact{gap:5px 18px;margin:10px 0 0;color:var(--muted)}
+  .ux-client-contact a{overflow-wrap:anywhere}
+  .ux-client-profile-active .ux-client-last-interaction{margin-top:6px;font-size:11px}
+  .ux-client-workspace__top>.ux-next-action{margin:14px 0 0;padding:12px 14px;background:#eaf2ee;border-left:2px solid #28765b;display:flex;justify-content:space-between;gap:14px;align-items:center}
+  .ux-client-workspace__top>.ux-next-action>div{min-width:0}
+  .ux-client-workspace__top>.ux-next-action strong{font-size:14px;overflow-wrap:anywhere}
+  .ux-client-workspace__top>.ux-next-action p{margin:4px 0 0;font-size:12px}
+  .ux-client-workspace__top>.ux-next-action .top-actions{flex-shrink:0}
+  .ux-client-profile-active .ux-client-tabs{top:var(--commercial-header-height,56px);background:rgba(246,248,247,.98);z-index:10;margin-top:8px}
+  .ux-client-profile-active .ux-client-tabs>button{padding:12px 16px;font-size:13px}
+  .ux-client-profile-active .ux-client-tabs>button[aria-selected=true]{color:#18533d;background:#e9f1ee;border-bottom-color:#23785a}
+  .ux-client-profile-active .ux-client-workspace__content{max-width:none;padding:18px 0}
+  .ux-app-shell .ux-client-profile-active #clientDetail{scroll-margin-top:calc(var(--commercial-header-height,56px) + 8px)}
+  .ux-contact-controls{margin-top:0;border-top:0;padding-top:0}
+  .ux-client-profile-active .ux-client-details>summary{font-size:13px;padding:12px 0}
+  .ux-opportunity-group{margin-block:22px}
+  .ux-opportunity-group>h4,.ux-opportunity-group>summary{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;margin:0 0 12px;color:var(--text)}
+  .ux-opportunity-count{font-size:11px;background:#e9eeeb;color:#53645a;padding:2px 7px;border-radius:4px;min-width:24px;text-align:center}
+  .ux-opportunity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  .ux-opportunity-grid>.ux-opportunity:only-child{grid-column:1/-1}
+  .ux-opportunity{min-width:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--soft)}
+  .ux-opportunity>summary{list-style:none;padding:16px;cursor:pointer;display:block}
+  .ux-opportunity>summary::-webkit-details-marker{display:none}
+  .ux-opportunity[open]{grid-column:1/-1;border-color:#9db8aa;box-shadow:none}
+  .ux-opportunity[open]>summary{border-bottom:1px solid var(--line);background:#f3f7f4}
+  .ux-opportunity-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .ux-opportunity-heading>strong{font-size:17px}
+  .ux-opportunity-state{font-size:11px;padding:3px 7px;border-radius:4px;background:#eaf2ee;color:#245d48}
+  .ux-opportunity-state--closed{background:#faefee;color:#a63f3b}
+  .ux-opportunity-meta,.ux-opportunity-availability{display:block;font-size:12px;color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+  .ux-opportunity-availability strong{font-weight:600;color:var(--text)}
+  .ux-opportunity-prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding-block:14px;margin-top:8px;border-block:1px solid #edf1ee}
+  .ux-opportunity-prices>span{font-size:10px;color:var(--muted);min-width:0}
+  .ux-opportunity-prices strong{display:block;font-size:13px;color:var(--text);margin-top:4px;overflow-wrap:anywhere}
+  .ux-opportunity-last{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);margin-top:12px}
+  .ux-opportunity[open] .ux-opportunity-last .ux-icon{transform:rotate(180deg)}
+  .ux-opportunity-detail{padding:16px;min-width:0}
+  .ux-opportunity-detail>.top-actions{justify-content:flex-start}
+  .ux-opportunity-origin{font-size:12px;overflow-wrap:anywhere;border-left:2px solid #8b9e93;padding:8px 12px;background:#f2f5f3}
+  .ux-opportunity-origin span{color:var(--muted)}
+  .ux-opportunity[data-opportunity-group="unavailable"] .ux-opportunity-state{background:#eff1f2;color:#52616a}
+  .ux-opportunity-detail .timeline{margin-top:12px}
+  .ux-opportunity-closed{border-top:1px solid var(--line);padding-top:18px}
+  .ux-opportunity-closed>summary{cursor:pointer;display:list-item;list-style-position:inside}
+  .ux-opportunity-closed>summary .ux-opportunity-count{margin-left:8px}
+  .ux-opportunity-closed[open]>.ux-opportunity-grid{margin-top:14px}
+  .app-shell>.hero{min-height:180px;padding:16px 24px 20px;gap:16px}
+  .app-shell .hero__content{margin:0;max-width:900px}
+  .app-shell .hero h1{font-size:28px;line-height:1.2}
+  .app-shell .panel--welcome h2{font-size:26px;line-height:1.3}
+  .app-shell .hero p:last-child{font-size:13px;margin:6px 0 0;line-height:1.5}
+  .app-shell>.main{margin:0 auto 40px;max-width:1600px}
+  .app-shell .module-tabs{background:transparent;box-shadow:none;border:0;border-radius:0;border-bottom:1px solid var(--line);padding:6px 0}
+  .app-shell .mode-card,.app-shell .intro-panel{box-shadow:none;background:#fff;border:1px solid var(--line);border-radius:8px}
+  .app-shell .fraction-analysis__section{background:transparent}
+  @media(max-width:1100px){
+    .ux-opportunity-grid{grid-template-columns:1fr}
+    .ux-app-shell .section-heading{flex-direction:row;flex-wrap:wrap}
+    .ux-app-shell .ux-app-header{min-height:56px}
+  }
+  @media(max-width:760px){
+    .modal{padding:18px;max-height:92dvh}.modal-backdrop{padding:10px}
+    .ux-app-shell{width:calc(100% - 24px)}
+    body:has(.ux-app-shell) .hero{height:auto;min-height:64px;padding:0 12px}
+    .hero .topbar__actions{gap:6px}.hero .status-pill{font-size:10px}
+    body:has(.ux-app-shell) .hero .topbar{gap:8px;flex-wrap:wrap;padding:10px 0}
+    .ux-app-shell .ux-app-header{flex-direction:column-reverse;gap:6px;padding:6px 0}
+    .ux-client-profile-active .ux-client-title>button{font-size:12px;padding:8px 10px;min-height:36px}
+    .ux-app-shell .ux-client-profile-active .ux-client-title h2{font-size:23px}
+    .ux-client-profile-active .ux-client-contact{font-size:12px}
+    .ux-client-workspace__top>.ux-next-action{align-items:flex-start;flex-direction:column;gap:6px;padding:10px 12px}
+    .ux-client-workspace__top>.ux-next-action .top-actions{margin:0;justify-content:flex-start;flex-wrap:wrap}
+    .ux-client-profile-active .ux-client-tabs{margin-top:6px;scrollbar-width:thin}
+    .ux-client-profile-active .ux-client-tabs>button{padding:10px;font-size:12px}
+    .ux-client-profile-active .ux-client-workspace__content{padding-top:14px}
+    .ux-contact-controls .crm-detail-section__heading{flex-wrap:wrap;gap:8px}
+    .ux-contact-controls .top-actions{justify-content:flex-start;gap:6px}
+    .ux-opportunity>summary{padding:14px}.ux-opportunity-detail{padding:14px}
+    .ux-opportunity-prices{gap:8px}.ux-opportunity-prices strong{font-size:12px}
+    .app-shell>.hero{min-height:160px;padding:14px 12px}
+    .app-shell .hero h1{font-size:25px}.app-shell .hero__content>p:last-child{display:none}
+    .app-shell .module-tabs{flex-wrap:nowrap;overflow:auto}
+    .app-shell .module-tab{flex-shrink:0;white-space:nowrap}
+  }
+}

@@ -1192,19 +1192,14 @@ function ensureSalesManagementTabs(){
     quick=document.createElement('section');
     quick.id='salesQuickActions';
     quick.className='panel sales-quick-actions';
-    quick.innerHTML=`<div class="section-heading compact">
-      <div>
-        <p class="eyebrow eyebrow--dark">Ações rápidas</p>
-        <h2>Gestão de Vendas e Propostas</h2>
-        <p class="muted">Crie clientes, agentes e eventos sem sair da visão atual.</p>
-      </div>
+    quick.innerHTML=`<details class="ux-management-menu"><summary>${uxIcon('ellipsis')}Ferramentas de gestão</summary>
       <div class="top-actions">
         <button class="primary-button" id="quickNewClient" type="button">Novo Cliente</button>
         <button class="ghost-button" id="quickNewAgent" type="button">Novo Agente</button>
         <button class="ghost-button" id="quickNewEvent" type="button">Novo Evento</button>
         <button class="ghost-button danger" id="quickMaintenance" type="button">Limpar Testes</button>
       </div>
-    </div>`;
+    </details>`;
     tab.insertBefore(quick, tab.firstChild);
     const btnClient=quick.querySelector('#quickNewClient');
     const btnAgent=quick.querySelector('#quickNewAgent');
@@ -1279,13 +1274,6 @@ function ensureClientStickyActions(clientPanel){
     if(newClient)actions.appendChild(newClient);
     if(addEvent){addEvent.textContent='Registar contacto';addEvent.onclick=()=>openClientContact();actions.appendChild(addEvent)}
     if(newClient)newClient.className='ghost-button';
-    const newAgent=document.createElement('button');
-    newAgent.id='clientStickyNewAgent';newAgent.className='ghost-button';newAgent.type='button';newAgent.textContent='Novo Agente';newAgent.onclick=()=>openAgentModal('');
-    const printSummary=document.createElement('button');
-    printSummary.id='printClientsSummaryBtn';printSummary.className='ghost-button';printSummary.type='button';printSummary.textContent='Imprimir Resumo de Clientes';printSummary.onclick=openClientsSummaryPdfModal;
-    const editClient=document.createElement('button');
-    editClient.id='clientStickyEditClient';editClient.className='ghost-button';editClient.type='button';editClient.textContent='Editar Cliente';editClient.onclick=()=>{if(client(state.selectedClientId))openClientModal(state.selectedClientId)};
-    actions.append(newAgent,printSummary,editClient);
     if(!existingActions.children.length)existingActions.remove();
     heading.after(bar);
   }
@@ -2075,13 +2063,16 @@ function renderClientDetail(){
     presentation:heading('Apresentação',action('presentation','Registar apresentação','presentation')+action('documentation','Registar documentação','send'))+`<section id="clientPreparedFractions">${heading(`Apresentação preparada <span class="muted small">${preparation.length} frações</span>`,action('select-presentation','Adicionar / retirar frações','list-checks'))}${preparation.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Fração</th><th>Tipologia / Piso</th><th>Preço comercial oficial</th><th>Disponibilidade</th></tr></thead><tbody>${preparation.map(f=>`<tr><td>${fractionReference(f)}</td><td>${esc(f.typology)} · ${esc(f.floorLabel)}</td><td data-prepared-price="${f.number}">${displayMoney(finalPrice(f))}</td><td data-prepared-status="${f.number}"><span class="${badge(statusOf(f))}">${esc(statusOf(f))}</span></td></tr>`).join('')}</tbody></table></div><div class="ux-client-secondary-actions">${action('proposal','Definir preços e gerar PDF','file-text')}</div>`:'<p class="muted">Ainda não existem frações selecionadas para apresentação.</p>'}</section><section class="ux-client-section" id="clientPresentedFractions">${heading(`Apresentações realizadas <span class="muted small">${presented.length} frações</span>`)}${clientPresentedFractionsMarkup(presented)}</section><details id="clientPresentationHistory" class="ux-client-details"><summary>Histórico de apresentações e documentação (${presentationEvents.length})</summary><div class="timeline ux-client-timeline">${presentationEvents.length?presentationEvents.map(clientTimelineItem).join(''):'<p class="muted">Sem apresentações ou documentação registadas.</p>'}</div></details>`,
     negotiation:heading('Negociação',action('proposal','Criar proposta','file-text')+action('stage','Atualizar estado comercial','tag'))+clientNegotiationMarkup(c,chronological,related)+`<section class="ux-client-section">${heading('Registar negociação')}<div class="ux-client-negotiation"><label class="field"><span>Evento comercial</span><select id="clientNegotiationType">${['Contra-proposta recebida','Contra-proposta enviada','Reserva efetuada','Reserva cancelada','Venda concluída','Desistência'].map(type=>`<option>${esc(type)}</option>`).join('')}</select></label>${action('negotiation','Registar evento','plus')}</div></section><section class="ux-client-section">${heading('Próxima ação do cliente')}${clientNextActionMarkup(followup,recommendation)}<div class="ux-client-secondary-actions">${action('contact','Registar contacto','phone')}${action('note','Adicionar observação','message-square')}</div></section><details id="clientFullHistory" class="ux-client-details" open><summary>Histórico comercial completo (${evs.length})</summary><div class="top-actions">${action('event','Adicionar evento','plus')}</div><div class="timeline ux-client-timeline">${evs.length?evs.map(clientTimelineItem).join(''):'<p class="muted">Sem interações registadas.</p>'}</div></details>`
   };
-  panels.data=workflow.contactMarkup(c)+`<details class="ux-client-details"><summary>Dados e ferramentas complementares</summary>${panels.data}</details>`;panels.presentation=workflow.presentationMarkup(c);panels.negotiation=workflow.negotiationMarkup(c);
+  panels.data=workflow.contactMarkup(c)+`<details class="ux-client-details"><summary>Dados complementares</summary>${clientFactsMarkup([['Nacionalidade',c.nationality],['NIF',c.nif],['Agente',associatedAgent?.name||c.agent],['Imobiliária',c.agency||associatedAgent?.agency],['Registo',registered],['Observações gerais',c.notes]])}</details><details class="ux-client-details"><summary>Resumo e ferramentas comerciais</summary>${overview}<div id="clientRecommendation">${clientRecommendationMarkup(clientAutomaticRecommendation(recommendation))}</div><div class="ux-client-secondary-actions">${action('stage','Estado do cliente','tag')}${action('note','Adicionar observação','message-square')}</div></details>`;panels.presentation=workflow.presentationMarkup(c);panels.negotiation=workflow.negotiationMarkup(c);
   {
     const content=panels.preferences;
     panels.preferences=inlinePreferencesMarkup(c)+(commercialUx.preferenceDraft?.clientId===c.id?'':content.slice(content.indexOf('<dl')))+archivedPreferencesMarkup(c);
   }
   panels.fractions=clientFractionWorkspaceMarkup(c)+`<section class="ux-client-section" id="clientRelatedDetails">${heading('Frações relacionadas',action('associate','Editar frações de interesse','link'))}${clientFractionTiles(related,'Ainda não existem frações associadas.')}${fractionHistory}</section>`;
   el.clientDetail.innerHTML=`<div class="ux-client-workspace"><div class="ux-client-workspace__top"><nav class="ux-client-return" aria-label="Navegação do cliente"><button class="ux-text-button" type="button" data-client-return>${uxIcon('arrow-left')}Voltar aos clientes</button><span>Ficha de cliente</span><button class="ghost-button compact-button ux-client-open" type="button" data-open-client-profile>${uxIcon('arrow-up-right')}Abrir ficha completa</button></nav><header class="client-detail-header"><div class="ux-client-title"><div><span class="badge badge--neutral">${esc(c.stage||'Novo Lead')}</span><h2 tabindex="-1">${esc(c.name||'Cliente sem nome')}</h2></div><button class="ghost-button compact-button" type="button" data-client-header-edit>${uxIcon('pencil')}Editar dados</button></div><div class="ux-client-contact">${c.phone?`<a href="tel:${safe(c.phone).trim().startsWith('+')?'+':''}${attr(normalizedPhone(c.phone))}">${uxIcon('phone')}${esc(c.phone)}</a>`:''}${c.email?`<a href="mailto:${attr(c.email)}">${uxIcon('mail')}${esc(c.email)}</a>`:''}${c.origin||c.originManual?`<span>Origem: ${esc(clientOriginLabel(c))}</span>`:''}${registered?`<span>Registo: ${esc(formatCommercialDate(registered.slice(0,10))==='—'?registered:formatCommercialDate(registered.slice(0,10)))}</span>`:''}</div>${latest?`<p class="ux-client-last-interaction"><span>Última interação</span> ${esc(latest.type||'Evento')} <time>${esc(formatTimelineDate(latest.date,latest.time))}</time></p>`:''}</header></div>${c.commercialReview?.length?`<p role="status" class="muted" data-commercial-review>Necessita de revisão: ${c.commercialReview.map(esc).join('; ')}</p>`:''}<div class="ux-client-tabs" role="tablist" aria-label="Ficha do cliente">${CLIENT_DETAIL_TABS.map(([key,label,icon])=>`<button id="clientTab-${key}" type="button" role="tab" aria-controls="clientPanel-${key}" aria-selected="false" tabindex="-1" data-ux-client-tab="${key}">${uxIcon(icon)}${label}</button>`).join('')}</div><div class="ux-client-workspace__content">${CLIENT_DETAIL_TABS.map(([key])=>`<section id="clientPanel-${key}" role="tabpanel" aria-labelledby="clientTab-${key}" tabindex="0" data-client-panel="${key}" hidden>${panels[key]}</section>`).join('')}</div></div>`;
+  const headerEdit=el.clientDetail.querySelector('[data-client-header-edit]');
+  if(headerEdit)headerEdit.innerHTML=uxIcon('pencil')+'Editar cliente';
+  el.clientDetail.querySelector('.ux-client-workspace__top')?.insertAdjacentHTML('beforeend',clientNextActionMarkup(followup,recommendation));
   el.clientDetail.querySelector('[data-edit-client]')?.addEventListener('click',()=>openClientModal(c.id));
   el.clientDetail.querySelector('[data-client-header-edit]')?.addEventListener('click',()=>openClientModal(c.id));
   if(window.THE_VIEW_CLIENT_WORKFLOW?.priority(c)){const mark=document.createElement('span');mark.className='ux-client-priority';mark.title='Cliente prioritário';mark.innerHTML=uxIcon('star')+'Cliente prioritário';el.clientDetail.querySelector('.ux-client-title>div')?.appendChild(mark)}
@@ -2111,7 +2102,9 @@ function clientWorkflow(){
       if(old&&hasCriticalCommercialEventChange(old,ev))throw Error(protectedEventEditError(old,ev)||'A origem comercial exige edição pelo evento original, com validação de integridade.');
       if(updated)Object.assign(client(ev.clientId),updated);
       if(old)state.data.events[state.data.events.findIndex(item=>item.id===old.id)]=ev;else state.data.events.push(ev);
-      const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;recalculateResumoCliente(c.id);c.preferences=preferences;c.budget=budget;
+      const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;recalculateResumoCliente(c.id);
+      if(preferences===undefined)delete c.preferences;else c.preferences=preferences;
+      if(budget===undefined)delete c.budget;else c.budget=budget;
     },
     rows:clientFractionSource,data:()=>state.data,selection:presentationSelection,revision:()=>sharedSync.revision,
     recommend:(c,rows)=>window.THE_VIEW_FRACTION_RECOMMENDATIONS.evaluate(c,rows),status:r=>r?clientFractionStatus(r):'Não confirmada',price:r=>r?clientFractionPrice(r):'Não confirmado',
@@ -2126,7 +2119,8 @@ function clientWorkflow(){
     apply:(ev,old)=>{
       const c=client(ev.clientId),preferences=c.preferences,budget=c.budget;
       if(old)replaceEventAndReapplyBusinessRules(old,ev);else applyEventBusinessRules(ev);
-      c.preferences=preferences;c.budget=budget;
+      if(preferences===undefined)delete c.preferences;else c.preferences=preferences;
+      if(budget===undefined)delete c.budget;else c.budget=budget;
       // Only the first realization consumes preparation; historical edits leave it intact.
       if(ev.presentationHistory&&!isPresentationDraft(ev)&&(!old||isPresentationDraft(old)))consumePresentationSelection(c,ev);
     },
@@ -4129,7 +4123,7 @@ function ensureCommercialNavigation(nav,tools){
   const shell=document.createElement('div');shell.className='ux-app-shell';main.before(shell);
   const sidebar=document.createElement('aside');sidebar.id='commercialSidebar';sidebar.className='ux-sidebar';
   sidebar.innerHTML=`<div class="ux-sidebar-brand"><strong>The View</strong><button class="ux-icon-button" type="button" data-ux-sidebar aria-label="Recolher navegação" aria-expanded="true" title="Recolher navegação">${uxIcon('panel-left-close')}</button></div>`;
-  const groups=[['Início',[['dashboard','','Dashboard','layout-dashboard']]],['Comercial',[['sales','clients','Clientes','users'],['sales','fractions','Frações / Vendas','building-2'],['proposals','','Propostas','file-text'],['sales','agents','Agentes','contact-round']]],['Análise',[['compare','','Comparador','columns-3'],['prices','','Definição de Preços','sliders-horizontal'],['history','history','Histórico','history']]],['Relatórios',[['reports','','Exportações / PDFs','download']]]];
+  const groups=[['Início',[['dashboard','','Dashboard','layout-dashboard']]],['Comercial',[['sales','clients','Clientes','users'],['sales','fractions','Frações / Vendas','building-2'],['proposals','','Propostas','file-text'],['sales','agents','Agentes','contact-round']]],['Análise',[['compare','','Comparador','columns-3'],['prices','','Definição de Preços','sliders-horizontal'],['history','history','Histórico','history'],['history','events','Eventos','calendar-days']]],['Relatórios',[['reports','','Exportações / PDFs','download']]]];
   nav.className='ux-main-navigation';nav.setAttribute('aria-label','Navegação comercial');
   nav.innerHTML=groups.map(([label,items])=>`<div class="ux-nav-group"><span>${esc(label)}</span>${items.map(([tab,view,text,icon])=>`<button class="module-tab" type="button" data-tab="${tab}" ${view?`data-view="${view}"`:''} aria-label="${attr(text)}" title="${attr(text)}">${uxIcon(icon)}<span>${esc(text)}</span></button>`).join('')}</div>`).join('');
   sidebar.appendChild(nav);shell.append(sidebar,main);main.classList.add('ux-main-content');
@@ -4137,6 +4131,7 @@ function ensureCommercialNavigation(nav,tools){
   if(window.ResizeObserver){commercialUx.headerObserver=new ResizeObserver(()=>document.documentElement.style.setProperty('--commercial-header-height',`${tools.getBoundingClientRect().height}px`));commercialUx.headerObserver.observe(tools)}
   const reports=document.createElement('section');reports.id='tab-reports';reports.className='tab-section hidden';
   reports.innerHTML=`<section class="panel"><div class="section-heading"><div><p class="eyebrow eyebrow--dark">Relatórios</p><h2>Exportações / PDFs</h2></div></div><div class="ux-report-options"><section><h3>Documentos</h3><button class="ghost-button" type="button" data-ux-export="proposal">${uxIcon('file-text')}Proposta Cliente</button><button class="ghost-button" type="button" data-ux-export="price-list">${uxIcon('printer')}Lista de Preços</button><button class="ghost-button" type="button" data-ux-export="clients">${uxIcon('users')}Resumo de Clientes</button></section><section><h3>Exportações de dados</h3><button class="ghost-button" type="button" data-ux-export="price-history">${uxIcon('history')}Histórico de preços</button><button class="ghost-button" type="button" data-ux-export="events">${uxIcon('download')}Eventos comerciais</button></section></div><details class="ux-report-maintenance"><summary>Dados e manutenção</summary><div class="top-actions"></div></details></section>`;
+  const clientsReport=reports.querySelector('[data-ux-export="clients"]');clientsReport.id='printClientsSummaryBtn';clientsReport.innerHTML=uxIcon('users')+'Imprimir Resumo de Clientes';
   reports.querySelector('.ux-report-maintenance .top-actions').append(...actions.children);main.appendChild(reports);oldPanel.remove();
   loadCommercialPreferences();updateCommercialNavigation();
   renderUxIcons();
@@ -4144,7 +4139,7 @@ function ensureCommercialNavigation(nav,tools){
 function updateCommercialNavigation(){
   document.querySelector('.ux-app-shell')?.classList.toggle('ux-sidebar-collapsed',!!commercialUx.collapsed);
   const tab=state.tab==='history'&&['clients','fractions','agents'].includes(state.salesSubtab)?'sales':state.tab;
-  document.querySelectorAll('#commercialSidebar [data-tab]').forEach(button=>{const active=button.dataset.tab===tab&&(!button.dataset.view||button.dataset.view===state.salesSubtab||tab==='history'&&state.salesSubtab==='events');button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});
+  document.querySelectorAll('#commercialSidebar [data-tab]').forEach(button=>{const active=button.dataset.tab===tab&&(!button.dataset.view||button.dataset.view===state.salesSubtab);button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});
   const toggle=document.querySelector('[data-ux-sidebar]');if(toggle){toggle.setAttribute('aria-expanded',String(!commercialUx.collapsed));toggle.title=commercialUx.collapsed?'Expandir navegação':'Recolher navegação';toggle.setAttribute('aria-label',toggle.title)}
   const newClient=document.getElementById('quickNewClient');if(newClient)newClient.className=state.tab==='sales'&&state.salesSubtab==='clients'&&client(state.selectedClientId)?'ghost-button':'primary-button';
 }
@@ -4602,10 +4597,12 @@ function renderSharedSyncStatus(){
   let bar=document.getElementById('commercialSyncStatus');
   if(!bar){const main=document.querySelector?.('main');if(!main)return;bar=document.createElement('section');bar.id='commercialSyncStatus';bar.setAttribute('aria-live','polite');main.prepend(bar)}
   const header=document.getElementById('commercialAppHeader');
+  bar.dataset.phase=sharedSync.phase;
+  bar.dataset.canWrite=String(sharedSync.canWrite);
   if(header){
     let badge=document.getElementById('commercialSyncBadge');
     if(!badge){badge=document.createElement('button');badge.id='commercialSyncBadge';badge.type='button';badge.className='ux-sync-indicator';header.appendChild(badge)}
-    badge.textContent=label;badge.dataset.phase=sharedSync.phase;badge.title=commercialDataOriginLabel();badge.setAttribute('aria-label','Ver detalhes da sincronização: '+label);badge.onclick=()=>bar.scrollIntoView({block:'start',behavior:'smooth'});
+    badge.textContent=label;badge.dataset.phase=sharedSync.phase;badge.title=commercialDataOriginLabel();badge.setAttribute('aria-label','Ver detalhes da sincronização: '+label);badge.setAttribute('aria-controls',bar.id);badge.setAttribute('aria-expanded',String(bar.classList.contains('ux-sync-expanded')));badge.onclick=()=>{bar.classList.toggle('ux-sync-expanded');badge.setAttribute('aria-expanded',String(bar.classList.contains('ux-sync-expanded')));if(bar.classList.contains('ux-sync-expanded'))bar.scrollIntoView({block:'start',behavior:'smooth'})};
   }
   const message=sharedSync.error==='STORE_SIZE_LIMIT'?'A base excede a capacidade configurada para o armazenamento comercial. A gravação foi recusada sem truncar dados. As alterações locais estão preservadas; contacte o administrador para rever a capacidade antes de voltar a sincronizar.':sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.error==='UNAUTHENTICATED'?'A sessão terminou e o pedido foi recusado. Renove o acesso. As alterações locais estão preservadas e não foram confirmadas pela base partilhada.':sharedSync.phase==='offline'?(!hasBusinessData(state.data)?'Não existe cópia comercial local neste navegador. Não foi possível carregar a base partilhada. Os dados comerciais não estão confirmados e as gravações remotas estão bloqueadas.':sharedSync.dirty?'Não foi possível confirmar a gravação. As alterações permanecem locais, sem confirmação de sincronização. Releia a fonte ou retome a operação pendente antes de voltar a gravar.':'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.'):sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
   let recovery=false;try{recovery=!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
