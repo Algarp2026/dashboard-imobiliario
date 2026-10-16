@@ -10,7 +10,8 @@
       "codex/fix-client-list-report-grouping": false,
       "codex/fix-commercial-stage-engine": false,
       "codex/fix-commercial-audit-defects": false,
-      "codex/visual-crm-unification": false
+      "codex/visual-crm-unification": false,
+      "codex/composition-d2": false
     }
   },
   "redirects": [

@@ -55,6 +55,6 @@ assert.match(render(),/data-event="refusal"/);assert.equal((render().match(/data
 data.events.push(event('new-offer',9,'Proposta recebida','2026-10-05',{amount:480000}));card(9,'active');
 
 reset();const global={...event('global-origin',0,'Desistência','2026-10-05',{fractions:[],scope:'global',globalWithdrawal:true,notes:'Encerramento ficticio',time:'12:30'})};data.events=[present('previous-show',9),global];card(9,'closed');
-assert.match(render(),/ux-opportunity-last">Desistência global · 2026-10-05/);assert.match(render(),/data-opportunity-origin="global-origin"/);assert.match(render(),/Desistência global do cliente/);assert.match(render(),/data-event="global-origin"/);assert.deepEqual(global.fractions,[]);
+assert.match(render(),/ux-opportunity-last"><span>Desistência global · 2026-10-05/);assert.match(render(),/data-opportunity-origin="global-origin"/);assert.match(render(),/Desistência global do cliente/);assert.match(render(),/data-event="global-origin"/);assert.deepEqual(global.fractions,[]);
 data.events.push(event('bad-global',0,'Desistência','2026-10-06',{fractions:[],scope:'global',globalWithdrawal:false}));assert.doesNotMatch(render(),/data-opportunity-origin="bad-global"/);
 console.log('Audit regressions PASS: third-party availability, visits without positive unit price, valid reopening after refusal, and global withdrawal provenance; JSON and protected model untouched.');

@@ -1,0 +1,16 @@
+{
+  "source": "fictitious in-memory only",
+  "results": [
+    {
+      "mode": "before",
+      "editorVisible": false,
+      "cacheUnchanged": true
+    },
+    {
+      "mode": "after",
+      "editorVisible": false,
+      "cacheUnchanged": true
+    }
+  ],
+  "limitation": "Existing in 125cba5 and unchanged: managed presentation opened from fraction history has no visible editor. Functional routing correction requires separate approval."
+}

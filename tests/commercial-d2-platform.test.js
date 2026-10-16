@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+require('../view-workspace.js');
+const ui=globalThis.THE_VIEW_D2,date='2026-10-16';
+const rows=[{id:'manual',priority:true,followup:{status:'none'}},{id:'near',followup:{status:'upcoming',date:'2026-10-18'}},{id:'review',followup:{status:'undated-review'}},{id:'response',state:'Resposta nossa pendente',followup:{status:'none'}},{id:'overdue',followup:{status:'overdue',date:'2026-10-14'}}];
+const before=JSON.stringify(rows);assert.deepEqual(ui.orderPriorities(rows,date).map(r=>r.id),['overdue','response','review','near','manual']);assert.equal(JSON.stringify(rows),before);
+assert.equal(ui.urgency({priority:true,followup:{status:'upcoming',date:'2099-10-20'}},date),4);
+assert.equal(ui.urgency({followup:{status:'upcoming',date:'2026-10-23'}},date),3);
+assert.equal(ui.urgency({followup:{status:'upcoming',date:'2026-10-24'}},date),5);
+const fs=require('node:fs'),source=fs.readFileSync(require.resolve('../view-workspace.js'),'utf8');
+assert.doesNotMatch(source,/\b(?:fetch|localStorage|sessionStorage|XMLHttpRequest)\b/);
+assert.doesNotMatch(source,/\.innerHTML\s*=/);
+for(const name of ['agents','prices','proposals','history','events','reports','client','modals','comparator'])assert.ok(source.includes('function '+name+'('));
+console.log('D2 platform: urgency order, date boundaries, immutable portfolio; DOM composition only, no persistence or network.');
+const catalog=require('./helpers/d2-synthetic-catalog.cjs')();
+assert.equal(catalog.length,319);assert.equal(catalog.filter(r=>r.Empreendimento==='The View').length,39);
+assert.ok(catalog.every(r=>r.PVP>0&&r['Preço Recomendado']>0&&r.URL.startsWith('https://example.invalid/')));
