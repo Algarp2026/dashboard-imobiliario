@@ -30,7 +30,7 @@ try{
     const tab=async label=>{await page.getByRole('tab',{name:label,exact:true}).click();await page.locator('[role=tabpanel]:visible').waitFor()};
     await tab('Dados');await snap('data');
     if(!before){
-      assert.equal(await page.locator('[data-client-header-edit]:visible').count(),1);assert.equal(await page.locator('.ux-client-workspace__top>.ux-next-action').count(),1);
+      assert.equal(await page.locator('[data-client-header-edit]:visible').count(),1);assert.equal(await page.locator('.ux-client-workspace__top .ux-next-action').count(),1);
       assert.equal(await page.locator('#clientStickyActions:visible').count(),0);
       await page.locator('#commercialSyncBadge').click();assert.equal(await page.locator('#commercialSyncStatus').isVisible(),true);await page.locator('#commercialSyncBadge').click();assert.equal(await page.locator('#commercialSyncStatus').isVisible(),false);
       await page.locator('[data-client-header-edit]').click();await page.locator('#clientModal:not(.hidden)').waitFor();
