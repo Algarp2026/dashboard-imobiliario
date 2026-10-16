@@ -67,3 +67,14 @@ O teste visual recria as imagens da galeria. O transacional grava apenas na memo
 - Eventos legados ambiguos continuam sujeitos a revisao pelas protecoes comerciais existentes; nenhum dado foi regularizado nesta entrega.
 - O tema adicional deve acompanhar os dois HTML no mesmo deployment futuro. Nao afeta as folhas de estilo autonomas dos PDFs nem regras de impressao.
 - Nao houve leitura/escrita na Google Sheet real, migracao, merge ou deployment de producao.
+
+## Correcao da segunda auditoria (PR 11)
+
+- Disponibilidade global Reservado/Vendido/Indisponivel sem operacao efetiva deste cliente passa ao grupo neutro Sem disponibilidade, fora de active/completed. Venda/reserva de terceiro so e afirmada com proveniencia confirmada; origem ambigua continua explicitamente por confirmar. Nao se inventa uma desistencia do cliente.
+- Visita isolada sem preco comunicado positivo, finito e correspondente a fracao nao constitui apresentacao. Movimentos comerciais legados continuam visiveis.
+- A projecao visual considera o movimento valido posterior ao encerramento: uma reapresentacao com preco pode voltar a Apresentado; uma simples revisita sem preco nao reabre. O motor `commercial-client-workflow.js` permanece intacto.
+- A desistencia global passa a ser o ultimo movimento visivel quando explica o encerramento, com data, ID de origem e evento original na cronologia, sem o converter num evento de fracao. A venda de terceiro nao oferece edicao do evento alheio dentro da ficha deste cliente.
+- Botao `.ghost-button--light` com fundo opaco e texto escuro, incluindo hover. Contraste real medido no Chrome: minimo 7,68:1 nos controlos testados (Comparador, edicao do cliente e relatorios).
+- Novas regressoes unitarias e browser com oito capturas ficticias; duas imagens do Comparador substituidas. Para reproduzir estes casos, iniciar o servidor com `VISUAL_AUDIT_FIXTURE=true` e executar `node tests/visual-audit-browser.mjs`.
+- Ficheiros de aplicacao alterados nesta correcao: apenas `commercial-client-workflow-ui.js` e `view-theme.css`. Restantes alteracoes limitam-se a testes, fixture ficticia e evidencias. Sem alteracoes a `commercial.js`, dados, API, autenticacao, Apps Script, protocolo de sincronizacao ou protecoes da PR 10.
+- Resultado: 31 suites e sintaxe aprovadas; testes browser dos quatro cenarios desktop/mobile aprovados; regressao visual existente nas quatro resolucoes aprovada; regressao transacional existente (incluindo 409 e falha de escrita) aprovada. Navegacao de auditoria sem escritas, alteracoes de cache ou erros JavaScript. Todas as transacoes de regressao ocorreram apenas em memoria ficticia.

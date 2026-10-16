@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',out='docs/visual-workspace',errors=[],failures=[],writes=[];
+const origin='http://127.0.0.1:5210',out=process.env.VISUAL_ARTIFACTS||'docs/visual-workspace',errors=[],failures=[],writes=[];
 fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 const baseline=Object.fromEntries(['commercial.js','commercial-client-workflow-ui.js'].map(name=>[name,execFileSync('git',['show','fb77666:'+name],{encoding:'utf8',maxBuffer:4000000})]));

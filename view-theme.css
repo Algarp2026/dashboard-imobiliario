@@ -16,6 +16,8 @@
   .primary-button{background:#245d48;min-height:38px;padding:10px 14px}
   .primary-button:hover{background:#1c4d3b}
   .ghost-button{background:#fff;min-height:38px;padding:9px 13px}
+  .ghost-button.ghost-button--light{background:#fff;color:#293530;border-color:#dce3df}
+  .ghost-button.ghost-button--light:hover{background:#e9f1ee;color:#18533d}
   .primary-button:hover,.ghost-button:hover,.module-tab:hover{transform:none}
   .module-tab.active{background:#e9f1ee;color:#18533d;box-shadow:inset 0 -2px #23785a}
   .field>span{font-size:12px;font-weight:600}
@@ -123,6 +125,9 @@
   .ux-opportunity[open] .ux-opportunity-last .ux-icon{transform:rotate(180deg)}
   .ux-opportunity-detail{padding:16px;min-width:0}
   .ux-opportunity-detail>.top-actions{justify-content:flex-start}
+  .ux-opportunity-origin{font-size:12px;overflow-wrap:anywhere;border-left:2px solid #8b9e93;padding:8px 12px;background:#f2f5f3}
+  .ux-opportunity-origin span{color:var(--muted)}
+  .ux-opportunity[data-opportunity-group="unavailable"] .ux-opportunity-state{background:#eff1f2;color:#52616a}
   .ux-opportunity-detail .timeline{margin-top:12px}
   .ux-opportunity-closed{border-top:1px solid var(--line);padding-top:18px}
   .ux-opportunity-closed>summary{cursor:pointer;display:list-item;list-style-position:inside}

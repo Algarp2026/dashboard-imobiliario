@@ -47,3 +47,14 @@ Capturas reais do Chrome com 64 clientes exclusivamente ficticios. Sem Google re
 - 820 x 1080: [Dados](tablet-data.png), [Negociacao](tablet-negotiation.png), [Listagem](tablet-clients.png), [Regresso](tablet-return.png).
 
 Os cartoes usam os estados derivados existentes. Reservas/vendas sao identificadas separadamente da disponibilidade global. A secao de oportunidades encerradas e o historico completo abrem por consulta explicita. Todos os montantes e contactos nas imagens sao ficticios.
+
+## Segunda auditoria da PR 11
+
+| Cenario corrigido | Desktop | Mobile |
+| --- | --- | --- |
+| Venda a outro cliente, sem negociacao ativa enganadora | [Abrir](audit-desktop-third-party.png) | [Abrir](audit-mobile-third-party.png) |
+| Visita sem preco excluida; proposta legada preservada | [Abrir](audit-desktop-unpriced-visit.png) | [Abrir](audit-mobile-unpriced-visit.png) |
+| Reapresentacao valida posterior a Sem interesse | [Abrir](audit-desktop-reopening.png) | [Abrir](audit-mobile-reopening.png) |
+| Desistencia global: data, origem e evento original | [Abrir](audit-desktop-global-withdrawal.png) | [Abrir](audit-mobile-global-withdrawal.png) |
+
+As duas capturas do Comparador foram atualizadas para mostrar o contraste corrigido do botao superior. As restantes capturas originais foram mantidas.

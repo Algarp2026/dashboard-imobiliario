@@ -34,3 +34,27 @@ data.events.push(event('unknown',50,'Proposta recebida'));card(50,'closed');asse
 assert.deepEqual(other,{id:'untouched'});assert.deepEqual(c.presentationSelection,[1,2,3]);
 assert.match(fs.readFileSync(require.resolve('../commercial.html'),'utf8'),/view-theme.css/);assert.match(fs.readFileSync(require.resolve('../comparador.html'),'utf8'),/view-theme.css/);
 console.log('Opportunity cards: selection/draft/document exclusion, realized vs interested, deduplication, offers, independent withdrawals, global cycles, closing/cancellation/reopening, legacy and incomplete data; no mutations.');
+
+// Independent audit regressions: each scenario starts from a fresh fictitious source.
+function reset(){data.events=[];data.statuses=Object.fromEntries(Array.from({length:39},(_,i)=>[i+1,'Disponível']));data.statusEventIds={}}
+reset();data.events=[event('first-offer',9,'Proposta recebida','2026-10-01',{amount:470000}),{...event('third-party-sale',9,'Venda concluída','2026-10-02',{amount:480000}),clientId:other.id}];data.statuses[9]='Vendido';data.statusEventIds[9]='third-party-sale';
+card(9,'unavailable');assert.match(render(),/Vendido a outro cliente/);assert.doesNotMatch(render(),/data-opportunity-section="active"|>Desistiu</);assert.match(render(),/data-opportunity-origin="third-party-sale"/);assert.match(render(),/data-event="first-offer"/);assert.doesNotMatch(render(),/data-event="third-party-sale"/,'Another client sale is identified, not editable as this client event');
+data.statuses[9]='Reservado';data.events[1].type='Reserva efetuada';card(9,'unavailable');assert.match(render(),/Reservado a outro cliente/);
+delete data.statusEventIds[9];card(9,'unavailable');assert.match(render(),/titularidade por confirmar/);
+data.statuses[9]='Indisponível';card(9,'unavailable');
+
+reset();data.events=[event('simple-visit',9,'Visita')];absent(9);
+for(const price of [0,-1,NaN,Infinity]){data.events[0].informedPrices=[{fraction:9,informedPrice:price}];absent(9)}
+data.events[0].informedPrices=[{fraction:24,informedPrice:400000}];absent(9);
+data.events.push(event('legacy-offer',9,'Proposta recebida','2026-10-02',{amount:470000}));card(9,'active');
+
+reset();data.events=[present('initial-show',9),event('refusal',9,'Acompanhamento da fração','2026-10-02',{interest:'Sem interesse',negotiationVersion:1})];card(9,'closed');
+data.events.push(event('unpriced-revisit',9,'Visita','2026-10-03'));card(9,'closed');
+data.events.push(present('valid-reshow',9,'2026-10-04'));card(9,'presented');assert.equal(model.relation(data,c.id,9).state,'Sem interesse','Protected model remains unchanged; only visual reopening is projected');
+assert.match(render(),/data-event="refusal"/);assert.equal((render().match(/data-negotiation-unit="9"/g)||[]).length,1);
+data.events.push(event('new-offer',9,'Proposta recebida','2026-10-05',{amount:480000}));card(9,'active');
+
+reset();const global={...event('global-origin',0,'Desistência','2026-10-05',{fractions:[],scope:'global',globalWithdrawal:true,notes:'Encerramento ficticio',time:'12:30'})};data.events=[present('previous-show',9),global];card(9,'closed');
+assert.match(render(),/ux-opportunity-last">Desistência global · 2026-10-05/);assert.match(render(),/data-opportunity-origin="global-origin"/);assert.match(render(),/Desistência global do cliente/);assert.match(render(),/data-event="global-origin"/);assert.deepEqual(global.fractions,[]);
+data.events.push(event('bad-global',0,'Desistência','2026-10-06',{fractions:[],scope:'global',globalWithdrawal:false}));assert.doesNotMatch(render(),/data-opportunity-origin="bad-global"/);
+console.log('Audit regressions PASS: third-party availability, visits without positive unit price, valid reopening after refusal, and global withdrawal provenance; JSON and protected model untouched.');
