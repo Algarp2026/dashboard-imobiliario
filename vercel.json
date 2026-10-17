@@ -11,7 +11,8 @@
       "codex/fix-commercial-stage-engine": false,
       "codex/fix-commercial-audit-defects": false,
       "codex/visual-crm-unification": false,
-      "codex/composition-d2": false
+      "codex/composition-d2": false,
+      "codex/client-agent-modal-workspace": false
     }
   },
   "redirects": [
