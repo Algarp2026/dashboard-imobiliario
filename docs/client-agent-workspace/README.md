@@ -5,6 +5,17 @@ password ou contacto de producao. Base anterior: `5d2c91f`.
 
 ## Antes e depois
 
+### Ajustes finais da PR #13
+
+| Vista | Contactos compactos na carteira | Novo Evento sem cliente selecionado |
+|---|---|---|
+| Desktop | [Ver](desktop-portfolio-contacts.png) | [Ver](desktop-new-event-unassigned.png) |
+| Mobile | [Ver](mobile-portfolio-contacts.png) | [Ver](mobile-new-event-unassigned.png) |
+
+Capturas adicionais de `tests/client-workspace-audit.mjs`, sem dados reais.
+
+### Comparacao com a base
+
 | Vista | Antes | Depois |
 |---|---|---|
 | Carteira desktop | [Anterior](before-desktop-portfolio.png) | [Nova carteira](desktop-portfolio.png) |

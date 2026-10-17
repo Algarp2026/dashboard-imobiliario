@@ -21,7 +21,7 @@ try{
     await snap('portfolio');
     if(before){await p.locator('[data-client="demo-0"]').click();await snap('profile');await context.close();continue}
     assert.equal(await p.locator('.client-portfolio-row').count(),64);assert.match(await p.locator('#clientFilterSummary').innerText(),/64 de 64/);assert.equal(await p.locator('#clientListSort').inputValue(),'newest');
-    assert.equal(await p.locator('#openEventModalBtn').innerText(),'Novo Evento');await p.locator('#openEventModalBtn').click();await p.locator('#eventModal:not(.hidden)').waitFor();assert.equal(await p.locator('#eventClientId').isVisible(),true);await p.keyboard.press('Escape');await p.locator('#eventModal.hidden').waitFor({state:'attached'});
+    assert.equal(await p.locator('#openEventModalBtn').innerText(),'Novo Evento');await p.locator('#openEventModalBtn').click();await p.locator('#eventModal:not(.hidden)').waitFor();assert.equal(await p.locator('#eventClientId').isVisible(),true);assert.equal(await p.locator('#eventClientId').inputValue(),'');await p.keyboard.press('Escape');await p.locator('#eventModal.hidden').waitFor({state:'attached'});
     await p.locator('#openClientModal').click();await p.locator('#clientModal:not(.hidden)').waitFor();assert.equal(await p.locator('#clientName').inputValue(),'');assert.equal(await p.locator('#clientId').inputValue(),'');await p.keyboard.press('Escape');await p.locator('#clientModal.hidden').waitFor({state:'attached'});
     assert.equal(await p.locator('[data-open-profile]').first().getAttribute('data-open-profile'),'demo-0');
     for(const mode of ['stage','contact-recent','contact-oldest','next-action','newest']){await p.locator('#clientListSort').selectOption(mode);assert.equal(await p.locator('.client-portfolio-row').count(),64)}

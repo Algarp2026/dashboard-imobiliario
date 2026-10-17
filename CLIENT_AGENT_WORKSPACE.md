@@ -87,8 +87,23 @@ Ficheiros funcionais: `commercial.js`, `commercial.html`, novo modulo
 alteracoes sao testes, adaptacoes de fixtures/seletores e esta documentacao.
 
 Sem migracao ou mudanca do esquema comercial. Sem merge ou deployment.
-Publicacao da branch e criacao de uma unica PR para `main` aguardam o fluxo do
-GitHub Desktop escolhido pelo utilizador. Nao aprovar/publicar sem revisao visual.
+A branch corresponde a [PR #13](https://github.com/Algarp2026/dashboard-imobiliario/pull/13),
+aberta para `main`. Nao fazer merge nem publicar sem autorizacao.
+
+## Ajustes finais da auditoria da PR #13
+
+- Novo Evento global abre com opcao vazia, mesmo depois de consultar um cliente.
+  Apenas a origem explicita `client` pre-seleciona o cliente da ficha; edicoes
+  continuam a usar o cliente do evento. Atualizar os seletores com um formulario
+  aberto preserva a escolha atual, incluindo a escolha vazia.
+- Validacao existente bloqueia guardar eventos que exigem cliente sem escolha.
+  Nao foram alteradas regras de reservas, vendas, comissoes ou persistencia.
+- Telefone e email compactos na identificacao da carteira, com links tel/mailto
+  e quebra responsiva. Clicar num contacto nao abre tambem a ficha.
+- `tests/client-workspace-audit.mjs`: desktop/mobile, abrir A/fechar/criar evento
+  vazio, rejeicao sem cliente sem gravacao, selecao de B, evento unico apenas em
+  B, refresh e preservacao de A e restantes dados comerciais. Escritas apenas
+  no backend ficticio em memoria. Capturas especificas na galeria.
 
 ## Reproduzir localmente
 
