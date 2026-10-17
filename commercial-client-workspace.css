@@ -1,0 +1,40 @@
+@media screen {
+  .ux-app-shell .client-portfolio-panel>.client-layout{display:block;grid-template-columns:1fr}
+  .ux-app-shell #clientsList.client-portfolio-list{height:auto;max-height:none;overflow:visible;display:block;border-top:1px solid var(--line);padding:0}
+  .client-portfolio-panel .filters-grid.three{grid-template-columns:minmax(180px,1.5fr) repeat(3,minmax(130px,1fr));align-items:end;gap:14px}
+  .client-portfolio-panel .filters-grid>.field[hidden]{display:none!important}
+  .client-advanced-filters{grid-column:1/-1;font-size:13px;border-top:1px solid var(--line);padding-top:12px}.client-advanced-filters>summary{cursor:pointer;color:var(--brand)}
+  .client-advanced-filters>div{display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));max-width:580px;gap:14px;padding:14px 0 0}
+  .client-portfolio-row{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(140px,1fr) minmax(120px,.8fr) minmax(170px,1.2fr) auto;gap:18px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line);min-width:0;cursor:pointer}
+  .client-portfolio-row:hover{background:var(--panel2)}.client-portfolio-row>div{min-width:0}
+  .client-portfolio-row :is(strong,span,small,time){overflow-wrap:anywhere}.client-portfolio-identity>strong{display:block;font-size:15px;line-height:1.4}
+  .client-portfolio-identity>span,.client-portfolio-row small{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}
+  .client-portfolio-contacts{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:5px;min-width:0}.client-portfolio-contacts>a{display:inline-flex;align-items:flex-start;gap:5px;min-width:0;max-width:100%;color:var(--muted);font-size:12px;line-height:1.5;text-decoration:none}.client-portfolio-contacts>a:hover{text-decoration:underline;color:var(--brand)}.client-portfolio-contacts svg{width:13px;height:13px;flex-shrink:0;margin-top:2px}.client-portfolio-contacts span{min-width:0;overflow-wrap:anywhere}
+  .client-portfolio-state>span{display:block;font-size:12px;line-height:1.5}.client-portfolio-state>.badge{display:inline-flex;margin-bottom:6px}
+  .client-portfolio-contact>span,.client-portfolio-action>span,.client-portfolio-action>time{display:block;font-size:13px;line-height:1.5}
+  .client-portfolio-action>time{color:var(--brand);font-size:12px}.client-portfolio-commands{display:flex;gap:6px;align-items:center;justify-content:flex-end}.client-portfolio-commands>button{white-space:nowrap}
+  .client-portfolio-panel .client-sticky-actions__context,.client-portfolio-panel #clientStickyEditClient{display:none!important}
+  #clientProfileDialog{padding:2.5dvh 2.5vw;align-items:center}
+  #clientProfileDialog>.client-profile-modal{display:flex;flex-direction:column;width:min(1660px,95vw);height:95dvh;max-height:95dvh;max-width:95vw;margin:0;padding:0!important;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--bg);backdrop-filter:none}
+  .client-profile-toolbar{display:flex;align-items:center;gap:18px;padding:10px 22px;background:white;border-bottom:1px solid var(--line);flex-shrink:0}
+  .client-profile-toolbar>strong{font-size:13px;color:var(--muted)}.client-profile-toolbar>nav{display:flex;gap:6px;margin-left:auto}.client-profile-toolbar [data-profile-sync]{font-size:12px;color:var(--brand);margin-left:auto;max-width:45%;overflow-wrap:anywhere}
+  #clientProfileDialog #clientDetail{border:0;border-radius:0;box-shadow:none;padding:0!important;background:transparent;min-height:0;overflow:hidden;flex:1;display:flex}
+  #clientProfileDialog .ux-client-workspace{width:100%;min-width:0;min-height:0;display:flex;flex-direction:column}
+  #clientProfileDialog .ux-client-workspace__top{position:static;flex-shrink:0;padding:14px 24px 0!important;border-radius:0;background:var(--bg);border:0}
+  #clientProfileDialog .ux-client-return{display:none}
+  #clientProfileDialog .d2-profile-overview{padding:0 0 14px;gap:20px;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr)}
+  #clientProfileDialog .ux-client-title h2{font-size:25px;margin:4px 0;line-height:1.2}#clientProfileDialog .client-detail-header{padding:0;margin:0}
+  #clientProfileDialog .ux-client-contact{font-size:12px;gap:6px 16px;margin-top:8px}#clientProfileDialog .ux-client-last-interaction{font-size:12px;margin:6px 0 0}
+  #clientProfileDialog .ux-client-tabs{position:static;flex-shrink:0;margin:0;padding:0 24px;overflow:auto;border-block:1px solid var(--line);background:var(--panel2);z-index:auto}
+  #clientProfileDialog .ux-client-tabs>button{flex-shrink:0;white-space:nowrap;min-height:44px}
+  #clientProfileDialog .ux-client-workspace__content{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:22px 24px;scrollbar-width:thin}
+  #clientProfileDialog [data-client-panel][hidden]{display:none!important}
+  #clientProfileDialog .d2-client-data{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}
+  #clientProfileDialog [data-client-header-edit]{display:inline-flex;color:white;background:var(--brand);border-color:var(--brand)}
+  #clientProfileDialog .ux-client-open{display:none}
+  #clientProfileDialog .table-wrap{max-height:none!important}.client-dialogs-managed #commercialUxStatus{z-index:10000}
+  .agent-associated-clients{margin-top:24px;border-top:1px solid var(--line);padding-top:22px}.agent-associated-clients h3{font-size:17px;margin:0}
+  .agent-associated-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 0;border-bottom:1px solid var(--line)}.agent-associated-row>div{min-width:0}.agent-associated-row strong,.agent-associated-row span,.agent-associated-row small{display:block;overflow-wrap:anywhere}.agent-associated-row span,.agent-associated-row small{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}.agent-associated-row button{flex-shrink:0}
+  @media(max-width:1100px){.client-portfolio-row{grid-template-columns:minmax(180px,1.3fr) minmax(140px,1fr) minmax(170px,1.1fr) auto;gap:12px}.client-portfolio-contact{grid-column:2;grid-row:2}.client-portfolio-identity,.client-portfolio-action,.client-portfolio-commands{grid-row:span 2}#clientProfileDialog .d2-client-data{grid-template-columns:1fr}#clientProfileDialog .d2-profile-overview{grid-template-columns:minmax(0,1.5fr) minmax(230px,1fr)}}
+  @media(max-width:760px){.client-portfolio-panel .filters-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.client-portfolio-panel .filters-grid>.field:first-child{grid-column:1/-1}.client-list-sort{grid-column:1/-1}.client-portfolio-row{grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;padding:16px 0}.client-portfolio-identity{grid-column:1;grid-row:1}.client-portfolio-state{grid-column:1;grid-row:2}.client-portfolio-contact{grid-column:1;grid-row:3}.client-portfolio-action{grid-column:1/-1;grid-row:4}.client-portfolio-commands{grid-column:2;grid-row:1/4;flex-direction:column}.client-portfolio-commands>button{padding-inline:10px;font-size:12px}.client-advanced-filters>div{grid-template-columns:1fr}#clientProfileDialog{padding:0}#clientProfileDialog>.client-profile-modal{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border:0;border-radius:0}.client-profile-toolbar{padding:8px 12px;gap:8px}.client-profile-toolbar>strong{font-size:12px}.client-profile-toolbar [data-profile-sync]{max-width:30%;font-size:11px}.client-profile-toolbar>nav{gap:4px}#clientProfileDialog .ux-client-workspace__top{padding:12px 14px 0!important}#clientProfileDialog .d2-profile-overview{display:block}#clientProfileDialog .d2-profile-overview>.ux-next-action{margin-top:10px;padding:10px}#clientProfileDialog .ux-client-title h2{font-size:21px}#clientProfileDialog .ux-client-last-interaction{display:none}#clientProfileDialog .ux-client-tabs{padding-inline:8px}#clientProfileDialog .ux-client-tabs>button{padding:10px;font-size:12px}#clientProfileDialog .ux-client-workspace__content{padding:16px 14px}.agent-associated-row{align-items:flex-start}.agent-associated-row button{font-size:12px;padding-inline:10px}}
+}
