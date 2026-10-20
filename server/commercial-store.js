@@ -47,7 +47,7 @@ async function callStore(functionName, argument) {
   if (operation.done!==true||operation.error||!OBJECT(operation.response?.result)) throw failure('INVALID_SOURCE_RESPONSE');
   const result=operation.response.result;
   if (result.sourceId!==sheet || result.environment!==(env.VERCEL_ENV==='production'?'production':'test')) throw failure('SOURCE_ENVIRONMENT_MISMATCH',503);
-  if (!result.ok) throw failure(['CONFLICT','WRITE_INCOMPLETE','UNINITIALIZED','WRITES_DISABLED','STORE_SIZE_LIMIT'].includes(result.code)?result.code:'SOURCE_OPERATION_FAILED',result.code==='CONFLICT'?409:result.code==='STORE_SIZE_LIMIT'?413:503);
+  if (!result.ok) throw failure(['CONFLICT','WRITE_INCOMPLETE','UNINITIALIZED','WRITES_DISABLED','STORE_SIZE_LIMIT','SOURCE_BUSY','SOURCE_TIMEOUT'].includes(result.code)?result.code:'SOURCE_OPERATION_FAILED',result.code==='CONFLICT'?409:result.code==='STORE_SIZE_LIMIT'?413:503);
   if (result.protocol!=='tv-cas-v1'||!REVISION.test(result.revision)||!Number.isFinite(Date.parse(result.confirmedAt))) throw failure('INVALID_SOURCE_RESPONSE');
   if (!OBJECT(result.capabilities)||result.capabilities.pendingWriteDiagnostics!==1) throw failure('SYNC_DIAGNOSTICS_UNAVAILABLE',503);
   if (functionName==='crmRead') {

@@ -14,8 +14,8 @@ module.exports=function makeStore(data, options={}){
       getMaxRows(){return this.maxRows},
       insertRowsAfter(after,count){if(!held||after!==this.maxRows)throw new Error('Invalid row extension');this.maxRows+=count;return this},
       getRange(key,column,height=1,width=1){const [row,col]=coordinates(key,column),address=(r,c)=>r+':'+c,s=this;return{
-        getValue(){if(name==='Store')trace.push({type:'read',key,held});return s.cells.get(address(row,col))??''},
-        getValues(){trace.push({type:'read',name,key,held});return Array.from({length:height},(_,i)=>Array.from({length:width},(_,j)=>s.cells.get(address(row+i,col+j))??''))},
+        getValue(){step('before:read:'+name+':'+key);if(name==='Store')trace.push({type:'read',key,held});const value=s.cells.get(address(row,col))??'';step('after:read:'+name+':'+key);return value},
+        getValues(){step('before:read:'+name+':'+key);trace.push({type:'read',name,key,held});const values=Array.from({length:height},(_,i)=>Array.from({length:width},(_,j)=>s.cells.get(address(row+i,col+j))??''));step('after:read:'+name+':'+key);return values},
         setValue(value){if(!held)throw new Error('Write without script lock');if(String(value).length>50000)throw new Error('Cell capacity exceeded');if(name==='Store'&&key==='B6'&&writeFailure==='pointer-before')throw new Error('Pointer failure');step('before:value:'+name+':'+key);trace.push({type:'write',name,key,held});s.cells.set(address(row,col),value);step('after:value:'+name+':'+key);if(name==='Store'&&key==='B6'&&writeFailure==='pointer-after')throw new Error('Lost commit acknowledgement');return this},
         setValues(values){
           if(!held)throw new Error('Write without script lock');
@@ -46,11 +46,11 @@ module.exports=function makeStore(data, options={}){
   }
   const store=sheet('Store');store.cells.set('2:2',JSON.stringify(data));store.cells.set('3:2','2026-10-01T10:00:00.000Z');
   const context={
-    console,
+    console:options.console||{log(){}},
     PropertiesService:{getScriptProperties(){return{getProperty:key=>properties[key]||''}}},
     Session:{getEffectiveUser(){return{getEmail:()=>caller}}},
     Utilities:{DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},computeDigest(algorithm,text){return [...createHash(algorithm).update(text).digest()].map(byte=>byte>127?byte-256:byte)}},
-    SpreadsheetApp:{openById(id){if(id!==properties.CRM_SPREADSHEET_ID)throw new Error('Wrong sheet');return{getSheetByName:name=>sheets.get(name),insertSheet:sheet}},flush(){step('flush')}},
+    SpreadsheetApp:{openById(id){step('open');trace.push({type:'open',held});if(id!==properties.CRM_SPREADSHEET_ID)throw new Error('Wrong sheet');return{getSheetByName:name=>sheets.get(name),insertSheet:sheet}},flush(){step('flush')}},
     LockService:{getScriptLock(){return{waitLock(){if(held)throw new Error('Concurrent lock not serialized');held=true;trace.push({type:'lock'})},releaseLock(){held=false;trace.push({type:'unlock'})}}}},
     ContentService:{MimeType:{JSON:'json',JAVASCRIPT:'js'},createTextOutput(body){return{body,setMimeType(){return this}}}}
   };

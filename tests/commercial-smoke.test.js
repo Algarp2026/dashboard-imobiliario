@@ -103,7 +103,7 @@ includesAll(appsScript, [
   'BACKUP_SHEET_NAME',
   'Backups',
   'stageVersion_(current.raw',
-  'readVersion_(previous)',
+  'readVersion_(previous, context)',
   'archive.appendRow',
   'archived[1] !== JSON.stringify(previous)',
   'sheet.getRange(STORE_ACTIVE_CELL).setValue(pointer)'

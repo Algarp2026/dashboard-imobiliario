@@ -12,8 +12,20 @@ for(const file of suites){run([path.join('tests',file)]);console.log('PASS '+fil
 const recoveryBase='3729e304317541b5bd23bb4fa45aadde9d959934',mainBase='fa876dc98f8ccc208ed68123ddce3c71e948ad51';
 const base=cp.execFileSync('git',['show',recoveryBase+':commercial.js'],{cwd:repo,encoding:'utf8'}),current=fs.readFileSync(path.join(repo,'commercial.js'),'utf8');
 const sync=s=>s.slice(s.indexOf('async function requestCommercialData('),s.indexOf('function appDialog(')).replace(/\r\n/g,'\n');assert.equal(sync(current),sync(base));
-const protectedPaths=['api','server','google_apps_script.gs','config.js','data.json','plantas','middleware.ts'];
+// Read contention deliberately changes the source reader and its two safe API error codes.
+// All other server modules and the API/frontend protocol remain frozen.
+const protectedPaths=['api','config.js','data.json','plantas','middleware.ts',...fs.readdirSync(path.join(repo,'server')).filter(file=>file!=='commercial-store.js').map(file=>'server/'+file)];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
+const oldServer=cp.execFileSync('git',['show',recoveryBase+':server/commercial-store.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
+const newServer=fs.readFileSync(path.join(repo,'server/commercial-store.js'),'utf8').replace(/\r\n/g,'\n');
+assert.equal(newServer.replace(",'SOURCE_BUSY','SOURCE_TIMEOUT'",''),oldServer,'Only the two retryable source error codes may change in the server adapter');
+const oldScript=cp.execFileSync('git',['show',recoveryBase+':google_apps_script.gs'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
+const newScript=fs.readFileSync(path.join(repo,'google_apps_script.gs'),'utf8').replace(/\r\n/g,'\n');
+function scriptFunctions(source){const matches=[...source.matchAll(/^function (\w+)\(/gm)];return Object.fromEntries(matches.map((match,index)=>[match[1],source.slice(match.index,matches[index+1]?.index??source.length).trim()]))}
+const previousFunctions=scriptFunctions(oldScript),currentFunctions=scriptFunctions(newScript);
+const instrumentedFunctions=new Set(['readStoreMetadata_','readVersion_','stageVersion_','currentStore_','crmRead','pendingWriteState_','crmWrite','getStoreSheet_','storeSpreadsheet_','getOrCreateSheet_']);
+for(const [name,body] of Object.entries(previousFunctions))if(!instrumentedFunctions.has(name))assert.equal(currentFunctions[name],body,'Unrelated Apps Script function must remain frozen: '+name);
+assert.equal(newScript.slice(0,newScript.indexOf('var STORE_READ_BUDGET_MS')).trim(),oldScript.slice(0,oldScript.indexOf('function doGet(')).trim(),'Original storage constants remain frozen');
 const commercialPaths=['commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial.html','config.js','data.json','plantas','middleware.ts'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 const layoutFix='.ux-opportunity-detail .ux-next-action>div{grid-template-columns:minmax(0,1fr)}\n.ux-opportunity-detail .ux-next-action strong{grid-column:1}\n';

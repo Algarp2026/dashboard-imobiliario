@@ -6,11 +6,12 @@ const originalEnv={...process.env},originalFetch=global.fetch,KEY='theView.crmCo
 const clone=value=>JSON.parse(JSON.stringify(value));
 const base={clients:[{id:'synthetic-client',name:'Fictitious client',preferences:{},fractions:[]}],events:[{id:'reservation-8',clientId:'synthetic-client',type:'Reserva efetuada',fractions:[8]},{id:'reservation-24',clientId:'synthetic-client',type:'Reserva efetuada',fractions:[24]}],agents:[],finalPrices:{16:400000},statuses:{8:'Reservado',24:'Reservado'},salePrices:{8:100000,24:200000},priceHistory:{16:[{price:400000}]},saleCommissions:{},unavailableReasons:{},statusEventIds:{8:'reservation-8',24:'reservation-24'},salePriceEventIds:{8:'reservation-8',24:'reservation-24'},unknown:{keep:true,padding:'x'.repeat(160000)}};
 Object.assign(process.env,{COMMERCIAL_ACCESS_SECRET:'fictitious-recovery-secret',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-refresh',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true',VERCEL_ENV:'preview'});
-let google=makeStore(base),loseResponse=false;
+let google=makeStore(base),loseResponse=false,readFailure='';
 global.fetch=async(url,options)=>{
   assert.ok(['https://oauth2.googleapis.com/token','https://script.googleapis.com/v1/scripts/test-deployment:run'].includes(url),'External calls forbidden');
   if(url.includes('oauth2'))return Response.json({access_token:'fictitious-access-token'});
   const body=JSON.parse(options.body);
+  if(readFailure&&body.function==='crmRead')return Response.json({done:true,response:{result:google.context.storeResponse_({ok:false,code:readFailure})}});
   try{return Response.json({done:true,response:{result:google.context[body.function](...body.parameters)}})}
   catch{return Response.json({done:true,error:{details:[{errorMessage:'Synthetic interruption'}]}})}
 };
@@ -86,7 +87,23 @@ async function main(){
   assert.equal(await refreshed.app.syncRemote(),true);
   assert.equal(google.data.clients[0].email,'synthetic@example.test');
   const final=browser(refreshed.storage);await final.app.loadExcel();assert.equal(final.app.sharedSync.phase,'synced');
-  console.log(JSON.stringify({httpStatuses:[200,409,503,502],refreshRecovery:true,exactRequestPreserved:true,reconciliationBlockedUntilRecovery:true,reconciledRequestArchived:true,lostAcknowledgementIdempotent:true,reservations8and24Preserved:true,realNetwork:false}));
+  // New retryable source failures preserve the exact local data and pending request,
+  // including refresh, without an automatic retry or recovery.
+  const originalPending=JSON.stringify({action:'save',requestId:'fiction-original-different-local',baseRevision:final.app.sharedSync.revision,data:clone(final.app.state.data)});
+  final.storage.set(KEY+'.pendingWrite.v1',originalPending);
+  final.app.state.data.clients[0].notes='Fictitious pending local change';final.app.save();
+  for(readFailure of ['SOURCE_BUSY','SOURCE_TIMEOUT']){
+    const sourceBefore=JSON.stringify(google.data);
+    assert.equal(await final.app.syncRemote(true),false);
+    const pending=final.storage.get(KEY+'.pendingWrite.v1'),local=final.storage.get(KEY);
+    assert.equal(pending,originalPending);assert.equal(final.responses.at(-1).status,503);assert.equal(final.responses.at(-1).body.code,readFailure);
+    const reload=browser(final.storage);await reload.app.loadExcel();
+    assert.equal(reload.responses.filter(response=>response.method==='POST').length,0);
+    assert.equal(reload.storage.get(KEY+'.pendingWrite.v1'),pending);assert.equal(reload.storage.get(KEY),local);
+    assert.equal(JSON.stringify(google.data),sourceBefore);
+  }
+  readFailure='';
+  console.log(JSON.stringify({httpStatuses:[200,409,503,502],refreshRecovery:true,exactRequestPreserved:true,reconciliationBlockedUntilRecovery:true,reconciledRequestArchived:true,lostAcknowledgementIdempotent:true,reservations8and24Preserved:true,busyAndTimeoutPreserveLocalAndPending:true,realNetwork:false}));
 }
 async function apiCall(body,ticket){
   const issued=String(Date.now()),cookie='tv_commercial_access='+issued+'.'+createHmac('sha256',process.env.COMMERCIAL_ACCESS_SECRET).update(issued).digest('hex');

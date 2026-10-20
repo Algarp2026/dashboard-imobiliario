@@ -46,7 +46,8 @@ async function main(){
   const backupLock=google.context.LockService.getScriptLock();backupLock.waitLock();
   try{assert.equal(google.context.readVersion_(JSON.parse(google.sheets.get('BackupsVersions').rows[0][1])),start)}finally{backupLock.releaseLock()}
   for(const name of ['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes'])assert.ok(google.sheets.has(name));
-  assert.ok(google.trace.filter(item=>item.type==='read'||item.type==='write'||item.type==='rows').every(item=>item.held));
+  assert.ok(google.trace.filter(item=>item.type==='write'||item.type==='rows'||item.type==='append').every(item=>item.held),'All durable mutations retain the script lock');
+  assert.ok(google.trace.some(item=>item.type==='read'&&!item.held),'Verified immutable snapshot reads must not take the writer lock');
   const repeated=await invoke(api,post);assert.equal(repeated.statusCode,200);assert.equal(google.sheets.get('BackupsVersions').rows.length,1);
   const stale={...payload,requestId:'request-test-stale',data:{...initial,clients:[{...initial.clients[0],email:'stale@example.test'}]}};
   const old=await invoke(api,{...post,body:stale});assert.equal(old.statusCode,409);assert.ok(!old.body.data);assert.deepEqual(google.data,candidate);

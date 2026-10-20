@@ -30,13 +30,13 @@ for(const chunked of [false,true]){
 const phases=[];let probing=false;
 const probe=makeStore(base,{onStep:name=>{if(probing)phases.push(name)}});
 if(chunked)assert.equal(probe.write({...prepare(probe,'synthetic-seed'),data:clone(base)}).persisted,true);
-probing=true;probe.write(prepare(probe));
+const probeRequest=prepare(probe);probing=true;probe.write(probeRequest);
 for(let target=0;target<phases.length;target++){
   let index=0,enabled=false;
   const store=makeStore(base,{onStep(name){if(enabled&&index++===target){enabled=false;throw new Error('Interruption at '+name)}}});
   if(chunked)assert.equal(store.write({...prepare(store,'synthetic-seed'),data:clone(base)}).persisted,true);
-  enabled=true;
   const request=prepare(store),legacy=store.sheets.get('Store').cells.get('2:2');
+  enabled=true;
   assert.throws(()=>store.write(request),undefined,phases[target]);
   const beforeRead=JSON.stringify([...store.sheets].map(([name,sheet])=>[name,[...sheet.cells]]));
   const read=store.read();assert.equal(read.ok,true);

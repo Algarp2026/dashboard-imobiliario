@@ -38,7 +38,8 @@ async function main(){
   a.api.state.data=merge.data;Object.assign(a.api.sharedSync,{base:remote.data,revision:remote.revision,ticket:remote.ticket,verified:true,canWrite:true,phase:'pending'});a.storage.delete(KEY+'.pendingWrite.v1');a.api.save();
   b.api.state.data.clients[0].phone='first-user-newer';b.api.save();assert.equal(await b.api.syncRemote(),true);const latest=JSON.stringify(google.data);
   assert.equal(await a.api.syncRemote(),false);assert.equal(a.responses.at(-1).status,409);assert.equal(JSON.stringify(google.data),latest);assert.equal(JSON.parse(a.storage.get(KEY)).clients[0].email,'second-user@example.test');
-  assert.ok(google.trace.filter(item=>['read','write','rows','append'].includes(item.type)).every(item=>item.held));
+  assert.ok(google.trace.filter(item=>['write','rows','append'].includes(item.type)).every(item=>item.held),'Every durable mutation must hold the writer lock');
+  assert.ok(google.trace.some(item=>item.type==='read'&&!item.held),'Snapshot reads must not serialize with writers');
   console.log(JSON.stringify({sameInitialRevision:revision,cleanBrowserReceivesRemoteEdit:true,observerWrites:0,firstStatus:200,staleStatus:409,firstDataIntact:true,secondLocalCachePreserved:true,revisionManipulationStatus:403,afterReconciliationRaceStatus:409,scriptLockChecked:true,visualSimulation:false,realGoogle:false}));
 }
 main().catch(error=>{console.error(error);process.exitCode=1}).finally(()=>{global.fetch=originalFetch;for(const key of Object.keys(process.env))if(!(key in originalEnv))delete process.env[key];Object.assign(process.env,originalEnv)});

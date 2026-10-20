@@ -55,7 +55,8 @@ async function main(){
   assert.equal((await post(opB,a,loadB.body.readTicket)).statusCode,403);
   reset();const concurrentA=await read(a),concurrentB=await read(b);
   const simultaneous=await Promise.all([post({...opA,baseRevision:concurrentA.body.revision},a,concurrentA.body.readTicket),post({...opB,baseRevision:concurrentB.body.revision},b,concurrentB.body.readTicket)]);
-  assert.deepEqual(simultaneous.map(r=>r.statusCode).sort(),[200,409]);assert.equal(backups(),1);assert.ok(google.trace.filter(item=>['read','write','rows','append'].includes(item.type)).every(item=>item.held));
+  assert.deepEqual(simultaneous.map(r=>r.statusCode).sort(),[200,409]);assert.equal(backups(),1);assert.ok(google.trace.filter(item=>['write','rows','append'].includes(item.type)).every(item=>item.held),'Durable mutations retain exclusive locking');
+  assert.ok(google.trace.some(item=>item.type==='read'&&!item.held),'Immutable snapshot reads do not acquire the writer lock');
 
   for(const fault of ['offline','timeout-before','401','403','500','invalid-before','false-success']){
     reset();const live=cookie(),base=await read(live),time=cell('3:2');mode=fault;
