@@ -4428,6 +4428,26 @@ function hasUnconfirmedLocalData(data){try{const meta=readSyncMeta();return !!lo
 function persistSyncMeta(){
   localStorage.setItem(LOCAL_SYNC_META_KEY,JSON.stringify({revision:sharedSync.revision,base:sharedSync.base,lastConfirmedAt:sharedSync.lastConfirmedAt}));
 }
+function localRecoveryExport(){
+  const meta=readSyncMeta(),raw=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),pendingWrite=raw===null?null:JSON.parse(raw);
+  // Recovery requests never contain authentication. Reject unexpected envelopes
+  // instead of silently redacting an original request that must remain exact.
+  if(pendingWrite!==null&&(!pendingWrite||typeof pendingWrite!=='object'||Array.isArray(pendingWrite)||Object.keys(pendingWrite).some(key=>!['action','data','baseRevision','requestId'].includes(key))))throw new Error('O pedido pendente tem um formato inesperado. Preserve a cópia original; a exportação foi interrompida.');
+  return JSON.parse(JSON.stringify({recoveryFormat:1,data:state.data,base:meta?.base||sharedSync.base,pendingWrite,
+    syncMeta:{revision:meta?.revision||sharedSync.revision,lastConfirmedAt:meta?.lastConfirmedAt||sharedSync.lastConfirmedAt},
+    pendingSync:hasPendingLocalSync(),createdAt:new Date().toISOString()}));
+}
+function exportLocalRecoveryCopy(){
+  try{downloadJson(localRecoveryExport(),'the-view-alteracoes-locais-pendentes.json')}
+  catch(error){notifyUser(error.message||'Não foi possível exportar a cópia. Os dados e o pedido original não foram alterados.','Exportar cópia local')}
+}
+function validateSyncDiagnostics(result,read){
+  const object=value=>value&&typeof value==='object'&&!Array.isArray(value),revision=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
+  if(!object(result.capabilities)||result.capabilities.pendingWriteDiagnostics!==1||read&&!Object.prototype.hasOwnProperty.call(result,'pendingWrite'))throw Object.assign(new Error('Diagnóstico de gravações pendentes indisponível. É necessário atualizar os componentes de sincronização.'),{code:'SYNC_DIAGNOSTICS_UNAVAILABLE'});
+  if(!read||result.pendingWrite===null)return;
+  const pending=result.pendingWrite;
+  if(!object(pending)||Object.keys(pending).sort().join(',')!=='baseRevision,requestId,revision,state'||!['pending','committed','blocked'].includes(pending.state)||typeof pending.requestId!=='string'||!/^[\w-]{8,100}$/.test(pending.requestId)||!revision(pending.baseRevision)||!revision(pending.revision)||pending.state==='pending'&&pending.baseRevision!==result.revision||pending.state==='committed'&&pending.revision!==result.revision)throw Object.assign(new Error('Diagnóstico de gravações pendentes inválido. Os dados locais foram preservados.'),{code:'INVALID_SYNC_DIAGNOSTICS'});
+}
 function syncComparable(value){
   if(Array.isArray(value))return'['+value.map(syncComparable).join(',')+']';
   if(value&&typeof value==='object')return'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+syncComparable(value[key])).join(',')+'}';
@@ -4445,10 +4465,11 @@ async function requestCommercialData(payload){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
   try{
     const response=await fetch(COMMERCIAL_DATA_API,{method:payload?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal,headers:payload?{'Content-Type':'application/json','X-CRM-Read-Ticket':sharedSync.ticket}:{},...(payload?{body:JSON.stringify(payload)}:{})});
-    let result;if(!response.headers.get('content-type')?.includes('application/json'))throw Object.assign(new Error('Resposta não confirmada'),{code:'INVALID_SOURCE_RESPONSE'});
-    try{result=await response.json()}catch{throw Object.assign(new Error('Resposta inválida'),{code:'INVALID_SOURCE_RESPONSE'})}
-    if(!response.ok||!result.ok)throw Object.assign(new Error('Ligação não confirmada'),{code:result.code||'SOURCE_UNAVAILABLE'});
-    if(result.protocol!=='tv-cas-v1'||result.source!=='shared'||! /^[a-f0-9]{64}$/.test(result.revision)||typeof result.readTicket!=='string'||! /^\d{13}\.[a-f0-9]{64}$/.test(result.readTicket)||!/^\d{4}-\d{2}-\d{2}T/.test(result.confirmedAt)||!Number.isFinite(Date.parse(result.confirmedAt))||!payload&&!validSharedData(result.data)||payload&&(result.persisted!==true||result.requestId!==payload.requestId))throw Object.assign(new Error('Integridade não confirmada'),{code:'INVALID_SOURCE_RESPONSE'});
+    let result;if(!response.headers.get('content-type')?.includes('application/json'))throw Object.assign(new Error('Resposta não confirmada'),{code:'INVALID_SOURCE_RESPONSE',httpStatus:response.status});
+    try{result=await response.json()}catch{throw Object.assign(new Error('Resposta inválida'),{code:'INVALID_SOURCE_RESPONSE',httpStatus:response.status})}
+    if(!response.ok||!result.ok)throw Object.assign(new Error('Ligação não confirmada'),{code:result.code||'SOURCE_UNAVAILABLE',httpStatus:response.status});
+    if(result.protocol!=='tv-cas-v1'||result.source!=='shared'||! /^[a-f0-9]{64}$/.test(result.revision)||typeof result.readTicket!=='string'||! /^\d{13}\.[a-f0-9]{64}$/.test(result.readTicket)||!/^\d{4}-\d{2}-\d{2}T/.test(result.confirmedAt)||!Number.isFinite(Date.parse(result.confirmedAt))||!payload&&!validSharedData(result.data)||payload&&(result.persisted!==true||result.requestId!==payload.requestId))throw Object.assign(new Error('Integridade não confirmada'),{code:'INVALID_SOURCE_RESPONSE',httpStatus:response.status});
+    validateSyncDiagnostics(result,!payload);
     return result;
   }catch(error){if(error.name==='AbortError')error.code='SOURCE_TIMEOUT';throw error}
   finally{clearTimeout(timer)}
@@ -4459,9 +4480,20 @@ async function loadRemoteData(){
   sharedSync.verified=false;sharedSync.phase='loading';renderSharedSyncStatus();
   try{
     const result=await requestCommercialData(),remote=normalizeData(result.data),meta=readSyncMeta();
-    sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite};
+    sharedSync.httpStatus=null;
+    sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite,pendingWrite:result.pendingWrite,capabilities:result.capabilities};
+    if(result.pendingWrite&&result.pendingWrite.state!=='committed'){
+      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      sharedSync.phase='offline';sharedSync.error='WRITE_INCOMPLETE';return {shouldSave:false};
+    }
     if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
     const differs=syncComparable(state.data)!==syncComparable(remote);
+    if(!differs&&localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null){
+      const original=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY));
+      if(!validSharedData(original?.data)||syncComparable(normalizeData(original.data))!==syncComparable(remote)){
+        sharedSync.phase='conflict';sharedSync.error='UNCONFIRMED_PENDING_REQUEST';return {shouldSave:false};
+      }
+    }
     // A confirmed remote response can still be an older restored database.
     if(differs&&sharedStoreMayRegress(state.data,remote,meta,result.revision)){
       if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
@@ -4476,10 +4508,14 @@ async function loadRemoteData(){
       return {shouldSave:false};
     }
     if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+    if(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null){
+      try{localStorage.setItem(KEY+'.confirmedReadBackup.'+Date.now()+'.'+id(),JSON.stringify(localRecoveryExport()))}
+      catch{throw Object.assign(new Error('Pedido original não arquivado'),{code:'LOCAL_STORAGE_FAILED'})}
+    }
     state.data=remote;sharedSync.base=JSON.parse(JSON.stringify(remote));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';
     saveLocalOnly();persistSyncMeta();clearPendingLocalSync();sharedSync.dirty=false;localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);sharedSync.phase='synced';
     return {shouldSave:false};
-  }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';throw error}
+  }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;throw error}
   finally{renderSharedSyncStatus()}
 }
 let saveTimer=null;
@@ -4628,21 +4664,25 @@ function flushPendingSyncOnUnload(){
   // Unconfirmed writes remain in localStorage; unload never sends a blind or duplicate request.
 }
 async function syncRemote(recovery=false){
-  if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!hasPendingLocalSync()||!recovery&&(!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
-  let payload,discardRejectedSnapshot=false;
+  if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!recovery&&(!hasPendingLocalSync()||!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
+  let payload;
   try{
     payload=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null');
+    sharedSync.busy=true;renderSharedSyncStatus();sharedSync.httpStatus=null;
+    // A new client must also detect an old API before sending any POST. Recovery
+    // uses the same probe, without altering or discarding the original request.
+    const probe=await requestCommercialData();
+    if(probe.pendingWrite?.state==='blocked'||!recovery&&probe.pendingWrite?.state==='pending'&&probe.pendingWrite.requestId!==payload?.requestId)throw Object.assign(new Error('Gravação incompleta'),{code:'WRITE_INCOMPLETE'});
     if(recovery){if(!payload)return false;payload={...payload,action:'recover'}}
-    else if(!payload||payload.baseRevision!==sharedSync.revision){payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload));discardRejectedSnapshot=true}
-    sharedSync.busy=true;renderSharedSyncStatus();
+    else if(payload&&payload.baseRevision!==sharedSync.revision)throw Object.assign(new Error('O pedido original exige revisão antes de ser substituído.'),{code:'CONFLICT'});
+    else if(!payload){payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload))}
     const result=await requestCommercialData(payload);
     sharedSync.base=JSON.parse(JSON.stringify(payload.data));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';persistSyncMeta();localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
     if(syncComparable(state.data)===syncComparable(payload.data)){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{sharedSync.phase='pending';clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300)}
     return true;
   }catch(error){
     // A rejected retry does not prove that an earlier attempt failed; preserve its recovery ID.
-    if(discardRejectedSnapshot&&['READ_REQUIRED','WRITES_DISABLED','UNAUTHENTICATED','INVALID_ORIGIN','INVALID_PAYLOAD','STORE_SIZE_LIMIT'].includes(error.code))try{localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
-    sharedSync.remote=null;sharedSync.phase=error.code==='CONFLICT'?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';return false;
+    sharedSync.remote=null;sharedSync.phase=error.code==='CONFLICT'?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;return false;
   }
   finally{sharedSync.busy=false;renderSharedSyncStatus()}
 }
@@ -4672,26 +4712,43 @@ function reconcileSharedData(base,local,remote){
 function openSyncReconciliation(){
   const remote=sharedSync.remote;
   if(!remote){notifyUser('Tente novamente a ligação para consultar a versão partilhada, sem apagar alterações locais.','Rever sincronização');return}
+  if(sharedSync.error==='UNCONFIRMED_PENDING_REQUEST'){notifyUser('O pedido original contém dados diferentes da cópia local atual. Exporte a cópia completa e peça revisão antes de substituir ou retomar esse pedido.','Pedido original por confirmar');return}
+  try{validateSyncDiagnostics(remote,true)}catch(error){sharedSync.verified=false;sharedSync.error=error.code;notifyUser(error.message,'Sincronização bloqueada');return}
+  if(remote.pendingWrite&&remote.pendingWrite.state!=='committed'){notifyUser('Existe uma gravação incompleta na fonte. Preserve o pedido original e retome-o com o mesmo identificador e conteúdo antes de reconciliar. Não substitua nem apague os registos pendentes.','Gravação incompleta');return}
   if(!hasBusinessData(remote.data)&&hasBusinessData(state.data)){notifyUser('A base partilhada está inesperadamente vazia. A cópia local foi preservada e não será enviada nem substituída. Peça ao administrador para verificar a fonte e os backups.','Verificar base partilhada');return}
-  const local=JSON.parse(JSON.stringify(state.data)),meta=readSyncMeta(),base=meta?.base||sharedSync.base;
+  const local=JSON.parse(JSON.stringify(state.data)),meta=readSyncMeta(),base=meta?.base||sharedSync.base,pendingAtOpen=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY);
   const result=base?reconcileSharedData(base,local,remote.data):{data:null,conflicts:['A versão de origem das alterações locais é desconhecida.']};
   document.getElementById('syncReviewModal')?.remove();
   const modal=document.createElement('div');modal.id='syncReviewModal';modal.className='modal-backdrop';modal.style.zIndex='150';
   modal.innerHTML=`<div class="modal"><button type="button" class="modal-close" data-sync-close aria-label="Fechar">×</button><p class="eyebrow eyebrow--dark">Integridade dos dados</p><h2>Rever sincronização</h2><p>Local: ${(local.clients||[]).length} clientes · Base partilhada: ${(remote.data.clients||[]).length} clientes</p>${result.conflicts.length?`<p class="muted">Existem diferenças que não podem ser resolvidas automaticamente. As alterações locais permanecem guardadas.</p><ul>${result.conflicts.slice(0,25).map(path=>`<li>${esc(path)}</li>`).join('')}</ul>`:'<p class="muted">As alterações afetam campos distintos e podem ser reconciliadas sem substituir alterações de outro utilizador. A gravação exigirá confirmação da versão no servidor.</p>'}<div class="modal-actions"><button type="button" class="ghost-button" data-sync-export>Exportar cópia local</button><button type="button" class="ghost-button" data-sync-use-remote>Guardar cópia e usar base partilhada</button><button type="button" class="primary-button" data-sync-merge ${result.conflicts.length?'disabled':''}>Reconciliar alterações compatíveis</button></div></div>`;
   document.body.appendChild(modal);const overflow=document.body.style.overflow;document.body.style.overflow='hidden';
-  const close=()=>{modal.remove();document.body.style.overflow=overflow};modal.querySelector('[data-sync-close]').onclick=close;
-  modal.querySelector('[data-sync-export]').onclick=()=>downloadJson({data:local,base,createdAt:new Date().toISOString()},'the-view-alteracoes-locais-pendentes.json');
+  let closed=false;
+  const close=()=>{closed=true;modal.remove();document.body.style.overflow=overflow};modal.querySelector('[data-sync-close]').onclick=close;
+  modal.querySelector('[data-sync-export]').onclick=exportLocalRecoveryCopy;
+  let applying=false;
   const apply=async(useRemote)=>{
-    if(useRemote&&!await confirmUser('Guardar uma cópia das alterações locais neste navegador e passar a consultar a base partilhada? As alterações dessa cópia não serão enviadas.','Usar base partilhada'))return;
+    if(applying)return;
+    applying=true;
     try{
+      if(useRemote&&!await confirmUser('Guardar uma cópia das alterações locais neste navegador e passar a consultar a base partilhada? As alterações dessa cópia não serão enviadas.','Usar base partilhada'))return;
+      if(sharedSync.busy)throw new Error('Existe uma operação em curso. Aguarde e volte a rever as diferenças.');
+      const fresh=await requestCommercialData();
+      if(closed)return;
+      if(fresh.revision!==remote.revision||syncComparable(fresh.pendingWrite)!==syncComparable(remote.pendingWrite)||syncComparable(normalizeData(fresh.data))!==syncComparable(remote.data)){
+        sharedSync.remote={data:normalizeData(fresh.data),revision:fresh.revision,ticket:fresh.readTicket,confirmedAt:fresh.confirmedAt,canWrite:!!fresh.canWrite,pendingWrite:fresh.pendingWrite,capabilities:fresh.capabilities};
+        throw new Error('A base partilhada ou o estado da gravação pendente mudou. Feche esta janela e volte a rever as diferenças.');
+      }
+      if(sharedSync.busy||pendingAtOpen!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY))throw new Error('O pedido local mudou. Volte a rever as diferenças.');
       if(syncComparable(state.data)!==syncComparable(local))throw new Error('Os dados locais mudaram. Volte a rever as diferenças.');
-      localStorage.setItem(KEY+'.conflictBackup.'+Date.now(),JSON.stringify({data:local,base,createdAt:new Date().toISOString()}));
+      localStorage.setItem(KEY+'.conflictBackup.'+Date.now(),JSON.stringify(localRecoveryExport()));
       state.data=useRemote?JSON.parse(JSON.stringify(remote.data)):normalizeData(result.data);
-      sharedSync.base=JSON.parse(JSON.stringify(remote.data));sharedSync.revision=remote.revision;sharedSync.ticket=remote.ticket;sharedSync.lastConfirmedAt=remote.confirmedAt;sharedSync.canWrite=remote.canWrite;sharedSync.verified=true;sharedSync.error='';sharedSync.generation++;
+      sharedSync.base=JSON.parse(JSON.stringify(remote.data));sharedSync.revision=remote.revision;sharedSync.ticket=fresh.readTicket;sharedSync.lastConfirmedAt=fresh.confirmedAt;sharedSync.canWrite=fresh.canWrite;sharedSync.verified=true;sharedSync.error='';sharedSync.generation++;
       saveLocalOnly();persistSyncMeta();localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
+      clearTimeout(saveTimer);saveTimer=null;
       if(useRemote){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{markPendingLocalSync();sharedSync.dirty=true;sharedSync.phase='pending'}
       close();renderAll();renderSharedSyncStatus();
-    }catch(error){sharedSync.verified=false;sharedSync.phase='conflict';renderSharedSyncStatus();notifyUser(error.message||'Não foi possível preservar a cópia local. Nenhuma gravação remota foi feita.','Rever sincronização')}
+    }catch(error){sharedSync.verified=false;sharedSync.phase='conflict';if(error.code)sharedSync.error=error.code;renderSharedSyncStatus();notifyUser(error.message||'Não foi possível preservar a cópia local. Nenhuma gravação remota foi feita.','Rever sincronização')}
+    finally{applying=false}
   };
   modal.querySelector('[data-sync-use-remote]').onclick=()=>apply(true);modal.querySelector('[data-sync-merge]').onclick=()=>apply(false);
 }
@@ -4714,6 +4771,13 @@ function renderSharedSyncStatus(){
   let recovery=false;try{recovery=!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
   bar.innerHTML=`<div><strong>${esc(label)}</strong>${message?`<p>${esc(message)}</p>`:''}${sharedSync.verified&&!sharedSync.canWrite?'<p>Gravação remota desativada neste ambiente.</p>':''}${sharedSync.lastConfirmedAt?`<small>Última confirmação: ${esc(new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}))}</small>`:''}</div><div class="top-actions"><button type="button" class="ghost-button compact-button" data-sync-retry ${sharedSync.busy||sharedSync.phase==='loading'?'disabled':''}>${sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite?'Sincronizar':'Tentar novamente'}</button>${sharedSync.phase==='conflict'?'<button type="button" class="ghost-button compact-button" data-sync-review>Rever diferenças</button>':''}${recovery&&!sharedSync.verified?'<button type="button" class="ghost-button compact-button" data-sync-recover>Retomar gravação pendente</button>':''}${sharedSync.error==='UNAUTHENTICATED'?'<a class="ghost-link" href="/access.html">Renovar acesso</a>':''}</div>`;
   bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};
+  if(sharedSync.error){const diagnostic=document.createElement('small');diagnostic.textContent=(sharedSync.httpStatus?'HTTP '+sharedSync.httpStatus+' - ':'')+sharedSync.error;bar.appendChild(diagnostic)}
+  if(['SYNC_DIAGNOSTICS_UNAVAILABLE','INVALID_SYNC_DIAGNOSTICS'].includes(sharedSync.error)){
+    const explanation=document.createElement('p');explanation.textContent='Sincronização bloqueada: os componentes do servidor não disponibilizam um diagnóstico compatível de gravações pendentes. Os dados locais e o pedido original estão preservados. Peça ao administrador para verificar as versões antes de voltar a sincronizar.';bar.appendChild(explanation);
+  }
+  if(sharedSync.phase!=='synced'){
+    const button=document.createElement('button');button.type='button';button.className='ghost-button compact-button';button.textContent='Exportar cópia local';button.onclick=exportLocalRecoveryCopy;bar.querySelector('.top-actions').appendChild(button);
+  }
   const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
   const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);renderAll()}};
   refreshClientFractionResults();

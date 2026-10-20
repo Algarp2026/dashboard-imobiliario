@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "codex/fix-commercial-write-recovery": false,
       "codex/client-profile-phase1": false,
       "codex/client-profile-phase2a": false,
       "codex/client-profile-phase2b": false,

@@ -49,10 +49,25 @@ async function callStore(functionName, argument) {
   if (result.sourceId!==sheet || result.environment!==(env.VERCEL_ENV==='production'?'production':'test')) throw failure('SOURCE_ENVIRONMENT_MISMATCH',503);
   if (!result.ok) throw failure(['CONFLICT','WRITE_INCOMPLETE','UNINITIALIZED','WRITES_DISABLED','STORE_SIZE_LIMIT'].includes(result.code)?result.code:'SOURCE_OPERATION_FAILED',result.code==='CONFLICT'?409:result.code==='STORE_SIZE_LIMIT'?413:503);
   if (result.protocol!=='tv-cas-v1'||!REVISION.test(result.revision)||!Number.isFinite(Date.parse(result.confirmedAt))) throw failure('INVALID_SOURCE_RESPONSE');
+  if (!OBJECT(result.capabilities)||result.capabilities.pendingWriteDiagnostics!==1) throw failure('SYNC_DIAGNOSTICS_UNAVAILABLE',503);
+  if (functionName==='crmRead') {
+    if (!Object.hasOwn(result,'pendingWrite')) throw failure('SYNC_DIAGNOSTICS_UNAVAILABLE',503);
+    const pending=pendingWriteState(result.pendingWrite);
+    if (pending && (pending.state==='pending'&&pending.baseRevision!==result.revision || pending.state==='committed'&&pending.revision!==result.revision)) throw failure('INVALID_SYNC_DIAGNOSTICS');
+  }
   return result;
 }
 function writeEnabled() {
   return process.env.CRM_GOOGLE_WRITES_ENABLED==='true' && (process.env.VERCEL_ENV==='production'||process.env.CRM_GOOGLE_TEST_WRITES_ENABLED==='true');
+}
+function pendingWriteState(value) {
+  if (value === null) return null;
+  if (!OBJECT(value) || !['pending','committed','blocked'].includes(value.state) ||
+      typeof value.requestId !== 'string' || !/^[\w-]{8,100}$/.test(value.requestId) ||
+      typeof value.baseRevision !== 'string' || !REVISION.test(value.baseRevision) ||
+      typeof value.revision !== 'string' || !REVISION.test(value.revision) ||
+      Object.keys(value).sort().join(',')!=='baseRevision,requestId,revision,state') throw failure('INVALID_SYNC_DIAGNOSTICS');
+  return {state:value.state,requestId:value.requestId,baseRevision:value.baseRevision,revision:value.revision};
 }
 function ticket(request, revision, issued = Date.now()) {
   const secret=process.env.COMMERCIAL_ACCESS_SECRET||process.env.COMMERCIAL_ACCESS_PASSWORD||'';
@@ -63,4 +78,4 @@ function validTicket(request, revision, value) {
   const issued=Number(value.split('.')[0]),age=Date.now()-issued;
   return age>=0&&age<=60*60*1000&&safeEqual(value,ticket(request,revision,issued));
 }
-module.exports={validStore,serializedStore,callStore,writeEnabled,ticket,validTicket,REVISION,failure};
+module.exports={validStore,serializedStore,callStore,writeEnabled,pendingWriteState,ticket,validTicket,REVISION,failure};

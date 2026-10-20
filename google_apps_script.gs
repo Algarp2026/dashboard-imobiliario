@@ -64,7 +64,7 @@ function assertServerCaller_() {
 }
 function storeResponse_(values) {
   var props = PropertiesService.getScriptProperties();
-  var response = {sourceId:props.getProperty('CRM_SPREADSHEET_ID'),environment:props.getProperty('CRM_ENVIRONMENT'),protocol:'tv-cas-v1',canWrite:props.getProperty('CRM_API_WRITES_ENABLED') === 'true'};
+  var response = {sourceId:props.getProperty('CRM_SPREADSHEET_ID'),environment:props.getProperty('CRM_ENVIRONMENT'),protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1},canWrite:props.getProperty('CRM_API_WRITES_ENABLED') === 'true'};
   Object.keys(values).forEach(function(key) { response[key] = values[key]; });
   return response;
 }
@@ -161,8 +161,18 @@ function crmRead(request) {
     var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL);
     if (intent && intent.format !== 2) return storeResponse_({ok:false,code:'WRITE_INCOMPLETE'});
     var current = currentStore_();
-    return storeResponse_({ok:true,data:JSON.parse(current.raw),revision:current.revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString()});
+    return storeResponse_({ok:true,data:JSON.parse(current.raw),revision:current.revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString(),pendingWrite:pendingWriteState_(intent,current)});
   } finally { lock.releaseLock(); }
+}
+function pendingWriteState_(intent, current) {
+  if (!intent) return null;
+  if (intent.format !== 2 || !/^[\w-]{8,100}$/.test(intent.requestId) ||
+      !/^[a-f0-9]{64}$/.test(intent.baseRevision) || !/^[a-f0-9]{64}$/.test(intent.revision)) throw new Error('INVALID_STORAGE');
+  var receipt = current.active ? current.active.receipt : readStoreMetadata_(STORE_RECEIPT_CELL);
+  var committed = receipt && receipt.requestId === intent.requestId && receipt.baseRevision === intent.baseRevision &&
+    receipt.revision === intent.revision && current.revision === intent.revision;
+  return {state:committed ? 'committed' : intent.baseRevision === current.revision ? 'pending' : 'blocked',
+    requestId:intent.requestId,baseRevision:intent.baseRevision,revision:intent.revision};
 }
 function crmWrite(request) {
   assertServerCaller_();
@@ -184,6 +194,9 @@ function crmWrite(request) {
       if (same(intent)) { sheet.getRange(STORE_WRITE_INTENT_CELL).setValue(''); SpreadsheetApp.flush(); }
       return success();
     }
+    // A verified active receipt survives a lost B5 cleanup. Do not let that completed
+    // intent block the next CAS write; its receipt remains in B6 and BackupsVersions.
+    if (intent && pendingWriteState_(intent,current).state === 'committed') intent = null;
     if (request.recovery && !same(intent)) return storeResponse_({ok:false,code:'CONFLICT'});
     if (intent && (intent.format !== 2 || !same(intent))) return storeResponse_({ok:false,code:'WRITE_INCOMPLETE'});
     if (receipt && receipt.requestId === request.requestId && !same(receipt)) return storeResponse_({ok:false,code:'CONFLICT'});

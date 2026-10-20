@@ -1,9 +1,10 @@
 const fs=require('node:fs');
 const vm=require('node:vm');
 const {createHash}=require('node:crypto');
-module.exports=function makeStore(data){
+module.exports=function makeStore(data, options={}){
   const sheets=new Map(),trace=[],properties={CRM_API_CALLER_EMAIL:'owner@example.test',CRM_SPREADSHEET_ID:'test-sheet',CRM_ENVIRONMENT:'test',CRM_API_WRITES_ENABLED:'true'};
   let held=false,mirrorFailure='',writeFailure='',caller='owner@example.test';
+  const step=(name)=>{if(options.onStep)options.onStep(name)};
   function coordinates(key,column){
     if(typeof key==='number')return[key,column];
     const match=key.match(/^([A-Z]+)(\d+)/);return[Number(match[2]),match[1].split('').reduce((sum,c)=>sum*26+c.charCodeAt(0)-64,0)];
@@ -15,28 +16,29 @@ module.exports=function makeStore(data){
       getRange(key,column,height=1,width=1){const [row,col]=coordinates(key,column),address=(r,c)=>r+':'+c,s=this;return{
         getValue(){if(name==='Store')trace.push({type:'read',key,held});return s.cells.get(address(row,col))??''},
         getValues(){trace.push({type:'read',name,key,held});return Array.from({length:height},(_,i)=>Array.from({length:width},(_,j)=>s.cells.get(address(row+i,col+j))??''))},
-        setValue(value){if(!held)throw new Error('Write without script lock');if(String(value).length>50000)throw new Error('Cell capacity exceeded');if(name==='Store'&&key==='B6'&&writeFailure==='pointer-before')throw new Error('Pointer failure');trace.push({type:'write',name,key,held});s.cells.set(address(row,col),value);if(name==='Store'&&key==='B6'&&writeFailure==='pointer-after')throw new Error('Lost commit acknowledgement');return this},
+        setValue(value){if(!held)throw new Error('Write without script lock');if(String(value).length>50000)throw new Error('Cell capacity exceeded');if(name==='Store'&&key==='B6'&&writeFailure==='pointer-before')throw new Error('Pointer failure');step('before:value:'+name+':'+key);trace.push({type:'write',name,key,held});s.cells.set(address(row,col),value);step('after:value:'+name+':'+key);if(name==='Store'&&key==='B6'&&writeFailure==='pointer-after')throw new Error('Lost commit acknowledgement');return this},
         setValues(values){
           if(!held)throw new Error('Write without script lock');
           if(values.some(line=>line.some(value=>String(value).length>50000)))throw new Error('Cell capacity exceeded');
           if(name==='StoreVersions'&&writeFailure==='chunks-before')throw new Error('Chunk write failure');
           if(name==='StoreVersions'&&writeFailure==='chunks-partial'){s.cells.set(address(row,col),values[0][0]);throw new Error('Partial chunk write');}
           if(mirrorFailure===name||name==='Backups'&&writeFailure==='backup-header'||name==='Store'&&writeFailure==='store-before')throw new Error('Simulated write failure');
-          trace.push({type:'rows',name,key,held});
+          step('before:rows:'+name);trace.push({type:'rows',name,key,held});
           values.forEach((line,i)=>line.forEach((value,j)=>{if(!(name==='Store'&&writeFailure==='store-json-only'&&row+i===3&&col+j===2))s.cells.set(address(row+i,col+j),value)}));s.rows.push(values);
+          step('after:rows:'+name);
           if(name==='StoreVersions'&&writeFailure==='chunks-corrupt')s.cells.set(address(row,col+2),':corrupted');
           if(name==='Store'&&['store-after','store-json-only'].includes(writeFailure))throw new Error('Simulated failure after applying Store');
           return this;
         }
       }},
       getLastRow(){return Math.max(0,...[...this.cells.keys()].map(key=>Number(key.split(':')[0])))},
-      clearContents(){if(!held)throw new Error('Clear without script lock');this.rows=[];this.cells.clear()},setFrozenRows(){},
+      clearContents(){if(!held)throw new Error('Clear without script lock');step('before:clear:'+name);this.rows=[];this.cells.clear();step('after:clear:'+name)},setFrozenRows(){},
       appendRow(row){
         if(!held)throw new Error('Append without script lock');
         if(row.some(value=>String(value).length>50000))throw new Error('Cell capacity exceeded');
         if(name==='BackupsVersions'&&writeFailure==='archive-before')throw new Error('Backup failure');
         if(name==='Backups'&&writeFailure==='backup-before')throw new Error('Simulated backup failure');
-        const number=this.getLastRow()+1;row.forEach((value,column)=>this.cells.set(number+':'+(column+1),value));this.rows.push(row);trace.push({type:'append',name,held});
+        step('before:append:'+name);const number=this.getLastRow()+1;row.forEach((value,column)=>this.cells.set(number+':'+(column+1),value));this.rows.push(row);trace.push({type:'append',name,held});step('after:append:'+name);
         if(name==='BackupsVersions'&&writeFailure==='archive-after')throw new Error('Backup acknowledgement lost');
         if(name==='Backups'&&writeFailure==='backup-after')throw new Error('Simulated failure after appending backup');
       }
@@ -48,7 +50,7 @@ module.exports=function makeStore(data){
     PropertiesService:{getScriptProperties(){return{getProperty:key=>properties[key]||''}}},
     Session:{getEffectiveUser(){return{getEmail:()=>caller}}},
     Utilities:{DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},computeDigest(algorithm,text){return [...createHash(algorithm).update(text).digest()].map(byte=>byte>127?byte-256:byte)}},
-    SpreadsheetApp:{openById(id){if(id!==properties.CRM_SPREADSHEET_ID)throw new Error('Wrong sheet');return{getSheetByName:name=>sheets.get(name),insertSheet:sheet}},flush(){}},
+    SpreadsheetApp:{openById(id){if(id!==properties.CRM_SPREADSHEET_ID)throw new Error('Wrong sheet');return{getSheetByName:name=>sheets.get(name),insertSheet:sheet}},flush(){step('flush')}},
     LockService:{getScriptLock(){return{waitLock(){if(held)throw new Error('Concurrent lock not serialized');held=true;trace.push({type:'lock'})},releaseLock(){held=false;trace.push({type:'unlock'})}}}},
     ContentService:{MimeType:{JSON:'json',JAVASCRIPT:'js'},createTextOutput(body){return{body,setMimeType(){return this}}}}
   };
