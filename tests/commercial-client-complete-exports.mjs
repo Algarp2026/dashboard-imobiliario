@@ -1,11 +1,11 @@
-import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';import {closeProfile} from './helpers/current-client-ui.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5197',output=process.env.COMPLETE_ARTIFACTS||path.resolve('docs/client-profile-complete');
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5197',output=process.env.COMPLETE_ARTIFACTS||path.resolve('docs/client-profile-complete');
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000}}),errors=[];
-await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+context.setDefaultTimeout(12000);await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
 await context.route(origin+'/isolated-print-render',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html><body></body></html>'}));
 await context.addInitScript(()=>{window.print=()=>{};const open=window.open;window.open=function(...args){const popup=open.apply(this,args);if(popup)popup.print=()=>{};return popup}});
 const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
@@ -23,7 +23,7 @@ try{
   await page.getByRole('tab',{name:'Apresentação',exact:true}).click();await page.locator('[data-workflow="pdf"]').click();await page.locator('[data-presentation-price="26"]').fill('543210');
   assert.equal(await page.locator('#presentationPdfLanguage').inputValue(),'pt-en');let print=await popup(()=>page.locator('[data-generate-presentation-pdf]').click());assert.match(await print.locator('body').innerText(),/543.210/);assert.match(await print.locator('body').innerText(),/Presentation Price/i);await print.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));assert.ok(await print.locator('img').count());await print.close();
   await page.getByRole('tab',{name:'Apresentação',exact:true}).click();await page.locator('[data-workflow="pdf"]').click();await page.locator('#presentationPdfLanguage').selectOption('pt-fr');print=await popup(()=>page.locator('[data-generate-presentation-pdf]').click());assert.match(await print.locator('body').innerText(),/Prix de présentation/i);await print.close();
-  await page.locator('#printClientsSummaryBtn').click();assert.equal(await page.locator('[name="clientReportModel"]:checked').inputValue(),'portfolio');print=await popup(()=>page.locator('[data-generate-clients-summary]').click());await print.locator('#report-pages .page').first().waitFor();assert.match(await print.locator('body').innerText(),/Carteira Comercial por Estado/);assert.match(await print.locator('body').innerText(),/Estado do Contacto/);await print.close();
+  await closeProfile(page);await page.locator('#commercialSidebar [data-tab="reports"]').click();await page.locator('#printClientsSummaryBtn').click();assert.equal(await page.locator('[name="clientReportModel"]:checked').inputValue(),'portfolio');print=await popup(()=>page.locator('[data-generate-clients-summary]').click());await print.locator('#report-pages .page').first().waitFor();assert.match(await print.locator('body').innerText(),/Carteira Comercial por Estado/);assert.match(await print.locator('body').innerText(),/Estado do Contacto/);await print.close();
   await page.locator('#printClientsSummaryBtn').click();await page.locator('[name="clientReportModel"][value="listing"]').check();await page.locator('[data-client-summary-column][value="informedPrices"]').check();await page.locator('#clientSummarySearch').fill(before.clients[0].name);print=await popup(()=>page.locator('[data-generate-clients-summary]').click());await print.locator('#report-pages .page').first().waitFor();assert.match(await print.locator('body').innerText(),/630.000/);await print.close();
   await page.locator('#commercialSidebar [data-tab="reports"]').click();await page.locator('[data-ux-export="price-list"]').click();print=await popup(()=>page.locator('[data-generate-price-list-pdf]').click());assert.match(await print.content(),/A4 portrait/);assert.match(await print.locator('body').innerText(),/Price List/i);await print.close();
   assert.deepEqual((await remote()).data,before);assert.equal((await meta()).writes,posts);assert.deepEqual(errors,[]);

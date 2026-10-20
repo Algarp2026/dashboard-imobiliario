@@ -5,11 +5,11 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),{loadReportApp,fictitiousRows}=require('./helpers/client-report-grouping.cjs');
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {PDFDocument}=require(process.env.PDF_LIB_MODULE||'pdf-lib');
-const model=require('../commercial-client-workflow.js'),app=loadReportApp(),origin='http://127.0.0.1:5200',out=path.resolve('docs/client-list-report-grouping');
+const workspace=require('../commercial-client-workspace.js'),model=require('../commercial-client-workflow.js'),app=loadReportApp(),origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5200',out=path.resolve('docs/client-list-report-grouping');
 await fs.mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000}}),errors=[],results=[];
-await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+context.setDefaultTimeout(12000);await context.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
 const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
 async function report(input,options,filename=''){
   const rows=app.filterClientReportRows(input,options);app.generateClientsSummaryPdf(rows,options.columns,options);
@@ -31,19 +31,21 @@ async function report(input,options,filename=''){
 try{
   await page.goto(origin+'/commercial.html');await page.locator('#password').fill('View-Phase2A-Teste');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('[data-client="demo-0"]').waitFor();
   const before=await page.evaluate(async()=>await(await fetch('/api/commercial-data')).json()),meta=await page.evaluate(async()=>await(await fetch('/api/test-meta')).json());
-  const expected=model.portfolio(before.data.clients,before.data.events,new Date().toISOString().slice(0,10)).map(r=>r.client.id);
-  assert.deepEqual(await page.locator('#clientsList [data-client]').evaluateAll(els=>els.map(e=>e.dataset.client)),expected);
-  assert.equal(await page.locator('.ux-portfolio-heading,.ux-portfolio-counts').count(),0);assert.match(await page.locator('#clientFilterSummary').innerText(),/64 clientes/);
+  await page.locator('#clientListSort').selectOption('stage');await page.locator('.client-advanced-filters>summary').click();
+  const projected=before.data.clients.map(c=>({...c,stage:model.clientProjection(before.data,c).stage}));
+  const expectedRows=model.portfolio(projected,before.data.events,new Date().toISOString().slice(0,10)).map(r=>r.client);
+  const expected=workspace.sortClients(expectedRows,{mode:'stage',source:before.data.clients,stages:app.STAGES}).map(c=>c.id);assert.deepEqual(await page.locator('#clientsList [data-client]').evaluateAll(els=>els.map(e=>e.dataset.client)),expected);
+  assert.equal(await page.locator('.ux-portfolio-heading,.ux-portfolio-counts').count(),0);assert.match(await page.locator('#clientFilterSummary').innerText(),/64 de 64/);
   assert.ok(await page.locator('.ux-client-priority').count());assert.ok(await page.locator('.ux-contact-pending').count());
   await page.locator('#clientsList').evaluate(e=>window.scrollTo(0,e.getBoundingClientRect().top+scrollY-250));await page.screenshot({path:path.join(out,'dashboard-lista-continua.png')});
   await page.locator('#clientStageFilter').selectOption('Qualificado');assert.ok(await page.locator('#clientsList [data-client]').count());assert.ok((await page.locator('#clientsList [data-client] .badge').allTextContents()).every(s=>s==='Qualificado'));
   await page.locator('#clientStageFilter').selectOption('all');await page.locator('#clientContactFilter').selectOption('Resposta nossa pendente');await page.locator('#clientPriorityFilter').selectOption('yes');assert.ok(await page.locator('#clientsList [data-client]').count());
-  const filtered=model.portfolio(before.data.clients,before.data.events,new Date().toISOString().slice(0,10),{contact:'Resposta nossa pendente',priority:'yes'}).map(r=>r.client.id);assert.deepEqual(await page.locator('#clientsList [data-client]').evaluateAll(els=>els.map(e=>e.dataset.client)),filtered);
+  const filteredRows=model.portfolio(projected,before.data.events,new Date().toISOString().slice(0,10),{contact:'Resposta nossa pendente',priority:'yes'}).map(r=>r.client);assert.deepEqual(await page.locator('#clientsList [data-client]').evaluateAll(els=>els.map(e=>e.dataset.client)),workspace.sortClients(filteredRows,{mode:'stage',source:before.data.clients,stages:app.STAGES}).map(c=>c.id));
   await page.locator('#clientSearch').fill('no fictitious match');assert.equal(await page.locator('#clientsList [data-client]').count(),0);await page.locator('#clientSearch').fill('');await page.locator('#clientContactFilter').selectOption('all');await page.locator('#clientPriorityFilter').selectOption('all');
-  await page.locator('[data-edit-client-card="demo-0"]').click();await page.locator('#clientModal').waitFor();await page.locator('#cancelClient').click();await page.locator('[data-client="demo-0"]').click();await page.getByRole('tab',{name:'Preferências',exact:true}).click();await page.getByRole('button',{name:'Editar preferências',exact:true}).click();await page.locator('#clientPreferencesEditor').waitFor();await page.locator('[data-preferences-cancel]').click();await page.locator('[data-client-return]').click();
+  await page.locator('[data-edit-client-card="demo-0"]').click();await page.locator('#clientModal').waitFor();await page.locator('#cancelClient').click();await page.locator('[data-client="demo-0"]').click();await page.getByRole('tab',{name:'Preferências',exact:true}).click();await page.getByRole('button',{name:'Editar preferências',exact:true}).click();await page.locator('#clientPreferencesEditor').waitFor();await page.locator('[data-preferences-cancel]').click();await page.locator('[data-profile-close]').click();
   // Exercise the actual modal -> popup path with the filtered fictitious CRM.
   for(const type of ['operational','listing']){
-    await page.locator('#printClientsSummaryBtn').click();await page.locator(`[name="clientReportModel"][value="${type}"]`).check();await page.locator('#clientSummarySearch').fill('Cliente demonstração 01');
+    await page.locator('#commercialSidebar [data-tab="reports"]').click();await page.locator('#printClientsSummaryBtn').click();await page.locator(`[name="clientReportModel"][value="${type}"]`).check();await page.locator('#clientSummarySearch').fill('Cliente demonstração 01');
     const popup=page.waitForEvent('popup');await page.locator('[data-generate-clients-summary]').click();const p=await popup;const html=await p.content();await p.close();const print=await context.newPage();await print.setContent(html);await print.waitForFunction(()=>document.body.dataset.ready==='true');assert.equal(await print.locator('#report-source [data-report-stage]').count(),1);assert.match(await print.locator('.preview-toolbar').innerText(),/1 clientes/);await print.close();
   }
   await page.setViewportSize({width:390,height:844});await page.locator('.ux-toast').waitFor({state:'hidden',timeout:6000});await page.locator('#clientsList').evaluate(e=>{e.scrollTop=0;window.scrollTo(0,e.getBoundingClientRect().top+scrollY-250)});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await page.screenshot({path:path.join(out,'dashboard-lista-mobile.png')});

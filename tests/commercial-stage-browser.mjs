@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5201';
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5201';
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 const errors=[],external=[],commercialPosts=[];
 try{
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
     const context=await browser.newContext({viewport});
-    await context.route('**/*',route=>{
+    context.setDefaultTimeout(12000);await context.route('**/*',route=>{
       const req=route.request();
       if(new URL(req.url()).origin!==origin){external.push(req.url());return route.abort()}
       if(req.method()!=='GET'&&!req.url().endsWith('/api/access')){commercialPosts.push(req.url());return route.abort()}
@@ -29,7 +29,7 @@ try{
       await page.getByRole('tab',{name:'Negociação',exact:true}).click();
       if(id==='demo-0')assert.ok((await page.locator('[data-negotiation-unit="9"]').innerText()).includes('Reservado'));
       if(id==='demo-2'){
-        await page.locator('[data-workflow="unit-movement"][data-number="24"]').click();
+        await page.locator('[data-negotiation-unit="24"]>summary').click();await page.locator('[data-workflow="unit-movement"][data-number="24"]').click();
         const form=page.locator('[data-workflow-form="negotiation"]');
         assert.equal(await form.locator('[name="interest"]').count(),0);
         await form.locator('[name="type"]').selectOption('Aceitação');
@@ -39,7 +39,7 @@ try{
         assert.equal(await form.locator('[name="interest"]').inputValue(),'');
         await page.locator('[data-workflow="cancel-negotiation"]').click();await page.locator('[data-dialog-confirm]').click();
       }
-      await page.locator('[data-client-return]').click();
+      await page.locator('[data-profile-close]').click();
     }
     await page.locator('#clientStageFilter').selectOption('Reservado');
     assert.equal(await page.locator('[data-client="demo-0"]').count(),1);

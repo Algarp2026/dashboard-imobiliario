@@ -3009,6 +3009,9 @@ function renderAgents(){
   if(edit)edit.onclick=()=>openAgentModal(edit.dataset.editAgentDetail);
   const ui=window.THE_VIEW_CLIENT_WORKSPACE;
   if(ui){
+    if(typeof window.THE_VIEW_CLIENT_WORKFLOW?.contactInfo!=='function'){
+      const warning=document.createElement('p');warning.className='error-box';warning.setAttribute('role','alert');warning.textContent='Acompanhamento dos clientes indisponível: recarregue a página para carregar o módulo comercial.';detail.append(warning);return;
+    }
     const linked=commercialClients().filter(c=>ui.associatedAgentId(c,state.data.agents)===String(a.id));
     const section=document.createElement('section');section.className='agent-associated-clients';
     section.innerHTML=`<div class="crm-detail-section__heading"><h3>Clientes associados <span class="d2-count">${linked.length}</span></h3><button class="ghost-button" type="button" data-agent-portfolio>${uxIcon('users')}Ver na carteira</button></div>${linked.length?linked.map(c=>{const contact=window.THE_VIEW_CLIENT_WORKFLOW.contactInfo(c,state.data.events,today()),action=clientSummaryFollowupInfo(c);return`<div class="agent-associated-row"><div><strong>${esc(c.name||'Cliente')}</strong><span>${esc(normalizeClientStage(c.stage))} · ${esc(contact.state)}</span><small>${esc(action.step||'Sem próxima ação definida')}${action.date?' · '+esc(formatCommercialDate(action.date)):''}</small></div><button class="ghost-button" type="button" data-ux-client="${attr(c.id)}">${uxIcon('arrow-up-right')}Abrir ficha</button></div>`}).join(''):'<p class="muted">Sem clientes com vínculo explícito a este agente.</p>'}`;

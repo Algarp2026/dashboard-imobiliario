@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',out=process.env.WORKSPACE_ARTIFACTS||'docs/client-agent-workspace',errors=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',out=process.env.WORKSPACE_ARTIFACTS||'docs/client-agent-workspace',errors=[];
 fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 try{
   for(const [name,viewport]of [['desktop',{width:1440,height:900}],['mobile',{width:390,height:844}]]){
-    const context=await browser.newContext({viewport});await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+    const context=await browser.newContext({viewport});context.setDefaultTimeout(12000);await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     const p=await context.newPage();let posts=0;p.setDefaultTimeout(15000);p.on('pageerror',e=>errors.push(e.message));p.on('request',r=>{if(new URL(r.url()).pathname==='/api/commercial-data'&&r.method()==='POST')posts++});
     await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');await p.getByRole('button',{name:'Entrar',exact:true}).click();await p.locator('[data-open-profile="demo-0"]').waitFor();
     const remote=()=>p.evaluate(async()=>await(await fetch('/api/commercial-data')).json()),before=(await remote()).data;

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',errors=[],writes=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',errors=[],writes=[];
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 try{
-  const context=await browser.newContext();await context.route('**/*',route=>{const r=route.request(),url=new URL(r.url());if(url.origin!==origin)return route.abort();if(r.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}return route.continue()});
+  const context=await browser.newContext();context.setDefaultTimeout(12000);await context.route('**/*',route=>{const r=route.request(),url=new URL(r.url());if(url.origin!==origin)return route.abort();if(r.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}return route.continue()});
   const p=await context.newPage();p.setDefaultTimeout(12000);p.on('pageerror',e=>errors.push(e.message));
   await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');await p.getByRole('button',{name:'Entrar',exact:true}).click();await p.locator('[data-open-profile="demo-0"]').waitFor();
   const cache=()=>p.evaluate(()=>localStorage.getItem('theView.crmCommercial.v2')),initial=await cache();

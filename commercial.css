@@ -259,6 +259,8 @@ body:has(.ux-app-shell) .topbar{padding-top:24px;padding-bottom:24px}
 .ux-next-action>div{display:grid;grid-template-columns:18px minmax(0,1fr);gap:7px 9px;align-items:center;min-width:0}
 .ux-next-action span{font-size:12px;color:var(--muted)}
 .ux-next-action strong{grid-column:2;font-size:14px;overflow-wrap:anywhere}
+.ux-opportunity-detail .ux-next-action>div{grid-template-columns:minmax(0,1fr)}
+.ux-opportunity-detail .ux-next-action strong{grid-column:1}
 .ux-next-action .ux-text-button{flex:0 0 auto;font-size:12px}
 .ux-client-secondary-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
 .ux-client-fractions{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px}
