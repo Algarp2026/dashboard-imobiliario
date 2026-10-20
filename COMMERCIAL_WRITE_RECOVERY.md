@@ -1,5 +1,110 @@
 # Commercial persistence: isolated diagnosis and recovery plan
 
+## PR 14: specific Apartment 16 operation (preparation only)
+
+The user has confirmed the completed comparison: only finalPrices[16] and the
+third priceHistory[16] entry differ; the desired value is 950000, replacing
+925000, with the existing entry dated 19/10/2026. All other data match: 65 clients,
+105 events, 39 states and remaining structures. This is accepted input, not a
+request to repeat that investigation. No real data was read in this intervention.
+
+The preserved Chrome request has a different requestId from B5, while its base
+revision matches active B6. The remaining technical proof is the target digest:
+equal base revisions or equal prices alone do NOT identify the pending content.
+
+### 1. Synchronization mechanism
+
+The reviewed engine already requires requestId + baseRevision + SHA-256 of the
+complete canonical payload to resume an intent. Its controls must not be weakened.
+There are no new changes to commercial.js, the API, the server adapter or Apps
+Script for this incident. The offline helper
+`scripts/prepare-apartment16-recovery.js` uses that existing protocol. It performs
+no HTTP calls, file writes, environment changes or browser-storage operations,
+and does nothing automatically when run/imported. No data fixtures or recovery
+payloads from the real incident are committed.
+
+### 2. Specific recovery plan
+
+With future explicit authorization for the necessary authenticated reads:
+
+1. Keep the Chrome pendingWrite and all existing exports/backups untouched. Keep
+   other commercial writers out of the controlled recovery window. Do not reload
+   the dashboard as a recovery operation. The full confirmed comparison need not
+   be manually repeated or sent to this chat.
+2. Obtain the exact original request from the existing private export or memory,
+   plus a fresh authenticated GET from `/api/commercial-data`. Use the installed
+   compatible capability/diagnostics; unsupported or incomplete results stop the
+   procedure. This helper cannot establish HTTP authentication from an offline
+   JSON file: the operator must obtain the read through the authenticated API.
+3. `createPlan(localExport, authenticatedRead)` verifies the active checksum, B5
+   pending state, original/source base revisions, counts/IDs/client references,
+   all 39 explicit valid states, reservations 8/24, the precise append-only
+   Apartment 16 delta, and equality of every other field, including unknown
+   metadata. It does not append a new history entry or reconstruct a price.
+4. Crucially, it hashes the complete original pendingWrite.data using the exact
+   server canonical serializer. It must equal B5's advertised target revision.
+   Only then is it possible to reconstruct the EXISTING SOURCE operation in a
+   separate envelope: `action: recover`, source B5 requestId, original baseRevision,
+   and a byte-equivalent canonical copy of the original content. The browser
+   request object and its ID are not edited, replaced, sent or removed.
+5. If the target checksum differs, the helper stops with
+   `SOURCE_TARGET_CONTENT_MISMATCH`. Do not rebind B5 to the local price or reuse
+   its ID with a new body. A separately authorized administrative read-only
+   reconstruction of B5's staged version is then needed to identify its original
+   content. If it is genuinely different, resolving that other operation requires
+   another reviewed decision; this patch neither cancels nor supersedes it.
+6. Keep the generated plan PRIVATE and outside Git/logs. `summary(plan)` emits
+   only identities/revisions/counts/changed paths, not customer records. The plan
+   itself contains the preserved original request and full data; it is not safe
+   to post to the PR. A plan checksum binds both request identities and payloads.
+7. Obtain explicit human approval bound to planChecksum, B5 requestId, baseRevision
+   and targetRevision. Immediately reread the API.
+   `prepareApprovedRequest(plan, freshRead, approval)` rejects absent approval,
+   altered plans, changed source identity/content/revision or missing intent.
+   It returns a SEPARATE request only; it cannot send it.
+8. Only after separate express authorization for the real write, an authorized
+   operator may send that exact envelope once to the existing authenticated,
+   same-origin POST `/api/commercial-data` recovery action. Do not send the plan
+   or its originalPendingWrite. The existing API preflight, Apps Script lock,
+   checksum/descriptor verification and CAS still apply. No force flag, alternate
+   endpoint, cell edit, B5 cleanup, new ID or timestamp/history generation is used.
+   A publication or Apps Script change, if needed, also requires separate approval.
+9. Preserve the prepared envelope for an ambiguous acknowledgement. A timeout or
+   502 is not proof of failure; do not create another operation. A controlled,
+   explicitly authorized retry uses the exact SAME source ID/base/content and is
+   idempotent. A 409, different pending identity or changed revision stops recovery.
+
+### 3. Post-recovery validation
+
+Require a matching persisted receipt (source requestId and targetRevision), then
+two fresh authenticated reads with the expected revision and identical complete
+content. `verifyPersistence(plan, receipt, firstRead, secondRead)` verifies all
+these facts; it rejects unrelated pending operations, unstable reads or a receipt
+for the Chrome ID instead of the source ID. Successful data must contain 950000
+and exactly the three ORIGINAL history records, 65 clients, 105 events, 39 states,
+unchanged reservations 8/24, sales, commissions and all other metadata. Confirm
+the previous immutable version/backup and legacy B2 are retained under the
+existing administrative backup procedure. The helper does not claim to inspect
+real backups or the browser; its no-mutation guarantee applies to its inputs.
+
+The Chrome pendingWrite must remain untouched even after this validation. Do not
+clear it or refresh the dashboard automatically. Reconciliation of that browser
+is a separate approved step, with its private original export retained.
+
+### Tests and remaining gate
+
+`node tests/commercial-apartment16-recovery.test.js` exercises 39 directed cases,
+including different IDs with identical complete content, rejected different
+content, approval/plan tampering, lost/missing original, pre-mirror/staged/committed
+interruptions, two-session CAS, API retries, three history records and unchanged
+original request. All source/API execution is in-memory with fictitious data and
+network interception. All 38 repository test suites pass.
+
+The actual target checksum has NOT been read or matched here. Therefore this is
+a tested technical preparation, not a claim that the real recovery has occurred
+or is already approved. No real read/write, Apps Script update, Vercel publication,
+merge or browser-storage modification was performed.
+
 ## Scope
 
 Branch: `codex/fix-commercial-write-recovery`, based exactly on production reference
@@ -239,6 +344,8 @@ Do not use a dashboard reload, reconciliation or repeated save as a diagnostic.
    revision to the current revision, regenerate its ID or substitute a merged
    payload. Resolve the underlying mirror/capacity failure first if it is still
    present. A same-ID retry does not append another backup or business event.
+   If source and browser IDs differ, use only the separately checksum-proven
+   source-envelope procedure above; never edit the stored browser request.
 6. If already committed with the matching receipt, the same recovery request can
    confirm it idempotently. A later unrelated normal write can ignore only that
    cryptographically verified completed intent under the new code. Do not clear
@@ -261,8 +368,9 @@ Do not use a dashboard reload, reconciliation or repeated save as a diagnostic.
 
 ## Remaining limitations
 
-The real failure's code, current B5/B6/receipt, mirror error, installed Apps Script
-version and backup integrity are unknown. This intervention does not prove that
+The historical failure code, current target checksum/receipt, mirror error,
+installed Apps Script version and live backup integrity have not been read here.
+The user-confirmed ID/base/delta facts are recorded above. This does not prove that
 the live source is recoverable. Cell-size limits in mirror fields, Apps Script
 quotas/timeouts and append-only sheet growth are unchanged. Mirrors can still be
 partially refreshed before a commit; only verified active chunks are authoritative.
