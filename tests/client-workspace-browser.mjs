@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',out=process.env.WORKSPACE_ARTIFACTS||'docs/client-agent-workspace',errors=[],writes=[],failures=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',out=process.env.WORKSPACE_ARTIFACTS||'docs/client-agent-workspace',errors=[],writes=[],failures=[];
 fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 const baseline=Object.fromEntries(['commercial.js'].map(name=>[name,execFileSync('git',['show','5d2c91f:'+name],{encoding:'utf8',maxBuffer:4000000})]));
@@ -12,7 +12,7 @@ try{
   for(const [name,viewport,before] of [['before-desktop',{width:1440,height:900},true],['before-mobile',{width:390,height:844},true],['desktop',{width:1440,height:900},false],['laptop',{width:1366,height:768},false],['tablet',{width:820,height:1080},false],['mobile',{width:390,height:844},false]]){
     console.log('Checking '+name);
     const context=await browser.newContext({viewport});
-    await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);if(before&&baseline[file])return route.fulfill({contentType:file.endsWith('.html')?'text/html':'text/javascript',body:baseline[file]});return route.continue()});
+    context.setDefaultTimeout(12000);await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);if(before&&baseline[file])return route.fulfill({contentType:file.endsWith('.html')?'text/html':'text/javascript',body:baseline[file]});return route.continue()});
     const p=await context.newPage();p.on('pageerror',e=>errors.push(name+': '+e.message));p.on('response',r=>{if(r.status()>=400)failures.push(name+': '+r.status()+' '+new URL(r.url()).pathname)});
     p.setDefaultTimeout(12000);
     await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');await p.getByRole('button',{name:'Entrar',exact:true}).click();await p.locator('[data-client="demo-0"]').waitFor({state:'attached'});

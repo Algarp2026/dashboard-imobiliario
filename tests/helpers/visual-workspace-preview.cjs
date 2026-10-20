@@ -13,4 +13,4 @@ require.cache[key].exports=()=>{
   if(process.env.COMPOSITION_D2_FIXTURE==='true')require('./composition-d2-fixture.cjs')(data);
   return process.env.VISUAL_AUDIT_FIXTURE==='true'?require('./visual-audit-fixture.cjs')(data,model):data;
 };
-process.env.PHASE2A_TEST_PORT='5210';process.env.PHASE2B_FIXTURE='true';process.env.HOME_ENTRY_TESTS='true';require('./client-phase2a-preview.cjs');
+process.env.PHASE2A_TEST_PORT=process.env.PHASE2A_TEST_PORT||'5210';process.env.PHASE2B_FIXTURE='true';process.env.HOME_ENTRY_TESTS='true';require('./client-phase2a-preview.cjs');

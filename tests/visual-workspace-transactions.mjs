@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',contexts=[],errors=[],writeResults=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',contexts=[],errors=[],writeResults=[];
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 const remote=p=>p.evaluate(async()=>await(await fetch('/api/commercial-data')).json());
 const cache=p=>p.evaluate(()=>JSON.parse(localStorage.getItem('theView.crmCommercial.v2')));
 const control=(p,body)=>p.evaluate(async body=>{const r=await fetch('/api/test-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw Error('Isolated control failed')},body);
 const synced=p=>p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced');
-async function session(){const context=await browser.newContext();contexts.push(context);await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('response',async r=>{if(r.url().endsWith('/api/commercial-data')&&r.request().method()==='POST'){const body=await r.json();writeResults.push([r.status(),body.code])}});await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');await p.getByRole('button',{name:'Entrar',exact:true}).click();await p.locator('[data-client="demo-1"]').waitFor({state:'attached'});await synced(p);await p.locator('[data-client="demo-1"]').click();return p}
+async function session(){const context=await browser.newContext();contexts.push(context);context.setDefaultTimeout(12000);await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('response',async r=>{if(r.url().endsWith('/api/commercial-data')&&r.request().method()==='POST'){const body=await r.json();writeResults.push([r.status(),body.code])}});await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');await p.getByRole('button',{name:'Entrar',exact:true}).click();await p.locator('[data-client="demo-1"]').waitFor({state:'attached'});await synced(p);await p.locator('[data-client="demo-1"]').click();return p}
 const tab=(p,name)=>p.getByRole('tab',{name,exact:true}).click();
 const form=(p,kind)=>p.locator(`[data-workflow-form="${kind}"]`);
 async function movement(p,n,type,amount,date='2026-11-02'){

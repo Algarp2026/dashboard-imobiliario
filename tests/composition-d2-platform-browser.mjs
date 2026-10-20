@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',out='docs/composition-d2-platform',errors=[],failures=[],writes=[],results=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',out='docs/composition-d2-platform',errors=[],failures=[],writes=[],results=[];
 fs.mkdirSync(out,{recursive:true});
 const previous=Object.fromEntries(['commercial.js','commercial-client-workflow-ui.js','view-theme.css'].map(file=>[file,execFileSync('git',['show','125cba5:'+file],{encoding:'utf8',maxBuffer:4000000})]));
 const start=previous['commercial.js'].indexOf('const MAJUCA_IMPORT_RECORDS=['),end=previous['commercial.js'].indexOf('\n];',start);assert.ok(start>=0&&end>=0);previous['commercial.js']=previous['commercial.js'].slice(0,start)+'const MAJUCA_IMPORT_RECORDS=[];'+previous['commercial.js'].slice(end+3);
@@ -10,7 +10,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CH
 try{
   for(const [size,viewport]of [['desktop',{width:1440,height:900}],['laptop',{width:1366,height:768}],['tablet',{width:820,height:1080}],['mobile',{width:390,height:844}]])for(const mode of ['before','after']){
     const context=await browser.newContext({viewport});
-    await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);if(mode==='before'&&file==='view-workspace.js')return route.fulfill({contentType:'text/javascript',body:''});return mode==='before'&&previous[file]?route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:previous[file]}):route.continue()});
+    context.setDefaultTimeout(12000);await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);if(mode==='before'&&file==='view-workspace.js')return route.fulfill({contentType:'text/javascript',body:''});return mode==='before'&&previous[file]?route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:previous[file]}):route.continue()});
     const page=await context.newPage();page.on('pageerror',e=>errors.push(`${size}-${mode}: ${e.message}`));page.on('response',r=>{if(r.status()>=400)failures.push(`${r.status()} ${new URL(r.url()).pathname}`)});
     await page.goto(origin+'/commercial.html');await page.locator('#password').fill('View-Phase2A-Teste');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('[data-client="demo-0"]').waitFor({state:'attached'});
     const cache=()=>page.evaluate(()=>localStorage.getItem('theView.crmCommercial.v2')),before=await cache(),meta=await(await context.request.get(origin+'/api/test-meta')).json();
@@ -53,7 +53,7 @@ try{
     await page.getByRole('tab',{name:'Apresentação',exact:true}).click();await shot('presentation');await page.locator('[data-workflow="new-presentation"]').click();await shot('presentation-editor','[data-workflow-form="presentation"]');await page.locator('[data-workflow="cancel-presentation"]').click();
     if(await page.locator('[data-dialog-confirm]:visible').count())await page.locator('[data-dialog-confirm]').click();
     await page.getByRole('tab',{name:'Negociação',exact:true}).click();await shot('opportunities');if(mode==='after')assert.match(await page.locator('[data-workflow-kind="negotiation"] h3').first().innerText(),/^Oportunidades/);
-    await page.reload();await page.locator('.ux-client-tabs').waitFor();await page.locator('[data-client-return]').click();
+    await page.reload();await page.locator('.ux-client-tabs').waitFor();await page.locator('[data-profile-close]:visible, [data-client-return]:visible').first().click();
     assert.equal(await cache(),before);const after=await(await context.request.get(origin+'/api/test-meta')).json();assert.equal(after.revision,meta.revision);assert.equal(after.writes,0);
     await page.goto(origin+'/comparador.html');await page.locator('#openCompareMode').click();await page.locator('#compareCardsGrid').waitFor();await shot('comparator');
     if(mode==='after'){

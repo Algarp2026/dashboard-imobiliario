@@ -17,4 +17,4 @@ require.cache[key].exports=()=>{
   data.clients[3].fractions=[];data.clients[3].manualFractions=[];
   return data;
 };
-process.env.PHASE2A_TEST_PORT='5201';process.env.PHASE2B_FIXTURE='true';require('./client-phase2a-preview.cjs');
+process.env.PHASE2A_TEST_PORT=process.env.PHASE2A_TEST_PORT||'5201';process.env.PHASE2B_FIXTURE='true';require('./client-phase2a-preview.cjs');

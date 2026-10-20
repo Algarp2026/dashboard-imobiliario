@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',out='docs/composition-d2',errors=[],failures=[],writes=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',out='docs/composition-d2',errors=[],failures=[],writes=[];
 fs.mkdirSync(out,{recursive:true});
 const previous=Object.fromEntries(['commercial.js','commercial-client-workflow-ui.js','view-theme.css'].map(file=>[file,execFileSync('git',['show','8ba9038:'+file],{encoding:'utf8',maxBuffer:4000000})]));
 const begin=previous['commercial.js'].indexOf('const MAJUCA_IMPORT_RECORDS=['),end=previous['commercial.js'].indexOf('\n];',begin);assert.ok(begin>=0&&end>=0);previous['commercial.js']=previous['commercial.js'].slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+previous['commercial.js'].slice(end+3);
@@ -10,7 +10,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CH
 const results=[];
 try{
   for(const [size,viewport]of [['desktop',{width:1440,height:900}],['laptop',{width:1366,height:768}],['tablet',{width:820,height:1080}],['mobile',{width:390,height:844}]])for(const mode of ['before','after']){
-    const context=await browser.newContext({viewport});await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);return mode==='before'&&previous[file]?route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:previous[file]}):route.continue()});
+    const context=await browser.newContext({viewport});context.setDefaultTimeout(12000);await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);return mode==='before'&&previous[file]?route.fulfill({contentType:file.endsWith('.css')?'text/css':'text/javascript',body:previous[file]}):route.continue()});
     const page=await context.newPage();page.on('pageerror',e=>errors.push(`${mode}-${size}: ${e.message}`));page.on('response',r=>{if(r.status()>=400)failures.push(`${mode}-${size}: ${r.status()} ${new URL(r.url()).pathname}`)});
     await page.goto(origin+'/commercial.html');await page.locator('#password').fill('View-Phase2A-Teste');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('[data-client="demo-0"]').waitFor({state:'attached'});
     const cache=()=>page.evaluate(()=>localStorage.getItem('theView.crmCommercial.v2')),initial=await cache(),meta=await(await context.request.get(origin+'/api/test-meta')).json();
@@ -46,7 +46,7 @@ try{
       await page.locator('[data-negotiation-unit="9"]>summary').click();await shot('negotiation-expanded','[data-negotiation-unit="9"]');await page.locator('[data-negotiation-unit="9"]>summary').click();
       await page.locator('#clientClosedOpportunities>summary').click();await page.locator('[data-negotiation-unit="36"]>summary').click();await shot('negotiation-closed','[data-negotiation-unit="36"]');
     }
-    await page.reload();await page.locator('.ux-client-tabs').waitFor();await page.locator('[data-client-return]').click();await page.locator('#clientSearch').waitFor({state:'visible'});if(full)await shot('clients');
+    await page.reload();await page.locator('.ux-client-tabs').waitFor();await page.locator('[data-profile-close]:visible, [data-client-return]:visible').first().click();await page.locator('#clientSearch').waitFor({state:'visible'});if(full)await shot('clients');
     await nav('sales','fractions');await shot('sales');
     if(mode==='after'){
       assert.equal(await page.locator('.d2-inventory-metrics>div').count(),4);await page.locator('[data-ux-sales-filter="search"]').fill('9');assert.equal(await page.locator('#salesTableBody [data-status="9"]').count(),1);await page.locator('[data-ux-sales-filter="search"]').fill('');

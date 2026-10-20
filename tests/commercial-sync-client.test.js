@@ -7,7 +7,7 @@ function app(local,options={}){
   const storage=options.storage||new Map(local===undefined?[]:[[KEY,JSON.stringify(local)]]),requests=[],timers=[],now='2026-10-13T12:00:00.000Z';let upstream=options.upstream?clone(options.upstream):root(63),failure='',writeFault='',writes=0,pdf='',initialMigrations=0;
   const revision=()=>createHash('sha256').update(JSON.stringify(upstream)).digest('hex');
   const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
-  const result=()=>({ok:true,data:upstream,revision:revision(),protocol:'tv-cas-v1',source:'shared',canWrite:true,confirmedAt:now,readTicket:'1791892800000.'+'a'.repeat(64)});
+  const result=()=>({ok:true,data:upstream,revision:revision(),protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1},pendingWrite:null,source:'shared',canWrite:true,confirmedAt:now,readTicket:'1791892800000.'+'a'.repeat(64)});
   const context={console,Date,AbortController,document:{readyState:'loading',addEventListener(){},querySelector(){return null}},window:{THE_VIEW_CONFIG:{GOOGLE_SHEETS_WEBAPP_URL:'https://never-contact-google.invalid/exec'},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'),addEventListener(){},open(){return{document:{open(){},write(value){pdf=value},close(){}}}}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},requestAnimationFrame(){},setTimeout(fn){timers.push(fn);return timers.length},clearTimeout(){},fetch:async(url,options={})=>{
     requests.push({url,method:options.method||'GET'});
     if(url==='data.json')return Response.json(JSON.parse(fs.readFileSync(require.resolve('../data.json'),'utf8')));

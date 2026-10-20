@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const origin='http://127.0.0.1:5210',out=process.env.VISUAL_ARTIFACTS||'docs/visual-workspace',errors=[],failures=[],writes=[];
+const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',out=process.env.VISUAL_ARTIFACTS||'docs/visual-workspace',errors=[],failures=[],writes=[];
 fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
 const baseline=Object.fromEntries(['commercial.js','commercial-client-workflow-ui.js'].map(name=>[name,execFileSync('git',['show','fb77666:'+name],{encoding:'utf8',maxBuffer:4000000})]));
@@ -12,7 +12,7 @@ assert.ok(begin>=0&&end>=0);baseline['commercial.js']=baseline['commercial.js'].
 try{
   for(const [name,viewport,before] of [['before-desktop',{width:1440,height:900},true],['desktop',{width:1440,height:900},false],['laptop',{width:1366,height:768},false],['tablet',{width:820,height:1080},false],['mobile',{width:390,height:844},false]]){
     const context=await browser.newContext({viewport});
-    await context.route('**/*',route=>{
+    context.setDefaultTimeout(12000);await context.route('**/*',route=>{
       const req=route.request(),url=new URL(req.url());
       if(url.origin!==origin)return route.abort();
       if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}
@@ -31,8 +31,8 @@ try{
     await tab('Dados');await snap('data');
     if(!before){
       assert.equal(await page.locator('[data-client-header-edit]:visible').count(),1);assert.equal(await page.locator('.ux-client-workspace__top .ux-next-action').count(),1);
-      assert.equal(await page.locator('#clientStickyActions:visible').count(),0);
-      await page.locator('#commercialSyncBadge').click();assert.equal(await page.locator('#commercialSyncStatus').isVisible(),true);await page.locator('#commercialSyncBadge').click();assert.equal(await page.locator('#commercialSyncStatus').isVisible(),false);
+      assert.equal(await page.locator('#clientStickyActions').evaluate(e=>!!e.closest('[inert]')),true,'Background actions must be inert while the client modal is open');
+      await page.locator('[data-profile-close]').click();await page.locator('#commercialSyncBadge').click();assert.equal(await page.locator('#commercialSyncStatus').isVisible(),true);await page.locator('#commercialSyncBadge').click();assert.equal(await page.locator('#commercialSyncStatus').isVisible(),false);await page.locator('[data-client="demo-0"]').click();
       await page.locator('[data-client-header-edit]').click();await page.locator('#clientModal:not(.hidden)').waitFor();
       if(name==='mobile'||name==='desktop')await snap('edit-client');await page.locator('#clientModal [data-close="clientModal"]').count()?await page.locator('#clientModal [data-close="clientModal"]').click():await page.locator('#clientModal .modal-close').click();
       await tab('Preferências');await page.locator('[data-preferences-edit]').click();await page.locator('[data-preference-key="typology"]').first().waitFor();
@@ -53,7 +53,7 @@ try{
       if(name==='desktop'||name==='mobile')await snap('movement');
       await page.locator('[data-workflow="cancel-negotiation"]').click();await page.locator('[data-dialog-confirm]').click();
       await page.reload();await page.locator('.ux-client-tabs').waitFor();await tab('Negociação');assert.equal(await page.locator('.ux-opportunity').count(),6);
-      await page.locator('[data-client-return]').click();await page.locator('#clientSearch').waitFor({state:'visible'});await snap('return');
+      await page.locator('[data-profile-close]:visible, [data-client-return]:visible').first().click();await page.locator('#clientSearch').waitFor({state:'visible'});await snap('return');
       await page.locator('.ux-management-menu>summary').click();for(const id of ['quickNewClient','quickNewAgent','quickNewEvent','quickMaintenance'])assert.equal(await page.locator('#'+id).isVisible(),true);await page.locator('.ux-management-menu>summary').click();
       const nav=async(tab,view='')=>{await page.locator(`#commercialSidebar [data-tab="${tab}"]${view?`[data-view="${view}"]`:''}`).click();await page.locator('#tab-'+(tab==='history'?'sales':tab)+':visible').waitFor()};
       for(const [key,view,label]of [['dashboard','','dashboard'],['sales','fractions','sales'],['sales','agents','agents'],['proposals','','proposals'],['compare','','compare'],['prices','','prices'],['history','history','history'],['history','events','events'],['reports','','reports']]){
