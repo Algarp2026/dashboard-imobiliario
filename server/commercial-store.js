@@ -72,8 +72,12 @@ async function callStore(functionName, argument, context = sourceContext()) {
   const result=operation.response.result;
   if (result.sourceId!==sheet || result.environment!==(env.VERCEL_ENV==='production'?'production':'test')) throw failure('SOURCE_ENVIRONMENT_MISMATCH',503);
   if (!result.ok) {
+    if (['COMMERCIAL_INTEGRITY','COMMERCIAL_VALIDATION_UNAVAILABLE'].includes(result.code)) {
+      sourceLog(context,phase,Date.now(),{layer:'apps-script',outcome:result.code});
+      throw failure(result.code,result.code==='COMMERCIAL_INTEGRITY'?422:503);
+    }
     if (result.diagnostics) {
-      const diagnostic=result.diagnostics,phases=['open','store-sheet','metadata','control','chunks','chunk-validation','validate','prepare','lock','intent','intent-version','archive','mirrors','activate','cleanup','stage','backup',...['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes'].map(name=>'mirror-'+name)];
+      const diagnostic=result.diagnostics,phases=['open','store-sheet','metadata','control','chunks','chunk-validation','validate','prepare','commercial-validation','lock','intent','intent-version','archive','mirrors','activate','cleanup','stage','backup',...['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes'].map(name=>'mirror-'+name)];
       if (!OBJECT(diagnostic)||Object.keys(diagnostic).sort().join(',')!=='durationMs,elapsedMs,layer,phase'||!phases.includes(diagnostic.phase)||!['google-sheets','apps-script'].includes(diagnostic.layer)||![diagnostic.durationMs,diagnostic.elapsedMs].every(value=>Number.isFinite(value)&&value>=0&&value<=3600000)) throw failure('INVALID_SOURCE_RESPONSE');
       sourceLog(context,phase,Date.now(),{layer:diagnostic.layer,sourcePhase:diagnostic.phase,sourceDurationMs:diagnostic.durationMs,sourceElapsedMs:diagnostic.elapsedMs,outcome:'source-error'});
     }
@@ -85,6 +89,7 @@ async function callStore(functionName, argument, context = sourceContext()) {
   // Old sources ignore this option and still return a fully validated read below.
   if (functionName==='crmRead'&&argument?.capabilitiesOnly&&result.capabilities?.lightweightPreflight===1) {
     if (result.protocol!=='tv-cas-v1'||result.capabilities.pendingWriteDiagnostics!==1||result.preflight!==true) throw failure('SYNC_DIAGNOSTICS_UNAVAILABLE',503);
+    if (argument.requireCommercialIntegrity&&result.capabilities.commercialIntegrity!==1) throw failure('COMMERCIAL_VALIDATION_UNAVAILABLE',503);
     return result;
   }
   if (result.protocol!=='tv-cas-v1'||!REVISION.test(result.revision)||!Number.isFinite(Date.parse(result.confirmedAt))) throw failure('INVALID_SOURCE_RESPONSE');
@@ -94,6 +99,7 @@ async function callStore(functionName, argument, context = sourceContext()) {
     const pending=pendingWriteState(result.pendingWrite);
     if (pending && (pending.state==='pending'&&pending.baseRevision!==result.revision || pending.state==='committed'&&pending.revision!==result.revision)) throw failure('INVALID_SYNC_DIAGNOSTICS');
   }
+  if (argument?.requireCommercialIntegrity&&result.capabilities.commercialIntegrity!==1) throw failure('COMMERCIAL_VALIDATION_UNAVAILABLE',503);
   return result;
 }
 function writeEnabled() {
