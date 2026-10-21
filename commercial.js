@@ -4491,11 +4491,19 @@ async function loadRemoteData(){
     }
     if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
     const differs=syncComparable(state.data)!==syncComparable(remote);
-    if(!differs&&localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null){
-      const original=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY));
-      if(!validSharedData(original?.data)||syncComparable(normalizeData(original.data))!==syncComparable(remote)){
+    const pendingRaw=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),original=pendingRaw===null?null:JSON.parse(pendingRaw);
+    const originalMatchesRemote=pendingRaw!==null&&validSharedData(original?.data)&&syncComparable(normalizeData(original.data))===syncComparable(remote);
+    if(!differs&&pendingRaw!==null){
+      if(!originalMatchesRemote){
         sharedSync.phase='conflict';sharedSync.error='UNCONFIRMED_PENDING_REQUEST';return {shouldSave:false};
       }
+    }
+    // A lost acknowledgement may confirm the original request while newer local
+    // edits exist. Preserve both; only an explicit fresh reconciliation may retire it.
+    if(differs&&originalMatchesRemote&&meta&&original.baseRevision===meta.revision){
+      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      sharedSync.base=meta.base;sharedSync.revision=meta.revision;
+      sharedSync.phase='conflict';sharedSync.error='PENDING_REQUEST_REVIEW_REQUIRED';return {shouldSave:false};
     }
     // A confirmed remote response can still be an older restored database.
     if(differs&&sharedStoreMayRegress(state.data,remote,meta,result.revision)){
@@ -4506,7 +4514,11 @@ async function loadRemoteData(){
     if((hasPendingLocalSync()||sharedSync.dirty||hasUnconfirmedLocalData(state.data)||generation!==sharedSync.generation)&&differs){
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       if(sharedSync.base&&sharedSync.revision===result.revision&&syncComparable(sharedSync.base)===syncComparable(remote)){
-        sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.phase='pending';persistSyncMeta();
+        if(pendingRaw!==null&&(!validSharedData(original?.data)||syncComparable(normalizeData(original.data))!==syncComparable(state.data))){
+          if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+          sharedSync.phase='conflict';sharedSync.error='PENDING_REQUEST_REVIEW_REQUIRED';return {shouldSave:false};
+        }
+        sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.phase='pending';sharedSync.error='';persistSyncMeta();
       }else{sharedSync.phase='conflict';sharedSync.error='UNRECONCILED_LOCAL_CHANGES'}
       return {shouldSave:false};
     }
@@ -4526,6 +4538,8 @@ function sharedStoreMayRegress(local,remote,meta,remoteRevision){
   const equal=(a,b)=>syncComparable(a)===syncComparable(b),object=value=>value&&typeof value==='object'&&!Array.isArray(value);
   const base=meta?normalizeData(meta.base):null;
   if(base&&remoteRevision===meta.revision&&!equal(remote,base))return true;
+  // A verified, unchanged source is not a rollback of newer unconfirmed local edits.
+  if(base&&remoteRevision===meta.revision&&equal(remote,base))return false;
   // Only a clean confirmed snapshot may receive a unilateral remote edit automatically.
   const remoteOnly=!!base&&remoteRevision!==meta.revision&&equal(local,base);
   const editable={
@@ -4676,6 +4690,7 @@ async function syncRemote(recovery=false){
     // uses the same probe, without altering or discarding the original request.
     const probe=await requestCommercialData();
     if(probe.pendingWrite?.state==='blocked'||!recovery&&probe.pendingWrite?.state==='pending'&&probe.pendingWrite.requestId!==payload?.requestId)throw Object.assign(new Error('Gravação incompleta'),{code:'WRITE_INCOMPLETE'});
+    if(payload&&(!validSharedData(payload.data)||syncComparable(normalizeData(payload.data))!==syncComparable(state.data)))throw Object.assign(new Error('O pedido original difere dos dados locais atuais. Preserve-o e reveja as diferenças antes de sincronizar.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
     if(recovery){if(!payload)return false;payload={...payload,action:'recover'}}
     else if(payload&&payload.baseRevision!==sharedSync.revision)throw Object.assign(new Error('O pedido original exige revisão antes de ser substituído.'),{code:'CONFLICT'});
     else if(!payload){payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload))}
@@ -4685,7 +4700,7 @@ async function syncRemote(recovery=false){
     return true;
   }catch(error){
     // A rejected retry does not prove that an earlier attempt failed; preserve its recovery ID.
-    sharedSync.remote=null;sharedSync.phase=error.code==='CONFLICT'?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;return false;
+    sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;return false;
   }
   finally{sharedSync.busy=false;renderSharedSyncStatus()}
 }

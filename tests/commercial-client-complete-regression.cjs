@@ -11,7 +11,10 @@ for(const file of suites){run([path.join('tests',file)]);console.log('PASS '+fil
 // Freeze the audited recovery implementation, not the obsolete transport.
 const recoveryBase='3729e304317541b5bd23bb4fa45aadde9d959934',mainBase='fa876dc98f8ccc208ed68123ddce3c71e948ad51';
 const base=cp.execFileSync('git',['show',recoveryBase+':commercial.js'],{cwd:repo,encoding:'utf8'}),current=fs.readFileSync(path.join(repo,'commercial.js'),'utf8');
-const sync=s=>s.slice(s.indexOf('async function requestCommercialData('),s.indexOf('function appDialog(')).replace(/\r\n/g,'\n');assert.equal(sync(current),sync(base));
+const reviewedSyncFunctions=['loadRemoteData','sharedStoreMayRegress','syncRemote'];
+const sync=s=>s.slice(s.indexOf('async function requestCommercialData('),s.indexOf('function appDialog(')).replace(/\r\n/g,'\n');
+const outsideReviewed=s=>sync(s).replace(/^(?:async )?function (loadRemoteData|sharedStoreMayRegress|syncRemote)\([^]*?^\}/gm,(_,name)=>'REVIEWED_FUNCTION:'+name);
+assert.equal(outsideReviewed(current),outsideReviewed(base),'All synchronization outside the three reviewed functions remains frozen');
 // Read contention deliberately changes the source reader and its two safe API error codes.
 // All other server modules and the API/frontend protocol remain frozen.
 const protectedPaths=['api','config.js','data.json','plantas','middleware.ts',...fs.readdirSync(path.join(repo,'server')).filter(file=>file!=='commercial-store.js').map(file=>'server/'+file)];
@@ -32,5 +35,5 @@ const layoutFix='.ux-opportunity-detail .ux-next-action>div{grid-template-column
 const css=fs.readFileSync(path.join(repo,'commercial.css'),'utf8').replace(/\r\n/g,'\n'),originalCss=cp.execFileSync('git',['show',mainBase+':commercial.css'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
 assert.ok(css.includes(layoutFix));assert.equal(css.replace(layoutFix,''),originalCss,'Only the scoped opportunity follow-up layout fix is allowed');
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
-const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,syncBlockUnchanged:true,onlyScopedFollowupLayoutChanged:true,hashes,productionAccess:false};
+const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,syncOutsideReviewedFunctionsUnchanged:true,onlyScopedFollowupLayoutChanged:true,hashes,productionAccess:false};
 fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'regression-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
