@@ -11,10 +11,10 @@ for(const file of suites){run([path.join('tests',file)]);console.log('PASS '+fil
 // Freeze the audited recovery implementation, not the obsolete transport.
 const recoveryBase='3729e304317541b5bd23bb4fa45aadde9d959934',mainBase='fa876dc98f8ccc208ed68123ddce3c71e948ad51';
 const base=cp.execFileSync('git',['show',recoveryBase+':commercial.js'],{cwd:repo,encoding:'utf8'}),current=fs.readFileSync(path.join(repo,'commercial.js'),'utf8');
-const reviewedSyncFunctions=['loadRemoteData','sharedStoreMayRegress','syncRemote'];
+const reviewedSyncFunctions=['loadRemoteData','sharedStoreMayRegress','syncRemote','backupLocalBeforeRemoteLoad','save','openSyncReconciliation','renderSharedSyncStatus'];
 const sync=s=>s.slice(s.indexOf('async function requestCommercialData('),s.indexOf('function appDialog(')).replace(/\r\n/g,'\n');
-const outsideReviewed=s=>sync(s).replace(/^(?:async )?function (loadRemoteData|sharedStoreMayRegress|syncRemote)\([^]*?^\}/gm,(_,name)=>'REVIEWED_FUNCTION:'+name);
-assert.equal(outsideReviewed(current),outsideReviewed(base),'All synchronization outside the three reviewed functions remains frozen');
+const outsideReviewed=s=>sync(s).replace(new RegExp('^(?:async )?function ('+reviewedSyncFunctions.join('|')+')\\([^]*?^\\}','gm'),(_,name)=>'REVIEWED_FUNCTION:'+name);
+assert.equal(outsideReviewed(current),outsideReviewed(base),'All synchronization outside the reviewed rollback/quota functions remains frozen');
 // Read contention deliberately changes the source reader and its two safe API error codes.
 // All other server modules and the API/frontend protocol remain frozen.
 const protectedPaths=['api','config.js','data.json','plantas','middleware.ts',...fs.readdirSync(path.join(repo,'server')).filter(file=>file!=='commercial-store.js').map(file=>'server/'+file)];

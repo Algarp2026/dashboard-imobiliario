@@ -1,5 +1,8 @@
 # Pending local changes versus shared rollback
 
+PR #15 quota follow-up: see [COMMERCIAL_LOCAL_STORAGE.md](COMMERCIAL_LOCAL_STORAGE.md)
+for IndexedDB retention, emergency recovery and native browser quota validation.
+
 Base: main `ed7c68480ee3a319717a225c34125c25ba45c3a5`.
 Branch: `codex/fix-pending-local-rollback`. Draft review only.
 
@@ -38,8 +41,8 @@ the last confirmed base. A new test failed on the original main with
   existing confirmed-read archival path can retire that request without POST.
   Otherwise an unconfirmed request remains blocked.
 
-No new merge policy, automatic recovery, data migration, localStorage key or
-backend protocol. Only three production functions in commercial.js changed:
+The original false-conflict correction introduced no new merge policy, automatic
+recovery, data migration, localStorage key or backend protocol. Its three functions were:
 `loadRemoteData`, `sharedStoreMayRegress` and `syncRemote`.
 
 ## Validation

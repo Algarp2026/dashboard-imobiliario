@@ -90,6 +90,7 @@ function bind(){
   ensurePriceListButton();
   bindCommercialUx();
   window.addEventListener('pagehide',flushPendingSyncOnUnload);
+  window.addEventListener('beforeunload',event=>{if(['LOCAL_STORAGE_FAILED','LOCAL_BACKUP_CAPACITY'].includes(sharedSync.error)){event.preventDefault();event.returnValue=''}});
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab,b.dataset.view||''));
   const proposalsShortcut=document.getElementById('openProposalsArea');
   if(proposalsShortcut)proposalsShortcut.onclick=()=>switchTab('proposals');
@@ -1053,21 +1054,22 @@ function ensureMajucaEvent(c,record){
 function backupBeforeMajucaImport(){
   try{
     const backupKey=KEY+'.backupBeforeMajucaImport.v1';
-    if(localStorage.getItem(backupKey))return;
+    if(localStorage.getItem(backupKey))return true;
     localStorage.setItem(backupKey,JSON.stringify({
       createdAt:new Date().toISOString(),
       reason:'Backup automático antes da importação histórica da Lista Majuca',
       data:normalizeData(state.data)
     }));
+    return true;
   }catch(err){
-    console.warn('Falha ao criar backup antes da importação Majuca',err);
+    return false;
   }
 }
 function applyMajucaImportMigration(){
   state.data.clients=state.data.clients||[];
   state.data.events=state.data.events||[];
   if(state.data.majucaImportKey===MAJUCA_IMPORT_KEY)return false;
-  backupBeforeMajucaImport();
+  if(!backupBeforeMajucaImport())throw Object.assign(new Error('Importação interrompida: backup local não confirmado.'),{code:'LOCAL_STORAGE_FAILED'});
   let changed=false;
   const summary={key:MAJUCA_IMPORT_KEY,canonical:MAJUCA_IMPORT_RECORDS.length,created:0,associated:0,updated:0,eventsCreated:0,skippedDuplicates:['Ivo Anastácio','Luís Claro','Mascote e amigo','Italiano Franco — Cátia Pilar']};
   MAJUCA_IMPORT_RECORDS.forEach(record=>{
@@ -4429,7 +4431,144 @@ function hasBusinessData(d){
 function readSyncMeta(){try{const meta=JSON.parse(localStorage.getItem(LOCAL_SYNC_META_KEY));return meta&&/^[a-f0-9]{64}$/.test(meta.revision)&&validSharedData(meta.base)&&/^\d{4}-\d{2}-\d{2}T/.test(meta.lastConfirmedAt)&&Number.isFinite(Date.parse(meta.lastConfirmedAt))?meta:null}catch{return null}}
 function hasUnconfirmedLocalData(data){try{const meta=readSyncMeta();return !!localStorage.getItem(KEY)&&!!meta&&syncComparable(data)!==syncComparable(meta.base)}catch{return true}}
 function persistSyncMeta(){
-  localStorage.setItem(LOCAL_SYNC_META_KEY,JSON.stringify({revision:sharedSync.revision,base:sharedSync.base,lastConfirmedAt:sharedSync.lastConfirmedAt}));
+  try{localStorage.setItem(LOCAL_SYNC_META_KEY,JSON.stringify({revision:sharedSync.revision,base:sharedSync.base,lastConfirmedAt:sharedSync.lastConfirmedAt}))}
+  catch{throw Object.assign(new Error('Metadados locais não confirmados.'),{code:'LOCAL_STORAGE_FAILED'})}
+}
+const LOCAL_BACKUP_LIMIT=64,LOCAL_BACKUP_BYTES=16*1024*1024,LOCAL_CONFIRMED_BACKUPS=5;
+let localVaultPromise=null;
+function localBackupKeys(){
+  return Object.keys(localStorage).filter(key=>key===LOCAL_REMOTE_BACKUP_KEY||key===KEY+'.backupBeforeMajucaImport.v1'||[KEY+'.conflictBackup.',KEY+'.confirmedReadBackup.',LOCAL_REMOTE_BACKUP_KEY+'.archive.'].some(prefix=>key.startsWith(prefix)));
+}
+function openLocalVault(){
+  if(!localVaultPromise)localVaultPromise=new Promise((resolve,reject)=>{
+    let settled=false;
+    const fail=message=>{if(settled)return;settled=true;clearTimeout(timer);reject(Object.assign(new Error(message),{code:'LOCAL_STORAGE_FAILED'}))};
+    const timer=setTimeout(()=>fail('Arquivo local sem confirmação.'),10000);
+    const request=indexedDB.open(KEY+'.recovery.v1',1);
+    request.onupgradeneeded=()=>request.result.createObjectStore('copies',{keyPath:'id'});
+    request.onerror=()=>fail('Arquivo local indisponível.');
+    request.onblocked=()=>fail('Feche os outros separadores antes de abrir o arquivo local.');
+    request.onsuccess=()=>{const db=request.result;if(settled){db.close();return}settled=true;clearTimeout(timer);db.onversionchange=()=>{db.close();localVaultPromise=null};resolve(db)};
+  }).catch(error=>{localVaultPromise=null;throw error});
+  return localVaultPromise;
+}
+async function localVaultTransaction(mode,action){
+  const db=await openLocalVault();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('copies',mode);let result,failure;
+    const timer=setTimeout(()=>{failure=Object.assign(new Error('Arquivo local sem confirmação.'),{code:'LOCAL_STORAGE_FAILED'});try{tx.abort()}catch{}},10000);
+    tx.oncomplete=()=>{clearTimeout(timer);resolve(result)};
+    tx.onabort=tx.onerror=()=>{clearTimeout(timer);reject(failure||Object.assign(new Error('Não foi possível guardar o arquivo local.'),{code:'LOCAL_STORAGE_FAILED'}))};
+    try{action(tx.objectStore('copies'),value=>{result=value},error=>{failure=error;try{tx.abort()}catch{}})}catch(error){failure=error;try{tx.abort()}catch{}}
+  });
+}
+async function localVaultCopies(){
+  if(typeof indexedDB==='undefined')return localBackupKeys().map(key=>({id:key,kind:'legacy',raw:localStorage.getItem(key),protected:true}));
+  return localVaultTransaction('readonly',(store,done)=>{const request=store.getAll();request.onsuccess=()=>done(request.result)});
+}
+async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
+  const raw=JSON.stringify(value),comparable=JSON.parse(raw);
+  delete comparable.createdAt;
+  if(comparable.syncMeta)delete comparable.syncMeta.lastConfirmedAt;
+  const content=syncComparable(comparable);
+  if(typeof indexedDB==='undefined'){
+    const keys=localBackupKeys();
+    for(const key of keys){if(localStorage.getItem(key)===raw)return key}
+    if(keys.length>=LOCAL_BACKUP_LIMIT)throw Object.assign(new Error('Arquivo local cheio. Exporte as cópias antes de continuar.'),{code:'LOCAL_BACKUP_CAPACITY'});
+    const prefix=kind==='confirmed'?'.confirmedReadBackup.':'.conflictBackup.';
+    const stem=KEY+prefix+Date.now()+'.'+id();let key=stem,index=0;
+    while(localStorage.getItem(key)!==null)key=stem+'.'+(++index);
+    try{localStorage.setItem(key,raw)}catch{throw Object.assign(new Error('Não há espaço para confirmar o backup local.'),{code:'LOCAL_STORAGE_FAILED'})}
+    return key;
+  }
+  const signature=typeof crypto!=='undefined'&&crypto.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(content))),byte=>byte.toString(16).padStart(2,'0')).join(''):content;
+  const entry={id:Date.now()+'.'+id(),kind,raw,signature,createdAt:new Date().toISOString(),protected:!confirmed,needsReview:kind==='storage-failure'};
+  const stored=await localVaultTransaction('readwrite',(store,done,abort)=>{
+    const request=store.getAll();request.onsuccess=()=>{try{
+      const entries=request.result,duplicate=entries.find(item=>item.signature===signature);
+      if(duplicate){duplicate.protected=duplicate.protected||entry.protected;if(entry.needsReview){duplicate.needsReview=true;duplicate.checkpointAt=entry.createdAt}store.put(duplicate);done(duplicate);return}
+      const candidates=[...entries,entry],confirmedEntries=candidates.filter(item=>!item.protected).sort((a,b)=>a.id===entry.id?-1:b.id===entry.id?1:b.createdAt.localeCompare(a.createdAt));
+      const remove=new Set(confirmedEntries.slice(LOCAL_CONFIRMED_BACKUPS).map(item=>item.id));
+      let kept=candidates.filter(item=>!remove.has(item.id));
+      const bytes=items=>items.reduce((sum,item)=>sum+2*(item.raw.length+item.signature.length),0);
+      for(const item of confirmedEntries.slice().reverse()){
+        if(kept.length<=LOCAL_BACKUP_LIMIT&&bytes(kept)<=LOCAL_BACKUP_BYTES)break;
+        if(item.id===entry.id)continue;
+        remove.add(item.id);kept=kept.filter(other=>other.id!==item.id);
+      }
+      if(kept.length>LOCAL_BACKUP_LIMIT||bytes(kept)>LOCAL_BACKUP_BYTES){abort(Object.assign(new Error('Arquivo de recuperação cheio. As cópias não confirmadas foram preservadas; exporte o arquivo.'),{code:'LOCAL_BACKUP_CAPACITY'}));return}
+      store.add(entry);for(const key of remove)store.delete(key);done(entry);
+    }catch(error){abort(error)}};
+  });
+  const verified=await localVaultTransaction('readonly',(store,done)=>{const request=store.get(stored.id);request.onsuccess=()=>done(request.result)});
+  if(!verified||verified.raw!==stored.raw||verified.signature!==signature)throw Object.assign(new Error('Cópia local não confirmada.'),{code:'LOCAL_STORAGE_FAILED'});
+  return stored.id;
+}
+async function exportLocalBackupArchive(){
+  try{
+    const records=typeof indexedDB==='undefined'?[]:await localVaultCopies(),legacy=localBackupKeys().map(key=>({id:key,kind:'legacy-localStorage',raw:localStorage.getItem(key),protected:true}));
+    downloadJson({recoveryArchiveFormat:1,records:[...records,...legacy],current:localRecoveryExport(),createdAt:new Date().toISOString()},'the-view-arquivo-recuperacao.json');
+  }catch{exportLocalRecoveryCopy();notifyUser('Não foi possível ler todo o arquivo. A exportação disponível contém a ficha local atual; os backups não foram eliminados.','Exportação parcial')}
+}
+async function migrateLegacyLocalBackups(){
+  if(typeof indexedDB==='undefined'){notifyUser('O arquivo IndexedDB não está disponível. Exporte as cópias; nada foi eliminado.','Arquivo local');return}
+  if(!await confirmUser('Transferir os backups antigos para o arquivo local deste navegador? Feche primeiro os outros separadores do The View. Cada cópia será confirmada antes de libertar espaço. Os dados atuais e pedidos pendentes não serão removidos.','Transferir backups antigos'))return;
+  try{
+    let moved=0;
+    for(const key of localBackupKeys()){
+      const raw=localStorage.getItem(key);if(raw===null)continue;
+      await archiveRecoveryCopy('legacy',{legacyKey:key,legacyRaw:raw});
+      if(localStorage.getItem(key)!==raw)throw new Error('Uma cópia mudou durante a transferência. As restantes foram preservadas.');
+      localStorage.removeItem(key);moved++;
+    }
+    notifyUser(moved+' backups transferidos e confirmados no arquivo local.','Arquivo local');
+  }catch(error){notifyUser(error.message||'Transferência interrompida. As cópias ainda não confirmadas permanecem intactas.','Arquivo local')}
+}
+function commitLocalCache(data,meta,pending=false,requestRaw=undefined){
+  const before=localStorage.getItem(KEY),beforeMeta=localStorage.getItem(LOCAL_SYNC_META_KEY),beforePending=localStorage.getItem(LOCAL_PENDING_SYNC_KEY),beforeRequest=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY);
+  const raw=JSON.stringify(data),rawMeta=JSON.stringify(meta),marker=JSON.stringify({createdAt:new Date().toISOString(),clients:data.clients.length,events:data.events.length,agents:data.agents.length});
+  try{
+    if(pending)localStorage.setItem(LOCAL_PENDING_SYNC_KEY,marker);
+    if(requestRaw!==undefined){if(requestRaw===null)localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);else localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,requestRaw)}
+    localStorage.setItem(KEY,raw);localStorage.setItem(LOCAL_SYNC_META_KEY,rawMeta);
+    if(localStorage.getItem(KEY)!==raw||localStorage.getItem(LOCAL_SYNC_META_KEY)!==rawMeta)throw new Error('Local cache changed');
+  }catch{
+    // Never roll back over a value another tab has changed since our own write.
+    const undo=(key,written,previous)=>{if(localStorage.getItem(key)===written){previous===null?localStorage.removeItem(key):localStorage.setItem(key,previous)}};
+    try{undo(KEY,raw,before);undo(LOCAL_SYNC_META_KEY,rawMeta,beforeMeta);if(pending)undo(LOCAL_PENDING_SYNC_KEY,marker,beforePending);if(requestRaw!==undefined)undo(LOCAL_SYNC_REQUEST_KEY,requestRaw,beforeRequest)}catch{}
+    throw Object.assign(new Error('Não foi possível confirmar o armazenamento local. Exporte os dados antes de sair.'),{code:'LOCAL_STORAGE_FAILED'});
+  }
+}
+async function preserveStorageFailure(){
+  try{await archiveRecoveryCopy('storage-failure',localRecoveryExport());return true}catch{return false}
+}
+async function latestLocalCheckpoint(){
+  if(typeof indexedDB==='undefined')return null;
+  const copies=await localVaultCopies();
+  return copies.filter(copy=>copy.needsReview).sort((a,b)=>(b.checkpointAt||b.createdAt).localeCompare(a.checkpointAt||a.createdAt))[0]||null;
+}
+async function acknowledgeLocalCheckpoint(checkpoint){
+  if(!checkpoint||typeof indexedDB==='undefined')return;
+  const until=checkpoint.checkpointAt||checkpoint.createdAt;
+  await localVaultTransaction('readwrite',(store,done)=>{
+    const request=store.getAll();request.onsuccess=()=>{for(const copy of request.result)if(copy.needsReview&&(copy.checkpointAt||copy.createdAt)<=until){copy.needsReview=false;store.put(copy)}done(true)};
+  });
+}
+async function restoreLocalCheckpoint(){
+  try{
+    const checkpoint=await latestLocalCheckpoint();if(!checkpoint){notifyUser('Não existe uma cópia de falha de armazenamento por recuperar.','Arquivo local');return}
+    const snapshot=JSON.parse(checkpoint.raw),meta={base:snapshot.base,revision:snapshot.syncMeta?.revision,lastConfirmedAt:snapshot.syncMeta?.lastConfirmedAt};
+    if(!validSharedData(snapshot.data)||!validSharedData(meta.base)||!meta.revision||!meta.lastConfirmedAt)throw new Error('A cópia exige revisão administrativa. Exporte o arquivo; nada foi substituído.');
+    const original=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),request=snapshot.pendingWrite?JSON.stringify(snapshot.pendingWrite):null;
+    if(original!==null&&syncComparable(JSON.parse(original))!==syncComparable(snapshot.pendingWrite))throw new Error('Existe outro pedido pendente. Exporte ambas as cópias antes de qualquer substituição.');
+    if(!await confirmUser('Recuperar esta cópia apenas neste navegador? Não será enviada à Google Sheet. A sincronização continuará bloqueada até uma nova verificação.','Recuperar cópia local'))return;
+    const generation=sharedSync.generation;await archiveRecoveryCopy('before-local-restore',localRecoveryExport());
+    if(generation!==sharedSync.generation||original!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY))throw new Error('A cópia local mudou. Volte a rever a recuperação.');
+    commitLocalCache(snapshot.data,meta,true,original===null?request:original);
+    state.data=normalizeData(snapshot.data);sharedSync.base=meta.base;sharedSync.revision=meta.revision;sharedSync.lastConfirmedAt=meta.lastConfirmedAt;sharedSync.dirty=true;sharedSync.verified=false;sharedSync.phase='conflict';sharedSync.error='LOCAL_RECOVERY_RESTORED';sharedSync.generation++;
+    await acknowledgeLocalCheckpoint(checkpoint);
+    renderAll();renderSharedSyncStatus();
+  }catch(error){sharedSync.verified=false;sharedSync.phase='conflict';sharedSync.error=error.code||'LOCAL_RECOVERY_BLOCKED';renderSharedSyncStatus();notifyUser(error.message,'Recuperação local bloqueada')}
 }
 function localRecoveryExport(){
   const meta=readSyncMeta(),raw=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),pendingWrite=raw===null?null:JSON.parse(raw);
@@ -4485,8 +4624,16 @@ async function loadRemoteData(){
     const result=await requestCommercialData(),remote=normalizeData(result.data),meta=readSyncMeta();
     sharedSync.httpStatus=null;
     sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite,pendingWrite:result.pendingWrite,capabilities:result.capabilities};
+    const checkpoint=await latestLocalCheckpoint();
+    if(checkpoint){
+      const saved=JSON.parse(checkpoint.raw);
+      if(syncComparable(normalizeData(saved.data))===syncComparable(remote))await acknowledgeLocalCheckpoint(checkpoint);
+      else if(syncComparable(normalizeData(saved.data))!==syncComparable(state.data)){
+        sharedSync.phase='conflict';sharedSync.error='LOCAL_RECOVERY_AVAILABLE';return {shouldSave:false};
+      }
+    }
     if(result.pendingWrite&&result.pendingWrite.state!=='committed'){
-      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
       sharedSync.phase='offline';sharedSync.error='WRITE_INCOMPLETE';return {shouldSave:false};
     }
     if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
@@ -4501,13 +4648,13 @@ async function loadRemoteData(){
     // A lost acknowledgement may confirm the original request while newer local
     // edits exist. Preserve both; only an explicit fresh reconciliation may retire it.
     if(differs&&originalMatchesRemote&&meta&&original.baseRevision===meta.revision){
-      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
       sharedSync.base=meta.base;sharedSync.revision=meta.revision;
       sharedSync.phase='conflict';sharedSync.error='PENDING_REQUEST_REVIEW_REQUIRED';return {shouldSave:false};
     }
     // A confirmed remote response can still be an older restored database.
     if(differs&&sharedStoreMayRegress(state.data,remote,meta,result.revision)){
-      if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       sharedSync.phase='conflict';sharedSync.error='POSSIBLE_SHARED_ROLLBACK';return {shouldSave:false};
     }
@@ -4515,20 +4662,22 @@ async function loadRemoteData(){
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       if(sharedSync.base&&sharedSync.revision===result.revision&&syncComparable(sharedSync.base)===syncComparable(remote)){
         if(pendingRaw!==null&&(!validSharedData(original?.data)||syncComparable(normalizeData(original.data))!==syncComparable(state.data))){
-          if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+          if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
           sharedSync.phase='conflict';sharedSync.error='PENDING_REQUEST_REVIEW_REQUIRED';return {shouldSave:false};
         }
         sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.phase='pending';sharedSync.error='';persistSyncMeta();
       }else{sharedSync.phase='conflict';sharedSync.error='UNRECONCILED_LOCAL_CHANGES'}
       return {shouldSave:false};
     }
-    if(!backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+    if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
     if(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null){
-      try{localStorage.setItem(KEY+'.confirmedReadBackup.'+Date.now()+'.'+id(),JSON.stringify(localRecoveryExport()))}
+      try{await archiveRecoveryCopy('confirmed',localRecoveryExport(),{confirmed:true})}
       catch{throw Object.assign(new Error('Pedido original não arquivado'),{code:'LOCAL_STORAGE_FAILED'})}
     }
+    if(generation!==sharedSync.generation||pendingRaw!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)){sharedSync.phase='conflict';sharedSync.error='LOCAL_CHANGED_DURING_BACKUP';return {shouldSave:false}}
+    commitLocalCache(remote,{base:remote,revision:result.revision,lastConfirmedAt:result.confirmedAt});
     state.data=remote;sharedSync.base=JSON.parse(JSON.stringify(remote));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';
-    saveLocalOnly();persistSyncMeta();clearPendingLocalSync();sharedSync.dirty=false;localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);sharedSync.phase='synced';
+    clearPendingLocalSync();sharedSync.dirty=false;localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);sharedSync.phase='synced';
     return {shouldSave:false};
   }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;throw error}
   finally{renderSharedSyncStatus()}
@@ -4646,12 +4795,18 @@ function mergeCommercialData(remoteData={},localData={}){
     majucaImportSummary:local.majucaImportSummary||remote.majucaImportSummary
   });
 }
-function backupLocalBeforeRemoteLoad(localData, remoteData){
+async function backupLocalBeforeRemoteLoad(localData, remoteData){
   try{
     const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
     if(syncComparable(local)===syncComparable(normalizeData())||syncComparable(local)===syncComparable(remote))return true;
+    if(typeof indexedDB!=='undefined'){
+      await archiveRecoveryCopy('before-remote',{...localRecoveryExport(),data:local,remoteData:remote});
+      return true;
+    }
     const previous=localStorage.getItem(LOCAL_REMOTE_BACKUP_KEY);
-    if(previous&&syncComparable(JSON.parse(previous).data)!==syncComparable(local)){
+    if(!previous&&localBackupKeys().length>=LOCAL_BACKUP_LIMIT)throw new Error('Backup capacity');
+    if(previous&&(syncComparable(JSON.parse(previous).data)!==syncComparable(local)||syncComparable(JSON.parse(previous).remoteData)!==syncComparable(remote))){
+      if(localBackupKeys().length>=LOCAL_BACKUP_LIMIT)throw new Error('Backup capacity');
       const prefix=LOCAL_REMOTE_BACKUP_KEY+'.archive.'+Date.now();let key=prefix,index=0;
       while(localStorage.getItem(key))key=prefix+'.'+(++index);
       localStorage.setItem(key,previous);
@@ -4669,7 +4824,7 @@ function backupLocalBeforeRemoteLoad(localData, remoteData){
 }
 function save(){
   sharedSync.generation++;sharedSync.dirty=true;
-  try{saveLocalOnly();markPendingLocalSync()}catch{sharedSync.verified=false;sharedSync.phase='offline';sharedSync.error='LOCAL_STORAGE_FAILED';renderSharedSyncStatus();return}
+  try{saveLocalOnly();markPendingLocalSync()}catch{sharedSync.verified=false;sharedSync.phase='offline';sharedSync.error='LOCAL_STORAGE_FAILED';preserveStorageFailure();renderSharedSyncStatus();return}
   if(sharedSync.verified&&sharedSync.phase!=='conflict')sharedSync.phase='pending';
   renderSharedSyncStatus();
   if(REMOTE_URL&&sharedSync.initialized&&sharedSync.verified&&sharedSync.base&&sharedSync.revision&&sharedSync.canWrite&&sharedSync.phase==='pending'){clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300)}
@@ -4681,7 +4836,7 @@ function flushPendingSyncOnUnload(){
   // Unconfirmed writes remain in localStorage; unload never sends a blind or duplicate request.
 }
 async function syncRemote(recovery=false){
-  if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!recovery&&(!hasPendingLocalSync()||!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
+  if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!recovery&&(!hasPendingLocalSync()&&!hasUnconfirmedLocalData(state.data)||!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
   let payload;
   try{
     payload=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null');
@@ -4689,18 +4844,24 @@ async function syncRemote(recovery=false){
     // A new client must also detect an old API before sending any POST. Recovery
     // uses the same probe, without altering or discarding the original request.
     const probe=await requestCommercialData();
+    const unsaved=await latestLocalCheckpoint();if(unsaved&&syncComparable(normalizeData(JSON.parse(unsaved.raw).data))!==syncComparable(state.data)&&syncComparable(normalizeData(JSON.parse(unsaved.raw).data))!==syncComparable(normalizeData(probe.data)))throw Object.assign(new Error('Existe uma cópia local mais recente por recuperar. Exporte o arquivo ou recupere essa cópia antes de sincronizar.'),{code:'LOCAL_RECOVERY_AVAILABLE'});
     if(probe.pendingWrite?.state==='blocked'||!recovery&&probe.pendingWrite?.state==='pending'&&probe.pendingWrite.requestId!==payload?.requestId)throw Object.assign(new Error('Gravação incompleta'),{code:'WRITE_INCOMPLETE'});
     if(payload&&(!validSharedData(payload.data)||syncComparable(normalizeData(payload.data))!==syncComparable(state.data)))throw Object.assign(new Error('O pedido original difere dos dados locais atuais. Preserve-o e reveja as diferenças antes de sincronizar.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
     if(recovery){if(!payload)return false;payload={...payload,action:'recover'}}
     else if(payload&&payload.baseRevision!==sharedSync.revision)throw Object.assign(new Error('O pedido original exige revisão antes de ser substituído.'),{code:'CONFLICT'});
-    else if(!payload){payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload))}
+    else if(!payload){
+      payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};
+      try{localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload))}catch{throw Object.assign(new Error('Pedido original não guardado localmente.'),{code:'LOCAL_STORAGE_FAILED'})}
+    }
     const result=await requestCommercialData(payload);
-    sharedSync.base=JSON.parse(JSON.stringify(payload.data));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';persistSyncMeta();localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
+    commitLocalCache(state.data,{base:payload.data,revision:result.revision,lastConfirmedAt:result.confirmedAt});
+    const checkpoint=await latestLocalCheckpoint();if(checkpoint&&syncComparable(normalizeData(JSON.parse(checkpoint.raw).data))===syncComparable(normalizeData(payload.data)))await acknowledgeLocalCheckpoint(checkpoint);
+    sharedSync.base=JSON.parse(JSON.stringify(payload.data));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
     if(syncComparable(state.data)===syncComparable(payload.data)){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{sharedSync.phase='pending';clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300)}
     return true;
   }catch(error){
     // A rejected retry does not prove that an earlier attempt failed; preserve its recovery ID.
-    sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;return false;
+    sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED','LOCAL_RECOVERY_AVAILABLE'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;if(error.code==='LOCAL_STORAGE_FAILED')await preserveStorageFailure();return false;
   }
   finally{sharedSync.busy=false;renderSharedSyncStatus()}
 }
@@ -4730,11 +4891,12 @@ function reconcileSharedData(base,local,remote){
 function openSyncReconciliation(){
   const remote=sharedSync.remote;
   if(!remote){notifyUser('Tente novamente a ligação para consultar a versão partilhada, sem apagar alterações locais.','Rever sincronização');return}
+  if(sharedSync.error==='LOCAL_RECOVERY_AVAILABLE'){notifyUser('Existe uma cópia local mais recente no arquivo. Recupere ou exporte essa cópia antes de reconciliar.','Cópia local por recuperar');return}
   if(sharedSync.error==='UNCONFIRMED_PENDING_REQUEST'){notifyUser('O pedido original contém dados diferentes da cópia local atual. Exporte a cópia completa e peça revisão antes de substituir ou retomar esse pedido.','Pedido original por confirmar');return}
   try{validateSyncDiagnostics(remote,true)}catch(error){sharedSync.verified=false;sharedSync.error=error.code;notifyUser(error.message,'Sincronização bloqueada');return}
   if(remote.pendingWrite&&remote.pendingWrite.state!=='committed'){notifyUser('Existe uma gravação incompleta na fonte. Preserve o pedido original e retome-o com o mesmo identificador e conteúdo antes de reconciliar. Não substitua nem apague os registos pendentes.','Gravação incompleta');return}
   if(!hasBusinessData(remote.data)&&hasBusinessData(state.data)){notifyUser('A base partilhada está inesperadamente vazia. A cópia local foi preservada e não será enviada nem substituída. Peça ao administrador para verificar a fonte e os backups.','Verificar base partilhada');return}
-  const local=JSON.parse(JSON.stringify(state.data)),meta=readSyncMeta(),base=meta?.base||sharedSync.base,pendingAtOpen=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY);
+  const local=JSON.parse(JSON.stringify(state.data)),meta=readSyncMeta(),base=meta?.base||sharedSync.base,pendingAtOpen=localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),generationAtOpen=sharedSync.generation;
   const result=base?reconcileSharedData(base,local,remote.data):{data:null,conflicts:['A versão de origem das alterações locais é desconhecida.']};
   document.getElementById('syncReviewModal')?.remove();
   const modal=document.createElement('div');modal.id='syncReviewModal';modal.className='modal-backdrop';modal.style.zIndex='150';
@@ -4756,14 +4918,19 @@ function openSyncReconciliation(){
         sharedSync.remote={data:normalizeData(fresh.data),revision:fresh.revision,ticket:fresh.readTicket,confirmedAt:fresh.confirmedAt,canWrite:!!fresh.canWrite,pendingWrite:fresh.pendingWrite,capabilities:fresh.capabilities};
         throw new Error('A base partilhada ou o estado da gravação pendente mudou. Feche esta janela e volte a rever as diferenças.');
       }
-      if(sharedSync.busy||pendingAtOpen!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY))throw new Error('O pedido local mudou. Volte a rever as diferenças.');
+      if(sharedSync.busy||generationAtOpen!==sharedSync.generation||pendingAtOpen!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY))throw new Error('O pedido local mudou. Volte a rever as diferenças.');
       if(syncComparable(state.data)!==syncComparable(local))throw new Error('Os dados locais mudaram. Volte a rever as diferenças.');
-      localStorage.setItem(KEY+'.conflictBackup.'+Date.now(),JSON.stringify(localRecoveryExport()));
-      state.data=useRemote?JSON.parse(JSON.stringify(remote.data)):normalizeData(result.data);
+      await archiveRecoveryCopy('conflict',localRecoveryExport());
+      // IndexedDB is asynchronous: revalidate again after the archive commits.
+      if(closed||sharedSync.busy||generationAtOpen!==sharedSync.generation||pendingAtOpen!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||syncComparable(state.data)!==syncComparable(local))throw new Error('Os dados locais mudaram durante o arquivo. Volte a rever as diferenças.');
+      const next=useRemote?JSON.parse(JSON.stringify(remote.data)):normalizeData(result.data);
+      commitLocalCache(next,{base:remote.data,revision:remote.revision,lastConfirmedAt:fresh.confirmedAt},!useRemote);
+      state.data=next;
       sharedSync.base=JSON.parse(JSON.stringify(remote.data));sharedSync.revision=remote.revision;sharedSync.ticket=fresh.readTicket;sharedSync.lastConfirmedAt=fresh.confirmedAt;sharedSync.canWrite=fresh.canWrite;sharedSync.verified=true;sharedSync.error='';sharedSync.generation++;
-      saveLocalOnly();persistSyncMeta();localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
+      localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
       clearTimeout(saveTimer);saveTimer=null;
-      if(useRemote){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{markPendingLocalSync();sharedSync.dirty=true;sharedSync.phase='pending'}
+      if(useRemote){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{sharedSync.dirty=true;sharedSync.phase='pending'}
+      const checkpoint=await latestLocalCheckpoint();if(checkpoint&&syncComparable(normalizeData(JSON.parse(checkpoint.raw).data))===syncComparable(local))await acknowledgeLocalCheckpoint(checkpoint);
       close();renderAll();renderSharedSyncStatus();
     }catch(error){sharedSync.verified=false;sharedSync.phase='conflict';if(error.code)sharedSync.error=error.code;renderSharedSyncStatus();notifyUser(error.message||'Não foi possível preservar a cópia local. Nenhuma gravação remota foi feita.','Rever sincronização')}
     finally{applying=false}
@@ -4796,6 +4963,9 @@ function renderSharedSyncStatus(){
   if(sharedSync.phase!=='synced'){
     const button=document.createElement('button');button.type='button';button.className='ghost-button compact-button';button.textContent='Exportar cópia local';button.onclick=exportLocalRecoveryCopy;bar.querySelector('.top-actions').appendChild(button);
   }
+  const archiveButton=document.createElement('button');archiveButton.type='button';archiveButton.className='ghost-button compact-button';archiveButton.textContent='Exportar arquivo local';archiveButton.onclick=exportLocalBackupArchive;bar.querySelector('.top-actions').appendChild(archiveButton);
+  if(sharedSync.error==='LOCAL_RECOVERY_AVAILABLE'){const restore=document.createElement('button');restore.type='button';restore.className='ghost-button compact-button';restore.textContent='Recuperar última cópia local';restore.onclick=restoreLocalCheckpoint;bar.querySelector('.top-actions').appendChild(restore)}
+  if(localBackupKeys().length){const move=document.createElement('button');move.type='button';move.className='ghost-button compact-button';move.textContent='Transferir backups antigos';move.onclick=migrateLegacyLocalBackups;bar.querySelector('.top-actions').appendChild(move)}
   const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
   const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);renderAll()}};
   refreshClientFractionResults();
@@ -4898,7 +5068,7 @@ async function resetLocal(){
       try{await loadRemoteData();renderAll();renderSharedSyncStatus()}catch{notifyUser('Não foi possível confirmar a base partilhada. A cópia local não foi apagada.','Dados locais preservados')}
       return;
     }
-    localStorage.setItem(KEY+'.conflictBackup.'+Date.now(),JSON.stringify({data:state.data,createdAt:new Date().toISOString()}));
+    try{await archiveRecoveryCopy('reset',localRecoveryExport())}catch{notifyUser('Não foi possível confirmar o backup. Os dados locais não foram repostos.','Dados locais preservados');return}
     localStorage.removeItem(KEY);
     state.data=loadDataLocal();
     sharedSync.verified=false;sharedSync.phase='offline';sharedSync.base=null;sharedSync.revision='';

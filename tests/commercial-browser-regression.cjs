@@ -4,6 +4,7 @@ const repo=path.resolve(__dirname,'..'),port=Number(process.env.COMMERCIAL_TEST_
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
+ 'commercial-local-quota-browser.mjs':'client-local-backups',
  'commercial-pending-local-browser.mjs':'client-phase2a',
  'commercial-followup-layout-browser.mjs':'client-complete',
  'commercial-audit-defects-browser.mjs':'client-stage',

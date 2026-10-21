@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {syncAction} from './helpers/current-client-ui.mjs';
+import {hasArchivedPending} from './helpers/local-backups.mjs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const origin=process.env.PHASE2A_TEST_ORIGIN,key='theView.crmCommercial.v2';
 if(!origin||new URL(origin).hostname!=='127.0.0.1'||!/^53\d{3}$/.test(new URL(origin).port))throw Error('Isolated loopback fixture required');
@@ -42,7 +43,7 @@ try{
     await syncAction(page);await phase('conflict');
     await syncAction(page,'[data-sync-review]');await page.locator('#syncReviewModal').waitFor();
     await page.locator('[data-sync-merge]').click();await page.locator('#syncReviewModal').waitFor({state:'detached'});await phase('pending');
-    assert.equal(await page.evaluate(({key,pendingRaw})=>Object.keys(localStorage).filter(k=>k.startsWith(key+'.conflictBackup.')).some(k=>JSON.stringify(JSON.parse(localStorage.getItem(k)).pendingWrite)===JSON.stringify(JSON.parse(pendingRaw))),{key,pendingRaw}),true);
+    assert.equal(await hasArchivedPending(page,pendingRaw),true);
     assert.equal(posts.length,1,'Review itself must not write');
     await syncAction(page);await phase('synced');assert.equal(posts.length,2);
     assert.notEqual(posts[1].requestId,JSON.parse(pendingRaw).requestId);
