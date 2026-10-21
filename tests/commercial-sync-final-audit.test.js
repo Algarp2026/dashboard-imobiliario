@@ -13,6 +13,9 @@ global.fetch=async(url,options)=>{
   assert.ok(['https://oauth2.googleapis.com/token','https://script.googleapis.com/v1/scripts/test-deployment:run'].includes(url),'External network is forbidden');
   if(url.includes('oauth2'))return Response.json({access_token:'fiction-token'});
   const call=JSON.parse(options.body);if(call.function!=='crmRead')writeExecutions++;
+  // Emulate a pre-optimization source for this compatibility matrix. It ignores
+  // capabilitiesOnly; malformed full diagnostics must still block every write.
+  if(call.function==='crmRead')delete call.parameters[0].capabilitiesOnly;
   try{return Response.json({done:true,response:{result:sourceTransform(clone(google.context[call.function](...call.parameters)),call.function)}})}
   catch{return Response.json({done:true,error:{details:[{errorMessage:'Fictitious interruption'}]}})}
 };

@@ -53,7 +53,7 @@ async function main(){
   const old=await invoke(api,{...post,body:stale});assert.equal(old.statusCode,409);assert.ok(!old.body.data);assert.deepEqual(google.data,candidate);
   const current=await invoke(api,request()),next=clone(candidate);next.clients[0].email='new@example.test';
   const interrupted={action:'save',data:next,baseRevision:current.body.revision,requestId:'request-test-interrupted'};
-  google.failMirror('Eventos');const failure=await invoke(api,{...request('POST',interrupted),headers:{...request().headers,'x-crm-read-ticket':current.body.readTicket}});assert.equal(failure.statusCode,502);
+  google.failMirror('Clientes');const failure=await invoke(api,{...request('POST',interrupted),headers:{...request().headers,'x-crm-read-ticket':current.body.readTicket}});assert.equal(failure.statusCode,502);
   assert.deepEqual(google.data,candidate);assert.equal((await invoke(api,request())).statusCode,200);
   const backupCount=google.sheets.get('BackupsVersions').rows.length;google.failMirror('');
   const recovery=await invoke(api,request('POST',{...interrupted,action:'recover'}));assert.equal(recovery.statusCode,200);assert.equal(google.sheets.get('BackupsVersions').rows.length,backupCount);

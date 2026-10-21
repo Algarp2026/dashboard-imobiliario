@@ -30,7 +30,7 @@ for(const fault of ['chunks-before','chunks-partial','chunks-corrupt','archive-b
   const s=makeStore(initial);assert.equal(s.write(operation(s,base)).persisted,true);
   const before=JSON.stringify(s.data),active=cells(s).get('6:2'),oldLegacy=cells(s).get('2:2');
   const write=operation(s,changed,'failure-'+fault);
-  fault==='mirror'?s.failMirror('Eventos'):s.failWrite(fault);
+  fault==='mirror'?s.failMirror('Clientes'):s.failWrite(fault);
   assert.throws(()=>s.write(write),undefined,fault);
   assert.equal(JSON.stringify(s.data),before,fault);assert.equal(cells(s).get('6:2'),active);assert.equal(cells(s).get('2:2'),oldLegacy);
   assert.equal(s.recover({...write,requestId:'unrelated-recovery'}).code,'CONFLICT');

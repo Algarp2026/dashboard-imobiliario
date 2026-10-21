@@ -56,7 +56,7 @@ commitNow=true;const updated=race.read();assert.equal(committed,true);assertRead
 
 // B5 changes without B6 changing: the read must retry and return the pending intent.
 let interruptNow=false;
-const pending=fixture({onStep(name){if(interruptNow&&name==='after:read:Store:2'){interruptNow=false;pending.failMirror('Eventos');assert.throws(()=>pending.write(write(pending,'fiction-partial-mirrors')))}}});
+const pending=fixture({onStep(name){if(interruptNow&&name==='after:read:Store:2'){interruptNow=false;pending.failMirror('PrecosHistorico');assert.throws(()=>pending.write(write(pending,'fiction-partial-mirrors')))}}});
 interruptNow=true;const pendingBefore=pending.sheets.get('Store').cells.get('6:2'),interrupted=pending.read();
 assertRead(interrupted,base);assert.equal(interrupted.pendingWrite.state,'pending');
 assert.equal(pending.sheets.get('Store').cells.get('6:2'),pendingBefore);
@@ -101,7 +101,7 @@ assert.deepEqual(clone(timeout.data.events),base.events);assert.deepEqual(clone(
 assert.ok(logs.some(line=>line.operation==='read'&&line.phase==='chunks'&&line.state==='error'&&line.durationMs>=360000));
 assert.ok(logs.some(line=>line.operation==='write'&&line.phase==='mirrors'&&line.state==='ok'));
 for(const phase of ['lock','backup','stage','archive','mirrors','activate','cleanup'])assert.ok(logs.some(line=>line.operation==='write'&&line.phase===phase&&line.state==='ok'),phase);
-assert.ok(logs.every(line=>Object.keys(line).sort().join(',')==='component,durationMs,elapsedMs,operation,phase,state'));
+assert.ok(logs.every(line=>Object.keys(line).sort().join(',')==='component,correlationId,durationMs,elapsedMs,operation,phase,state'));
 assert.doesNotMatch(JSON.stringify(logs),/PRIVATE_FICTION_NAME|fiction-client|fiction-new-version|400000|410000|checksum|revision/);cases++;
 
 // Budget expires during openById: no further Sheets calls or writes are attempted.
