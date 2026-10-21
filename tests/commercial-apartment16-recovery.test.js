@@ -105,7 +105,7 @@ async function main(){
     }
     const pendingPlan=recovery.createPlan(fixture.localExport,read(store));
     const request=recovery.prepareApprovedRequest(pendingPlan,read(store),approve(pendingPlan));
-    if(fault==='mirror'){store.failMirror('Eventos');assert.equal((await invoke('POST',request)).statusCode,502);store.failMirror('')}
+    if(fault==='mirror'){store.failMirror('PrecosHistorico');assert.equal((await invoke('POST',request)).statusCode,502);store.failMirror('')}
     assert.equal((await invoke('POST',request)).statusCode,200);assert.deepEqual(store.data,candidate);assert.equal(store.data.priceHistory['16'].length,3);assertions++;
   }
   // A changed identity/revision after preparation is still rejected by server CAS.

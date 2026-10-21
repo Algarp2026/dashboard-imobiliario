@@ -17,17 +17,28 @@ const outsideReviewed=s=>sync(s).replace(new RegExp('^(?:async )?function ('+rev
 assert.equal(outsideReviewed(current),outsideReviewed(base),'All synchronization outside the reviewed rollback/quota functions remains frozen');
 // Read contention deliberately changes the source reader and its two safe API error codes.
 // All other server modules and the API/frontend protocol remain frozen.
-const protectedPaths=['api','config.js','data.json','plantas','middleware.ts',...fs.readdirSync(path.join(repo,'server')).filter(file=>file!=='commercial-store.js').map(file=>'server/'+file)];
+const protectedPaths=[...fs.readdirSync(path.join(repo,'api')).filter(file=>file!=='commercial-data.js').map(file=>'api/'+file),'config.js','data.json','plantas','middleware.ts',...fs.readdirSync(path.join(repo,'server')).filter(file=>file!=='commercial-store.js').map(file=>'server/'+file)];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 const oldServer=cp.execFileSync('git',['show',recoveryBase+':server/commercial-store.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
 const newServer=fs.readFileSync(path.join(repo,'server/commercial-store.js'),'utf8').replace(/\r\n/g,'\n');
-assert.equal(newServer.replace(",'SOURCE_BUSY','SOURCE_TIMEOUT'",''),oldServer,'Only the two retryable source error codes may change in the server adapter');
+// PR16 reviews transport/diagnostics only; freeze every store validator, ticket,
+// write gate and pending-operation shape independently of the transport.
+const topFunctions=source=>{const matches=[...source.matchAll(/^(?:async )?function (\w+)\(/gm)];return Object.fromEntries(matches.map((m,i)=>[m[1],source.slice(m.index,matches[i+1]?.index??source.indexOf('module.exports=')).trim()]))};
+const serverBefore=topFunctions(oldServer),serverAfter=topFunctions(newServer);
+for(const [name,body] of Object.entries(serverBefore))if(!['fetchJson','callStore'].includes(name))assert.equal(serverAfter[name],body,'Store security function frozen: '+name);
+const oldApi=cp.execFileSync('git',['show',recoveryBase+':api/commercial-data.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
+const api=fs.readFileSync(path.join(repo,'api/commercial-data.js'),'utf8').replace(/\r\n/g,'\n');
+const normalizedApi=api.replace(/^  const context=store.sourceContext\(\);\n/m,'').replace(/^  response.setHeader\('X-CRM-Correlation-Id',context.correlationId\);\n/m,'').replace("store.callStore('crmRead',{capabilitiesOnly:true},context)","store.callStore('crmRead')").replace("store.callStore('crmRead',undefined,context)","store.callStore('crmRead')").replace('requestId:body.requestId},context)','requestId:body.requestId})').replace(/^ +store.sourceLog\(context,'request'.*\n/gm,'');
+assert.equal(normalizedApi,oldApi,'API authentication, validation and confirmation contract unchanged outside the explicit PR16 instrumentation/preflight');
 const oldScript=cp.execFileSync('git',['show',recoveryBase+':google_apps_script.gs'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
 const newScript=fs.readFileSync(path.join(repo,'google_apps_script.gs'),'utf8').replace(/\r\n/g,'\n');
 function scriptFunctions(source){const matches=[...source.matchAll(/^function (\w+)\(/gm)];return Object.fromEntries(matches.map((match,index)=>[match[1],source.slice(match.index,matches[index+1]?.index??source.length).trim()]))}
 const previousFunctions=scriptFunctions(oldScript),currentFunctions=scriptFunctions(newScript);
 const instrumentedFunctions=new Set(['readStoreMetadata_','readVersion_','stageVersion_','currentStore_','crmRead','pendingWriteState_','crmWrite','getStoreSheet_','storeSpreadsheet_','getOrCreateSheet_']);
-for(const [name,body] of Object.entries(previousFunctions))if(!instrumentedFunctions.has(name))assert.equal(currentFunctions[name],body,'Unrelated Apps Script function must remain frozen: '+name);
+for(const [name,body] of Object.entries(previousFunctions))if(!instrumentedFunctions.has(name)){
+  const actual=/^mirror(Clientes|Eventos|Agentes|EstadosVendas|PrecosHistorico|VendasComissoes)_$/.test(name)||name==='writeSheet_'?currentFunctions[name].replace(/, context/g,''):currentFunctions[name];
+  assert.equal(actual,body,'Unrelated Apps Script function must remain frozen: '+name);
+}
 assert.equal(newScript.slice(0,newScript.indexOf('var STORE_READ_BUDGET_MS')).trim(),oldScript.slice(0,oldScript.indexOf('function doGet(')).trim(),'Original storage constants remain frozen');
 const commercialPaths=['commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial.html','config.js','data.json','plantas','middleware.ts'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);

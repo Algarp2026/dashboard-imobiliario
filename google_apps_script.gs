@@ -12,15 +12,16 @@ var STORE_TOTAL_CHARACTERS = 900000;
 var STORE_READ_BUDGET_MS = 12000;
 var STORE_READ_ATTEMPTS = 2;
 
-function sourceContext_(operation) {
-  return {operation:operation,started:Date.now(),spreadsheet:null,storeSheet:null};
+function sourceContext_(operation, request) {
+  var correlationId = request && /^[a-f0-9-]{36}$/.test(request.correlationId || '') ? request.correlationId : '';
+  return {operation:operation,correlationId:correlationId,started:Date.now(),spreadsheet:null,storeSheet:null};
 }
 function sourceStep_(context, phase, action) {
   if (!context) return action();
   var started = Date.now(), outcome = 'error';
   function log(state) {
     // Only fixed labels and timings: never payloads, identities, revisions or error messages.
-    try { console.log(JSON.stringify({component:'crm-store',operation:context.operation,phase:phase,state:state,elapsedMs:Date.now()-context.started,durationMs:Date.now()-started})); } catch (ignored) {}
+    try { console.log(JSON.stringify({component:'crm-store',correlationId:context.correlationId,operation:context.operation,phase:phase,state:state,elapsedMs:Date.now()-context.started,durationMs:Date.now()-started})); } catch (ignored) {}
   }
   log('start');
   try {
@@ -30,7 +31,16 @@ function sourceStep_(context, phase, action) {
     if (context.operation === 'read' && Date.now()-context.started >= STORE_READ_BUDGET_MS) throw new Error('SOURCE_TIMEOUT');
     outcome = 'ok';
     return result;
+  } catch (error) {
+    // Keep the innermost fixed phase; never copy the exception message.
+    if (!context.failure) context.failure = {phase:phase,durationMs:Date.now()-started,elapsedMs:Date.now()-context.started};
+    throw error;
   } finally { log(outcome); }
+}
+function sourceFailure_(context) {
+  var failure = context.failure || {phase:'validate',durationMs:0,elapsedMs:Date.now()-context.started};
+  var sheetsPhase = /^(open|store-sheet|metadata|control|chunks|intent|intent-version|archive|mirrors|activate|cleanup|stage|backup|mirror-)/.test(failure.phase);
+  return {phase:failure.phase,durationMs:failure.durationMs,elapsedMs:failure.elapsedMs,layer:sheetsPhase?'google-sheets':'apps-script'};
 }
 function readStoreSnapshot_(context) {
   var sheet = getStoreSheet_(context);
@@ -192,7 +202,10 @@ function currentStore_(context, snapshot) {
 function crmRead(request) {
   assertServerCaller_();
   if (!validSourceRequest_(request)) return storeResponse_({ok:false,code:'SOURCE_ENVIRONMENT_MISMATCH'});
-  var context = sourceContext_('read');
+  // Compatibility/authentication probe only. crmWrite still validates the full
+  // authoritative version, B5/B6 and CAS under its lock before any mutation.
+  if (request.capabilitiesOnly === true) return storeResponse_({ok:true,preflight:true,capabilities:{pendingWriteDiagnostics:1,lightweightPreflight:1}});
+  var context = sourceContext_('read', request);
   try {
     for (var attempt = 0; attempt < STORE_READ_ATTEMPTS; attempt++) {
       // Immutable chunks are safe without the writer lock. Recheck ALL control cells,
@@ -209,6 +222,7 @@ function crmRead(request) {
     return storeResponse_({ok:false,code:'SOURCE_BUSY'});
   } catch (error) {
     if (error && error.message === 'SOURCE_TIMEOUT') return storeResponse_({ok:false,code:'SOURCE_TIMEOUT'});
+    if (request.diagnosticsVersion === 1) return storeResponse_({ok:false,code:'INVALID_SOURCE_RESPONSE',diagnostics:sourceFailure_(context)});
     throw error;
   }
 }
@@ -229,10 +243,15 @@ function crmWrite(request) {
   if (!request || typeof request.baseRevision !== 'string' || !/^[a-f0-9]{64}$/.test(request.baseRevision) ||
       typeof request.requestId !== 'string' || !/^[\w-]{8,100}$/.test(request.requestId) || !validStoreData_(request.data, true))
     return storeResponse_({ok:false,code:'INVALID_PAYLOAD'});
-  var context = sourceContext_('write'), lock = LockService.getScriptLock();
+  var context = sourceContext_('write', request), lock = LockService.getScriptLock();
   sourceStep_(context, 'lock', function() { lock.waitLock(10000); });
   try {
-    var sheet = getStoreSheet_(context), current = currentStore_(context), nextJson = storeJson_(request.data), revision = storeRevision_(nextJson);
+    var sheet = getStoreSheet_(context), current = currentStore_(context);
+    var prepared = sourceStep_(context, 'prepare', function() {
+      var raw = storeJson_(request.data);
+      return {raw:raw,revision:storeRevision_(raw)};
+    });
+    var nextJson = prepared.raw, revision = prepared.revision;
     if (nextJson.length > STORE_TOTAL_CHARACTERS || current.raw.length > STORE_TOTAL_CHARACTERS) return storeResponse_({ok:false,code:'STORE_SIZE_LIMIT'});
     var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL, context);
     var receipt = current.active ? current.active.receipt : readStoreMetadata_(STORE_RECEIPT_CELL, context);
@@ -258,12 +277,14 @@ function crmWrite(request) {
     // Backups reference fully verified immutable versions, never a single payload cell.
     var previous = sourceStep_(context, 'backup', function() {
       var previous = metadata.previous || (current.active ? current.active.version : stageVersion_(current.raw, current.updatedAt, context));
-      readVersion_(previous, context);
+      // currentStore_ already verified the active version. A resumed descriptor
+      // must still be checked independently.
+      if (metadata.previous || !current.active) readVersion_(previous, context);
       return previous;
     });
     var version = sourceStep_(context, 'stage', function() {
       var version = metadata.version || stageVersion_(nextJson, metadata.updatedAt, context);
-      if(readVersion_(version, context) !== nextJson) throw new Error('WRITE_INCOMPLETE');
+      if(metadata.version && readVersion_(version, context) !== nextJson) throw new Error('WRITE_INCOMPLETE');
       return version;
     });
     metadata.previous = previous; metadata.version = version;
@@ -280,7 +301,7 @@ function crmWrite(request) {
       if (archived[1] !== JSON.stringify(previous) || archived[2] !== JSON.stringify(version)) throw new Error('WRITE_INCOMPLETE');
     });
     // Mirrors are derived. A failure here leaves the old authoritative version active.
-    sourceStep_(context, 'mirrors', function() { mirrorAll_(request.data); SpreadsheetApp.flush(); });
+    sourceStep_(context, 'mirrors', function() { mirrorChanged_(JSON.parse(current.raw), request.data, context); SpreadsheetApp.flush(); });
     readVersion_(version, context);
     var pointer = JSON.stringify({format:2,version:version,previous:previous,receipt:metadata,legacyChecksum:current.active ? current.active.legacyChecksum : storeRevision_(current.raw)});
     sourceStep_(context, 'activate', function() {
@@ -295,6 +316,9 @@ function crmWrite(request) {
       SpreadsheetApp.flush();
     });
     return success();
+  } catch (error) {
+    if (request.diagnosticsVersion === 1) return storeResponse_({ok:false,code:'INVALID_SOURCE_RESPONSE',diagnostics:sourceFailure_(context)});
+    throw error;
   } finally { lock.releaseLock(); }
 }
 function crmRecover(request) {
@@ -315,7 +339,24 @@ function mirrorAll_(data) {
   mirrorVendasComissoes_(data.saleCommissions || {});
 }
 
-function mirrorClientes_(clients) {
+function mirrorChanged_(previous, data, context) {
+  // Compare complete dependencies, including unknown fields. Reapply the same
+  // delta on retries against old B6, and always recreate a missing mirror.
+  var groups = [
+    ['Clientes',['clients'],function() { mirrorClientes_(data.clients || [], context); }],
+    ['Eventos',['events'],function() { mirrorEventos_(data.events || [], context); }],
+    ['Agentes',['agents'],function() { mirrorAgentes_(data.agents || [], context); }],
+    ['EstadosVendas',['statuses','salePrices','unavailableReasons'],function() { mirrorEstadosVendas_(data, context); }],
+    ['PrecosHistorico',['priceHistory'],function() { mirrorPrecosHistorico_(data.priceHistory || {}, context); }],
+    ['VendasComissoes',['saleCommissions'],function() { mirrorVendasComissoes_(data.saleCommissions || {}, context); }]
+  ];
+  groups.forEach(function(group) {
+    var changed = group[1].some(function(key) { return storeJson_(previous[key]) !== storeJson_(data[key]); });
+    if (changed || !storeSpreadsheet_(context).getSheetByName(group[0])) sourceStep_(context, 'mirror-'+group[0], group[2]);
+  });
+}
+
+function mirrorClientes_(clients, context) {
   var rows = (clients || []).map(function(c) {
     return [
       text_(c.id),
@@ -335,10 +376,10 @@ function mirrorClientes_(clients) {
       text_(c.updated)
     ];
   });
-  writeSheet_('Clientes', ['ID', 'Nome', 'Contacto', 'Email', 'NIF', 'Nacionalidade', 'Origem', 'AgentId', 'Agente', 'Agencia', 'Orcamento', 'Estado', 'Fracoes', 'Notas', 'Atualizado'], rows);
+  writeSheet_('Clientes', ['ID', 'Nome', 'Contacto', 'Email', 'NIF', 'Nacionalidade', 'Origem', 'AgentId', 'Agente', 'Agencia', 'Orcamento', 'Estado', 'Fracoes', 'Notas', 'Atualizado'], rows, context);
 }
 
-function mirrorEventos_(events) {
+function mirrorEventos_(events, context) {
   var rows = (events || []).map(function(ev) {
     return [
       text_(ev.id),
@@ -360,10 +401,10 @@ function mirrorEventos_(events) {
       numberOrBlank_(ev.commissionAmount)
     ];
   });
-  writeSheet_('Eventos', ['ID', 'Data', 'Hora', 'Tipo', 'ClienteId', 'Fracoes', 'Valor', 'Interesse', 'FollowUp', 'DataFollowUp', 'Objecoes', 'Notas', 'ComAgente', 'AgentId', 'TipoComissao', 'ValorComissao', 'Comissao'], rows);
+  writeSheet_('Eventos', ['ID', 'Data', 'Hora', 'Tipo', 'ClienteId', 'Fracoes', 'Valor', 'Interesse', 'FollowUp', 'DataFollowUp', 'Objecoes', 'Notas', 'ComAgente', 'AgentId', 'TipoComissao', 'ValorComissao', 'Comissao'], rows, context);
 }
 
-function mirrorAgentes_(agents) {
+function mirrorAgentes_(agents, context) {
   var rows = (agents || []).map(function(a) {
     return [
       text_(a.id),
@@ -377,10 +418,10 @@ function mirrorAgentes_(agents) {
       text_(a.updated)
     ];
   });
-  writeSheet_('Agentes', ['ID', 'Nome', 'Agencia', 'AMI', 'Contacto', 'Email', 'ComissaoPadrao', 'Notas', 'Atualizado'], rows);
+  writeSheet_('Agentes', ['ID', 'Nome', 'Agencia', 'AMI', 'Contacto', 'Email', 'ComissaoPadrao', 'Notas', 'Atualizado'], rows, context);
 }
 
-function mirrorEstadosVendas_(data) {
+function mirrorEstadosVendas_(data, context) {
   var statuses = data.statuses || {};
   var salePrices = data.salePrices || {};
   var reasons = data.unavailableReasons || {};
@@ -393,10 +434,10 @@ function mirrorEstadosVendas_(data) {
       text_(reasons[k])
     ];
   });
-  writeSheet_('EstadosVendas', ['Fracao', 'Estado', 'PrecoReservaVenda', 'MotivoIndisponivel'], rows);
+  writeSheet_('EstadosVendas', ['Fracao', 'Estado', 'PrecoReservaVenda', 'MotivoIndisponivel'], rows, context);
 }
 
-function mirrorPrecosHistorico_(priceHistory) {
+function mirrorPrecosHistorico_(priceHistory, context) {
   var rows = [];
   sortKeys_(priceHistory).forEach(function(k) {
     var entries = priceHistory[k] || [];
@@ -411,10 +452,10 @@ function mirrorPrecosHistorico_(priceHistory) {
       ]);
     });
   });
-  writeSheet_('PrecosHistorico', ['Fracao', 'Data', 'Preco', 'PrecoAnterior', 'Motivo'], rows);
+  writeSheet_('PrecosHistorico', ['Fracao', 'Data', 'Preco', 'PrecoAnterior', 'Motivo'], rows, context);
 }
 
-function mirrorVendasComissoes_(saleCommissions) {
+function mirrorVendasComissoes_(saleCommissions, context) {
   var rows = sortKeys_(saleCommissions).map(function(k) {
     var c = saleCommissions[k] || {};
     return [
@@ -429,7 +470,7 @@ function mirrorVendasComissoes_(saleCommissions) {
       text_(c.date)
     ];
   });
-  writeSheet_('VendasComissoes', ['Fracao', 'ComAgente', 'AgentId', 'TipoComissao', 'ValorComissao', 'Comissao', 'ReceitaLiquida', 'EventoId', 'Data'], rows);
+  writeSheet_('VendasComissoes', ['Fracao', 'ComAgente', 'AgentId', 'TipoComissao', 'ValorComissao', 'Comissao', 'ReceitaLiquida', 'EventoId', 'Data'], rows, context);
 }
 
 function getStoreSheet_(context) {
@@ -455,8 +496,8 @@ function getOrCreateSheet_(name, context) {
   return sheet || ss.insertSheet(name);
 }
 
-function writeSheet_(name, headers, rows) {
-  var sheet = getOrCreateSheet_(name);
+function writeSheet_(name, headers, rows, context) {
+  var sheet = getOrCreateSheet_(name, context);
   sheet.clearContents();
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   if (rows.length) {
