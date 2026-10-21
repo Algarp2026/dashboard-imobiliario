@@ -95,7 +95,7 @@ async function main(){
   assert.equal((await invoke('POST',stale,b.body.readTicket)).statusCode,409);assert.deepEqual(google.data,next);assert.equal(stale.data.clients[1].notes,'Other pending edit');scenarios++;
   // Updated API safely falls back to the old complete source reader; old frontend
   // response/ticket/payload contracts are unchanged.
-  reset(true);const legacy=await invoke();assert.equal((await invoke('POST',op(legacy),legacy.body.readTicket)).statusCode,200);scenarios++;
+  reset(true);const legacy=await invoke(),oldSourceBefore=sheets();const unsupported=await invoke('POST',op(legacy),legacy.body.readTicket);assert.equal(unsupported.statusCode,503);assert.equal(unsupported.body.code,'COMMERCIAL_VALIDATION_UNAVAILABLE');assert.equal(sheets(),oldSourceBefore);scenarios++;
   reset();const oldApi=oldModule('api/commercial-data.js',oldModule('server/commercial-store.js'));
   const published=await invoke('GET',undefined,undefined,oldApi);assert.equal(published.statusCode,200);
   assert.equal((await invoke('POST',op(published),published.body.readTicket,oldApi)).statusCode,200);scenarios++;
@@ -135,7 +135,11 @@ async function main(){
     ['unknown',null,{keep:true,more:'Fictitious metadata'}]
   ]){
     reset();const data=clone(base);data[key]=value;const request={requestId:'fiction-projection-'+key,baseRevision:google.revision,data};google.trace.length=0;
-    assert.equal(google.write(request).persisted,true);assert.deepEqual(google.data,data);
+    const result=google.write(request);
+    if(['salePrices','saleCommissions'].includes(key)){
+      assert.equal(result.code,'COMMERCIAL_INTEGRITY',key+' cannot bypass a closing operation');assert.deepEqual(google.data,base);scenarios++;continue;
+    }
+    assert.equal(result.persisted,true,key);assert.deepEqual(google.data,data);
     const touched=[...new Set(google.trace.filter(x=>x.type==='rows'&&!['Store','StoreVersions'].includes(x.name)).map(x=>x.name))];
     assert.deepEqual(touched,expected?[expected]:[]);scenarios++;
   }

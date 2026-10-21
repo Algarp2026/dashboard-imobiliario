@@ -54,6 +54,8 @@ module.exports=function makeStore(data, options={}){
     LockService:{getScriptLock(){return{waitLock(){if(held)throw new Error('Concurrent lock not serialized');held=true;trace.push({type:'lock'})},releaseLock(){held=false;trace.push({type:'unlock'})}}}},
     ContentService:{MimeType:{JSON:'json',JAVASCRIPT:'js'},createTextOutput(body){return{body,setMimeType(){return this}}}}
   };
-  vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../../google_apps_script.gs'),'utf8'),context);
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(require.resolve('../../google_commercial_integrity.gs'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(require.resolve('../../google_apps_script.gs'),'utf8'),context);
   return{context,sheets,trace,properties,get data(){return JSON.parse(JSON.stringify(context.crmRead({sourceId:properties.CRM_SPREADSHEET_ID,environment:properties.CRM_ENVIRONMENT}).data))},get revision(){return context.crmRead({sourceId:properties.CRM_SPREADSHEET_ID,environment:properties.CRM_ENVIRONMENT}).revision},read(){return context.crmRead({sourceId:properties.CRM_SPREADSHEET_ID,environment:properties.CRM_ENVIRONMENT})},write(request){return context.crmWrite({...request,sourceId:properties.CRM_SPREADSHEET_ID,environment:properties.CRM_ENVIRONMENT})},recover(request){return context.crmRecover({...request,sourceId:properties.CRM_SPREADSHEET_ID,environment:properties.CRM_ENVIRONMENT})},failMirror(name){mirrorFailure=name},failWrite(name){writeFailure=name},setCaller(value){caller=value}};
 };

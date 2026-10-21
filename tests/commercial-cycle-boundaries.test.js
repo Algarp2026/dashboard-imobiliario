@@ -24,7 +24,7 @@ const administrative=ev('prefs','Preferências recebidas','2026-10-04',{fraction
 check([show,offer,close,administrative],'Desistiu');
 check([show,offer,close,{...administrative,requalificationConfirmed:false}],'Desistiu');
 const qualified={...administrative,requalificationConfirmed:true};
-const qualification=check([show,offer,close,qualified],'Qualificado');assert.equal(qualification.relations[0].state,'Interessado');assert.equal(qualification.relations[0].presented,false);assert.equal(qualification.relations[0].historicallyPresented,true);
+const qualification=check([show,offer,close,qualified],'Qualificado');assert.equal(qualification.relations[0].commercialState,'Não concretizada');assert.equal(qualification.relations[0].presented,false);assert.equal(qualification.relations[0].historicallyPresented,true);
 check([show,offer,{...qualified,date:'2026-10-02'},close],'Desistiu');
 check([show,offer,close,qualified,ev('closed-again','Desistência','2026-10-05',{fractions:[],globalWithdrawal:true})],'Desistiu');
 check([show,offer,close,ev('interest','Interessado','2026-10-04')],'Qualificado');

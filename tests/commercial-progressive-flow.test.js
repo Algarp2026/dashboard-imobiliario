@@ -9,7 +9,7 @@ let writes = 0;
 const context = {
   console,
   document: {readyState:'loading',addEventListener(){},querySelector(){return null}},
-  window: {THE_VIEW_CONFIG:{},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'),THE_VIEW_CLIENT_WORKFLOW:require('../commercial-client-workflow.js')},
+  window: {THE_VIEW_CONFIG:{},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'),THE_VIEW_CLIENT_WORKFLOW:require('../commercial-client-workflow.js'),THE_VIEW_OPPORTUNITIES:require('../commercial-opportunities.js')},
   localStorage: {getItem(){return null},setItem(){writes++}},
   fetch(){throw new Error('Unexpected request')}
 };
@@ -31,7 +31,7 @@ assert.deepEqual(Array.from(app.presentationSelection(legacy)),[1,2]);
 assert.deepEqual(legacy.fractions,[24]);
 assert.deepEqual(legacy.commercialSummary.presentedFractions,[24]);
 assert.equal(legacy.stage,'Apresentado');
-assert.equal(app.state.data.events.length,1);
+assert.equal(app.state.data.events.length,2);assert.equal(app.state.data.events[1].opportunityAction,'select');
 assert.equal(app.updatePresentationSelection(legacy,[1,2]),false);
 const restored = app.normalizeData(JSON.parse(JSON.stringify(app.state.data)));
 assert.deepEqual(Array.from(app.presentationSelection(restored.clients[0])),[1,2]);
@@ -40,7 +40,7 @@ app.consumePresentationSelection(legacy,{type:'Documentação enviada',fractions
 assert.deepEqual(Array.from(app.presentationSelection(legacy)),[1,2]);
 app.consumePresentationSelection(legacy,{type:'Apresentação comercial',fractions:[1]});
 assert.deepEqual(Array.from(app.presentationSelection(legacy)),[2]);
-assert.equal(app.state.data.events.length,1);
+assert.equal(app.state.data.events.length,2);assert.equal(app.state.data.events[1].opportunityAction,'select');
 
 const lead = {id:'new',name:'New fixture',preferences:{typology:'T2'},manualPreferences:{typology:'T2'},manualBudget:750000,budget:750000,preferencesManuallyEdited:true,fractions:[],manualFractions:[],manualNextStep:'Preserved action',manualNextFollowup:'2099-01-01'};
 app.state.data.clients.push(lead);
@@ -49,7 +49,7 @@ assert.equal(app.clientCommercialProjection(lead).stage,'Qualificado');
 assert.equal(lead.stage,undefined,'Derivation must not regularize persisted stages');
 assert.deepEqual(Array.from(lead.commercialSummary.presentedFractions),[]);
 assert.equal(lead.manualNextStep,'Preserved action');
-assert.equal(app.state.data.events.length,1);
+assert.equal(app.state.data.events.length,2);
 const matching = app.commercialClientRecommendation(lead).matching;
 assert.equal(matching.known,true);
 assert.ok(matching.matches.length);

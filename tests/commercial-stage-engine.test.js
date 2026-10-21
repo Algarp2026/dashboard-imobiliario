@@ -108,7 +108,7 @@ const beforeReads=JSON.stringify(app.state.data),view=app.clientCommercialProjec
 const pdfRows=app.buildClientSummaryRows({statuses:app.STAGES,sort:'name'});
 assert.equal(pdfRows.find(row=>row.id===customer.id).status,view.stage);
 assert.equal(app.commercialClients()[0].stage,view.stage);
-assert.equal(app.clientFractionCommercialRows(view,app.state.data.events).find(row=>row.fraction===9).status,model.negotiation(app.state.data.events,customer.id,9,'2026-10-15',app.state.data).state);
+assert.equal(app.clientFractionCommercialRows(view,app.state.data.events).find(row=>row.fraction===9).status,model.relation(app.state.data,customer.id,9).commercialState);
 for(const report of ['operational','listing','portfolio','management'])assert.ok(app.clientReportMarkup(pdfRows,{model:report,statuses:app.STAGES}).body.includes(view.stage));
 assert.equal(JSON.stringify(app.state.data),beforeReads);
 app.state.data=app.normalizeData(copy(app.state.data));assert.equal(app.clientCommercialProjection(app.state.data.clients[0]).stage,'Reservado');

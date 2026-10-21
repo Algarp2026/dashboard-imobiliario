@@ -7,44 +7,41 @@ syntax.push('tests/commercial-pr6-regression-browser.mjs');
 for(const file of syntax)run(['--check',file]);
 const suites=fs.readdirSync(__dirname).filter(file=>file.endsWith('.test.js')).sort();
 for(const file of suites){run([path.join('tests',file)]);console.log('PASS '+file)}
-// The 2026 CRM snapshot predates approved synchronization changes in main.
-// Freeze the audited recovery implementation, not the obsolete transport.
-const recoveryBase='3729e304317541b5bd23bb4fa45aadde9d959934',mainBase='fa876dc98f8ccc208ed68123ddce3c71e948ad51';
-const base=cp.execFileSync('git',['show',recoveryBase+':commercial.js'],{cwd:repo,encoding:'utf8'}),current=fs.readFileSync(path.join(repo,'commercial.js'),'utf8');
-const reviewedSyncFunctions=['loadRemoteData','sharedStoreMayRegress','syncRemote','backupLocalBeforeRemoteLoad','save','openSyncReconciliation','renderSharedSyncStatus'];
-const sync=s=>s.slice(s.indexOf('async function requestCommercialData('),s.indexOf('function appDialog(')).replace(/\r\n/g,'\n');
-const outsideReviewed=s=>sync(s).replace(new RegExp('^(?:async )?function ('+reviewedSyncFunctions.join('|')+')\\([^]*?^\\}','gm'),(_,name)=>'REVIEWED_FUNCTION:'+name);
-assert.equal(outsideReviewed(current),outsideReviewed(base),'All synchronization outside the reviewed rollback/quota functions remains frozen');
-// Read contention deliberately changes the source reader and its two safe API error codes.
-// All other server modules and the API/frontend protocol remain frozen.
-const protectedPaths=[...fs.readdirSync(path.join(repo,'api')).filter(file=>file!=='commercial-data.js').map(file=>'api/'+file),'config.js','data.json','plantas','middleware.ts',...fs.readdirSync(path.join(repo,'server')).filter(file=>file!=='commercial-store.js').map(file=>'server/'+file)];
+// Freeze the published PR14/15/16 implementation, not historical UI layouts.
+const recoveryBase='9ba65b56f01a22fa04c8d89f95811510c3ae3e3d',mainBase=recoveryBase;
+const historical=file=>cp.execFileSync('git',['show',recoveryBase+':'+file],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
+const read=file=>fs.readFileSync(path.join(repo,file),'utf8').replace(/\r\n/g,'\n');
+const current=read('commercial.js'),base=historical('commercial.js');
+const reviewedSyncFunctions=[];
+const sync=s=>s.slice(s.indexOf('function readSyncMeta('),s.indexOf('function appDialog('));
+assert.equal(sync(current),sync(base),'Entire PR14/15/16 local vault, rollback, transport and reconciliation block remains exact');
+const protectedPaths=['api/access.js','api/logout.js','config.js','data.json','data.xlsx','plantas','server/session.js'];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
-const oldServer=cp.execFileSync('git',['show',recoveryBase+':server/commercial-store.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
-const newServer=fs.readFileSync(path.join(repo,'server/commercial-store.js'),'utf8').replace(/\r\n/g,'\n');
-// PR16 reviews transport/diagnostics only; freeze every store validator, ticket,
-// write gate and pending-operation shape independently of the transport.
-const topFunctions=source=>{const matches=[...source.matchAll(/^(?:async )?function (\w+)\(/gm)];return Object.fromEntries(matches.map((m,i)=>[m[1],source.slice(m.index,matches[i+1]?.index??source.indexOf('module.exports=')).trim()]))};
-const serverBefore=topFunctions(oldServer),serverAfter=topFunctions(newServer);
-for(const [name,body] of Object.entries(serverBefore))if(!['fetchJson','callStore'].includes(name))assert.equal(serverAfter[name],body,'Store security function frozen: '+name);
-const oldApi=cp.execFileSync('git',['show',recoveryBase+':api/commercial-data.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
-const api=fs.readFileSync(path.join(repo,'api/commercial-data.js'),'utf8').replace(/\r\n/g,'\n');
-const normalizedApi=api.replace(/^  const context=store.sourceContext\(\);\n/m,'').replace(/^  response.setHeader\('X-CRM-Correlation-Id',context.correlationId\);\n/m,'').replace("store.callStore('crmRead',{capabilitiesOnly:true},context)","store.callStore('crmRead')").replace("store.callStore('crmRead',undefined,context)","store.callStore('crmRead')").replace('requestId:body.requestId},context)','requestId:body.requestId})').replace(/^ +store.sourceLog\(context,'request'.*\n/gm,'');
-assert.equal(normalizedApi,oldApi,'API authentication, validation and confirmation contract unchanged outside the explicit PR16 instrumentation/preflight');
-const oldScript=cp.execFileSync('git',['show',recoveryBase+':google_apps_script.gs'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
-const newScript=fs.readFileSync(path.join(repo,'google_apps_script.gs'),'utf8').replace(/\r\n/g,'\n');
-function scriptFunctions(source){const matches=[...source.matchAll(/^function (\w+)\(/gm)];return Object.fromEntries(matches.map((match,index)=>[match[1],source.slice(match.index,matches[index+1]?.index??source.length).trim()]))}
-const previousFunctions=scriptFunctions(oldScript),currentFunctions=scriptFunctions(newScript);
-const instrumentedFunctions=new Set(['readStoreMetadata_','readVersion_','stageVersion_','currentStore_','crmRead','pendingWriteState_','crmWrite','getStoreSheet_','storeSpreadsheet_','getOrCreateSheet_']);
-for(const [name,body] of Object.entries(previousFunctions))if(!instrumentedFunctions.has(name)){
-  const actual=/^mirror(Clientes|Eventos|Agentes|EstadosVendas|PrecosHistorico|VendasComissoes)_$/.test(name)||name==='writeSheet_'?currentFunctions[name].replace(/, context/g,''):currentFunctions[name];
-  assert.equal(actual,body,'Unrelated Apps Script function must remain frozen: '+name);
+assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),historical('middleware.ts'),'Only protect the three new module paths; authentication behavior unchanged');
+function functions(source,indent=''){
+  const matches=[...source.matchAll(new RegExp('^'+indent+'(?:async )?function (\\w+)\\(','gm'))];
+  return Object.fromEntries(matches.map((m,i)=>[m[1],source.slice(m.index,matches[i+1]?.index??source.indexOf('module.exports=')).trim()]));
 }
-assert.equal(newScript.slice(0,newScript.indexOf('var STORE_READ_BUDGET_MS')).trim(),oldScript.slice(0,oldScript.indexOf('function doGet(')).trim(),'Original storage constants remain frozen');
-const commercialPaths=['commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial.html','config.js','data.json','plantas','middleware.ts'];
+const serverBefore=functions(historical('server/commercial-store.js')),serverAfter=functions(read('server/commercial-store.js'));
+for(const [name,body]of Object.entries(serverBefore))if(name!=='callStore')assert.equal(serverAfter[name],body,'PR16 server transport/security frozen: '+name);
+assert.equal(read('api/commercial-data.js').replace(',requireCommercialIntegrity:true',''),historical('api/commercial-data.js'),'Only require the source-side integrity capability; no additional data read');
+const previousFunctions=functions(historical('google_apps_script.gs')),currentFunctions=functions(read('google_apps_script.gs'));
+for(const [name,body]of Object.entries(previousFunctions)){
+  let actual=currentFunctions[name];
+  if(['storeResponse_','crmRead'].includes(name))actual=actual.replace(',commercialIntegrity:commercialIntegrityReady_()?1:0','');
+  if(name==='crmWrite'){
+    actual=actual.replace('    // Validate the exact CAS baseline while holding the writer lock, before B5,\n    // backups, chunks or mirrors. Exact committed replays above remain idempotent.\n    sourceStep_(context, \'commercial-validation\', function() { validateCommercialTransition_(JSON.parse(current.raw), request.data); });\n','');
+    actual=actual.replace(/^    if \(error && \(error.code === 'COMMERCIAL_INTEGRITY'.*\n/m,'');
+  }
+  assert.equal(actual,body,'Storage/CAS/flush/backup/diagnostics unchanged outside the explicit integrity gate: '+name);
+}
+const workflowBefore=functions(historical('commercial-client-workflow.js'),'  '),workflowAfter=functions(read('commercial-client-workflow.js'),'  ');
+for(const name of ['effectiveEffect','effectTransition','closingError'])assert.equal(workflowAfter[name],workflowBefore[name],'Closing ownership/provenance unchanged: '+name);
+const appBefore=functions(base),appAfter=functions(current);
+for(const name of ['save','backupBeforeMajucaImport','applyMajucaImportMigration','resetLocal','hasCriticalCommercialEventChange','protectedEventEditError','replaceEventAndReapplyBusinessRules','applyEventBusinessRules','exportPdf','generateClientsSummaryPdf'])assert.equal(appAfter[name],appBefore[name],'Unrelated persistence/business function frozen: '+name);
+run(['scripts/build-commercial-integrity.js','--check']);
+const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','commercial.css','config.js','data.json','data.xlsx','plantas'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
-const layoutFix='.ux-opportunity-detail .ux-next-action>div{grid-template-columns:minmax(0,1fr)}\n.ux-opportunity-detail .ux-next-action strong{grid-column:1}\n';
-const css=fs.readFileSync(path.join(repo,'commercial.css'),'utf8').replace(/\r\n/g,'\n'),originalCss=cp.execFileSync('git',['show',mainBase+':commercial.css'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
-assert.ok(css.includes(layoutFix));assert.equal(css.replace(layoutFix,''),originalCss,'Only the scoped opportunity follow-up layout fix is allowed');
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
-const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,syncOutsideReviewedFunctionsUnchanged:true,onlyScopedFollowupLayoutChanged:true,hashes,productionAccess:false};
+const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,wholePublishedSyncBlockUnchanged:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};
 fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'regression-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));

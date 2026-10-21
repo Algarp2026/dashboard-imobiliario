@@ -16,7 +16,7 @@ data.events.push(model.buildPresentation(null,{id:'draft',clientId:c.id,state:'d
 data.events.push(event('docs',2,'Documentação enviada'),event('association',3,'Outro'));absent(2);absent(3);
 data.events.push(present('shown',9));card(9,'presented');assert.match(render(),/>Apresentado</);assert.doesNotMatch(render(),/data-opportunity-section="active"/);
 data.events.push(present('shown-again',9,'2026-10-02'));assert.equal((render().match(/data-negotiation-unit="9"/g)||[]).length,1);
-data.events.push(event('interest',9,'Acompanhamento da fração','2026-10-03',{interest:'Interessado',negotiationVersion:1}));card(9,'interested');
+data.events.push(event('interest',9,'Acompanhamento da fração','2026-10-03',{interest:'Interessado',negotiationVersion:1}));card(9,'presented');
 data.events.push(event('offer',9,'Proposta recebida','2026-10-04',{amount:470000}));card(9,'active');
 data.events.push(event('counter',9,'Contra-proposta enviada','2026-10-05',{amount:480000}));card(9,'active');assert.match(render(),/480000/);
 data.events.push(present('second-unit',24),event('unit-withdrawal',24,'Desistência','2026-10-06',{scope:'fraction',globalWithdrawal:false}));card(24,'closed');card(9,'active');assert.doesNotMatch(render(),/id="clientClosedOpportunities" open/);
@@ -50,7 +50,7 @@ data.events.push(event('legacy-offer',9,'Proposta recebida','2026-10-02',{amount
 
 reset();data.events=[present('initial-show',9),event('refusal',9,'Acompanhamento da fração','2026-10-02',{interest:'Sem interesse',negotiationVersion:1})];card(9,'closed');
 data.events.push(event('unpriced-revisit',9,'Visita','2026-10-03'));card(9,'closed');
-data.events.push(present('valid-reshow',9,'2026-10-04'));card(9,'presented');assert.equal(model.relation(data,c.id,9).state,'Sem interesse','Protected model remains unchanged; only visual reopening is projected');
+data.events.push(present('valid-reshow',9,'2026-10-04'));card(9,'presented');assert.equal(model.relation(data,c.id,9).state,'Apresentado','Reopening must agree with the canonical model, not be a visual-only repair');
 assert.match(render(),/data-event="refusal"/);assert.equal((render().match(/data-negotiation-unit="9"/g)||[]).length,1);
 data.events.push(event('new-offer',9,'Proposta recebida','2026-10-05',{amount:480000}));card(9,'active');
 

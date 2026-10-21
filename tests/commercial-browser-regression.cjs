@@ -4,6 +4,10 @@ const repo=path.resolve(__dirname,'..'),port=Number(process.env.COMMERCIAL_TEST_
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
+ 'crm-reform-browser.mjs':'visual-workspace',
+ 'crm-reform-safety-browser.mjs':'visual-workspace',
+ 'crm-reform-report-browser.mjs':'visual-workspace',
+ 'crm-post-audit-browser.mjs':'visual-workspace',
  'commercial-local-quota-browser.mjs':'client-local-backups',
  'commercial-pending-local-browser.mjs':'client-phase2a',
  'commercial-followup-layout-browser.mjs':'client-complete',
@@ -37,13 +41,13 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function ready(server){for(let i=0;i<100;i++){if(server.exitCode!==null)throw Error('Fixture server exited');try{const r=await fetch(origin+'/api/commercial-data');if(r.status===401)return}catch{}await delay(100)}throw Error('Fixture server did not start')}
 async function test(name){
  await available();const dir=path.join(output,name.replace('.mjs',''));fs.mkdirSync(path.join(dir,'docs/client-profile-complete'),{recursive:true});
- const flags={COMPOSITION_D2_FIXTURE:String(name.startsWith('composition-d2')),VISUAL_AUDIT_FIXTURE:String(name==='visual-audit-browser.mjs'),COMPLETE_EXPORT_FIXTURE:String(name==='commercial-client-complete-exports.mjs')};
+ const flags={D2_SYNTHETIC_CATALOG:String(name.startsWith('crm-')),COMPOSITION_D2_FIXTURE:String(name.startsWith('composition-d2')),VISUAL_AUDIT_FIXTURE:String(name==='visual-audit-browser.mjs'),COMPLETE_EXPORT_FIXTURE:String(name==='commercial-client-complete-exports.mjs')};
  const server=cp.spawn(process.execPath,[path.join(repo,'tests/helpers',plans[name]+'-preview.cjs')],{cwd:repo,env:{...env,...flags},windowsHide:true,stdio:['ignore','pipe','pipe']});
  let serverLog='';server.stdout.on('data',b=>serverLog+=b);server.stderr.on('data',b=>serverLog+=b);
  try{
   console.log('RUN '+name);await ready(server);
   const gitDir=cp.execFileSync('git',['rev-parse','--absolute-git-dir'],{cwd:repo,encoding:'utf8'}).trim();
-  const run=cp.spawn(process.execPath,[path.join(repo,'tests',name)],{cwd:dir,env:{...env,GIT_DIR:gitDir,GIT_WORK_TREE:repo,COMPLETE_ARTIFACTS:path.join(dir,'docs/client-profile-complete'),PHASE2A_ARTIFACTS:dir,PHASE2B_ARTIFACTS:dir},windowsHide:true,stdio:['ignore','pipe','pipe']});
+  const run=cp.spawn(process.execPath,[path.join(repo,'tests',name)],{cwd:dir,env:{...env,GIT_DIR:gitDir,GIT_WORK_TREE:repo,REFORM_ARTIFACTS:dir,COMPLETE_ARTIFACTS:path.join(dir,'docs/client-profile-complete'),PHASE2A_ARTIFACTS:dir,PHASE2B_ARTIFACTS:dir},windowsHide:true,stdio:['ignore','pipe','pipe']});
   let log='';run.stdout.on('data',b=>log+=b);run.stderr.on('data',b=>log+=b);const timer=setTimeout(()=>run.kill(),240000);
   const code=await new Promise((resolve,reject)=>{run.once('error',reject);run.once('exit',resolve)});clearTimeout(timer);
   fs.writeFileSync(path.join(dir,'output.log'),log);results.push({name,code,passed:code===0});console.log((code===0?'PASS ':'FAIL ')+name+(code===0?'':'\n'+log.slice(-3500)));
