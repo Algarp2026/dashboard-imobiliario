@@ -84,7 +84,9 @@ async function main(){
   inconsistent.storage.set(KEY+'.syncMeta.v1',JSON.stringify(syncMeta));inconsistent.upstream=changedRevisionData;
   await inconsistent.api.loadRemoteData();assert.equal(inconsistent.api.sharedSync.phase,'conflict');assert.equal(inconsistent.api.state.data.clients[0].phone,undefined);
   const unmarked=app(root(2),{upstream:root(2)});await unmarked.api.loadExcel();unmarked.api.state.data.unknownRoot.note='Local unsaved metadata';
-  await unmarked.api.loadRemoteData();assert.equal(unmarked.api.sharedSync.phase,'conflict');assert.equal(unmarked.api.state.data.unknownRoot.note,'Local unsaved metadata');
+  // The authenticated source is still exactly the confirmed base: preserve local
+  // unknown metadata as pending, not as evidence that the source rolled back.
+  await unmarked.api.loadRemoteData();assert.equal(unmarked.api.sharedSync.phase,'pending');assert.equal(unmarked.api.sharedSync.verified,true);assert.equal(unmarked.api.state.data.unknownRoot.note,'Local unsaved metadata');assert.equal(unmarked.writes,0);
   const conflictingBase=root(2);conflictingBase.majucaImportSummary={created:63};
   const conflictingLocal=clone(conflictingBase),conflictingRemote=clone(conflictingBase);conflictingLocal.majucaImportSummary.created=64;conflictingRemote.majucaImportSummary.created=24;
   const conflict=unmarked.api.reconcileSharedData(conflictingBase,conflictingLocal,conflictingRemote);assert.ok(conflict.conflicts.includes('majucaImportSummary.created'));assert.equal(conflict.data.majucaImportSummary.created,64);

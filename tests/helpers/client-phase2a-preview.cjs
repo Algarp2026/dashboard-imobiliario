@@ -58,7 +58,9 @@ http.createServer(async(req,res)=>{
     if(name==='data.json'&&process.env.D2_SYNTHETIC_CATALOG==='true')content=Buffer.from(JSON.stringify(require('./d2-synthetic-catalog.cjs')()));
     else if(name==='config.js')content=Buffer.from('window.THE_VIEW_CONFIG={GOOGLE_SHEETS_WEBAPP_URL:"https://isolated-test.invalid/exec"};');
     else if(name==='commercial.js'){
-      let source=fs.readFileSync(path.join(repo,name),'utf8');const begin=source.indexOf('const MAJUCA_IMPORT_RECORDS=['),end=source.indexOf('\n];',begin);if(begin<0||end<0)throw Error('Sanitization failed');source=source.slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+source.slice(end+3);content=Buffer.from(source);
+      let source=fs.readFileSync(path.join(repo,name),'utf8');const begin=source.indexOf('const MAJUCA_IMPORT_RECORDS=['),end=source.indexOf('\n];',begin);if(begin<0||end<0)throw Error('Sanitization failed');source=source.slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+source.slice(end+3);
+      if(process.env.LOCAL_BACKUP_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__localBackupTest={archiveRecoveryCopy,localVaultCopies,state,save};'+source.slice(finish)}
+      content=Buffer.from(source);
     }else content=fs.readFileSync(path.join(repo,name));
     res.setHeader('Content-Type',mime[path.extname(name)]||'application/octet-stream');res.end(content);
   }catch{if(!res.headersSent)reply.status(500).json({ok:false,code:'ISOLATED_TEST_ERROR'});else res.end()}
