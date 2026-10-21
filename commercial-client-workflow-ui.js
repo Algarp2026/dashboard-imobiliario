@@ -206,6 +206,7 @@
       });
     }
     function edit(ev){if(ev.communicationHistory){newContact(ev.clientId,ev.type==='Contacto recebido',ev);return true}if(model.latest(ev)){newPresentation(ev.clientId,ev);return true}if(ev.negotiationVersion===1){newMovement(ev.clientId,ev.fractions?.[0],ev);return true}return false}
-    return{presentationMarkup,negotiationMarkup,contactMarkup,bind,edit,newPresentation,newContact};
+    const legacy={presentationMarkup,negotiationMarkup,contactMarkup,bind,edit,newPresentation,newContact};
+    return root.createOpportunityWorkflow?root.createOpportunityWorkflow(a,legacy):legacy;
   };
 })(window);
