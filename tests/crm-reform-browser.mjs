@@ -43,7 +43,13 @@ try{
       };
       await operation('Reservada',500000);assert.equal((await data()).data.statuses[19],'Reservado');assert.match(await card.locator('summary').first().innerText(),/Reservada/);
       await card.locator('[data-op-command="cancel-reservation"]').click();await card.locator('[data-op-form] [type=submit]').click();await p.locator('[data-dialog-confirm]').click();await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced');assert.equal((await data()).data.statuses[19],'Disponível');
-      await card.locator('[data-op-state]').selectOption('Vendida');await card.locator('[name="amount"]').fill('500000');await card.locator('[name="withAgent"]').check();const agent=(await data()).data.agents[0];await card.locator('[name="agentId"]').selectOption(agent.id);await card.locator('[name="commissionValue"]').fill('3');await card.locator('[data-op-form] [type=submit]').click();await p.locator('[data-dialog-confirm]').click();await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced');
+      await card.locator('[data-op-state]').selectOption('Vendida');await card.locator('[name="amount"]').fill('500000');await card.locator('[name="withAgent"]').check();const agent=(await data()).data.agents[0];await card.locator('[name="agentId"]').selectOption(agent.id);await card.locator('[name="commissionValue"]').fill('3');
+      // The previous synced badge can remain visible while the confirmation
+      // handler awaits local archival. Wait for this sale's actual write response.
+      const saleSaved=p.waitForResponse(r=>r.url()===origin+'/api/commercial-data'&&r.request().method()==='POST'&&r.request().postDataJSON()?.data?.statuses?.[19]==='Vendido');
+      await card.locator('[data-op-form] [type=submit]').click();await p.locator('[data-dialog-confirm]').click();
+      const saleResponse=await saleSaved;assert.equal(saleResponse.status(),200);assert.equal((await saleResponse.json()).persisted,true);
+      await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced');
       const final=(await data()).data;assert.equal(final.statuses[19],'Vendido');assert.equal(final.saleCommissions[19].amount,15000);assert.equal(final.saleCommissions[19].netRevenue,485000);assert.deepEqual(final.finalPrices,before.finalPrices);assert.deepEqual(final.clients.find(c=>c.id==='demo-2'),before.clients.find(c=>c.id==='demo-2'));assert.equal(final.clients.find(c=>c.id==='demo-1').priorityClient,before.clients.find(c=>c.id==='demo-1').priorityClient);await snap('venda');
       await p.reload();await p.locator('[data-opportunity-unit="19"]').waitFor();assert.match(await p.locator('[data-opportunity-unit="19"]>summary').innerText(),/Vendida/);
     }

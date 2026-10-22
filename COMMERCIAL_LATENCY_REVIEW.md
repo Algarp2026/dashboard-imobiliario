@@ -104,9 +104,12 @@ constam do ficheiro de metricas e nao fundamentam promessas de desempenho.
 
 ## Validacao
 
-- Resultado final: 52/52 suites Node, 4/4 suites de navegador relevantes e
+- Validacao inicial do commit `468dc53`: 52/52 suites Node, 4/4 suites de navegador relevantes e
   repeticao do teste de confirmacao lenta aprovadas. Sintaxe: 118 JS/TS e
   os dois ficheiros Apps Script aprovados. `git diff --check` sem erros.
+- A repeticao integral pedida antes do merge encontra-se em
+  [PR18_FULL_REGRESSION.md](PR18_FULL_REGRESSION.md), incluindo resultados iniciais,
+  repeticoes, a correcao da espera exclusivamente num teste e riscos residuais.
 - 52 suites Node: integridade comercial sob lock, CAS/conflitos, blocos/checksum,
   recuperacao PR #14/Apt.16, falsos rollback e quota/IndexedDB PR #15,
   diagnosticos e falhas OAuth/Execution API/Sheets PR #16, CRM PR #17.
