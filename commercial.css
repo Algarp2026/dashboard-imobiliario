@@ -259,8 +259,8 @@ body:has(.ux-app-shell) .topbar{padding-top:24px;padding-bottom:24px}
 .ux-next-action>div{display:grid;grid-template-columns:18px minmax(0,1fr);gap:7px 9px;align-items:center;min-width:0}
 .ux-next-action span{font-size:12px;color:var(--muted)}
 .ux-next-action strong{grid-column:2;font-size:14px;overflow-wrap:anywhere}
-.ux-opportunity-detail .ux-next-action>div{grid-template-columns:minmax(0,1fr)}
-.ux-opportunity-detail .ux-next-action strong{grid-column:1}
+
+
 .ux-next-action .ux-text-button{flex:0 0 auto;font-size:12px}
 .ux-client-secondary-actions{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
 .ux-client-fractions{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px}
@@ -464,7 +464,7 @@ body:has(.ux-app-shell) .modal .primary-button.danger{background:#a94335;color:#
 .ux-client-return{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;color:var(--muted);margin-bottom:22px}
 .ux-client-return>span{margin-left:auto}
 .ux-client-return .ux-text-button{display:inline-flex;gap:8px;align-items:center}
-.ux-client-profile-active .ux-client-open{display:none}
+
 .panel:not(.ux-client-profile-active) .ux-client-return>[data-client-return]{display:none}
 .panel:not(.ux-client-profile-active) .ux-client-workspace__top{position:static}
 .ux-client-profile-active .ux-client-contact{font-size:13px;display:flex;gap:10px 22px;flex-wrap:wrap;margin:16px 0 0}

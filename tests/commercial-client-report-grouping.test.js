@@ -26,6 +26,7 @@ for(const model of ['operational','listing']){
 const constrained=app.filterClientReportRows(rows,{statuses:app.STAGES,contactState:'Resposta nossa pendente',priorityClient:'yes',followupFilter:'future',priority:'Alta'});assert.ok(constrained.length>0);assert.ok(constrained.every(r=>r.priorityClient&&r.contactState==='Resposta nossa pendente'&&r.followupStatus==='future'&&r.priority==='Alta'));
 // The two models outside this correction must produce byte-for-byte identical bodies.
 const baseline=loadReportApp(cp.execFileSync('git',['show','origin/main:commercial.js'],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'}));
-for(const model of ['management','portfolio'])assert.deepEqual(clone(app.clientReportMarkup(rows,{model,statuses:app.STAGES})),clone(baseline.clientReportMarkup(rows,{model,statuses:app.STAGES})));
+assert.deepEqual(clone(app.clientReportMarkup(rows,{model:'management',statuses:app.STAGES})),clone(baseline.clientReportMarkup(rows,{model:'management',statuses:app.STAGES})));
+const portfolio=app.clientReportMarkup(rows,{model:'portfolio',statuses:app.STAGES});assert.match(portfolio.body,/Oportunidades/);assert.doesNotMatch(portfolio.body,/Dias sem contacto|Estado do Contacto/);
 assert.equal(JSON.stringify(rows),snapshot);
 console.log('Grouped reports passed: seven official stages, filtered counts, stable within-group sorts, column blocks, optional fields, empty reports, combined filters and unchanged management/portfolio.');

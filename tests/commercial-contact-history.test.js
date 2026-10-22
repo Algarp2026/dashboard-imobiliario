@@ -1,11 +1,11 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const model=require('../commercial-client-workflow.js'),copy=x=>JSON.parse(JSON.stringify(x));
 const window={THE_VIEW_CLIENT_WORKFLOW:model};
-vm.runInNewContext(fs.readFileSync(require.resolve('../commercial-client-workflow-ui.js'),'utf8'),{window,console});
+vm.runInNewContext(fs.readFileSync(require.resolve('../commercial-client-workflow-ui.js'),'utf8'),{window,console});vm.runInNewContext(fs.readFileSync(require.resolve('../commercial-opportunity-ui.js'),'utf8'),{window,console});
 (async()=>{
   let client={id:'fiction',preferences:{},manualPreferences:{},priorityHistory:[{version:1,value:true}]},events=[],writes=0,nextId=0;
   const ui=window.createClientWorkflow({
-    esc:x=>x,client:()=>client,event:id=>events.find(e=>e.id===id),events:()=>events,
+    data:()=>({clients:[client],events}),esc:x=>x,client:()=>client,event:id=>events.find(e=>e.id===id),events:()=>events,
     id:()=>`fiction-${++nextId}`,today:()=> '2026-10-15',render(){},tab(){},feedback(){},
     preferences:{draft:()=>({}),options:{}},
     applyCommunication(ev,old){if(old)events[events.findIndex(e=>e.id===old.id)]=ev;else events.push(ev)},

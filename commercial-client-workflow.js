@@ -1,5 +1,6 @@
 (function(root){
   'use strict';
+  const opportunities=typeof module==='object'&&module.exports?require('./commercial-opportunities.js'):root.THE_VIEW_OPPORTUNITIES;
   const clone=value=>JSON.parse(JSON.stringify(value));
   const latest=event=>Array.isArray(event?.presentationHistory)?event.presentationHistory.at(-1):null;
   const isDraft=event=>latest(event)?.state==='draft'||event?.type==='Apresentação em preparação';
@@ -93,11 +94,12 @@
     if(effect?.status==='Vendido'&&history.some(ev=>eventKey(ev)>eventKey(effect.event)&&(reserve(ev)||ev.type==='Reserva cancelada'||ev.type==='Desistência'&&ev.releaseReservation)))review.push('Movimento posterior incompatível com venda efetiva');
     const presented=relevant.some(presentedEvent),historicallyPresented=history.some(presentedEvent);
     const active=!review.includes('Fração desconhecida')&&(['Reservado','Vendido'].includes(state)||opportunity&&!['Reservado','Vendido','Indisponível'].includes(availability)&&!['Desistiu','Sem interesse'].includes(state));
-    return{number:Number(number),history,state,historicalState,availability,effect:effect?.event.clientId===clientId?effect:null,presented,historicallyPresented,active,review};
+    const result={number:Number(number),history,state,historicalState,availability,effect:effect?.event.clientId===clientId?effect:null,presented,historicallyPresented,active,review};
+    return opportunities?opportunities.project(data,clientId,number,result,{globalWithdrawal,confirmedRequalification,eventKey,movementState,effectiveEffect}):result;
   }
   function clientProjection(data,c){
     const events=ordered((data.events||[]).filter(ev=>ev.clientId===c.id&&!isDraft(ev)));
-    const numbers=[...new Set([...(c.fractions||[]),...(c.manualFractions||[]),...events.flatMap(unitNumbers)].map(Number))].sort((a,b)=>a-b);
+    const numbers=[...new Set([...(c.fractions||[]),...(c.manualFractions||[]),...(c.presentationSelection||[]),...events.flatMap(unitNumbers)].map(Number))].sort((a,b)=>a-b);
     const relations=numbers.map(n=>relation(data,c.id,n));
     const review=relations.flatMap(row=>row.review.map(reason=>`Apt. ${row.number}: ${reason}`));
     if(events.some(ev=>!unitNumbers(ev).length&&movementState(ev)&&!globalWithdrawal(ev)))review.push('Movimento comercial sem fração identificada');
@@ -115,6 +117,8 @@
     else if(withdrawal&&!qualification&&!active.length)stage='Desistiu';
     else if(relations.some(row=>row.presented)||manual==='Apresentado'&&!withdrawal&&!qualification)stage='Apresentado';
     else if(qualification||numbers.length||Number(c.budget)>0||Number(c.budgetMin)>0||Number(c.budgetMax)>0||['typology','floor','orientation','objective','decisionTime','summary'].some(key=>typeof c.preferences?.[key]==='string'&&!!c.preferences[key].trim())||events.some(ev=>ev.type==='Preferências recebidas')||manual==='Qualificado')stage='Qualificado';
+    const open=active.filter(row=>!['Reservado','Vendido'].includes(row.state));
+    if(stage==='Vendido'&&open.length)stage=open.some(row=>negotiationStates.includes(row.state))?'Em negociação':open.some(row=>row.presented)?'Apresentado':'Qualificado';
     if(['Reservado','Vendido'].includes(manual)&&manual!==stage)review.push('Estado manual sem operação efetiva confirmada');
     if(!manual&&['Reservado','Vendido','Desistiu'].includes(c.stage)&&c.stage!==stage)review.push('Estado legado divergente da situação efetiva');
     if(manual==='Desistiu'&&stage!=='Desistiu')review.push(active.length?'Desistência manual incompatível com oportunidade ativa':'Desistência manual sem confirmação global e cronologia suficientes');

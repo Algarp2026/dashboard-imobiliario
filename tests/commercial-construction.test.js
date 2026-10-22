@@ -114,7 +114,9 @@ assert.ok(!html.includes('<option>Visita</option>'));
 assert.ok(!html.includes('2ª Visita'));
 
 // Exercise the authenticated/versioned backend against an in-memory Sheet, never Google Sheets.
-const store=require('./helpers/apps-script-store.js')(app.normalizeData()),backend=store.context;
+// The legacy sold snapshot is already authoritative; this is not an import
+// permission to invent closing maps on an empty source.
+const store=require('./helpers/apps-script-store.js')(initial),backend=store.context;
 const payload = JSON.stringify({action:'save',data:restored,updatedAt:'2026-10-08T12:00:00Z'});
 assert.equal(store.write({data:restored,baseRevision:store.revision,requestId:'construction-test'}).ok,true);
 assert.deepEqual(store.data,JSON.parse(JSON.stringify(restored)));

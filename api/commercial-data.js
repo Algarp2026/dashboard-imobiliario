@@ -19,7 +19,7 @@ module.exports = async function commercialData(request,response) {
       if (body.action==='save'&&!store.validTicket(request,body.baseRevision,header(request,'x-crm-read-ticket'))) return response.status(403).json({ok:false,code:'READ_REQUIRED'});
       // Probe the deployed source before any mutation, including recovery. An old
       // Apps Script must not execute a write before incompatibility is detected.
-      await store.callStore('crmRead',{capabilitiesOnly:true},context);
+      await store.callStore('crmRead',{capabilitiesOnly:true,requireCommercialIntegrity:true},context);
       const saved=await store.callStore(body.action==='recover'?'crmRecover':'crmWrite',{data:body.data,baseRevision:body.baseRevision,requestId:body.requestId},context);
       if (saved.persisted!==true||saved.requestId!==body.requestId||saved.revision!==createHash('sha256').update(store.serializedStore(body.data)).digest('hex')) throw store.failure('INVALID_SOURCE_RESPONSE');
       store.sourceLog(context,'request',context.started,{outcome:'confirmed',writeOutcome:'confirmed'});

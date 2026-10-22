@@ -20,6 +20,8 @@ global.fetch=async(url,options)=>{
 };
 const allowed=new Set(['commercial.html','commercial.css','view-theme.css','commercial.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','data.json','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','vendor/lucide.min.js']);
 allowed.add('view-workspace.js');
+allowed.add('commercial-opportunities.js');
+allowed.add('commercial-opportunity-ui.js');
 allowed.add('commercial-client-workspace.js');
 allowed.add('commercial-client-workspace.css');
 if(entryTests)for(const name of ['comparador.html','app.js','style.css'])allowed.add(name);
@@ -45,7 +47,7 @@ http.createServer(async(req,res)=>{
         if(req.headers.origin!=='http://127.0.0.1:'+port){reply.status(403).json({ok:false});return}
         const input=req.body||{};
         if(input.reset){store=makeStore(fixture());reads=0;writes=0}
-        if(process.env.PHASE2B_FIXTURE==='true'&&input.commercialChange){const data=store.data;for(const key of ['statuses','finalPrices'])if(input.commercialChange[key])Object.assign(data[key],input.commercialChange[key]);const result=store.write({data,baseRevision:store.revision,requestId:'test-change-'+crypto.randomUUID()});if(!result.ok)throw Error('Isolated change failed')}
+        if(process.env.PHASE2B_FIXTURE==='true'&&input.commercialChange){const data=store.data;if(input.commercialChange.statuses){for(const [n,value]of Object.entries(input.commercialChange.statuses)){if(value!=='Reservado')throw Error('Only a fictitious reservation is supported');const eventId='fixture-reservation-'+crypto.randomUUID(),amount=data.finalPrices[n];data.events.push({id:eventId,clientId:'demo-2',type:'Reserva efetuada',negotiationVersion:1,date:new Date().toISOString().slice(0,10),fractions:[Number(n)],amount});data.statuses[n]=value;(data.statusEventIds||={})[n]=eventId;(data.salePrices||={})[n]=amount;(data.salePriceEventIds||={})[n]=eventId}}if(input.commercialChange.finalPrices)Object.assign(data.finalPrices,input.commercialChange.finalPrices);const result=store.write({data,baseRevision:store.revision,requestId:'test-change-'+crypto.randomUUID()});if(!result.ok)throw Error('Isolated change failed')}
         failure=['','offline','write-failure'].includes(input.failure)?input.failure:'';delay=Math.min(3000,Math.max(0,Number(input.delay)||0));reply.json({ok:true});return;
       }
       if(name==='api/test-meta'){const data=store.data;reply.json({clients:data.clients.length,events:data.events.length,reads,writes,revision:store.revision,source:'fictitious in-memory test store',productionNetwork:false});return}

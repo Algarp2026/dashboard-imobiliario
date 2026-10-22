@@ -103,9 +103,20 @@ function assertServerCaller_() {
 }
 function storeResponse_(values) {
   var props = PropertiesService.getScriptProperties();
-  var response = {sourceId:props.getProperty('CRM_SPREADSHEET_ID'),environment:props.getProperty('CRM_ENVIRONMENT'),protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1},canWrite:props.getProperty('CRM_API_WRITES_ENABLED') === 'true'};
+  var response = {sourceId:props.getProperty('CRM_SPREADSHEET_ID'),environment:props.getProperty('CRM_ENVIRONMENT'),protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1,commercialIntegrity:commercialIntegrityReady_()?1:0},canWrite:props.getProperty('CRM_API_WRITES_ENABLED') === 'true'};
   Object.keys(values).forEach(function(key) { response[key] = values[key]; });
   return response;
+}
+function commercialIntegrityReady_() {
+  return typeof THE_VIEW_COMMERCIAL_INTEGRITY === 'object' && THE_VIEW_COMMERCIAL_INTEGRITY && THE_VIEW_COMMERCIAL_INTEGRITY.version === 1 && typeof THE_VIEW_COMMERCIAL_INTEGRITY.validate === 'function';
+}
+function validateCommercialTransition_(previous, next) {
+  if (!commercialIntegrityReady_()) throw new Error('COMMERCIAL_VALIDATION_UNAVAILABLE');
+  // Add defaults only to the in-memory validation view of a legacy snapshot.
+  var view = JSON.parse(JSON.stringify(previous));
+  ['clients','events','agents'].forEach(function(key) { if (!view[key]) view[key] = []; });
+  ['statuses','salePrices','saleCommissions','statusEventIds','salePriceEventIds'].forEach(function(key) { if (!view[key]) view[key] = {}; });
+  THE_VIEW_COMMERCIAL_INTEGRITY.validate(view, next);
 }
 function storeRevision_(json) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json, Utilities.Charset.UTF_8).map(function(byte) { return ('0' + ((byte + 256) % 256).toString(16)).slice(-2); }).join('');
@@ -204,7 +215,7 @@ function crmRead(request) {
   if (!validSourceRequest_(request)) return storeResponse_({ok:false,code:'SOURCE_ENVIRONMENT_MISMATCH'});
   // Compatibility/authentication probe only. crmWrite still validates the full
   // authoritative version, B5/B6 and CAS under its lock before any mutation.
-  if (request.capabilitiesOnly === true) return storeResponse_({ok:true,preflight:true,capabilities:{pendingWriteDiagnostics:1,lightweightPreflight:1}});
+  if (request.capabilitiesOnly === true) return storeResponse_({ok:true,preflight:true,capabilities:{pendingWriteDiagnostics:1,lightweightPreflight:1,commercialIntegrity:commercialIntegrityReady_()?1:0}});
   var context = sourceContext_('read', request);
   try {
     for (var attempt = 0; attempt < STORE_READ_ATTEMPTS; attempt++) {
@@ -269,6 +280,9 @@ function crmWrite(request) {
     if (receipt && receipt.requestId === request.requestId && !same(receipt)) return storeResponse_({ok:false,code:'CONFLICT'});
     if (current.revision !== request.baseRevision) return storeResponse_({ok:false,code:'CONFLICT'});
     if (current.revision === revision && !intent) return success();
+    // Validate the exact CAS baseline while holding the writer lock, before B5,
+    // backups, chunks or mirrors. Exact committed replays above remain idempotent.
+    sourceStep_(context, 'commercial-validation', function() { validateCommercialTransition_(JSON.parse(current.raw), request.data); });
     var metadata = intent || {format:2,requestId:request.requestId,baseRevision:request.baseRevision,revision:revision,updatedAt:new Date().toISOString()};
     sourceStep_(context, 'intent', function() {
       sheet.getRange(STORE_WRITE_INTENT_CELL).setValue(JSON.stringify(metadata));
@@ -317,6 +331,7 @@ function crmWrite(request) {
     });
     return success();
   } catch (error) {
+    if (error && (error.code === 'COMMERCIAL_INTEGRITY' || error.message === 'COMMERCIAL_VALIDATION_UNAVAILABLE')) return storeResponse_({ok:false,code:error.code === 'COMMERCIAL_INTEGRITY'?'COMMERCIAL_INTEGRITY':'COMMERCIAL_VALIDATION_UNAVAILABLE'});
     if (request.diagnosticsVersion === 1) return storeResponse_({ok:false,code:'INVALID_SOURCE_RESPONSE',diagnostics:sourceFailure_(context)});
     throw error;
   } finally { lock.releaseLock(); }

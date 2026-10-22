@@ -50,6 +50,17 @@ assert.deepEqual(copy(adapter.client('untouched')),selectionBaseline.clients[1])
 for(const field of ['finalPrices','statuses','salePrices','saleCommissions','priceHistory'])assert.deepEqual(copy(selectionApp.state.data[field]),selectionBaseline[field]);
 assert.deepEqual(copy(adapter.client('selection-client').priorityHistory),selectionBaseline.clients[0].priorityHistory);
 console.log('Selection regression: subset realization, drafts, historical edits, retry, repeat and reload preserve unrelated preparation and commercial data.');
+
+// The definitive opportunity editor must obey the same preparation contract.
+const opportunities=require('../commercial-opportunities.js');
+selectionApp.state.data=selectionApp.normalizeData(copy(selectionBaseline));
+const opportunityPresentation=opportunities.build({id:'op-subset',clientId:'selection-client',action:'present',date:'2026-10-16',fractions:[24],rows:[{fraction:24,officialPrice:750000,informedPrice:700000}]},selectionApp.state.data);
+adapter.apply(opportunityPresentation,null);assert.deepEqual(selected(),[9,30]);
+const opportunityCorrection=opportunities.build({id:'op-correction',clientId:'selection-client',action:'present',corrects:opportunityPresentation.id,date:'2026-10-17',fractions:[24],rows:[{fraction:24,officialPrice:750000,informedPrice:710000}]},selectionApp.state.data);
+adapter.apply(opportunityCorrection,null);assert.deepEqual(selected(),[9,30]);
+assert.deepEqual(copy(selectionApp.state.data.events.find(e=>e.id===opportunityPresentation.id)),opportunityPresentation);
+selectionApp.state.data=selectionApp.normalizeData(copy(selectionApp.state.data));assert.deepEqual(selected(),[9,30]);
+for(const field of ['finalPrices','statuses','salePrices','saleCommissions','priceHistory'])assert.deepEqual(copy(selectionApp.state.data[field]),selectionBaseline[field]);
 delete adapter.client('selection-client').budget;
 adapter.apply(model.buildPresentation(null,{...selectionInput,id:'optional-budget-draft'}),null);
 assert.equal(Object.hasOwn(adapter.client('selection-client'),'budget'),false,'Absent optional budget must not become an undefined JSON property during presentation writes');

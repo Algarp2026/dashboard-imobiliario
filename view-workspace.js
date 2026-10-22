@@ -119,7 +119,7 @@
   function client(){
     const negotiation=q('[data-workflow-kind="negotiation"]');
     if(negotiation){const heading=q(':scope>.crm-detail-section__heading h3',negotiation);if(heading?.firstChild?.nodeType===3)heading.firstChild.textContent='Oportunidades ';q('h3>span',negotiation)?.classList.add('d2-count');q(':scope>.crm-detail-section__heading [data-ux-client-action="stage"]',negotiation)?.classList.add('d2-context-command');q(':scope>details:not([id])',negotiation)?.classList.add('d2-movement-command')}
-    const preferences=q('#clientPanel-preferences');
+    const preferences=q('#clientPanel-procura');
     if(preferences){
       const editor=q('#clientPreferencesEditor',preferences);
       if(editor){
@@ -127,7 +127,7 @@
         if(selectors.length&&fields){const layout=group(editor,'d2-preference-editor',[...selectors,fields]);const choices=group(layout,'d2-preference-choices',selectors);if(choices)title(choices,'Perfil do imóvel');title(fields,'Investimento e finalidade')}
       }else{const facts=q(':scope>dl',preferences);if(facts){facts.classList.add('d2-preference-overview');all(':scope>div',facts).forEach((item,i)=>{item.dataset.preferenceGroup=String(i)})}}
     }
-    const fractions=q('#clientPanel-fractions');
+    const fractions=q('#clientPanel-procura');
     if(fractions){
       const workspace=q('#clientFractionWorkspace',fractions);
       if(workspace&&!q('.d2-client-match-workspace',workspace)){
