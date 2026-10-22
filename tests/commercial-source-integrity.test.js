@@ -48,7 +48,13 @@ for(let i=0;i<5;i++)for(const mode of ['published','integrated']){
   const data=clone(seed);data.clients[0].notes='Fictitious benchmark';const op=operation(fixture,data,'fiction-benchmark-note');fixture.trace.length=0;
   const start=performance.now();assert.equal(fixture.write(op).persisted,true);samples[mode].push(Number((performance.now()-start).toFixed(2)));
   const counts=['open','read','write','rows','append','lock','unlock'].map(type=>[type,fixture.trace.filter(row=>row.type===type).length]);
-  if(!expectedIo)expectedIo=counts;else assert.deepEqual(counts,expectedIo,'The locked commercial validator must add no Sheets operations');
+  if(!expectedIo)expectedIo=counts;
+  else {
+    // The reviewed latency optimization reuses B5 from the locked snapshot and
+    // writes mirror headers+rows in one batch. No security operation is removed.
+    const expected=expectedIo.map(([type,count])=>[type,count-(mode==='integrated'&&['read','rows'].includes(type)?1:0)]);
+    assert.deepEqual(counts,expected,'Only the two explicitly optimized RPCs may differ');
+  }
   assert.deepEqual(fixture.data,data);
 }
 const median=values=>values.slice().sort((a,b)=>a-b)[Math.floor(values.length/2)];

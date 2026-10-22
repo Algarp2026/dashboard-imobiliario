@@ -26,7 +26,13 @@ const serverBefore=functions(historical('server/commercial-store.js')),serverAft
 for(const [name,body]of Object.entries(serverBefore))if(name!=='callStore')assert.equal(serverAfter[name],body,'PR16 server transport/security frozen: '+name);
 assert.equal(read('api/commercial-data.js').replace(',requireCommercialIntegrity:true',''),historical('api/commercial-data.js'),'Only require the source-side integrity capability; no additional data read');
 const previousFunctions=functions(historical('google_apps_script.gs')),currentFunctions=functions(read('google_apps_script.gs'));
+// Six source functions have reviewed telemetry/batching changes. Their CAS,
+// interrupted-write and exact I/O expectations are exercised by mandatory suites.
+const latencyFunctions=['sourceContext_','sourceStep_','storeResponse_','crmRead','crmWrite','writeSheet_'];
+assert.ok(suites.includes('commercial-latency.test.js'));
+assert.ok(suites.includes('commercial-source-integrity.test.js'));
 for(const [name,body]of Object.entries(previousFunctions)){
+  if(latencyFunctions.includes(name))continue;
   let actual=currentFunctions[name];
   if(['storeResponse_','crmRead'].includes(name))actual=actual.replace(',commercialIntegrity:commercialIntegrityReady_()?1:0','');
   if(name==='crmWrite'){
@@ -43,5 +49,5 @@ run(['scripts/build-commercial-integrity.js','--check']);
 const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','data.json','data.xlsx','plantas'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
-const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,wholePublishedSyncBlockUnchanged:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};
+const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,reviewedSourceLatencyFunctions:latencyFunctions,wholePublishedSyncBlockUnchanged:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};
 fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'regression-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));

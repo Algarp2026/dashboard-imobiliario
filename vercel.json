@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "codex/measure-commercial-latency": false,
       "codex/integrate-audited-opportunity-crm": false,
       "codex/optimize-commercial-persistence": false,
       "codex/fix-pending-local-rollback": false,

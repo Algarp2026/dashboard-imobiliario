@@ -52,6 +52,23 @@ async function fetchJson(url, options, context, phase) {
     throw failure(code);
   }
 }
+function logSourceMetrics(context, operation, value) {
+  // Optional telemetry must not turn a confirmed write into an unconfirmed one.
+  if (value === undefined) return;
+  const phases=['open','store-sheet','metadata','control','chunks','chunk-validation','validate','prepare','commercial-validation','lock','lock-held','intent','intent-version','archive','mirrors','activate','cleanup','stage','backup',...['Clientes','Eventos','Agentes','EstadosVendas','PrecosHistorico','VendasComissoes'].map(name=>'mirror-'+name)];
+  const duration=number=>Number.isFinite(number)&&number>=0&&number<=3600000;
+  if (!OBJECT(value)||value.version!==1||!duration(value.totalMs)||!OBJECT(value.phases)||Object.keys(value.phases).some(key=>!phases.includes(key))) {
+    sourceLog(context,'source-summary',Date.now(),{operation,outcome:'invalid-telemetry'});return;
+  }
+  const safePhases={};
+  for (const [phase,metric] of Object.entries(value.phases)) {
+    if (!OBJECT(metric)||!duration(metric.durationMs)||!Number.isInteger(metric.count)||metric.count<1||metric.count>1000) {
+      sourceLog(context,'source-summary',Date.now(),{operation,outcome:'invalid-telemetry'});return;
+    }
+    safePhases[phase]={durationMs:metric.durationMs,count:metric.count};
+  }
+  sourceLog(context,'source-summary',Date.now(),{operation,outcome:'measured',sourceTotalMs:value.totalMs,sourcePhases:safePhases});
+}
 async function callStore(functionName, argument, context = sourceContext()) {
   const env=process.env, deployment=env.CRM_GOOGLE_DEPLOYMENT_ID, sheet=env.CRM_GOOGLE_SPREADSHEET_ID;
   if (!deployment || !/^[\w-]+$/.test(deployment) || !sheet || !env.CRM_GOOGLE_CLIENT_ID || !env.CRM_GOOGLE_CLIENT_SECRET || !env.CRM_GOOGLE_REFRESH_TOKEN) throw failure('SOURCE_NOT_CONFIGURED',503);
@@ -71,6 +88,7 @@ async function callStore(functionName, argument, context = sourceContext()) {
   if (operation.done!==true||operation.error||!OBJECT(operation.response?.result)) throw failure('INVALID_SOURCE_RESPONSE');
   const result=operation.response.result;
   if (result.sourceId!==sheet || result.environment!==(env.VERCEL_ENV==='production'?'production':'test')) throw failure('SOURCE_ENVIRONMENT_MISMATCH',503);
+  logSourceMetrics(context,phase,result.sourceMetrics);
   if (!result.ok) {
     if (['COMMERCIAL_INTEGRITY','COMMERCIAL_VALIDATION_UNAVAILABLE'].includes(result.code)) {
       sourceLog(context,phase,Date.now(),{layer:'apps-script',outcome:result.code});

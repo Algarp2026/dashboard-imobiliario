@@ -41,6 +41,7 @@ global.fetch=async(url,options)=>{
   if(writing&&mode==='before-write-timeout')throw Object.assign(Error('Lost'),{name:'TimeoutError'});
   try{
     const result=google.context[call.function](...call.parameters);
+    if(mode==='bad-telemetry')result.sourceMetrics={version:1,totalMs:1,phases:{PRIVATE_FICTION_NAME:{durationMs:1,count:1}}};
     if(mode==='bad-probe'&&call.parameters[0].capabilitiesOnly)result.capabilities.pendingWriteDiagnostics=0;
     if(writing&&mode==='after-write-timeout')throw Object.assign(Error('Lost confirmation'),{name:'TimeoutError'});
     return Response.json({done:true,response:{result}});
@@ -52,10 +53,10 @@ async function invoke(method='GET',body,ticket,handler=api){
   await handler({method,body,headers:{host:'fixture.test',origin:'https://fixture.test',cookie,'content-type':'application/json','x-crm-read-ticket':ticket||''}},response);return response;
 }
 const op=read=>({action:'save',requestId:'fiction-operation',baseRevision:read.body.revision,data:clone(next)});
-function oldModule(path,store){
+function oldModule(path,store,revision=BASE){
   const filename=require.resolve('../'+path),instance=new Module(filename,module);instance.filename=filename;instance.paths=module.paths;
   const normal=instance.require.bind(instance);instance.require=name=>name==='../server/commercial-store.js'?store:normal(name);
-  instance._compile(execFileSync('git',['show',BASE+':'+path],{encoding:'utf8'}),filename);return instance.exports;
+  instance._compile(execFileSync('git',['show',revision+':'+path],{encoding:'utf8'}),filename);return instance.exports;
 }
 async function benchmark(old){
   reset(old);const handler=old?oldModule('api/commercial-data.js',oldModule('server/commercial-store.js')):api;
@@ -144,6 +145,21 @@ async function main(){
     assert.deepEqual(touched,expected?[expected]:[]);scenarios++;
   }
   reset();google.sheets.delete('Agentes');assert.equal(google.write({requestId:'fiction-missing-mirror',baseRevision:google.revision,data:clone(next)}).persisted,true);assert.ok(google.sheets.has('Agentes'));scenarios++;
+  // Optional instrumentation is bounded and sanitized, and can never invalidate
+  // a successful write or reach the public frontend response.
+  reset();const metricsRead=await invoke();mode='bad-telemetry';
+  const metricsWrite=await invoke('POST',op(metricsRead),metricsRead.body.readTicket);
+  assert.equal(metricsWrite.statusCode,200);assert.deepEqual(google.data,next);
+  assert.ok(!('sourceMetrics'in metricsWrite.body));
+  assert.ok(allLogs.some(x=>x.phase==='source-summary'&&x.outcome==='invalid-telemetry'));scenarios++;
+  assert.ok(allLogs.some(x=>x.phase==='source-summary'&&x.operation==='write'&&x.sourcePhases?.['lock-held']));
+  // Exact currently published API/source contracts work in either release order.
+  reset();vm.runInContext(execFileSync('git',['show','a4a04ab:google_apps_script.gs'],{encoding:'utf8'}),google.context);
+  const previousSource=await invoke();assert.equal(previousSource.statusCode,200);
+  assert.equal((await invoke('POST',op(previousSource),previousSource.body.readTicket)).statusCode,200);scenarios++;
+  reset();const previousApi=oldModule('api/commercial-data.js',oldModule('server/commercial-store.js',undefined,'a4a04ab'),'a4a04ab');
+  const previousApiRead=await invoke('GET',undefined,undefined,previousApi);assert.equal(previousApiRead.statusCode,200);
+  assert.equal((await invoke('POST',op(previousApiRead),previousApiRead.body.readTicket,previousApi)).statusCode,200);scenarios++;
   // Preserve privacy across both layers, including deliberately sensitive errors.
   for(const line of allLogs){assert.ok(!JSON.stringify(line).includes('PRIVATE_'));assert.ok(!('data'in line));assert.ok(!('requestId'in line));assert.ok(!('revision'in line))}
   assert.ok(allLogs.some(x=>x.layer==='oauth'&&x.outcome==='SOURCE_UNAVAILABLE'));

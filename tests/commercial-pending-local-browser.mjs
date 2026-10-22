@@ -24,7 +24,14 @@ try{
       localStorage.setItem(key,JSON.stringify(data));localStorage.setItem(key+'.pendingSync','{}');
     },{key,width});
     await page.reload();await phase('pending');assert.equal(posts.length,0,'Refresh must not write');
-    await syncAction(page);await phase('synced');
+    await page.evaluate(async()=>{const response=await fetch('/api/test-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delay:700})});if(!response.ok)throw Error('Isolated delay failed')});
+    if(await page.locator('#commercialSyncBadge').getAttribute('aria-expanded')!=='true')await page.locator('#commercialSyncBadge').click();
+    await page.locator('[data-sync-retry]').click();
+    await page.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.textContent.includes('A aguardar confirmação'));
+    assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).clients[0].notes,key),'Fictitious pending '+width,'Local edits survive while awaiting remote confirmation');
+    assert.equal(await page.locator('#commercialSyncBadge').getAttribute('data-phase'),'pending');
+    await phase('synced');
+    await page.evaluate(async()=>{await fetch('/api/test-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({delay:0})})});
     assert.equal(posts.length,1);let data=(await remote()).data;
     assert.equal(data.clients[0].notes,'Fictitious pending '+width);
     assert.equal(data.events.filter(event=>event.id==='fiction-browser-pending-'+width).length,1);
@@ -52,7 +59,7 @@ try{
     assert.equal(new Set(data.events.map(event=>event.id)).size,data.events.length);
     assert.equal(data.events.filter(event=>event.id==='fiction-browser-newer-'+width).length,1);
     for(const field of ['statuses','finalPrices','priceHistory','salePrices','saleCommissions','statusEventIds','salePriceEventIds','agents'])assert.deepEqual(data[field],original[field]);
-    results.push({width,refreshWithoutWrites:true,explicitSync:true,olderRequestBlocked:true,archivedBeforeNewRequest:true,eventsUnique:true,commercialDataPreserved:true});
+    results.push({width,refreshWithoutWrites:true,explicitSync:true,slowConfirmationDistinguished:true,olderRequestBlocked:true,archivedBeforeNewRequest:true,eventsUnique:true,commercialDataPreserved:true});
     await context.close();
   }
   assert.deepEqual(errors,[]);console.log(JSON.stringify({results,errors,productionNetwork:false}));

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "commercial-local-quota-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-pending-local-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "crm-reform-safety-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-contacts-browser.mjs",
+    "code": 0,
+    "passed": true
+  }
+]
