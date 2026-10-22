@@ -1,5 +1,9 @@
 # Integracao do CRM pos-auditoria na main atual
 
+> Relatorio historico da integracao ate 7a46672. A consolidacao definitiva da PR17,
+> incluindo a classificacao/adaptacao das suites antigas e os resultados atuais,
+> esta em [CRM_CONSOLIDATION_PR17.md](CRM_CONSOLIDATION_PR17.md).
+
 ## Base e referencia
 
 - Base obrigatoria: `9ba65b56f01a22fa04c8d89f95811510c3ae3e3d`.

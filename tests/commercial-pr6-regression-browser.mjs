@@ -21,11 +21,11 @@ async function savePresentation(p,state){const f=p.locator('[data-workflow-form=
 async function editPresentation(p,id){await p.locator(`#clientPanel-presentation [data-edit-client-event="${id}"]`).click()}
 async function saveContact(p){const f=p.locator('[data-contact-form]');await f.locator('[type="submit"]').click();await f.waitFor({state:'detached'});await synced(p)}
 async function communication(p,date,state,notes){
-  await tab(p,'Dados');await p.locator('[data-workflow="new-contact"]').click();const f=p.locator('[data-contact-form]');
+  await tab(p,'Dados');await contactSettings(p);await p.locator('[data-workflow="new-contact"]').click();const f=p.locator('[data-contact-form]');
   await f.locator('[name="date"]').fill(date);await f.locator('[name="contactState"]').selectOption(state);await f.locator('[name="notes"]').fill(notes);await saveContact(p);
 }
 async function editContact(p,id,date,state){
-  await tab(p,'Negociação');await p.locator('#clientFullHistory>summary').click();await p.locator(`#clientFullHistory [data-edit-client-event="${id}"]`).click();
+  await tab(p,'Oportunidades');await p.locator('#clientFullHistory>summary').click();await p.locator(`#clientFullHistory [data-edit-client-event="${id}"]`).click();
   const f=p.locator('[data-contact-form]');await f.locator('[name="date"]').fill(date);await f.locator('[name="contactState"]').selectOption(state);
   await f.locator('[name="notes"]').fill('Fictitious historical correction '+date);await saveContact(p);
 }
@@ -35,25 +35,18 @@ try{
   const baseline=(await remote(p)).data;assert.equal(baseline.clients.length,64);
   await startNewClient(p);await p.locator('#clientName').fill('PR6 fictitious client');await p.locator('#saveClient').click();await p.locator('#clientModal').waitFor({state:'hidden'});await synced(p);
   const cid=(await remote(p)).data.clients.find(c=>c.name==='PR6 fictitious client').id;
-  await tab(p,'Apresentação');await p.locator('#clientPanel-presentation [data-ux-client-action="select-presentation"]').click();
-  for(const n of [9,24,30]){await p.locator('#presentationSelectionSearch').fill(String(n));await p.locator(`[data-pick-fraction="${n}"]`).click()}
+  await tab(p,'Procura');await p.locator('[data-ux-client-action="select-presentation"]').click();
+  for(const n of [9,24,30]){await p.locator('#presentationSelectionSearch').fill(String(n));await p.locator('[data-pick-fraction="'+n+'"]').click()}
   await p.locator('[data-save-selection]').click();await p.locator('#presentationSelectionModal').waitFor({state:'hidden'});await synced(p);
-  const selected=async()=> (await remote(p)).data.clients.find(c=>c.id===cid).presentationSelection;
-  assert.deepEqual(await selected(),[9,24,30]);
-  await tab(p,'Apresentação');await p.locator('[data-workflow="new-presentation"]').click();
-  for(const n of [9,30])await p.locator(`[data-workflow="remove-unit"][data-number="${n}"]`).click();
-  await p.locator('[data-present-price="24"]').fill('700000');await savePresentation(p,'draft');assert.deepEqual(await selected(),[9,24,30]);
-  let data=(await remote(p)).data;const presentation=data.events.find(e=>e.clientId===cid&&e.presentationHistory);
-  await editPresentation(p,presentation.id);await p.locator('[data-workflow-form="presentation"] [name="notes"]').fill('Fictitious draft edit');await savePresentation(p,'draft');assert.deepEqual(await selected(),[9,24,30]);
-  await editPresentation(p,presentation.id);await savePresentation(p,'realized');assert.deepEqual(await selected(),[9,30]);
-  await editPresentation(p,presentation.id);await p.locator('[data-present-price="24"]').fill('710000');await savePresentation(p,'realized');assert.deepEqual(await selected(),[9,30]);
+  const selected=async()=> (await remote(p)).data.clients.find(c=>c.id===cid).presentationSelection;assert.deepEqual(await selected(),[9,24,30]);
+  await tab(p,'Oportunidades');const card=p.locator('[data-opportunity-unit="24"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('700000');await card.locator('[name="notes"]').fill('Rascunho fictício');
+  await tab(p,'Dados');await tab(p,'Oportunidades');assert.equal(await card.locator('[name="notes"]').inputValue(),'Rascunho fictício');assert.deepEqual(await selected(),[9,24,30]);await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
+  let data=(await remote(p)).data;const presentation=data.events.find(e=>e.clientId===cid&&e.opportunityAction==='present');
+  await card.locator('.op-history>summary').click();await card.locator('[data-edit-client-event="'+presentation.id+'"]').click();await card.locator('[name="price-24"]').fill('710000');await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
+  data=(await remote(p)).data;assert.deepEqual(data.events.find(e=>e.id===presentation.id),presentation);assert.equal(data.events.filter(e=>e.corrects===presentation.id).length,1);
   await p.reload();await ready(p);await profile(p,cid);assert.deepEqual(await selected(),[9,30]);
-  await tab(p,'Apresentação');await editPresentation(p,presentation.id);await p.locator('[data-workflow-form="presentation"] [type="submit"]').click();
-  await p.getByText('Sem alterações por guardar.',{exact:true}).waitFor();await p.locator('[data-workflow="cancel-presentation"]').click();await p.locator('[data-dialog-confirm]').click();
-  data=(await remote(p)).data;assert.equal(data.events.filter(e=>e.id===presentation.id).length,1);assert.equal(data.events.find(e=>e.id===presentation.id).presentationHistory.length,4);assert.deepEqual(await selected(),[9,30]);
-  await p.locator('[data-workflow="new-presentation"]').click();for(const n of [9,30])await p.locator(`[data-workflow="remove-unit"][data-number="${n}"]`).click();
-  await p.locator('[data-workflow-form="presentation"] [name="addUnit"]').selectOption('24');await p.locator('[data-workflow="add-unit"]').click();await savePresentation(p,'realized');
-  data=(await remote(p)).data;assert.equal(data.events.filter(e=>e.clientId===cid&&e.presentationHistory).length,2);assert.deepEqual(await selected(),[9,30]);
+  await tab(p,'Oportunidades');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('720000');await card.locator('[type=submit]').click();await synced(p);
+  assert.equal((await remote(p)).data.events.filter(e=>e.id===presentation.id).length,1);assert.deepEqual(await selected(),[9,30]);
   await communication(p,'2026-08-03','A aguardar cliente','Fictitious first contact');
   const oldContact=(await remote(p)).data.events.find(e=>e.clientId===cid&&e.notes==='Fictitious first contact');
   const beforeBackdated=await p.locator('.ux-contact-controls').innerText();

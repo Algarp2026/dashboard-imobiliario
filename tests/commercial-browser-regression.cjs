@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),cp=require('node:child_process'),net=require('node:net');
 const repo=path.resolve(__dirname,'..'),port=Number(process.env.COMMERCIAL_TEST_PORT||53214),origin='http://127.0.0.1:'+port;
+const {consolidated}=require('./helpers/browser-suite-policy.cjs');
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
@@ -15,7 +16,6 @@ const plans={
  'commercial-stage-browser.mjs':'client-stage',
  'commercial-client-phase2a-browser.mjs':'client-phase2a',
  'commercial-client-phase2b-browser.mjs':'client-phase2b',
- 'commercial-client-complete-browser.mjs':'client-complete',
  'commercial-client-complete-exports.mjs':'client-complete',
  'commercial-contacts-browser.mjs':'client-complete',
  'commercial-pr6-regression-browser.mjs':'client-complete',
@@ -25,15 +25,12 @@ const plans={
  'client-workspace-audit.mjs':'visual-workspace',
  'client-workspace-browser.mjs':'visual-workspace',
  'client-workspace-dialogs.mjs':'visual-workspace',
- 'composition-d2-browser.mjs':'visual-workspace',
  'composition-d2-history-routing-probe.mjs':'visual-workspace',
  'composition-d2-platform-browser.mjs':'visual-workspace',
  'visual-audit-browser.mjs':'visual-workspace',
- 'visual-workspace-browser.mjs':'visual-workspace',
- 'visual-workspace-transactions.mjs':'visual-workspace'
 };
 const requested=process.argv.slice(2),selected=requested.length?requested:Object.keys(plans),results=[];
-for(const name of selected)if(!plans[name])throw Error('Unknown browser suite: '+name);
+for(const name of selected)if(!plans[name])throw Error(consolidated[name]?'Consolidated suite '+name+'. Run: '+consolidated[name].replacements.join(' '):'Unknown browser suite: '+name);
 fs.mkdirSync(output,{recursive:true});
 const env={...process.env,PHASE2A_TEST_PORT:String(port),COMMERCIAL_TEST_ORIGIN:origin,PHASE2A_TEST_ORIGIN:origin,PHASE2B_TEST_ORIGIN:origin};
 function available(){return new Promise((resolve,reject)=>{const s=net.createServer();s.once('error',reject);s.listen(port,'127.0.0.1',()=>s.close(resolve))})}

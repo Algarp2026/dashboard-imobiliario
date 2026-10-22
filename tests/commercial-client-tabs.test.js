@@ -26,19 +26,19 @@ assert.equal(app.commercialUx.clientDetailTab,'data');assert.equal(panels.filter
 assert.equal((detail.innerHTML.match(/role="tabpanel"/g)||[]).length,3);assert.match(detail.innerHTML,/Old &lt;fixture&gt;/);
 assert.match(detail.innerHTML,/clientFractionWorkspace/);
 assert.doesNotMatch(detail.innerHTML,/Sem alternativas adicionais identificadas/);
-assert.match(detail.innerHTML,/Orçamento indicativo/);assert.match(detail.innerHTML,/Alterar situação comercial/);assert.match(detail.innerHTML,/Histórico da fração/);assert.doesNotMatch(detail.innerHTML,/data-contact-settings/);
+assert.match(detail.innerHTML,/Orçamento indicativo/);assert.match(detail.innerHTML,/Alterar situação comercial/);assert.match(detail.innerHTML,/Histórico da fração/);assert.match(detail.innerHTML,/data-contact-settings/);
 assert.match(detail.innerHTML,/800\.000/);assert.match(detail.innerHTML,/900\.000/);assert.match(detail.innerHTML,/Fictitious &lt;price note&gt;/);
 for(const key of keys){app.activateClientDetailTab(key,true);assert.equal(focused,key);assert.equal(panels.filter(p=>!p.hidden).length,1);assert.equal(panels.find(p=>!p.hidden).dataset.clientPanel,key);assert.equal(buttons.find(b=>b.dataset.uxClientTab===key).attributes['aria-selected'],'true')}
-app.activateClientDetailTab('preferences');app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'procura');
+app.activateClientDetailTab('procura');app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'procura');
 app.commercialUx.clientDetailId='';app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'procura');
-app.activateClientDetailTab('followup');assert.equal(app.commercialUx.clientDetailTab,'opportunities');
+app.activateClientDetailTab('opportunities');assert.equal(app.commercialUx.clientDetailTab,'opportunities');
 app.activateClientDetailTab('summary');assert.equal(app.commercialUx.clientDetailTab,'data');
 app.activateClientDetailTab('invalid');assert.equal(app.commercialUx.clientDetailTab,'data');
 app.state.cf={search:'Preserved search',stage:'Apresentado'};const filters=JSON.stringify(app.state.cf);
 app.openClientProfile('old');assert.equal(app.commercialUx.clientProfileOpen,true);app.closeClientProfile();assert.equal(app.commercialUx.clientProfileOpen,false);assert.equal(JSON.stringify(app.state.cf),filters);
 assert.equal((detail.innerHTML.match(/role="tabpanel"/g)||[]).length,3);
 for(const key of keys){app.activateClientDetailTab(key);assert.equal(panels.find(p=>!p.hidden).dataset.clientPanel,key)}
-assert.match(detail.innerHTML,/Editar preferências/);assert.match(detail.innerHTML,/PDF de proposta/);assert.match(detail.innerHTML,/Histórico comercial original/);assert.doesNotMatch(detail.innerHTML,/Registar contacto|Registar resposta recebida/);
+assert.match(detail.innerHTML,/Editar preferências/);assert.match(detail.innerHTML,/PDF de proposta/);assert.match(detail.innerHTML,/Histórico comercial original/);assert.match(detail.innerHTML,/Registar contacto|Registar resposta recebida/);
 assert.match(app.clientPreferenceDisplay('Tipologias','T1 ou T2'),/>T1<.*>T2</);
 assert.match(app.clientPreferenceDisplay('Piso','Indiferente'),/is-indifferent/);
 assert.match(app.clientPreferenceDisplay('Piso',''),/Não informada/);
@@ -50,8 +50,8 @@ const recommendation={clientId:'old',primary:{code:'manual-undated',priority:'M�
 const original=JSON.stringify(recommendation),automatic=app.clientAutomaticRecommendation(recommendation);
 assert.equal(automatic.primary.code,'proposal');assert.equal(automatic.secondary.length,0);assert.equal(JSON.stringify(recommendation),original);
 assert.match(app.clientNextActionMarkup({label:'Sem data',step:'Preserved action',status:'undated'},recommendation,true),/Existing undated action needs review/);
-app.state.selectedClientId='incomplete';app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'data');assert.match(detail.innerHTML,/Não informado/);assert.match(detail.innerHTML,/data-op-priority/);
+app.state.selectedClientId='incomplete';app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'data');assert.match(detail.innerHTML,/Não informado/);assert.match(detail.innerHTML,/data-contact-settings/);
 const preferencesModule=context.window.THE_VIEW_CLIENT_PREFERENCES;delete context.window.THE_VIEW_CLIENT_PREFERENCES;app.renderClientDetail();assert.match(detail.innerHTML,/data-client-module-error/);assert.doesNotMatch(detail.innerHTML,/role="tabpanel"|Editar preferências/);context.window.THE_VIEW_CLIENT_PREFERENCES=preferencesModule;
 const workspaceModule=context.window.THE_VIEW_CLIENT_WORKSPACE;delete context.window.THE_VIEW_CLIENT_WORKSPACE;app.renderClientDetail();assert.match(detail.innerHTML,/data-client-module-error|Navegação dos clientes/);assert.doesNotMatch(detail.innerHTML,/role="tabpanel"/);context.window.THE_VIEW_CLIENT_WORKSPACE=workspaceModule;
 assert.equal(JSON.stringify(app.state.data),before);assert.equal(writes,0);assert.equal(requests,0);
-console.log('client profile tests passed: three accessible panels, profile/list navigation, legacy tab aliases, preserved filters, legacy preference states, presented vs prepared, original events and zero business writes');
+console.log('client profile tests passed: three accessible panels, profile/list navigation, current tab keys, preserved filters, legacy preference states, presented vs prepared, original events and zero business writes');

@@ -5,14 +5,11 @@ const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5210',out=process.env.WORKSPACE_ARTIFACTS||'docs/client-agent-workspace',errors=[],writes=[],failures=[];
 fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
-const baseline=Object.fromEntries(['commercial.js'].map(name=>[name,execFileSync('git',['show','5d2c91f:'+name],{encoding:'utf8',maxBuffer:4000000})]));
-const begin=baseline['commercial.js'].indexOf('const MAJUCA_IMPORT_RECORDS=['),end=baseline['commercial.js'].indexOf('\n];',begin);
-assert.ok(begin>=0&&end>=0);baseline['commercial.js']=baseline['commercial.js'].slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+baseline['commercial.js'].slice(end+3);
 try{
-  for(const [name,viewport,before] of [['before-desktop',{width:1440,height:900},true],['before-mobile',{width:390,height:844},true],['desktop',{width:1440,height:900},false],['laptop',{width:1366,height:768},false],['tablet',{width:820,height:1080},false],['mobile',{width:390,height:844},false]]){
+  for(const [name,viewport,before] of [['desktop',{width:1440,height:900},false],['laptop',{width:1366,height:768},false],['tablet',{width:820,height:1080},false],['mobile',{width:390,height:844},false]]){
     console.log('Checking '+name);
     const context=await browser.newContext({viewport});
-    context.setDefaultTimeout(12000);await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}const file=url.pathname.slice(1);if(before&&baseline[file])return route.fulfill({contentType:file.endsWith('.html')?'text/html':'text/javascript',body:baseline[file]});return route.continue()});
+    context.setDefaultTimeout(12000);await context.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==origin)return route.abort();if(req.method()!=='GET'&&!url.pathname.endsWith('/api/access')){writes.push(url.pathname);return route.abort()}return route.continue()});
     const p=await context.newPage();p.on('pageerror',e=>errors.push(name+': '+e.message));p.on('response',r=>{if(r.status()>=400)failures.push(name+': '+r.status()+' '+new URL(r.url()).pathname)});
     p.setDefaultTimeout(12000);
     await p.goto(origin+'/commercial.html');await p.locator('#password').fill('View-Phase2A-Teste');await p.getByRole('button',{name:'Entrar',exact:true}).click();await p.locator('[data-client="demo-0"]').waitFor({state:'attached'});
@@ -33,13 +30,13 @@ try{
     await p.locator('[data-client-header-edit]').click();await p.locator('#clientModal:not(.hidden)').waitFor();
     assert.equal(await p.locator('#clientProfileDialog').evaluate(e=>e.inert),true);
     await p.keyboard.press('Escape');await p.locator('#clientModal.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#clientProfileDialog').evaluate(e=>e.inert),false);
-    await tab('Preferências');await p.locator('[data-preferences-edit]').click();await p.locator('[data-preference-key="typology"]').first().waitFor();await snap('preferences');await p.locator('[data-preferences-cancel]').click();
-    await tab('Frações');await p.locator('#clientFractionManual>summary').click();await p.locator('#clientFractionSearch').fill('1');await snap('fractions');
-    await tab('Apresentação');await snap('presentation');
-    await p.locator('[data-workflow="new-presentation"]').click();const form=p.locator('[data-workflow-form="presentation"]');await form.waitFor();await form.locator('[name="notes"]').fill('Rascunho ficticio preservado');
-    await tab('Dados');await tab('Apresentação');assert.equal(await form.locator('[name="notes"]').inputValue(),'Rascunho ficticio preservado');
-    await tab('Negociação');await snap('negotiation');
-    await p.reload();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Negociação',exact:true}).getAttribute('aria-selected'),'true');
+    await tab('Procura');await p.locator('[data-preferences-edit]').click();await p.locator('[data-preference-key="typology"]').first().waitFor();await snap('preferences');await p.locator('[data-preferences-cancel]').click();
+    await tab('Procura');await p.locator('#clientFractionManual>summary').click();await p.locator('#clientFractionSearch').fill('1');await snap('fractions');
+    await tab('Oportunidades');await snap('presentation');
+    const card=p.locator('[data-opportunity-unit="1"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');const form=card.locator('[data-op-form]');await form.waitFor();await form.locator('[name="notes"]').fill('Rascunho ficticio preservado');
+    await tab('Dados');await tab('Oportunidades');assert.equal(await form.locator('[name="notes"]').inputValue(),'Rascunho ficticio preservado');
+    await tab('Oportunidades');await snap('negotiation');
+    await p.reload();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Oportunidades',exact:true}).getAttribute('aria-selected'),'true');
     await p.locator('[data-profile-close]').click();await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#clientSearch').inputValue(),'Cliente Exemplo');assert.equal(await p.locator('#clientListSort').inputValue(),'oldest');await snap('return');
     await p.waitForFunction(()=>document.activeElement?.dataset.openProfile==='demo-0');
     await p.locator('#clientSearch').fill('');await p.locator('#clientListSort').selectOption('newest');
@@ -51,12 +48,12 @@ try{
     await p.locator('.agent-associated-row [data-ux-client="demo-0"]').click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();await p.keyboard.press('Escape');await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#agentsPanel').count()?await p.locator('#agentsPanel').isVisible():await p.locator('.agent-associated-row').isVisible(),true);
     await p.locator('[data-agent-portfolio]').click();assert.equal(await p.locator('#clientAgentFilter').inputValue(),'demo-agent');assert.equal(await p.locator('.client-portfolio-row').count(),1);
     await nav('dashboard');await p.locator('#globalCommercialSearch').fill('Cliente Exemplo');const shortcut=p.locator('#globalCommercialResults [data-ux-client="demo-0"]');await shortcut.click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(new URL(p.url()).searchParams.get('client'),'demo-0');await p.locator('[data-profile-close]').click();assert.equal(await p.locator('#tab-dashboard').isVisible(),true);
-    await p.goto(origin+'/commercial.html?client=demo-0&clientTab=preferences');await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Preferências',exact:true}).getAttribute('aria-selected'),'true');
+    await p.goto(origin+'/commercial.html?client=demo-0&clientTab=procura');await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Procura',exact:true}).getAttribute('aria-selected'),'true');
     await p.locator('[data-profile-close]').click();await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});
     assert.equal(await cache(),initial,name+' consultation changed CRM cache');
     await context.close();
   }
-  const direct=await browser.newContext();await direct.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());const page=await direct.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/commercial.html?client=demo-0&clientTab=preferences');await page.locator('#password').fill('View-Phase2A-Teste');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await page.getByRole('tab',{name:'Preferências',exact:true}).getAttribute('aria-selected'),'true');await direct.close();
+  const direct=await browser.newContext();await direct.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());const page=await direct.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/commercial.html?client=demo-0&clientTab=procura');await page.locator('#password').fill('View-Phase2A-Teste');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await page.getByRole('tab',{name:'Procura',exact:true}).getAttribute('aria-selected'),'true');await direct.close();
   assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);assert.deepEqual(writes,[]);
-  console.log('Workspace browser PASS: before/after, four responsive sizes, filters/sort, five functional tabs, editing/Escape, draft retention, refresh/deep links, agents and dashboard origins, return focus and zero business writes.');
+  console.log('Workspace browser PASS: four current responsive sizes, filters/sort, three functional tabs, editing/Escape, draft retention, refresh/deep links, agents and dashboard origins, return focus and zero business writes.');
 }finally{await browser.close()}

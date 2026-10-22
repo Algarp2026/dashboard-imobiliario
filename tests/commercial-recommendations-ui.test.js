@@ -25,7 +25,7 @@ const context={
 };
 vm.createContext(context);
 const end=source.lastIndexOf('})();');
-vm.runInContext(source.slice(0,end)+'globalThis.test={state,commercialUx,parseRow,commercialRecommendationInput,commercialClientRecommendation,commercialRecommendationQueueMarkup,clientRecommendationMarkup,refreshClientRecommendations,clientFractionTiles};'+source.slice(end),context);
+vm.runInContext(source.slice(0,end)+'globalThis.test={state,commercialUx,parseRow,commercialRecommendationInput,commercialClientRecommendation,commercialRecommendationQueueMarkup,clientRecommendationMarkup,refreshClientRecommendations,clientFractionCards};'+source.slice(end),context);
 const app=context.test;
 app.state.rows=rows.map(app.parseRow);app.state.fractions=app.state.rows.filter(row=>row.isTheView);
 const daysAgo=days=>new Date(Date.now()-days*86400000).toISOString().slice(0,10);
@@ -71,7 +71,7 @@ const future=app.commercialClientRecommendation(app.state.data.clients[2]);asser
 assert.match(app.clientRecommendationMarkup(future),/Aguardar a próxima ação definida/);
 app.state.selectedClientId='presentation';app.refreshClientRecommendations();assert.equal(container.innerHTML,markup);
 const f=app.state.fractions.find(f=>f.number===24);
-assert.match(app.clientFractionTiles([f],'', [{number:24,preferred:['Piso','Orientação']}]),/Preferências coincidentes: Piso · Orientação/);
+assert.match(app.clientFractionCards(app.state.data.clients[1],[{...f,currentPrice:700000,priceConfirmed:true,status:'Disponível',statusConfirmed:true,explanation:'Preferências coincidentes: Piso · Orientação'}]),/Preferências coincidentes: Piso · Orientação/);
 assert.equal(JSON.stringify(app.state.data),snapshot);assert.equal(JSON.stringify(rows),rowSnapshot);assert.equal(writes,0);assert.equal(requests,0);
 assert.equal(app.state.fractions.length,39);
 context.window.THE_VIEW_CLIENT_WORKFLOW=require('../commercial-client-workflow.js');

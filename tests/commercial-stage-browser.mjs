@@ -1,3 +1,4 @@
+import {contactSettings} from './helpers/current-client-ui.mjs';
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5201';
@@ -23,21 +24,15 @@ try{
       await page.locator(`[data-client="${id}"]`).click();
       assert.equal(await page.locator('.client-detail-header .badge').innerText(),stage);
       await page.getByRole('tab',{name:'Dados',exact:true}).click();
-      assert.ok((await page.locator('.ux-contact-controls').innerText()).includes(stage));
-      await page.getByRole('tab',{name:'Frações',exact:true}).click();
-      if(id==='demo-0')assert.ok((await page.locator('#clientRelatedDetails').innerText()).includes('Reservado'));
-      await page.getByRole('tab',{name:'Negociação',exact:true}).click();
-      if(id==='demo-0')assert.ok((await page.locator('[data-negotiation-unit="9"]').innerText()).includes('Reservado'));
+      await contactSettings(page);assert.ok((await page.locator('.ux-contact-controls').innerText()).includes(stage));
+      await page.getByRole('tab',{name:'Procura',exact:true}).click();
+      assert.equal(await page.locator('#clientFractionWorkspace').isVisible(),true);
+      await page.getByRole('tab',{name:'Oportunidades',exact:true}).click();
+      if(id==='demo-0'){assert.match(await page.locator('[data-opportunity-unit="9"]>summary').innerText(),/Reservada/);await page.locator('[data-opportunity-unit="9"]>summary').click();assert.match(await page.locator('[data-opportunity-unit="9"]').innerText(),/Reservado/)}
       if(id==='demo-2'){
-        await page.locator('[data-negotiation-unit="24"]>summary').click();await page.locator('[data-workflow="unit-movement"][data-number="24"]').click();
-        const form=page.locator('[data-workflow-form="negotiation"]');
-        assert.equal(await form.locator('[name="interest"]').count(),0);
-        await form.locator('[name="type"]').selectOption('Aceitação');
-        assert.ok((await form.innerText()).includes('Aceite'));assert.equal(await form.locator('[name="interest"]').count(),0);
-        await form.locator('[name="type"]').selectOption('Acompanhamento da fração');
-        assert.equal(await form.locator('[name="interest"] option').count(),7);
-        assert.equal(await form.locator('[name="interest"]').inputValue(),'');
-        await page.locator('[data-workflow="cancel-negotiation"]').click();await page.locator('[data-dialog-confirm]').click();
+        const card=page.locator('[data-opportunity-unit="24"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Em negociação');
+        const form=card.locator('[data-op-form]');assert.equal(await form.locator('[name="interest"]').count(),0);assert.equal(await form.locator('[name="amount"]').count(),1);assert.equal(await form.locator('[name="terms"]').count(),1);
+        assert.equal(await card.locator('[data-op-state] option[value="Reservada"]').count(),1);await card.locator('[data-op-command="cancel"]').click();assert.equal(await card.locator('[data-op-form]').count(),0);
       }
       await page.locator('[data-profile-close]').click();
     }

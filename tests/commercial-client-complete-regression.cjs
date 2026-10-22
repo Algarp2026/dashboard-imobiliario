@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),assert=require('node:assert/strict'),crypto=require('node:crypto');
 const repo=path.resolve(__dirname,'..'),output=process.env.COMPLETE_ARTIFACTS||path.join(require('node:os').tmpdir(),'the-view-complete-regression');
 const run=args=>cp.execFileSync(process.execPath,args,{cwd:repo,encoding:'utf8',stdio:['ignore','pipe','pipe']});
-const syntax=['commercial.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','app.js','config.js','tests/commercial-client-complete-browser.mjs','tests/commercial-client-complete-exports.mjs','tests/commercial-contacts-browser.mjs'];
+const syntax=['commercial.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','app.js','config.js','tests/crm-reform-browser.mjs','tests/commercial-client-complete-exports.mjs','tests/commercial-contacts-browser.mjs'];
 syntax.push('tests/commercial-pr6-regression-browser.mjs');
 for(const file of syntax)run(['--check',file]);
 const suites=fs.readdirSync(__dirname).filter(file=>file.endsWith('.test.js')).sort();
@@ -40,7 +40,7 @@ for(const name of ['effectiveEffect','effectTransition','closingError'])assert.e
 const appBefore=functions(base),appAfter=functions(current);
 for(const name of ['save','backupBeforeMajucaImport','applyMajucaImportMigration','resetLocal','hasCriticalCommercialEventChange','protectedEventEditError','replaceEventAndReapplyBusinessRules','applyEventBusinessRules','exportPdf','generateClientsSummaryPdf'])assert.equal(appAfter[name],appBefore[name],'Unrelated persistence/business function frozen: '+name);
 run(['scripts/build-commercial-integrity.js','--check']);
-const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','commercial.css','config.js','data.json','data.xlsx','plantas'];
+const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','data.json','data.xlsx','plantas'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
 const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,wholePublishedSyncBlockUnchanged:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};

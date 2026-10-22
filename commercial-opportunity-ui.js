@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  root.createOpportunityWorkflow=function(a,legacy){
+  root.createOpportunityWorkflow=function(a,sharedEditors){
     const originalTimeline=a.timeline;
     a={...a,timeline:e=>originalTimeline(e)+ops.priceRows(e).filter(row=>row.observation).map(row=>`<p class="muted">Apt. ${Number(row.fraction||row.unitId)} · ${esc(row.observation)}</p>`).join('')};
     const ops=root.THE_VIEW_OPPORTUNITIES,model=root.THE_VIEW_CLIENT_WORKFLOW,esc=a.esc,drafts=new Map(),opened=new Map();
@@ -67,12 +67,12 @@
     }
     function opportunityMarkup(c){
       const items=rows(c),pending=items.filter(r=>r.commercialState==='Por apresentar');
-      return`<section class="opportunity-workspace"><div class="crm-detail-section__heading"><h3>Oportunidades <span>${items.length}</span></h3>${pending.length?command('multi-present','Apresentar várias frações','','presentation'):''}</div><p role="status" class="op-workspace-feedback">${esc(feedback)}</p>${items.length?`<div class="opportunity-list">${items.map(info=>card(c,info)).join('')}</div>`:'<p class="empty-state">Selecione frações na Procura para iniciar as oportunidades.</p>'}${audit?`<details class="op-audit" open><summary>Edição administrativa de registo histórico</summary>${command('close-audit','Fechar consulta administrativa','','x')}${audit.presentationHistory?legacy.presentationMarkup(c):audit.communicationHistory?legacy.contactMarkup(c):audit.negotiationVersion?legacy.negotiationMarkup(c):`<div class="timeline">${a.timeline(audit)}</div>`}</details>`:''}<details id="clientFullHistory"><summary>Histórico comercial original</summary><div class="timeline">${model.ordered(a.events().filter(e=>e.clientId===c.id)).reverse().map(a.timeline).join('')}</div></details></section>`;
+      return`<section class="opportunity-workspace"><div class="crm-detail-section__heading"><h3>Oportunidades <span>${items.length}</span></h3>${pending.length?command('multi-present','Apresentar várias frações','','presentation'):''}</div><p role="status" class="op-workspace-feedback">${esc(feedback)}</p>${items.length?`<div class="opportunity-list">${items.map(info=>card(c,info)).join('')}</div>`:'<p class="empty-state">Selecione frações na Procura para iniciar as oportunidades.</p>'}${audit?`<details class="op-audit" open><summary>Edição administrativa de registo histórico</summary>${command('close-audit','Fechar consulta administrativa','','x')}${audit.presentationHistory?sharedEditors.presentationMarkup(c):audit.negotiationVersion?sharedEditors.negotiationMarkup(c):`<div class="timeline">${a.timeline(audit)}</div>`}</details>`:''}<details id="clientFullHistory"><summary>Histórico comercial original</summary><button class="ux-text-button" type="button" data-ux-client-action="event">Adicionar evento</button><div class="timeline">${model.ordered(a.events().filter(e=>e.clientId===c.id)).reverse().map(a.timeline).join('')}</div></details></section>`;
     }
     function dataMarkup(c){
       const items=rows(c),agent=a.agents().find(g=>g.id===c.agentId);
       const counts=ops.states.map(s=>[s,items.filter(r=>r.commercialState===s).length]);
-      return`<section class="op-client-data">${a.facts([['Nome',c.name],['Telefone / WhatsApp',c.phone],['Email',c.email],['Origem',c.originManual||c.origin],['Agente',agent?.name||c.agent],['Imobiliária',agent?.agency||c.agency],['NIF',c.nif],['Nacionalidade',c.nationality],['Observações gerais',c.notes]])}<h3>Resumo comercial</h3><div data-op-relevant-summary>${items.length?a.facts(counts.filter(([,count])=>count>0)):'<p class="muted">Sem oportunidades registadas.</p>'}</div><details class="op-full-summary"><summary>Consultar todos os estados</summary>${a.facts(counts)}</details>${ops.cycleInfo(a.data(),c.id,{date:a.today()}).blocked?command('requalify','Confirmar requalificação','','check'):''}<form data-op-priority><label><input type="checkbox" name="priority" ${model.priority(c)?'checked':''}> Cliente prioritário</label><button type="submit" class="ghost-button compact-button">Guardar prioridade</button></form></section>`;
+      return`<section class="op-client-data">${a.facts([['Nome',c.name],['Telefone / WhatsApp',c.phone],['Email',c.email],['Origem',c.originManual||c.origin],['Agente',agent?.name||c.agent],['Imobiliária',agent?.agency||c.agency],['NIF',c.nif],['Nacionalidade',c.nationality],['Observações gerais',c.notes],['Último contacto efetivo',model.contactInfo(c,a.events(),a.today()).lastContact||'—']])}${a.general(c)}<details id="clientContactSettings" class="ux-client-details" ${sharedEditors.contactMarkup(c).includes('data-contact-form')?'open':''}><summary>Contactos e acompanhamento</summary>${sharedEditors.contactMarkup(c)}</details><h3>Resumo comercial</h3><div data-op-relevant-summary>${items.length?a.facts(counts.filter(([,count])=>count>0)):'<p class="muted">Sem oportunidades registadas.</p>'}</div><details class="op-full-summary"><summary>Consultar todos os estados</summary>${a.facts(counts)}</details>${ops.cycleInfo(a.data(),c.id,{date:a.today()}).blocked?command('requalify','Confirmar requalificação','','check'):''}</section>`;
     }
     function collect(form,d){
       for(const input of [...form.querySelectorAll('input[name],select[name],textarea[name]')])d[input.name]=input.type==='checkbox'?input.checked:['amount','commissionValue'].includes(input.name)||input.name.startsWith('price-')?Number(input.value):input.value;
@@ -99,7 +99,7 @@
       finally{saving=false;a.render();a.tab('opportunities');const target=document.querySelector(`[data-opportunity-unit="${n}"] [data-op-state]`);if(target)target.focus({preventScroll:true})}
     }
     function bind(c,container){
-      legacy.bind(c,container);
+      sharedEditors.bind(c,container);
       for(const info of rows(c)){
         if(info.agreement){const content=container.querySelector(`[data-opportunity-unit="${info.number}"] .opportunity-card__content`);if(content&&!content.querySelector('[data-op-agreement]')){const line=document.createElement('p');line.dataset.opAgreement='';line.textContent='Acordo: '+info.agreement.id+' · '+a.money(info.agreement.amount)+' · '+(info.agreement.terms||'Sem condições adicionais');content.prepend(line)}}
         if(!info.informed)continue;
@@ -129,9 +129,9 @@
         if(action==='multi-present'){const pending=rows(c).filter(r=>r.commercialState==='Por apresentar').map(r=>r.number);if(!pending.length)return;begin(c,pending[0],'present');Object.assign(drafts.get(identity(c.id,pending[0])),{fractions:pending,candidates:pending});a.render();return}
         begin(c,n,action);
       });
-      const priority=container.querySelector('[data-op-priority]');if(priority)priority.onsubmit=async e=>{e.preventDefault();if(saving)return;saving=true;try{const target=a.client(c.id);if(model.decision(target,'priorityHistory',priority.elements.priority.checked,{id:a.id(),recordedAt:new Date().toISOString(),source:'manual'}))a.feedback(await a.persist(),'Prioridade guardada.')}catch(error){await a.notify(error.message)}finally{saving=false;a.render()}};
+
     }
-    return{...legacy,opportunityMarkup,dataMarkup,reviewMarkup,bind,
+    return{...sharedEditors,opportunityMarkup,dataMarkup,reviewMarkup,bind,
       edit(ev){
         if(ev.opportunityVersion&&['present','round','refuse','close'].includes(ev.opportunityAction)){
           const c=a.client(ev.clientId),n=ev.fractions[0];begin(c,n,ev.opportunityAction,ev);
@@ -139,10 +139,11 @@
           for(const r of ev.informedPrices||[])d['price-'+r.fraction]=r.informedPrice;
           a.render();return true;
         }
-        audit=ev;if(ev.opportunityVersion){a.render();a.tab('opportunities');return true}return legacy.edit(ev);
+        if(ev.communicationHistory){audit=null;return sharedEditors.edit(ev)}
+        audit=ev;if(ev.opportunityVersion){a.render();a.tab('opportunities');return true}return sharedEditors.edit(ev);
       },
       newPresentation(cid){const c=a.client(cid),pending=rows(c).filter(r=>r.commercialState==='Por apresentar');if(pending.length)begin(c,pending[0].number,'present')},
-      newContact(){a.notify('Os contactos anteriores continuam disponíveis no histórico administrativo. Utilize a oportunidade para atualizar a situação comercial.')}
+      newContact(cid,received,event){sharedEditors.newContact(cid,received,event);a.tab('data')}
     };
   };
 })(window);

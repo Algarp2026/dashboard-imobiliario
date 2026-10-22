@@ -16,11 +16,11 @@ try{
       await page.getByText(/Reservas e vendas não podem ser alteradas por ajuste manual/).waitFor();await page.locator('[data-dialog-confirm]').click();assert.equal(await select.inputValue(),status);
     }
     await page.locator('#salesTableBody [data-status="24"]').selectOption('Indisponível');await page.locator('[data-dialog-cancel]').last().click();assert.equal(await page.locator('#salesTableBody [data-status="24"]').inputValue(),'Disponível');
-    await page.locator('#commercialSidebar [data-tab="sales"][data-view="clients"]').click();await page.locator('[data-client="demo-2"]').click();await page.getByRole('tab',{name:'Negociação',exact:true}).click();
-    await page.locator('#clientPanel-negotiation [data-ux-client-action="stage"]').click();await page.locator('#clientStage').selectOption('Desistiu');await page.locator('#saveClient').click();
+    await page.locator('#commercialSidebar [data-tab="sales"][data-view="clients"]').click();await page.locator('[data-client="demo-2"]').click();await page.getByRole('tab',{name:'Dados',exact:true}).click();
+    await page.locator('#clientPanel-data [data-ux-client-action="stage"]').click();await page.locator('#clientStage').selectOption('Desistiu');await page.locator('#saveClient').click();
     await page.getByText(/Encerra interesses não concluídos/).waitFor();await page.locator('[data-dialog-cancel]').last().click();assert.equal(await cache(),before);
     await page.reload();await page.locator('.client-detail-header').waitFor();assert.equal(await page.locator('.client-detail-header .badge').innerText(),'Em negociação');assert.equal(await cache(),before);
-    await page.locator('[data-profile-close]').click();await page.locator('[data-client="demo-3"]').click();await page.getByRole('tab',{name:'Negociação',exact:true}).click();await page.locator('#clientPanel-negotiation [data-ux-client-action="stage"]').click();await page.locator('#clientStage').selectOption('Qualificado');await page.locator('#saveClient').click();await page.getByText(/Inicia um novo ciclo como Qualificado/).waitFor();await page.locator('[data-dialog-cancel]').last().click();assert.equal(await cache(),before);
+    await page.locator('[data-profile-close]').click();await page.locator('[data-client="demo-3"]').click();await page.getByRole('tab',{name:'Dados',exact:true}).click();await page.locator('#clientPanel-data [data-ux-client-action="stage"]').click();await page.locator('#clientStage').selectOption('Qualificado');await page.locator('#saveClient').click();await page.getByText(/Inicia um novo ciclo como Qualificado/).waitFor();await page.locator('[data-dialog-cancel]').last().click();assert.equal(await cache(),before);
     const meta=await(await context.request.get(origin+'/api/test-meta')).json();assert.equal(meta.writes,0);await context.close();
   }
   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
