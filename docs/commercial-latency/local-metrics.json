@@ -1,0 +1,65 @@
+{
+  "baseline": "a4a04ab",
+  "modelRpcMs": 5,
+  "realGoogleMeasurements": false,
+  "chunked": {
+    "before": {
+      "write": {
+        "operations": 32,
+        "modeledMs": 160,
+        "flushes": 7,
+        "wallMs": 5.635,
+        "mirrorWrites": 2
+      },
+      "read": {
+        "operations": 4,
+        "modeledMs": 20,
+        "flushes": 0
+      }
+    },
+    "after": {
+      "write": {
+        "operations": 28,
+        "modeledMs": 140,
+        "flushes": 7,
+        "wallMs": 5.161,
+        "mirrorWrites": 1
+      },
+      "read": {
+        "operations": 4,
+        "modeledMs": 20,
+        "flushes": 0
+      }
+    }
+  },
+  "legacy": {
+    "before": {
+      "write": {
+        "operations": 44,
+        "modeledMs": 220,
+        "flushes": 8,
+        "wallMs": 6.794,
+        "mirrorWrites": 2
+      },
+      "read": {
+        "operations": 4,
+        "modeledMs": 20,
+        "flushes": 0
+      }
+    },
+    "after": {
+      "write": {
+        "operations": 37,
+        "modeledMs": 185,
+        "flushes": 8,
+        "wallMs": 7.137,
+        "mirrorWrites": 1
+      },
+      "read": {
+        "operations": 4,
+        "modeledMs": 20,
+        "flushes": 0
+      }
+    }
+  }
+}

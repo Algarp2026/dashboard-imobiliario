@@ -14,7 +14,7 @@ var STORE_READ_ATTEMPTS = 2;
 
 function sourceContext_(operation, request) {
   var correlationId = request && /^[a-f0-9-]{36}$/.test(request.correlationId || '') ? request.correlationId : '';
-  return {operation:operation,correlationId:correlationId,started:Date.now(),spreadsheet:null,storeSheet:null};
+  return {operation:operation,correlationId:correlationId,started:Date.now(),spreadsheet:null,storeSheet:null,metrics:request && request.diagnosticsVersion === 1,phases:{}};
 }
 function sourceStep_(context, phase, action) {
   if (!context) return action();
@@ -35,7 +35,12 @@ function sourceStep_(context, phase, action) {
     // Keep the innermost fixed phase; never copy the exception message.
     if (!context.failure) context.failure = {phase:phase,durationMs:Date.now()-started,elapsedMs:Date.now()-context.started};
     throw error;
-  } finally { log(outcome); }
+  } finally {
+    var metric = context.phases[phase] || {durationMs:0,count:0};
+    metric.durationMs += Date.now()-started; metric.count++;
+    context.phases[phase] = metric;
+    log(outcome);
+  }
 }
 function sourceFailure_(context) {
   var failure = context.failure || {phase:'validate',durationMs:0,elapsedMs:Date.now()-context.started};
@@ -101,10 +106,11 @@ function assertServerCaller_() {
   if (!expected || !actual || expected.toLowerCase() !== actual.toLowerCase()) throw new Error('SOURCE_AUTHENTICATION_FAILED');
   if (!props.getProperty('CRM_SPREADSHEET_ID') || !/^(test|production)$/.test(props.getProperty('CRM_ENVIRONMENT') || '')) throw new Error('SOURCE_NOT_CONFIGURED');
 }
-function storeResponse_(values) {
+function storeResponse_(values, context) {
   var props = PropertiesService.getScriptProperties();
   var response = {sourceId:props.getProperty('CRM_SPREADSHEET_ID'),environment:props.getProperty('CRM_ENVIRONMENT'),protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1,commercialIntegrity:commercialIntegrityReady_()?1:0},canWrite:props.getProperty('CRM_API_WRITES_ENABLED') === 'true'};
   Object.keys(values).forEach(function(key) { response[key] = values[key]; });
+  if (context && context.metrics) response.sourceMetrics = {version:1,totalMs:Date.now()-context.started,phases:context.phases};
   return response;
 }
 function commercialIntegrityReady_() {
@@ -228,7 +234,7 @@ function crmRead(request) {
       var pending = pendingWriteState_(intent,current);
       var after = readStoreSnapshot_(context);
       if (JSON.stringify(before) !== JSON.stringify(after)) continue;
-      return storeResponse_({ok:true,data:JSON.parse(current.raw),revision:current.revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString(),pendingWrite:pending});
+      return storeResponse_({ok:true,data:JSON.parse(current.raw),revision:current.revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString(),pendingWrite:pending}, context);
     }
     return storeResponse_({ok:false,code:'SOURCE_BUSY'});
   } catch (error) {
@@ -256,18 +262,23 @@ function crmWrite(request) {
     return storeResponse_({ok:false,code:'INVALID_PAYLOAD'});
   var context = sourceContext_('write', request), lock = LockService.getScriptLock();
   sourceStep_(context, 'lock', function() { lock.waitLock(10000); });
+  var lockAcquiredAt = Date.now();
   try {
-    var sheet = getStoreSheet_(context), current = currentStore_(context);
+    var sheet = getStoreSheet_(context), snapshot = readStoreSnapshot_(context), current = currentStore_(context, snapshot);
     var prepared = sourceStep_(context, 'prepare', function() {
       var raw = storeJson_(request.data);
       return {raw:raw,revision:storeRevision_(raw)};
     });
     var nextJson = prepared.raw, revision = prepared.revision;
     if (nextJson.length > STORE_TOTAL_CHARACTERS || current.raw.length > STORE_TOTAL_CHARACTERS) return storeResponse_({ok:false,code:'STORE_SIZE_LIMIT'});
-    var intent = readStoreMetadata_(STORE_WRITE_INTENT_CELL, context);
-    var receipt = current.active ? current.active.receipt : readStoreMetadata_(STORE_RECEIPT_CELL, context);
+    // Reuse the coherent snapshot acquired under this writer lock. Never cache it across calls.
+    var intent = snapshot[3] ? JSON.parse(snapshot[3]) : null;
+    var receipt = current.active ? current.active.receipt : snapshot[2] ? JSON.parse(snapshot[2]) : null;
     var same = function(value) { return value && value.requestId === request.requestId && value.baseRevision === request.baseRevision && value.revision === revision; };
-    var success = function() { return storeResponse_({ok:true,persisted:true,revision:revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString(),requestId:request.requestId}); };
+    var success = function() {
+      context.phases['lock-held'] = {durationMs:Date.now()-lockAcquiredAt,count:1};
+      return storeResponse_({ok:true,persisted:true,revision:revision,updatedAt:current.updatedAt,confirmedAt:new Date().toISOString(),requestId:request.requestId}, context);
+    };
     if (same(receipt) && current.revision === revision) {
       if (same(intent)) sourceStep_(context, 'cleanup', function() { sheet.getRange(STORE_WRITE_INTENT_CELL).setValue(''); SpreadsheetApp.flush(); });
       return success();
@@ -308,10 +319,14 @@ function crmWrite(request) {
     });
     sourceStep_(context, 'archive', function() {
       var archive = getOrCreateSheet_(BACKUP_SHEET_NAME + 'Versions', context);
-      var last = archive.getLastRow() ? archive.getRange(archive.getLastRow(), 1, 1, 4).getValues()[0] : [];
-      if(last[3] !== JSON.stringify(metadata)) archive.appendRow([metadata.updatedAt, JSON.stringify(previous), JSON.stringify(version), JSON.stringify(metadata)]);
+      var lastRow = archive.getLastRow();
+      var last = lastRow ? archive.getRange(lastRow, 1, 1, 4).getValues()[0] : [];
+      if(last[3] !== JSON.stringify(metadata)) {
+        archive.appendRow([metadata.updatedAt, JSON.stringify(previous), JSON.stringify(version), JSON.stringify(metadata)]);
+        lastRow++;
+      }
       SpreadsheetApp.flush();
-      var archived = archive.getRange(archive.getLastRow(), 1, 1, 4).getValues()[0];
+      var archived = archive.getRange(lastRow, 1, 1, 4).getValues()[0];
       if (archived[1] !== JSON.stringify(previous) || archived[2] !== JSON.stringify(version)) throw new Error('WRITE_INCOMPLETE');
     });
     // Mirrors are derived. A failure here leaves the old authoritative version active.
@@ -514,10 +529,7 @@ function getOrCreateSheet_(name, context) {
 function writeSheet_(name, headers, rows, context) {
   var sheet = getOrCreateSheet_(name, context);
   sheet.clearContents();
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  if (rows.length) {
-    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-  }
+  sheet.getRange(1, 1, rows.length + 1, headers.length).setValues([headers].concat(rows));
   sheet.setFrozenRows(1);
 }
 
