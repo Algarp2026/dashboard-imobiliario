@@ -72,7 +72,8 @@ const MAX_COMPARE_FRACTIONS=4;
 const CLIENT_DETAIL_TABS=[['data','Dados','user-round'],['procura','Procura','search'],['opportunities','Oportunidades','building-2']];
 const state={rows:[],fractions:[],tab:'sales',selected:new Set(),selectedClientId:'',pf:{search:'',typology:'all',floor:'all',status:'all'},rf:{search:'',typology:'all',floor:'all',status:'all'},cf:{search:'',stage:'all',contact:'all',priority:'all',agent:'all'},hf:{search:'',status:'all',selected:''},salesSubtab:'clients',selectedAgentId:'',pendingEventClientCreation:false,pendingClientAgentCreation:false,definingNextAction:false,nextActionFormSignature:'',data:loadDataLocal()};
 const el={};
-const sharedSync={phase:'loading',initialized:false,verified:false,revision:'',ticket:'',base:null,remote:null,lastConfirmedAt:readSyncMeta()?.lastConfirmedAt||'',canWrite:false,busy:false,dirty:hasPendingLocalSync()||hasUnconfirmedLocalData(state.data),generation:0,error:''};
+const initialSyncMeta=readSyncMeta();
+const sharedSync={phase:'loading',initialized:false,verified:false,revision:initialSyncMeta?.revision||'',ticket:'',base:initialSyncMeta?normalizeData(initialSyncMeta.base):null,remote:null,lastConfirmedAt:initialSyncMeta?.lastConfirmedAt||'',canWrite:false,busy:false,dirty:hasPendingLocalSync()||!!initialSyncMeta&&syncComparable(state.data)!==syncComparable(normalizeData(initialSyncMeta.base)),generation:0,error:''};
 const commercialUx={comparison:new Set(),drawerFraction:null,returnContext:null,scroll:{},sort:{},priceReasonDrafts:{},salesFilters:{search:'',typology:'all',floor:'all',status:'all'},searchIndex:-1,ready:false,timer:null};
 const COMMERCIAL_UI_KEY='theView.commercialUi.v1';
 const COMMERCIAL_PREFS_KEY='theView.commercialPreferences.v1';
@@ -90,7 +91,9 @@ function bind(){
   ensurePriceListButton();
   bindCommercialUx();
   window.addEventListener('pagehide',flushPendingSyncOnUnload);
-  window.addEventListener('beforeunload',event=>{if(['LOCAL_STORAGE_FAILED','LOCAL_BACKUP_CAPACITY'].includes(sharedSync.error)){event.preventDefault();event.returnValue=''}});
+  window.addEventListener('pagehide',event=>commercialAutoCleanup?.(event.persisted));
+  window.addEventListener('pageshow',event=>{if(event.persisted)startCommercialAutoSync()});
+  window.addEventListener('beforeunload',event=>{if(['LOCAL_STORAGE_FAILED','LOCAL_BACKUP_CAPACITY'].includes(sharedSync.error)||commercialDraftGuard?.modified()||commercialUx.preferenceDraft||commercialUx.fractionSelectionDraft){event.preventDefault();event.returnValue=''}});
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab,b.dataset.view||''));
   const proposalsShortcut=document.getElementById('openProposalsArea');
   if(proposalsShortcut)proposalsShortcut.onclick=()=>switchTab('proposals');
@@ -726,6 +729,7 @@ async function loadExcel(){
     requestAnimationFrame(()=>clientProfileModal()?.restore());
 
     renderSharedSyncStatus();
+    startCommercialAutoSync();
   }catch(e){
     console.error(e);
     showError(e.message || String(e));
@@ -4358,6 +4362,95 @@ function normalizeData(d={}){
 function loadDataLocal(){try{return normalizeData(JSON.parse(localStorage.getItem(KEY))||{})}catch{return normalizeData()}}
 
 
+function createCommercialAutoSync(o){
+  const now=o.now||Date.now,set=o.setTimer||setTimeout,clear=o.clearTimer||clearTimeout,random=o.random||Math.random;
+  const interval=30000,minGap=10000,metrics={reads:0,hiddenSkipped:0,coalesced:0,lockSkipped:0,failures:0};
+  let stopped=true,timer=null,running=false,lastStart=-Infinity,failures=0,authPaused=false,seenPeer='';
+  const delay=()=>Math.min(300000,interval*2**Math.min(failures,4)*(.9+random()*.2));
+  function schedule(ms){clear(timer);timer=null;if(!stopped&&o.visible()&&!authPaused)timer=set(()=>check('timer'),ms)}
+  async function check(reason='timer'){
+    if(stopped)return;
+    if(!o.visible()){metrics.hiddenSkipped++;clear(timer);timer=null;return}
+    if(authPaused&&reason==='timer')return;
+    if(running){metrics.coalesced++;return}
+    if(!o.ready()){schedule(delay());return}
+    const remaining=minGap-(now()-lastStart);
+    if(remaining>0){metrics.coalesced++;schedule(remaining);return}
+    clear(timer);timer=null;running=true;lastStart=now();authPaused=false;
+    try{
+      const read=async()=>{metrics.reads++;return o.read()};
+      const result=o.locks?await o.locks.request('theView.crm.auto-read.v1',{mode:'exclusive',ifAvailable:true},lock=>lock?read():null):await read();
+      if(result===null){metrics.lockSkipped++;return}
+      failures=0;
+      if(result?.revision)o.channel?.postMessage({type:'checked',revision:result.revision,at:now()});
+    }catch(error){failures++;metrics.failures++;authPaused=error.httpStatus===401}
+    finally{running=false;schedule(delay())}
+  }
+  function message(event){
+    const m=event.data;
+    if(!m||!['checked','confirmed'].includes(m.type)||! /^[a-f0-9]{64}$/.test(m.revision)||!Number.isFinite(m.at)||Math.abs(now()-m.at)>60000)return;
+    if(m.revision!==o.revision()&&m.revision!==seenPeer){seenPeer=m.revision;check('peer')}
+    else if(m.type==='checked'&&!running)schedule(delay());
+  }
+  if(o.channel)o.channel.onmessage=message;
+  return{metrics,get running(){return running},start(){stopped=false;schedule(delay())},stop(){stopped=true;clear(timer);timer=null;o.channel?.close()},check,
+    wake(reason='focus'){if(reason==='visibility'&&!o.visible()){metrics.hiddenSkipped++;clear(timer);timer=null;return}if(authPaused&&['focus','online','visibility'].includes(reason))authPaused=false;return check(reason)},
+    confirmed(revision){o.channel?.postMessage({type:'confirmed',revision,at:now()})}};
+}
+function createCommercialDraftGuard(document){
+  const dirty=new Set(),baselines=new WeakMap();let epoch=0;
+  const visible=node=>!!node?.isConnected&&!node.closest('[hidden],.hidden')&&!!node.getClientRects().length;
+  const fields=group=>[...group.querySelectorAll('input,select,textarea')].map(n=>[n.name||n.id,n.value,n.checked,n.tagName==='SELECT'?[...n.selectedOptions].map(x=>x.value):null]);
+  const signature=group=>JSON.stringify(group.matches('input,select,textarea')?[[group.value,group.checked]]:fields(group));
+  const group=node=>node.closest('form')||(node.closest('.modal-backdrop')?.id!=='clientProfileDialog'?node.closest('.modal'):null)||node;
+  function editable(node){return node?.matches?.('input,select,textarea,[contenteditable="true"]')&&!node.matches('[type="search"],[id$="Search"],[id$="Filter"],#selectedClient,#compareA,#compareB,#compareFractions')}
+  function remember(event){if(!editable(event.target))return;const g=group(event.target);if(!baselines.has(g))baselines.set(g,signature(g))}
+  function change(event){if(!editable(event.target))return;const g=group(event.target);dirty.add(g);epoch++}
+  document.addEventListener('focusin',remember,true);document.addEventListener('input',change,true);document.addEventListener('change',change,true);
+  function modified(){
+    for(const g of dirty){if(!visible(g)||baselines.get(g)===signature(g)){dirty.delete(g);baselines.delete(g)}}
+    return dirty.size>0;
+  }
+  function editing(){
+    if(modified())return true;
+    if([...document.querySelectorAll('.modal-backdrop:not(.hidden)')].some(n=>n.id!=='clientProfileDialog'&&visible(n)))return true;
+    if([...document.querySelectorAll('#clientPreferencesEditor,[data-op-form],[data-contact-form],[data-workflow-form]')].some(visible))return true;
+    return editable(document.activeElement)&&visible(document.activeElement);
+  }
+  return{editing,modified,version:()=>epoch,dispose(){document.removeEventListener('focusin',remember,true);document.removeEventListener('input',change,true);document.removeEventListener('change',change,true)}};
+}
+let commercialAutoSync=null,commercialDraftGuard=null,commercialReadInFlight=null,commercialLoadInFlight=null,commercialAutoCleanup=null;
+function protectedCommercialEdit(){return !!commercialDraftGuard?.editing()||!!commercialUx.preferenceDraft||!!commercialUx.fractionSelectionDraft}
+function startCommercialAutoSync(){
+  if(commercialAutoSync||!REMOTE_URL||typeof document.hasFocus!=='function')return;
+  commercialDraftGuard ||= createCommercialDraftGuard(document);
+  let channel=null;try{if(typeof BroadcastChannel==='function')channel=new BroadcastChannel('theView.crm.revisions.v1')}catch{}
+  commercialAutoSync=createCommercialAutoSync({visible:()=>document.visibilityState!=='hidden',ready:()=>sharedSync.initialized&&!sharedSync.busy&&!commercialLoadInFlight,
+    revision:()=>sharedSync.revision,channel,locks:typeof navigator!=='undefined'?navigator.locks:null,
+    read:async()=>{const result=await loadRemoteData({automatic:true});return{revision:result?.revision||sharedSync.revision}}});
+  const listeners=[[document,'visibilitychange','visibility'],[window,'focus','focus'],[window,'online','online']].map(([target,event,reason])=>{const fn=()=>commercialAutoSync?.wake(reason);target.addEventListener(event,fn);return()=>target.removeEventListener(event,fn)});
+  let previous='',queued=false;
+  const observer=new MutationObserver(()=>{
+    if(queued)return;queued=true;queueMicrotask(()=>{queued=false;const status=protectedCommercialEdit()+'|'+commercialDraftGuard.modified();if(status===previous)return;previous=status;renderSharedSyncStatus({refresh:false});if(!protectedCommercialEdit()&&sharedSync.incoming)commercialAutoSync?.wake('edit-closed')});
+  });observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden','open']});
+  const changed=()=>renderSharedSyncStatus({refresh:false});document.addEventListener('input',changed,true);document.addEventListener('change',changed,true);
+  commercialAutoCleanup=(keepDraft=false)=>{observer.disconnect();listeners.forEach(fn=>fn());document.removeEventListener('input',changed,true);document.removeEventListener('change',changed,true);if(!keepDraft){commercialDraftGuard.dispose();commercialDraftGuard=null}commercialAutoSync?.stop();commercialAutoSync=null};
+  commercialAutoSync.start();
+}
+function renderCommercialRemoteUpdate(){
+  const scroll=[...document.querySelectorAll('[id],.client-profile-modal')].map(node=>({node,id:node.id,top:node.scrollTop,left:node.scrollLeft})),x=window.scrollX,y=window.scrollY;
+  renderAll();requestAnimationFrame(()=>{for(const item of scroll){const node=item.node.isConnected?item.node:document.getElementById(item.id);if(node){node.scrollTop=item.top;node.scrollLeft=item.left}}window.scrollTo(x,y)});
+}
+async function confirmCommercialRequestArchive(key,payload){
+  if(!key||typeof indexedDB==='undefined')return;
+  await localVaultTransaction('readwrite',(store,done)=>{const request=store.getAll();request.onsuccess=()=>{
+    for(const record of request.result){if(record?.kind==='write-request'){
+      const saved=JSON.parse(record.raw).pendingWrite;
+      if(saved?.requestId===payload.requestId&&saved.baseRevision===payload.baseRevision&&syncComparable(saved.data)===syncComparable(payload.data)){record.protected=false;store.put(record)}
+    }}
+    done(true);
+  }});
+}
 function hasBusinessData(d){
   d = normalizeData(d || {});
   return Object.keys(d.finalPrices||{}).length>0 ||
@@ -4545,27 +4638,60 @@ function validSharedData(data){
   }
   return ['finalPrices','statuses','salePrices','priceHistory','saleCommissions','unavailableReasons','statusEventIds','salePriceEventIds'].every(key=>!(key in data)||data[key]&&typeof data[key]==='object'&&!Array.isArray(data[key]));
 }
-async function requestCommercialData(payload){
+function requestCommercialData(payload,readTicket=sharedSync.ticket){
+  if(payload)return requestCommercialTransport(payload,readTicket);
+  if(commercialReadInFlight)return commercialReadInFlight;
+  commercialReadInFlight=requestCommercialTransport().finally(()=>{commercialReadInFlight=null});
+  return commercialReadInFlight;
+}
+async function requestCommercialTransport(payload,readTicket){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
   try{
-    const response=await fetch(COMMERCIAL_DATA_API,{method:payload?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal,headers:payload?{'Content-Type':'application/json','X-CRM-Read-Ticket':sharedSync.ticket}:{},...(payload?{body:JSON.stringify(payload)}:{})});
+    const response=await fetch(COMMERCIAL_DATA_API,{method:payload?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal,headers:payload?{'Content-Type':'application/json','X-CRM-Read-Ticket':readTicket}:{},...(payload?{body:JSON.stringify(payload)}:{})});
     let result;if(!response.headers.get('content-type')?.includes('application/json'))throw Object.assign(new Error('Resposta não confirmada'),{code:'INVALID_SOURCE_RESPONSE',httpStatus:response.status});
     try{result=await response.json()}catch{throw Object.assign(new Error('Resposta inválida'),{code:'INVALID_SOURCE_RESPONSE',httpStatus:response.status})}
     if(!response.ok||!result.ok)throw Object.assign(new Error('Ligação não confirmada'),{code:result.code||'SOURCE_UNAVAILABLE',httpStatus:response.status});
     if(result.protocol!=='tv-cas-v1'||result.source!=='shared'||! /^[a-f0-9]{64}$/.test(result.revision)||typeof result.readTicket!=='string'||! /^\d{13}\.[a-f0-9]{64}$/.test(result.readTicket)||!/^\d{4}-\d{2}-\d{2}T/.test(result.confirmedAt)||!Number.isFinite(Date.parse(result.confirmedAt))||!payload&&!validSharedData(result.data)||payload&&(result.persisted!==true||result.requestId!==payload.requestId))throw Object.assign(new Error('Integridade não confirmada'),{code:'INVALID_SOURCE_RESPONSE',httpStatus:response.status});
     validateSyncDiagnostics(result,!payload);
+    if(!payload){sharedSync.lastCheckedAt=result.confirmedAt;sharedSync.remoteUpdatedAt=result.updatedAt||''}
     return result;
   }catch(error){if(error.name==='AbortError')error.code='SOURCE_TIMEOUT';throw error}
   finally{clearTimeout(timer)}
 }
-async function loadRemoteData(){
+function loadRemoteData(options={}){
   if(!REMOTE_URL||sharedSync.busy)return;
+  if(commercialLoadInFlight)return commercialLoadInFlight;
+  commercialLoadInFlight=applyRemoteData(options).finally(()=>{commercialLoadInFlight=null});
+  return commercialLoadInFlight;
+}
+async function applyRemoteData({automatic=false}={}){
   const generation=sharedSync.generation;
-  sharedSync.verified=false;sharedSync.phase='loading';renderSharedSyncStatus();
+  const editVersion=commercialDraftGuard?.version(),storedBefore=localStorage.getItem(KEY),memoryBefore=syncComparable(state.data);
+  // localStorage is shared by tabs. Keep this instance's confirmed baseline,
+  // captured before the asynchronous read, not another tab's later metadata.
+  const metaAtStart=sharedSync.base&&sharedSync.revision?{base:JSON.parse(JSON.stringify(sharedSync.base)),revision:sharedSync.revision}:readSyncMeta();
+  if(!automatic){sharedSync.verified=false;sharedSync.phase='loading'}else{sharedSync.checking=true;sharedSync.received=false}
+  renderSharedSyncStatus({refresh:!automatic});
   try{
-    const result=await requestCommercialData(),remote=normalizeData(result.data),meta=readSyncMeta();
+    const result=await requestCommercialData(),remote=normalizeData(result.data),meta=metaAtStart;
     sharedSync.httpStatus=null;
     sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite,pendingWrite:result.pendingWrite,capabilities:result.capabilities};
+    const observedMeta=readSyncMeta();
+    if(observedMeta?.revision===result.revision&&syncComparable(normalizeData(observedMeta.base))!==syncComparable(remote)){
+      if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      sharedSync.phase='conflict';sharedSync.error='POSSIBLE_SHARED_ROLLBACK';return{shouldSave:false};
+    }
+    if(automatic){
+      const changed=result.revision!==sharedSync.revision;
+      const protectedNow=protectedCommercialEdit()||editVersion!==commercialDraftGuard?.version();
+      const pending=hasPendingLocalSync()||sharedSync.dirty||localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null||!!sharedSync.base&&syncComparable(state.data)!==syncComparable(sharedSync.base);
+      if(protectedNow||pending||sharedSync.phase==='conflict'&&sharedSync.error!=='REMOTE_UPDATE_DURING_EDIT'){
+        sharedSync.incoming=changed;
+        if(changed){sharedSync.phase='conflict';sharedSync.error=pending?'UNRECONCILED_LOCAL_CHANGES':'REMOTE_UPDATE_DURING_EDIT';sharedSync.verified=false}
+        else if(!pending&&result.revision===sharedSync.revision)sharedSync.ticket=result.readTicket;
+        return{revision:result.revision,applied:false};
+      }
+    }
     const checkpoint=await latestLocalCheckpoint();
     if(checkpoint){
       const saved=JSON.parse(checkpoint.raw);
@@ -4573,6 +4699,15 @@ async function loadRemoteData(){
       else if(syncComparable(normalizeData(saved.data))!==syncComparable(state.data)){
         sharedSync.phase='conflict';sharedSync.error='LOCAL_RECOVERY_AVAILABLE';return {shouldSave:false};
       }
+    }
+    if(automatic&&result.revision===sharedSync.revision&&syncComparable(state.data)===syncComparable(remote)&&!result.pendingWrite){
+      sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.phase='synced';sharedSync.error='';sharedSync.incoming=false;
+      return{revision:result.revision,applied:false};
+    }
+    if(!automatic&&sharedSync.initialized&&protectedCommercialEdit()){
+      sharedSync.incoming=result.revision!==sharedSync.revision;
+      if(sharedSync.incoming){sharedSync.phase='conflict';sharedSync.error='REMOTE_UPDATE_DURING_EDIT';sharedSync.verified=false}
+      return{shouldSave:false};
     }
     if(result.pendingWrite&&result.pendingWrite.state!=='committed'){
       if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
@@ -4600,7 +4735,8 @@ async function loadRemoteData(){
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       sharedSync.phase='conflict';sharedSync.error='POSSIBLE_SHARED_ROLLBACK';return {shouldSave:false};
     }
-    if((hasPendingLocalSync()||sharedSync.dirty||hasUnconfirmedLocalData(state.data)||generation!==sharedSync.generation)&&differs){
+    const localChanged=meta?syncComparable(state.data)!==syncComparable(normalizeData(meta.base)):hasUnconfirmedLocalData(state.data);
+    if((hasPendingLocalSync()||sharedSync.dirty||localChanged||generation!==sharedSync.generation)&&differs){
       sharedSync.base=meta?.base||sharedSync.base;sharedSync.revision=meta?.revision||sharedSync.revision;
       if(sharedSync.base&&sharedSync.revision===result.revision&&syncComparable(sharedSync.base)===syncComparable(remote)){
         if(pendingRaw!==null&&(!validSharedData(original?.data)||syncComparable(normalizeData(original.data))!==syncComparable(state.data))){
@@ -4616,13 +4752,20 @@ async function loadRemoteData(){
       try{await archiveRecoveryCopy('confirmed',localRecoveryExport(),{confirmed:true})}
       catch{throw Object.assign(new Error('Pedido original não arquivado'),{code:'LOCAL_STORAGE_FAILED'})}
     }
-    if(generation!==sharedSync.generation||pendingRaw!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)){sharedSync.phase='conflict';sharedSync.error='LOCAL_CHANGED_DURING_BACKUP';return {shouldSave:false}}
+    if(generation!==sharedSync.generation||pendingRaw!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||storedBefore!==localStorage.getItem(KEY)||automatic&&(memoryBefore!==syncComparable(state.data)||protectedCommercialEdit()||editVersion!==commercialDraftGuard?.version())){
+      if(automatic||storedBefore!==localStorage.getItem(KEY)){
+        if(generation===sharedSync.generation&&!sharedSync.dirty&&!hasPendingLocalSync()&&localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)===null){sharedSync.phase='conflict';sharedSync.error='REMOTE_UPDATE_DURING_EDIT';sharedSync.incoming=true}
+        return{shouldSave:false,revision:result.revision,applied:false};
+      }
+      sharedSync.phase='conflict';sharedSync.error='LOCAL_CHANGED_DURING_BACKUP';return{shouldSave:false};
+    }
     commitLocalCache(remote,{base:remote,revision:result.revision,lastConfirmedAt:result.confirmedAt});
     state.data=remote;sharedSync.base=JSON.parse(JSON.stringify(remote));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';
     clearPendingLocalSync();sharedSync.dirty=false;localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);sharedSync.phase='synced';
-    return {shouldSave:false};
+    if(automatic){sharedSync.incoming=false;sharedSync.received=true;renderCommercialRemoteUpdate()}
+    return {shouldSave:false,revision:result.revision,applied:automatic};
   }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;throw error}
-  finally{renderSharedSyncStatus()}
+  finally{sharedSync.checking=false;renderSharedSyncStatus({refresh:!automatic||sharedSync.phase==='offline'})}
 }
 let saveTimer=null;
 function sharedStoreMayRegress(local,remote,meta,remoteRevision){
@@ -4778,6 +4921,13 @@ function flushPendingSyncOnUnload(){
   // Unconfirmed writes remain in localStorage; unload never sends a blind or duplicate request.
 }
 async function syncRemote(recovery=false){
+  if(typeof navigator!=='undefined'&&navigator.locks)return navigator.locks.request('theView.crm.write.v1',{mode:'exclusive',ifAvailable:true},lock=>{
+    if(!lock){sharedSync.phase='conflict';sharedSync.error='OTHER_TAB_WRITING';renderSharedSyncStatus();return false}
+    return performCommercialWrite(recovery);
+  });
+  return performCommercialWrite(recovery);
+}
+async function performCommercialWrite(recovery=false){
   if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!recovery&&(!hasPendingLocalSync()&&!hasUnconfirmedLocalData(state.data)||!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
   let payload;
   try{
@@ -4786,24 +4936,56 @@ async function syncRemote(recovery=false){
     // A new client must also detect an old API before sending any POST. Recovery
     // uses the same probe, without altering or discarding the original request.
     const probe=await requestCommercialData();
+    sharedSync.remote={data:normalizeData(probe.data),revision:probe.revision,ticket:probe.readTicket,confirmedAt:probe.confirmedAt,canWrite:!!probe.canWrite,pendingWrite:probe.pendingWrite,capabilities:probe.capabilities};
     const unsaved=await latestLocalCheckpoint();if(unsaved&&syncComparable(normalizeData(JSON.parse(unsaved.raw).data))!==syncComparable(state.data)&&syncComparable(normalizeData(JSON.parse(unsaved.raw).data))!==syncComparable(normalizeData(probe.data)))throw Object.assign(new Error('Existe uma cópia local mais recente por recuperar. Exporte o arquivo ou recupere essa cópia antes de sincronizar.'),{code:'LOCAL_RECOVERY_AVAILABLE'});
     if(probe.pendingWrite?.state==='blocked'||!recovery&&probe.pendingWrite?.state==='pending'&&probe.pendingWrite.requestId!==payload?.requestId)throw Object.assign(new Error('Gravação incompleta'),{code:'WRITE_INCOMPLETE'});
     if(payload&&(!validSharedData(payload.data)||syncComparable(normalizeData(payload.data))!==syncComparable(state.data)))throw Object.assign(new Error('O pedido original difere dos dados locais atuais. Preserve-o e reveja as diferenças antes de sincronizar.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
+    const cached=localStorage.getItem(KEY);
+    if(cached&&syncComparable(normalizeData(JSON.parse(cached)))!==syncComparable(state.data))throw Object.assign(new Error('Outra aba alterou a cópia local. Preserve as versões e reveja as diferenças.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
+    if(typeof navigator!=='undefined'&&!navigator.locks&&typeof indexedDB==='undefined')throw Object.assign(new Error('Este navegador não dispõe de proteção local suficiente para gravar. Exporte os dados e use um navegador atualizado.'),{code:'LOCAL_STORAGE_FAILED'});
     if(recovery){if(!payload)return false;payload={...payload,action:'recover'}}
     else if(payload&&payload.baseRevision!==sharedSync.revision)throw Object.assign(new Error('O pedido original exige revisão antes de ser substituído.'),{code:'CONFLICT'});
     else if(!payload){
+      if(probe.revision!==sharedSync.revision)throw Object.assign(new Error('A base partilhada mudou. Reveja as diferenças.'),{code:'CONFLICT',httpStatus:409});
       payload={...JSON.parse(remotePayload()),requestId:'crm-'+id()};
       try{localStorage.setItem(LOCAL_SYNC_REQUEST_KEY,JSON.stringify(payload))}catch{throw Object.assign(new Error('Pedido original não guardado localmente.'),{code:'LOCAL_STORAGE_FAILED'})}
     }
-    const result=await requestCommercialData(payload);
+    const validateRead=read=>{
+      sharedSync.remote={data:normalizeData(read.data),revision:read.revision,ticket:read.readTicket,confirmedAt:read.confirmedAt,canWrite:!!read.canWrite,pendingWrite:read.pendingWrite,capabilities:read.capabilities};
+      if(read.pendingWrite?.state==='blocked'||read.pendingWrite?.state==='pending'&&read.pendingWrite.requestId!==payload.requestId)throw Object.assign(new Error('Gravação incompleta'),{code:'WRITE_INCOMPLETE'});
+      const committedRecovery=recovery&&syncComparable(normalizeData(read.data))===syncComparable(normalizeData(payload.data));
+      if(read.revision!==payload.baseRevision&&!committedRecovery)throw Object.assign(new Error('A base partilhada mudou. Reveja as diferenças.'),{code:'CONFLICT',httpStatus:409});
+      if(!read.canWrite)throw Object.assign(new Error('Gravação desativada na fonte.'),{code:'WRITES_DISABLED'});
+      if(read.revision===payload.baseRevision)sharedSync.ticket=read.readTicket;
+      return read.readTicket;
+    };
+    let requestArchive;
+    if(typeof indexedDB!=='undefined')requestArchive=await archiveRecoveryCopy('write-request',{recoveryFormat:1,data:payload.data,base:sharedSync.base,pendingWrite:payload,syncMeta:{revision:payload.baseRevision,lastConfirmedAt:sharedSync.lastConfirmedAt}});
+    // A freshly validated GET renews the session/revision-bound proof, not CAS.
+    let result;
+    try{result=await requestCommercialData(payload,validateRead(probe))}
+    catch(error){
+      if(recovery||error.httpStatus!==403||error.code!=='READ_REQUIRED')throw error;
+      const renewed=await requestCommercialData();
+      if(syncComparable(normalizeData(payload.data))!==syncComparable(state.data))throw Object.assign(new Error('O pedido original difere dos dados locais atuais.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
+      result=await requestCommercialData(payload,validateRead(renewed));
+    }
+    const original=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null');
+    if(!original||original.requestId!==payload.requestId||original.baseRevision!==payload.baseRevision||syncComparable(original.data)!==syncComparable(payload.data))throw Object.assign(new Error('O pedido pendente mudou noutra aba. A confirmação foi preservada no arquivo.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
+    await confirmCommercialRequestArchive(requestArchive,payload);
+    const confirmedCache=localStorage.getItem(KEY);
+    if(confirmedCache&&syncComparable(normalizeData(JSON.parse(confirmedCache)))!==syncComparable(state.data))throw Object.assign(new Error('Outra aba alterou a cópia local durante a confirmação. Preserve as versões antes de continuar.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
     commitLocalCache(state.data,{base:payload.data,revision:result.revision,lastConfirmedAt:result.confirmedAt});
     const checkpoint=await latestLocalCheckpoint();if(checkpoint&&syncComparable(normalizeData(JSON.parse(checkpoint.raw).data))===syncComparable(normalizeData(payload.data)))await acknowledgeLocalCheckpoint(checkpoint);
+    const live=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null'),liveCache=localStorage.getItem(KEY);
+    if(!live||live.requestId!==payload.requestId||live.baseRevision!==payload.baseRevision||syncComparable(live.data)!==syncComparable(payload.data)||liveCache&&syncComparable(normalizeData(JSON.parse(liveCache)))!==syncComparable(state.data))throw Object.assign(new Error('Outra aba alterou a cópia local. O pedido confirmado está preservado no arquivo.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
     sharedSync.base=JSON.parse(JSON.stringify(payload.data));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);
+    sharedSync.lastWriteConfirmedAt=result.confirmedAt;sharedSync.remoteUpdatedAt=result.updatedAt||sharedSync.remoteUpdatedAt;sharedSync.received=false;sharedSync.incoming=false;commercialAutoSync?.confirmed(result.revision);
     if(syncComparable(state.data)===syncComparable(payload.data)){clearPendingLocalSync();sharedSync.dirty=false;sharedSync.phase='synced'}else{sharedSync.phase='pending';clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300)}
     return true;
   }catch(error){
     // A rejected retry does not prove that an earlier attempt failed; preserve its recovery ID.
-    sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED','LOCAL_RECOVERY_AVAILABLE'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;if(error.code==='LOCAL_STORAGE_FAILED')await preserveStorageFailure();return false;
+    if(error.code!=='CONFLICT')sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED','LOCAL_RECOVERY_AVAILABLE'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;if(error.code==='LOCAL_STORAGE_FAILED')await preserveStorageFailure();return false;
   }
   finally{sharedSync.busy=false;renderSharedSyncStatus()}
 }
@@ -4879,9 +5061,11 @@ function openSyncReconciliation(){
   };
   modal.querySelector('[data-sync-use-remote]').onclick=()=>apply(true);modal.querySelector('[data-sync-merge]').onclick=()=>apply(false);
 }
-function renderSharedSyncStatus(){
+function renderSharedSyncStatus({refresh=true}={}){
   const labels={loading:'A consultar base partilhada…',synced:'Dados partilhados — Sincronizados',offline:'Dados locais — Sem ligação',pending:'Sincronização pendente',conflict:'Conflito de sincronização'};
-  const label=sharedSync.busy?'Gravação solicitada — A aguardar confirmação':labels[sharedSync.phase]||labels.offline;
+  const editing=protectedCommercialEdit();
+  const localPending=hasPendingLocalSync()||sharedSync.dirty;
+  const label=sharedSync.busy?'Gravação solicitada — A aguardar confirmação':editing?(sharedSync.incoming?'Atualização disponível — Edição preservada':'Alterações por guardar'):sharedSync.checking?'A verificar base partilhada':localPending&&sharedSync.phase==='synced'?'Sincronização pendente':sharedSync.received&&sharedSync.phase==='synced'?'Atualização recebida — Dados confirmados':labels[sharedSync.phase]||labels.offline;
   if(el.dataStatus)el.dataStatus.textContent=label;
   if(!document.getElementById||!document.createElement)return;
   let bar=document.getElementById('commercialSyncStatus');
@@ -4889,6 +5073,7 @@ function renderSharedSyncStatus(){
   const header=document.getElementById('commercialAppHeader');
   bar.dataset.phase=sharedSync.phase;
   bar.dataset.canWrite=String(sharedSync.canWrite);
+  bar.dataset.checking=String(!!sharedSync.checking);bar.dataset.localEdits=String(editing);
   if(header){
     let badge=document.getElementById('commercialSyncBadge');
     if(!badge){badge=document.createElement('button');badge.id='commercialSyncBadge';badge.type='button';badge.className='ux-sync-indicator';header.appendChild(badge)}
@@ -4897,11 +5082,16 @@ function renderSharedSyncStatus(){
   const message=sharedSync.error==='STORE_SIZE_LIMIT'?'A base excede a capacidade configurada para o armazenamento comercial. A gravação foi recusada sem truncar dados. As alterações locais estão preservadas; contacte o administrador para rever a capacidade antes de voltar a sincronizar.':sharedSync.error==='LOCAL_STORAGE_FAILED'?'Não foi possível guardar a cópia local neste navegador. As alterações não foram enviadas. Preserve uma cópia antes de sair.':sharedSync.error==='UNAUTHENTICATED'?'A sessão terminou e o pedido foi recusado. Renove o acesso. As alterações locais estão preservadas e não foram confirmadas pela base partilhada.':sharedSync.phase==='offline'?(!hasBusinessData(state.data)?'Não existe cópia comercial local neste navegador. Não foi possível carregar a base partilhada. Os dados comerciais não estão confirmados e as gravações remotas estão bloqueadas.':sharedSync.dirty?'Não foi possível confirmar a gravação. As alterações permanecem locais, sem confirmação de sincronização. Releia a fonte ou retome a operação pendente antes de voltar a gravar.':'Não foi possível carregar os dados partilhados. Está a consultar dados locais que podem estar desatualizados. As gravações remotas estão temporariamente bloqueadas.'):sharedSync.phase==='conflict'?'As alterações locais estão preservadas. Atualize a ligação e reveja as diferenças antes de sincronizar.':sharedSync.phase==='pending'?'Alterações locais ainda não confirmadas pela base partilhada.':'';
   let recovery=false;try{recovery=!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)}catch{}
   bar.innerHTML=`<div><strong>${esc(label)}</strong>${message?`<p>${esc(message)}</p>`:''}${sharedSync.verified&&!sharedSync.canWrite?'<p>Gravação remota desativada neste ambiente.</p>':''}${sharedSync.lastConfirmedAt?`<small>Última confirmação: ${esc(new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}))}</small>`:''}</div><div class="top-actions"><button type="button" class="ghost-button compact-button" data-sync-retry ${sharedSync.busy||sharedSync.phase==='loading'?'disabled':''}>${sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite?'Sincronizar':'Tentar novamente'}</button>${sharedSync.phase==='conflict'?'<button type="button" class="ghost-button compact-button" data-sync-review>Rever diferenças</button>':''}${recovery&&!sharedSync.verified?'<button type="button" class="ghost-button compact-button" data-sync-recover>Retomar gravação pendente</button>':''}${sharedSync.error==='UNAUTHENTICATED'?'<a class="ghost-link" href="/access.html">Renovar acesso</a>':''}</div>`;
-  bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();renderAll()}catch{}renderSharedSyncStatus()};
+  bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();if(!protectedCommercialEdit())renderAll()}catch{}renderSharedSyncStatus()};
   if(sharedSync.error){const diagnostic=document.createElement('small');diagnostic.textContent=(sharedSync.httpStatus?'HTTP '+sharedSync.httpStatus+' - ':'')+sharedSync.error;bar.appendChild(diagnostic)}
   if(['SYNC_DIAGNOSTICS_UNAVAILABLE','INVALID_SYNC_DIAGNOSTICS'].includes(sharedSync.error)){
     const explanation=document.createElement('p');explanation.textContent='Sincronização bloqueada: os componentes do servidor não disponibilizam um diagnóstico compatível de gravações pendentes. Os dados locais e o pedido original estão preservados. Peça ao administrador para verificar as versões antes de voltar a sincronizar.';bar.appendChild(explanation);
   }
+  const dates=document.createElement('small');
+  const indicator=document.getElementById('commercialSyncBadge');if(indicator){indicator.dataset.localEdits=String(editing||localPending);indicator.dataset.checking=String(!!sharedSync.checking)}
+  bar.querySelector('small')?.remove();
+  const date=value=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}):'—';
+  dates.textContent='Última verificação: '+date(sharedSync.lastCheckedAt)+' · Última gravação confirmada nesta sessão: '+date(sharedSync.lastWriteConfirmedAt)+' · Versão partilhada atualizada: '+date(sharedSync.remoteUpdatedAt);bar.querySelector('div').appendChild(dates);
   if(sharedSync.phase!=='synced'){
     const button=document.createElement('button');button.type='button';button.className='ghost-button compact-button';button.textContent='Exportar cópia local';button.onclick=exportLocalRecoveryCopy;bar.querySelector('.top-actions').appendChild(button);
   }
@@ -4909,8 +5099,8 @@ function renderSharedSyncStatus(){
   if(sharedSync.error==='LOCAL_RECOVERY_AVAILABLE'){const restore=document.createElement('button');restore.type='button';restore.className='ghost-button compact-button';restore.textContent='Recuperar última cópia local';restore.onclick=restoreLocalCheckpoint;bar.querySelector('.top-actions').appendChild(restore)}
   if(localBackupKeys().length){const move=document.createElement('button');move.type='button';move.className='ghost-button compact-button';move.textContent='Transferir backups antigos';move.onclick=migrateLegacyLocalBackups;bar.querySelector('.top-actions').appendChild(move)}
   const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
-  const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);renderAll()}};
-  refreshClientFractionResults();
+  const resume=bar.querySelector('[data-sync-recover]');if(resume)resume.onclick=async()=>{if(await confirmUser('Retomar apenas a gravação anterior, com o mesmo conteúdo e identificador? O servidor recusará uma operação inexistente ou uma versão entretanto alterada.','Retomar gravação')){await syncRemote(true);if(!protectedCommercialEdit())renderAll()}};
+  if(refresh&&!editing)refreshClientFractionResults();
 }
 
 function appDialog({title='Aviso',message='',confirmText='OK',cancelText='',input=false,defaultValue='',danger=false}={}){

@@ -5,6 +5,7 @@ const {consolidated}=require('./helpers/browser-suite-policy.cjs');
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
+ 'commercial-auto-sync-browser.mjs':'visual-workspace',
  'crm-reform-browser.mjs':'visual-workspace',
  'crm-reform-safety-browser.mjs':'visual-workspace',
  'crm-reform-report-browser.mjs':'visual-workspace',
@@ -38,7 +39,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function ready(server){for(let i=0;i<100;i++){if(server.exitCode!==null)throw Error('Fixture server exited');try{const r=await fetch(origin+'/api/commercial-data');if(r.status===401)return}catch{}await delay(100)}throw Error('Fixture server did not start')}
 async function test(name){
  await available();const dir=path.join(output,name.replace('.mjs',''));fs.mkdirSync(path.join(dir,'docs/client-profile-complete'),{recursive:true});
- const flags={D2_SYNTHETIC_CATALOG:String(name.startsWith('crm-')),COMPOSITION_D2_FIXTURE:String(name.startsWith('composition-d2')),VISUAL_AUDIT_FIXTURE:String(name==='visual-audit-browser.mjs'),COMPLETE_EXPORT_FIXTURE:String(name==='commercial-client-complete-exports.mjs')};
+ const flags={AUTO_SYNC_TESTS:String(name==='commercial-auto-sync-browser.mjs'),D2_SYNTHETIC_CATALOG:String(name.startsWith('crm-')||name==='commercial-auto-sync-browser.mjs'),COMPOSITION_D2_FIXTURE:String(name.startsWith('composition-d2')),VISUAL_AUDIT_FIXTURE:String(name==='visual-audit-browser.mjs'),COMPLETE_EXPORT_FIXTURE:String(name==='commercial-client-complete-exports.mjs')};
  const server=cp.spawn(process.execPath,[path.join(repo,'tests/helpers',plans[name]+'-preview.cjs')],{cwd:repo,env:{...env,...flags},windowsHide:true,stdio:['ignore','pipe','pipe']});
  let serverLog='';server.stdout.on('data',b=>serverLog+=b);server.stderr.on('data',b=>serverLog+=b);
  try{
