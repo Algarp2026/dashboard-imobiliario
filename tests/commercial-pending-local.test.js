@@ -100,7 +100,8 @@ async function main(){
   reset();const a=browser(),b=browser();await a.app.loadExcel();await b.app.loadExcel();
   edit(a,'user-a');b.app.state.data.clients[1].notes='Fictitious user B';b.app.save();
   assert.equal(await a.app.syncRemote(),true);assert.equal(await b.app.syncRemote(),false);
-  assert.equal(b.requests.at(-1).status,409);
+  assert.equal(b.app.sharedSync.error,'CONFLICT');assert.equal(b.app.sharedSync.httpStatus,409);
+  assert.equal(b.requests.filter(item=>item.method==='POST').length,0,'A changed preflight revision blocks stale data before POST');
   await b.app.loadRemoteData();assert.equal(b.app.sharedSync.phase,'conflict');
   b.app.openSyncReconciliation();await b.modal.querySelector('[data-sync-merge]').onclick();
   assert.equal(await b.app.syncRemote(),true);assert.equal(google.data.clients[0].notes,'Fictitious user-a');assert.equal(google.data.clients[1].notes,'Fictitious user B');assertUnique(google.data);assert.deepEqual(protectedData(google.data),protectedBefore);cases++;

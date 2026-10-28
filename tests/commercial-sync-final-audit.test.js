@@ -159,9 +159,10 @@ async function main(){
   const another=clone(google.data);another.clients[2].notes='Fictitious concurrent update';
   assert.equal(google.write({requestId:'fiction-after-review',baseRevision:google.revision,data:another}).persisted,true);
   const remoteBefore=sheets(),localBefore=race.storage.get(KEY);
-  assert.equal(await race.app.syncRemote(),false);assert.equal(race.requests.at(-1).status,409);assert.equal(race.app.sharedSync.error,'CONFLICT');
-  assert.equal(sheets(),remoteBefore);assert.equal(race.storage.get(KEY),localBefore);assert.ok(race.storage.has(KEY+'.pendingWrite.v1'));cases++;
+  assert.equal(await race.app.syncRemote(),false);assert.equal(race.app.sharedSync.httpStatus,409);assert.equal(race.app.sharedSync.error,'CONFLICT');assert.equal(race.requests.filter(r=>r.method==='POST').length,0);
+  assert.equal(sheets(),remoteBefore);assert.equal(race.storage.get(KEY),localBefore);assert.equal(race.storage.has(KEY+'.pendingWrite.v1'),false);cases++;
   // A request with a different original base is not silently replaced by a new ID.
+  race.storage.set(KEY+'.pendingWrite.v1',JSON.stringify(operation(race)));
   const oldRequest=race.storage.get(KEY+'.pendingWrite.v1');race.app.sharedSync.revision='f'.repeat(64);race.app.sharedSync.phase='pending';race.app.sharedSync.verified=true;
   assert.equal(await race.app.syncRemote(),false);assert.equal(race.storage.get(KEY+'.pendingWrite.v1'),oldRequest);assert.equal(sheets(),remoteBefore);cases++;
   // Even a successful matching GET archives an outstanding request before retiring it.

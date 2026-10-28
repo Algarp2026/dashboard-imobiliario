@@ -8,6 +8,8 @@ const middleware=entryTests?import('../../middleware.ts'):null;
 Object.assign(process.env,{COMMERCIAL_ACCESS_PASSWORD:'View-Phase2A-Teste',COMMERCIAL_ACCESS_SECRET:crypto.randomBytes(32).toString('hex'),VERCEL_ENV:'preview',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-token',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true'});
 const session=require('../../server/session.js'),access=require('../../api/access.js'),api=require('../../api/commercial-data.js'),makeStore=require('./apps-script-store.js'),fixture=require(process.env.PHASE2B_FIXTURE==='true'?'./client-phase2b-fixture.js':'./client-phase2a-fixture.js');
 let store=makeStore(fixture()),reads=0,writes=0,failure='',delay=0;
+const realNow=Date.now;let clockOffset=0,readRequired=0;
+if(process.env.AUTO_SYNC_TESTS==='true')Date.now=()=>realNow()+clockOffset;
 global.fetch=async(url,options)=>{
   if(url==='https://oauth2.googleapis.com/token')return Response.json({access_token:'fictitious-access'});
   if(url!=='https://script.googleapis.com/v1/scripts/test-deployment:run')throw Error('External network denied');
@@ -42,10 +44,15 @@ http.createServer(async(req,res)=>{
     if(!['api/access','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','favicon.ico'].includes(name)&&!await session.hasValidSession(req)){res.writeHead(name.startsWith('api/')?401:302,name.startsWith('api/')?{'Content-Type':'application/json'}:{Location:'/access.html'});res.end(name.startsWith('api/')?JSON.stringify({ok:false,code:'UNAUTHENTICATED'}):'');return}
     if(name.startsWith('api/')){
       let raw='';for await(const part of req){raw+=part;if(raw.length>1000000)throw Error('Too large')}req.body=raw?JSON.parse(raw):undefined;
+      if(name==='api/commercial-data'&&req.method==='POST'&&readRequired>0){readRequired--;reply.status(403).json({ok:false,code:'READ_REQUIRED'});return}
       if(name==='api/access'||name==='api/commercial-data'){await(name==='api/access'?access:api)(req,reply);return}
       if(name==='api/test-control'&&req.method==='POST'){
         if(req.headers.origin!=='http://127.0.0.1:'+port){reply.status(403).json({ok:false});return}
         const input=req.body||{};
+        if(process.env.AUTO_SYNC_TESTS==='true'){
+          if(Number.isFinite(input.clockOffsetMs))clockOffset=Math.min(9*3600000,Math.max(0,input.clockOffsetMs));
+          if(Number.isInteger(input.readRequired))readRequired=Math.min(2,Math.max(0,input.readRequired));
+        }
         if(input.reset){store=makeStore(fixture());reads=0;writes=0}
         if(process.env.PHASE2B_FIXTURE==='true'&&input.commercialChange){const data=store.data;if(input.commercialChange.statuses){for(const [n,value]of Object.entries(input.commercialChange.statuses)){if(value!=='Reservado')throw Error('Only a fictitious reservation is supported');const eventId='fixture-reservation-'+crypto.randomUUID(),amount=data.finalPrices[n];data.events.push({id:eventId,clientId:'demo-2',type:'Reserva efetuada',negotiationVersion:1,date:new Date().toISOString().slice(0,10),fractions:[Number(n)],amount});data.statuses[n]=value;(data.statusEventIds||={})[n]=eventId;(data.salePrices||={})[n]=amount;(data.salePriceEventIds||={})[n]=eventId}}if(input.commercialChange.finalPrices)Object.assign(data.finalPrices,input.commercialChange.finalPrices);const result=store.write({data,baseRevision:store.revision,requestId:'test-change-'+crypto.randomUUID()});if(!result.ok)throw Error('Isolated change failed')}
         failure=['','offline','write-failure'].includes(input.failure)?input.failure:'';delay=Math.min(3000,Math.max(0,Number(input.delay)||0));reply.json({ok:true});return;
@@ -62,6 +69,7 @@ http.createServer(async(req,res)=>{
     else if(name==='commercial.js'){
       let source=fs.readFileSync(path.join(repo,name),'utf8');const begin=source.indexOf('const MAJUCA_IMPORT_RECORDS=['),end=source.indexOf('\n];',begin);if(begin<0||end<0)throw Error('Sanitization failed');source=source.slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+source.slice(end+3);
       if(process.env.LOCAL_BACKUP_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__localBackupTest={archiveRecoveryCopy,localVaultCopies,state,save};'+source.slice(finish)}
+      if(process.env.AUTO_SYNC_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__autoSyncTest={check:()=>commercialAutoSync?.check("test"),idle:()=>!commercialAutoSync?.running&&!commercialReadInFlight&&!commercialLoadInFlight&&!sharedSync.busy,metrics:()=>({...commercialAutoSync?.metrics}),editing:protectedCommercialEdit,status:()=>({phase:sharedSync.phase,error:sharedSync.error,dirty:sharedSync.dirty,incoming:sharedSync.incoming,editing:protectedCommercialEdit(),pending:!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),differentRoots:Object.keys(state.data).filter(k=>syncComparable(state.data[k])!==syncComparable(sharedSync.base?.[k])),clientFields:state.data.clients.flatMap((c,i)=>Object.keys(c).filter(k=>syncComparable(c[k])!==syncComparable(sharedSync.base?.clients?.[i]?.[k])).map(k=>i+"."+k)).slice(0,12)})};'+source.slice(finish)}
       content=Buffer.from(source);
     }else content=fs.readFileSync(path.join(repo,name));
     res.setHeader('Content-Type',mime[path.extname(name)]||'application/octet-stream');res.end(content);
