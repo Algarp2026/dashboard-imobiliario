@@ -15,7 +15,8 @@ const current=read('commercial.js'),base=historical('commercial.js');
 const reviewedSyncFunctions=[];
 const sync=s=>s.slice(s.indexOf('function readSyncMeta('),s.indexOf('function appDialog('));
 assert.equal(sync(current),sync(base),'Entire PR14/15/16 local vault, rollback, transport and reconciliation block remains exact');
-const protectedPaths=['api/access.js','api/logout.js','config.js','data.json','data.xlsx','plantas','server/session.js'];
+const protectedPaths=['api/access.js','api/logout.js','config.js','plantas','server/session.js'];
+assert.ok(suites.includes('comparator-belaformosa.test.js'),'Authorized analytical data changes require exact source/table preservation tests');
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),historical('middleware.ts'),'Only protect the three new module paths; authentication behavior unchanged');
 function functions(source,indent=''){
@@ -46,7 +47,7 @@ for(const name of ['effectiveEffect','effectTransition','closingError'])assert.e
 const appBefore=functions(base),appAfter=functions(current);
 for(const name of ['save','backupBeforeMajucaImport','applyMajucaImportMigration','resetLocal','hasCriticalCommercialEventChange','protectedEventEditError','replaceEventAndReapplyBusinessRules','applyEventBusinessRules','exportPdf','generateClientsSummaryPdf'])assert.equal(appAfter[name],appBefore[name],'Unrelated persistence/business function frozen: '+name);
 run(['scripts/build-commercial-integrity.js','--check']);
-const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','data.json','data.xlsx','plantas'];
+const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','plantas'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
 const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,reviewedSourceLatencyFunctions:latencyFunctions,wholePublishedSyncBlockUnchanged:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};

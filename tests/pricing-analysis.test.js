@@ -5,14 +5,14 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const rows = JSON.parse(fs.readFileSync(path.join(root, 'data.json'), 'utf8'));
-const expected = [0,545000,615000,390000,475000,450000,625000,535000,390000,825000,635000,400000,440000,440000,600000,580000,900000,660000,425000,360000,410000,575000,600000,850000,775000,440000,630000,440000,500000,485000,950000,850000,455000,600000,690000,600000,1450000,1000000,470000,1050000];
+const expected = [0,675000,725000,400000,500000,475000,735000,625000,415000,1000000,775000,415000,465000,465000,685000,650000,1100000,825000,450000,385000,435000,675000,695000,1000000,900000,475000,725000,475000,525000,525000,1100000,1025000,500000,750000,880000,700000,1500000,1105000,490000,1150000];
 const viewRows = rows.filter(row => row.Empreendimento === 'The View');
 assert.equal(viewRows.length, 39);
 
 for (const row of viewRows) {
   const number = Number(row['Fração'].match(/\d+/)[0]);
   assert.equal(row['Preço Recomendado'], expected[number]);
-  assert.equal(row['Versão Análise'], '2026-09');
+  assert.equal(row['Versão Análise'], '2026-10');
   assert.ok(['Alta','Média','Baixa'].includes(row['Confiança Recomendação']));
   assert.ok(row['Justificação Técnica']);
   assert.ok(['Standard','Premium'].includes(row['Segmento Análise']));
@@ -50,9 +50,9 @@ const apt24 = app.state.fractions.find(row => row.number === 24);
 assert.deepEqual(Array.from(app.internalComparables(apt24), row => row.number), [2,10,17,24,31,37]);
 app.openFractionModal(apt24);
 assert.match(app.els.fractionModalContent.innerHTML, /Preço base<\/span><strong>700/);
-assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span><strong>775/);
-assert.match(app.els.fractionModalContent.innerHTML, /\+75.*\+10,7%/s);
-assert.match(app.els.fractionModalContent.innerHTML, /Setembro 2026/);
+assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span><strong>900/);
+assert.match(app.els.fractionModalContent.innerHTML, /\+200.*\+28,6%/s);
+assert.match(app.els.fractionModalContent.innerHTML, /Outubro 2026/);
 assert.match(app.els.fractionModalContent.innerHTML, /Fora de comercialização/);
 assert.match(app.els.fractionModalContent.innerHTML, /Qualidade/);
 app.openFractionModal({...apt24,recommendedPrice:null,analysisVersion:''});
@@ -61,10 +61,10 @@ assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span>
 const commercial = loadFunctions('commercial.js', ['parseRow','state','recommendedPriceOf','finalPrice']);
 const commercial24 = commercial.parseRow(viewRows.find(row => row['Fração'] === 'Apartamento 24'));
 const historyBefore = JSON.stringify(commercial.state.data.priceHistory);
-assert.equal(commercial.recommendedPriceOf(commercial24), 775000);
+assert.equal(commercial.recommendedPriceOf(commercial24), 900000);
 commercial.state.data.finalPrices[24] = 750000;
 assert.equal(commercial.finalPrice(commercial24), 750000);
-assert.equal(commercial.recommendedPriceOf(commercial24) - commercial.finalPrice(commercial24), 25000);
+assert.equal(commercial.recommendedPriceOf(commercial24) - commercial.finalPrice(commercial24), 150000);
 assert.equal(JSON.stringify(commercial.state.data.priceHistory), historyBefore);
 assert.equal(commercial.recommendedPriceOf(commercial.parseRow({...commercial24.raw,'Preço Recomendado':undefined})), null);
 assert.equal(writes, 0);
