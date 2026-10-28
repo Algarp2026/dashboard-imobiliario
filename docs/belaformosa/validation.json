@@ -122,8 +122,8 @@
     },
     {
       "name": "commercial-client-phase2b-browser.mjs",
-      "code": 0,
-      "passed": true
+      "code": 1,
+      "passed": false
     },
     {
       "name": "commercial-client-complete-exports.mjs",
@@ -187,17 +187,16 @@
     }
   ],
   "initialBrowserTimeouts": [
-    "commercial-client-phase2b-browser.mjs",
-    "commercial-client-complete-exports.mjs"
+    "commercial-client-phase2b-browser.mjs"
   ],
   "isolatedRetries": [
     {
       "name": "commercial-client-phase2b-browser.mjs",
-      "code": 0,
-      "passed": true
+      "code": 1,
+      "passed": false
     },
     {
-      "name": "commercial-client-complete-exports.mjs",
+      "name": "comparator-belaformosa-browser.mjs",
       "code": 0,
       "passed": true
     }
@@ -206,9 +205,9 @@
   "canonicalWorkbookJsonVerified": true,
   "syntaxChecks": 119,
   "hashes": {
-    "app.js": "cc56483251933335c465feb95f9c69516dc82f42c2236712d1cc65baf96a8aa8",
-    "data.json": "618825f8bed2c30d0bf52e2d8ef1ede7168bdd65fa2b996e66b87dbc04d643d8",
-    "data.xlsx": "56c9ea30ad7cb7b2d341095ad41a652c8f703b02272afcbf6a38bf161f3a7032"
+    "app.js": "8b6fad7aa1e3bc2c336ca5ae93d57ef5e8fbd2f592e62d2c81c73567d2160a94",
+    "data.json": "36cd9eba6659d72225e5590927ad9e1982353b3eeb80973f9be6c1659d0ced1f",
+    "data.xlsx": "669abe4471b4fd9e5e4133d447120d30b0f277e6ca0d31e136b842289a9e0441"
   },
   "commercialSyncFrozen": true,
   "comparatorBrowser": {
@@ -297,5 +296,191 @@
   },
   "productionAccess": false,
   "googleWrites": false,
-  "excelNativeVisualCheck": "Independent values inspected; renderer exited without PNG; desktop Excel visual review pending"
+  "excelNativeVisualCheck": {
+    "reader": "Microsoft Excel",
+    "version": "16.0",
+    "readOnly": true,
+    "macrosDisabled": true,
+    "externalLinkUpdates": 0,
+    "saved": false,
+    "sheets": 10,
+    "table": "$A$1:$AR$536",
+    "viewMinimumVisible": "3",
+    "viewMaximumVisible": "4",
+    "locality": "Olhão",
+    "recommendedTotal": 27395000,
+    "recommendedTotalVisible": "€ 27 395 000",
+    "workbookSha256": "669abe4471b4fd9e5e4133d447120d30b0f277e6ca0d31e136b842289a9e0441",
+    "hashUnchangedAfterReader": true
+  },
+  "originalImplementation": {
+    "browserSuites": [
+      {
+        "name": "comparator-belaformosa-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-reform-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-reform-safety-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-reform-report-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-post-audit-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-local-quota-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-pending-local-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-followup-layout-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-audit-defects-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-stage-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-phase2a-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-phase2b-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-complete-exports.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-contacts-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-pr6-regression-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-profile-routing-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-home-entry-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-report-grouping-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "client-workspace-audit.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "client-workspace-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "client-workspace-dialogs.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "composition-d2-history-routing-probe.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "composition-d2-platform-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "visual-audit-browser.mjs",
+        "code": 0,
+        "passed": true
+      }
+    ],
+    "initialBrowserTimeouts": [
+      "commercial-client-phase2b-browser.mjs",
+      "commercial-client-complete-exports.mjs"
+    ],
+    "isolatedRetries": [
+      {
+        "name": "commercial-client-phase2b-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-complete-exports.mjs",
+        "code": 0,
+        "passed": true
+      }
+    ]
+  },
+  "corrections": {
+    "reviewedCommit": "1825c6e28c6c03ec5c413ee540b051dd77d8717e",
+    "estimatedViewRanges": 216,
+    "confirmedBelaFormosaViews": 0,
+    "geoFactors": {
+      "sameLocality": 1,
+      "differentLocality": 0.7,
+      "unknownLocality": 0.85
+    },
+    "strategicBenchmarksOutsideLayers": true,
+    "noDuplicateReferences": true,
+    "pricesAndParkingUnchangedFromReviewedCommit": true,
+    "baselineBrowserResults": [
+      {
+        "name": "commercial-client-phase2b-browser.mjs",
+        "code": 1,
+        "passed": false
+      }
+    ],
+    "remainingFailure": {
+      "suite": "commercial-client-phase2b-browser.mjs",
+      "line": 39,
+      "problem": "Search still reports 34 when the test expects six Piso 5 results",
+      "reproducedOnUnmodifiedReviewedCommit": true,
+      "commercialCodeChanged": false,
+      "countedAsPass": false
+    },
+    "browserPassed": 23,
+    "browserTotal": 24
+  }
 }

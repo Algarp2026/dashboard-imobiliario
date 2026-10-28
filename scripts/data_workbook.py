@@ -28,7 +28,7 @@ ANALYSIS = (
 )
 OPTIONAL_COLUMNS = (
     "Classe vista comparável", "Bloco", "Tipo produto", "Vista mínima", "Vista máxima",
-    "Confiança vista", "Fonte vista", "Preço visível na fonte",
+    "Confiança vista", "Fonte vista", "Preço visível na fonte", "Localidade", "Fonte localidade",
 )
 
 

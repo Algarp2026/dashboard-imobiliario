@@ -20,4 +20,23 @@ sao a fonte de setembro de 2026, com reservas e vistas estimadas identificadas.
 
 ![Comparaveis mobile do Apt. 37](mobile-apt37-comparables.png)
 
+## Benchmarks complementares, sem duplicacao com A/B/C/D
+
+![Del Mar BZ no Apt. 36](desktop-apt36-strategic.png)
+
+![Benchmark em mobile](mobile-apt36-strategic.png)
+
+## Verificacao real no Microsoft Excel 16.0
+
+Modo so de leitura, macros desativadas e sem atualizar ligacoes externas.
+Ficheiro fechado sem guardar; SHA-256 identico antes/depois.
+
+![Novas colunas no Excel](excel-columns.png)
+
+![Resumo BD no Excel](excel-summary.png)
+
+[Registo da leitura](excel-reader.json).
+Os formatos e os campos cortados encontrados durante a revisao foram corrigidos.
+Os dados do CRM e Google nao foram consultados.
+
 [Relatorio](../../BELAFORMOSA_COMPARATOR.md) · [Resultados](validation.json) · [Fonte](source-manifest.json)

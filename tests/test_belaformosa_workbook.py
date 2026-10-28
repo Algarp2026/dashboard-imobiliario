@@ -59,8 +59,15 @@ class WorkbookTests(unittest.TestCase):
             self.assertEqual(len(entries),535)
             self.assertEqual([n for n,_ in entries],list(range(2,537)))
             if sheet.find(Q("dimension")) is not None:
-                self.assertEqual(sheet.find(Q("dimension")).get("ref"),"A1:AP536")
-            self.assertEqual(ET.fromstring(current.read("xl/tables/table1.xml")).get("ref"),"A1:AP536")
+                self.assertEqual(sheet.find(Q("dimension")).get("ref"),"A1:AR536")
+            self.assertEqual(ET.fromstring(current.read("xl/tables/table1.xml")).get("ref"),"A1:AR536")
+            rows={int(r.get("r")):r for r in sheet.find(Q("sheetData"))}
+            self.assertEqual(rows[321].get("ht"),"72")
+            styles={c.get("r"):c.get("s") for c in rows[321]}
+            self.assertEqual(styles["AL321"],"94")
+            self.assertEqual(styles["AM321"],"94")
+            summary=ET.fromstring(current.read("xl/worksheets/sheet3.xml"))
+            self.assertEqual(next(c for c in summary.iter(Q("c")) if c.get("r")=="B24").get("s"),"95")
 
     def test_repeated_import_has_no_additions_or_changes(self):
         self.apply()

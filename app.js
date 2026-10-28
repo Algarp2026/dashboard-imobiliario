@@ -207,6 +207,7 @@
       block:safe(raw['Bloco']), productType:safe(raw['Tipo produto']),
       viewMin:parseOptionalNumber(raw['Vista mínima']),viewMax:parseOptionalNumber(raw['Vista máxima']),
       viewConfidence:safe(raw['Confiança vista']),viewSource:safe(raw['Fonte vista']),
+      locality:safe(raw['Localidade']),localitySource:safe(raw['Fonte localidade']),
       source:safe(raw['Fonte']),updatedAt:safe(raw['Data de atualização']),
       notes:safe(raw['Observações comerciais'])
     };
@@ -308,18 +309,23 @@
         <label class="field comp-area-assumption"><span>Hipótese analítica: peso da área exterior (%)</span><input id="compExteriorCoefficient" type="number" min="0" max="100" step="5" value="${Math.round(exteriorCoefficient()*100)}"></label>
         <p class="muted small">Área equivalente = interior + <span id="compCoefficientLabel">${Math.round(exteriorCoefficient()*100)}</span>% do exterior. Hipótese de comparação, não equivalência oficial de avaliação.</p>
         <div class="comps-list comps-list--analysis">${externalComparisonMarkup(f)}</div>
+        <div id="strategicComparisonContent">${strategicComparisonMarkup(f)}</div>
       </section>
     </div>`;
     els.fractionModal.classList.remove('hidden');
     document.body.style.overflow='hidden';
     const coefficient=els.fractionModalContent.querySelector?.('#compExteriorCoefficient');
-    if(coefficient)coefficient.onchange=()=>{const value=Number(coefficient.value);if(Number.isFinite(value)&&value>=0&&value<=100){state.compare.exteriorCoefficient=value/100;els.fractionModalContent.querySelector('#compCoefficientLabel').textContent=String(value);els.fractionModalContent.querySelector('.comps-list--analysis').innerHTML=externalComparisonMarkup(f)}};
+    if(coefficient)coefficient.onchange=()=>{const value=Number(coefficient.value);if(Number.isFinite(value)&&value>=0&&value<=100){state.compare.exteriorCoefficient=value/100;els.fractionModalContent.querySelector('#compCoefficientLabel').textContent=String(value);els.fractionModalContent.querySelector('.comps-list--analysis').innerHTML=externalComparisonMarkup(f);els.fractionModalContent.querySelector('#strategicComparisonContent').innerHTML=strategicComparisonMarkup(f)}};
   }
 
   function closeModal() { els.fractionModal.classList.add('hidden'); document.body.style.overflow=''; }
 
   function externalComparisonMarkup(f) {
-    return [['direct','A · Concorrentes diretos'],['adjacent','B · Adjacentes prioritários'],['indirect','C · Indiretos e ajustados'],['special','D · Referências especiais / Benchmarks estratégicos']].map(([mode,title])=>compBlock(title,compMatches(f,mode),f)).join('');
+    return [['direct','A · Concorrentes diretos'],['adjacent','B · Adjacentes prioritários'],['indirect','C · Indiretos e ajustados'],['special','D · Referências especiais']].map(([mode,title])=>compBlock(title,compMatches(f,mode),f)).join('');
+  }
+
+  function strategicComparisonMarkup(f) {
+    return `<h3>Benchmarks estratégicos complementares</h3><p class="muted small">Referências premium fora dos limites de piso ou área das quatro camadas. Apoiam o posicionamento, mas não são concorrentes diretos nem alteram o preço recomendado.</p><div class="strategic-comparison-list">${compBlock('Referências premium complementares',strategicBenchmarks(f,true),f)}</div>`;
   }
 
   function plantFamilyKey(f) {
@@ -378,22 +384,23 @@
     return selected;
   }
 
-  function strategicBenchmarks(f) {
+  function strategicBenchmarks(f, complementary=false) {
     const temporalWeight = year => year >= 2026 ? 1 : year === 2025 ? .6 : year === 2024 ? .2 : .05;
     const qualityWeight = quality => ({alta:1,media:.85,baixa:.6})[normalize(quality)] || .55;
     const layerWeight = layer => ({a:1,b:.8,c:.55})[normalize(layer).charAt(0)] || .55;
     const targetSegment = f.analysisSegment || externalSegment(f);
-    const scored = state.competitors.filter(c => c.comparableTypology === f.comparableTypology && c.price > 0)
+    const pool = complementary ? consolidatedCompetitors(filteredCompetitors()).filter(c=>externalSegment(c)==='Premium'&&!specialProduct(c)&&comparisonLayer(f,c)===null) : state.competitors;
+    const scored = pool.filter(c => c.comparableTypology === f.comparableTypology && Number.isFinite(c.price) && c.price > 0)
       .map(c => {
         const status = normalize(c.status);
         const activeWeight = status === 'ativo' ? 1 : status === 'a validar' ? .35 : .15;
         const segmentWeight = externalSegment(c) === targetSegment ? 1 : targetSegment === 'Standard' ? .8 : .55;
         const typeWeight = c.typology === f.typology ? 1 : .85;
         const score = c.weight * temporalWeight(c.referenceYear) * activeWeight * typeWeight *
-          segmentWeight * layerWeight(c.compsetLayer) * qualityWeight(c.dataQuality);
+          segmentWeight * layerWeight(c.compsetLayer) * qualityWeight(c.dataQuality) * locationFactor(f,c);
         return { row:c, score };
       })
-      .filter(entry => entry.score >= .25)
+      .filter(entry => entry.score >= (complementary ? .15 : .25))
       .sort((a,b) => b.score-a.score || b.row.referenceYear-a.row.referenceYear || a.row.price-b.row.price);
     const ranked = scored.map(entry => entry.row);
     const firstPerDevelopment = selectDiverseComparables(ranked, 6, 1);
@@ -427,7 +434,8 @@
       const variants=r.sourceVariants?`<details><summary>${r.sourceVariants.length} registos divergentes · variante de referência abaixo</summary>${r.sourceVariants.map(v=>`<p class="muted small">${money(v.price)} · Interior ${area(v.abp)} · Exterior ${area(v.terrace)} · ${v.referenceYear||'Data não informada'} · ${esc(v.source||'Fonte por validar')}</p>`).join('')}</details>`:'';
       return `<article class="comp-item" data-comparable="${esc(r.development+'|'+r.fractionRaw)}"><div><strong>${esc(r.development)} · ${esc(r.fractionRaw)}</strong><small>${esc(r.typology)} · Piso ${esc(r.floorLabel)} · ${esc(viewLabel(r))}</small>
         <small><span class="comp-segment ${segment===targetSegment?'comp-segment--match':''}">${esc(segment)}</span> · ${esc(r.status)} · ${r.referenceYear||'Ano n/d'} · Qualidade ${esc(r.dataQuality||'não confirmada')}</small>
-        <small>${esc(typeof target==='object'?comparisonHeading(target,r):'')}</small><details class="comp-context"><summary>Motivo, fonte e condições</summary><p class="muted small">${esc(reason)}</p><p class="muted small">${esc(r.orientation||'Orientação não confirmada')} · Estacionamento: ${esc(r.parking||'Não informado')}</p><p class="muted small">${esc(r.viewSource||'')}${r.viewSource?' · ':''}${esc(r.source||'Fonte por validar')}${r.updatedAt?' · '+esc(r.updatedAt):''}</p>${variants}</details>
+        <small>${esc(r.locality||'Localidade por confirmar')} · Fator geográfico ${typeof target==='object'?locationFactor(target,r):'—'}</small>
+        <small>${esc(typeof target==='object'?comparisonHeading(target,r):'')}</small><details class="comp-context"><summary>Motivo, fonte e condições</summary><p class="muted small">${esc(reason)}</p><p class="muted small">${esc(r.orientation||'Orientação não confirmada')} · Estacionamento: ${esc(r.parking||'Não informado')}</p><p class="muted small">${esc(r.viewSource||'')}${r.viewSource?' · ':''}${esc(r.source||'Fonte por validar')}${r.updatedAt?' · '+esc(r.updatedAt):''}</p><p class="muted small">Localização: ${esc(r.localitySource||'Fonte por confirmar')}</p>${variants}</details>
         <dl class="comp-area-metrics"><div><dt>Interior</dt><dd>${r.abp?area(r.abp):'—'}<small>${r.abp?money(Math.round(r.price/r.abp),0)+' /m² interior':'Não informado'}</small></dd></div><div><dt>Exterior</dt><dd>${Number.isFinite(r.terrace)?area(r.terrace):'—'}</dd></div><div><dt>Total</dt><dd>${r.totalArea?area(r.totalArea):'—'}<small>${validTotal?money(Math.round(r.price/r.totalArea),0)+' /m² total':'Área total por validar'}</small></dd></div><div><dt>Equivalente</dt><dd>${eq?area(eq):'—'}<small>${eq?money(Math.round(r.price/eq),0)+' /m² equivalente':'Interior/exterior por confirmar'}</small></dd></div></dl>
       </div><div class="num-col"><strong>${money(r.price)}</strong><small>${esc(difference)}</small>${normalize(r.status)==='reservado'?'<small>Reservado · não é venda nem oferta ativa</small>':''}</div></article>`;
     };
@@ -731,12 +739,12 @@
     const type=normalize(c.typology)===normalize(f.typology)?1:.9;
     const orientation=c.orientation&&f.orientation&&normalize(c.orientation)!==normalize(f.orientation) ? .9 : 1;
     const parking=c.parking&&f.parking&&/sem estacionamento/.test(normalize(c.parking))!==/sem estacionamento/.test(normalize(f.parking)) ? .95 : 1;
-    const location=/regional/.test(normalize(c.segment)) ? .8 : 1;
+    const location=locationFactor(f,c);
     return (c.weight||.5)*current*quality*status*segment*type*viewWeight*areaWeight*interiorWeight*orientation*parking*location/(1+gap*.3);
   }
   function comparisonHeading(f,c) {
     const layer=comparisonLayer(f,c);
-    return layer==='special'?'Produto especial: referência de posicionamento, não equivalente convencional':
+    return layer===null?'Benchmark estratégico: fora dos limites de comparação direta ou ajustada':layer==='special'?'Produto especial: referência de posicionamento, não equivalente convencional':
       layer==='direct'?'Mesma família tipológica, piso e classe de vista fiável':
       layer==='adjacent'?'Piso adjacente e mesma classe de vista fiável':Math.abs(c.floor-f.floor)===1?'Piso adjacente; vista não equivalente ou não confirmada':'Comparável ajustado; características não equivalentes';
   }
@@ -752,6 +760,11 @@
     if(c.parking!==f.parking)reasons.push('Estacionamento não equivalente ou por confirmar');
     reasons.push(`Comparação ${comparableView(c)===null||normalize(c.dataQuality)==='baixa'?'com confiança limitada':'com confiança condicionada às áreas e à fonte'}`);
     return reasons.join(' · ');
+  }
+
+  function locationFactor(f,c) {
+    if(!f.locality||!c.locality)return .85;
+    return normalize(f.locality)===normalize(c.locality)?1:.7;
   }
 
   function filteredCommercialFractions() {

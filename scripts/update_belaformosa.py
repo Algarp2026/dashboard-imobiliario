@@ -18,6 +18,13 @@ PRICES = [675000,725000,400000,500000,475000,735000,625000,415000,1000000,775000
           675000,695000,1000000,900000,475000,725000,475000,525000,525000,1100000,
           1025000,500000,750000,880000,700000,1500000,1105000,490000,1150000]
 FIELDS = OPTIONAL_COLUMNS[1:]
+LOCALITIES = {
+    "The View": ("Olhão", "Empreendimento The View Olhão"),
+    "BelaFormosa": ("Olhão", "BelaFormosa Price List September 2026, p. 1"),
+    "EVO Lux Garden": ("Faro", "https://libertas.pt/portfolio/"),
+    "Palácio BR Avenida": ("Faro", "https://palaciobravenida.pt/localizacao/"),
+    "Del Mar Waterfront": ("Olhão", "https://residential.jll.pt/imovel/apartamento-t1-com-varanda-em-olhao-algarve/19744519"),
+}
 ROW = re.compile(r"^(\d{3})\s+([A-Z])\s+(T[123](?:\s*\+?\s*Rooftop|\s+Duplex)?)\s+"
                  r"(\d+\.\d{2})\s+(\d+\.\d{2})\s+(\d+\.\d{2})\s+([\d,]+\.\d{2})\s+", re.I)
 
@@ -55,10 +62,16 @@ def extract(pdf):
             if block in ("LF", "RF") and position in (4, 5):
                 low, high = 1, 1
                 view_note = "Posição frontal 4/5; estimativa de exposição à Ria, não confirmada por altura."
-            elif block in ("LF", "RF") and position in (7, 8):
+            elif block in ("LF", "RF") and position in (6, 7, 8):
                 low, high = 2, 3
                 view_note = "Posição interior frontal; intervalo preliminar 2–3, sem confirmação por altura."
-            elif block in ("LB", "RB") and position in (3, 4, 7):
+            elif block in ("LB", "RB") and position in (6, 7, 8, 9):
+                low, high = 2, 3
+                view_note = "Posição posterior 6–9; intervalo preliminar 2–3, sem confirmação por altura."
+            elif (block in ("LF", "RF") and position in (1, 2, 3)) or (block in ("LB", "RB") and position in (2, 3, 4, 5)):
+                low, high = 3, 4
+                view_note = "Posição lateral; intervalo preliminar 3–4, sem confirmação por altura."
+            elif block in ("LB", "RB") and position in (1, 10, 11):
                 low, high = 3, 4
                 view_note = "Posição lateral/retaguarda; intervalo preliminar 3–4, sem confirmação por altura."
             notes = ["Preço pedido, não transação. Garagem/arrecadação não incluídas.",
@@ -87,6 +100,7 @@ def extract(pdf):
                 "Confiança vista":"Estimada · média" if low is not None and floor >= 4 else "Estimada · baixa",
                 "Fonte vista":"Estimativa de implantação fornecida pela gestão; piso considerado sem confirmação geométrica.",
                 "Preço visível na fonte":"Não · reservado" if reserved else "Sim",
+                "Localidade":LOCALITIES["BelaFormosa"][0], "Fonte localidade":LOCALITIES["BelaFormosa"][1],
             })
     counts = Counter(r["Bloco"] for r in records)
     if len(records) != 216 or counts != {"LB":60,"RB":60,"LF":48,"RF":48} or len({r["Fração"] for r in records}) != 216:
@@ -127,7 +141,7 @@ def migrate(pdf, workbook, output, manifest):
                 put_value(xml_rows[1], column_name(len(headers)), field, 70)
         cols=sheet.find(Q("cols"))
         if cols is not None:
-            for field,width in zip(FIELDS,(10,18,12,12,24,58,26)):
+            for field,width in zip(FIELDS,(10,18,12,12,24,58,26,18,58)):
                 index=headers.index(field)+1
                 column=next((c for c in cols if c.get("min")==str(index) and c.get("max")==str(index)),None)
                 if column is None:
@@ -135,6 +149,9 @@ def migrate(pdf, workbook, output, manifest):
                 column.set("width",str(width))
                 column.set("customWidth","1")
         for number, record in entries:
+            if record["Empreendimento"] in LOCALITIES:
+                for field, value in zip(("Localidade", "Fonte localidade"), LOCALITIES[record["Empreendimento"]]):
+                    put_value(xml_rows[number], column_name(headers.index(field)+1), value, 74)
             if record["Empreendimento"] == "The View":
                 n = int(re.search(r"\d+",record["Fração"])[0])
                 updates = {"Preço Recomendado":PRICES[n-1], "Versão Análise":"2026-10"}
@@ -159,10 +176,11 @@ def migrate(pdf, workbook, output, manifest):
             next_row += 1
             row = xml_rows.get(number)
             if row is None:
-                row = ET.SubElement(sheet.find(Q("sheetData")), Q("row"), {"r":str(number)})
+                row = ET.SubElement(sheet.find(Q("sheetData")), Q("row"), {"r":str(number),"ht":"72","customHeight":"1"})
             for index, field in enumerate(headers, 1):
                 if field in record:
-                    put_value(row, column_name(index), record[field], 73 if isinstance(record[field],(int,float)) else 74)
+                    style = 95 if field in ("PVP","Sem Varanda/Terraço","Com Varanda/Terraço") else 97 if field in ("ABP","Varanda/Terraço","Área Total","Peso comparável") else 94
+                    put_value(row, column_name(index), record[field], style)
         last_row = max(next_row-1,max(xml_rows))
         ref = f"A1:{column_name(len(headers))}{last_row}"
         dimension = sheet.find(Q("dimension"))
@@ -202,6 +220,23 @@ def migrate(pdf, workbook, output, manifest):
         put_value(summary_rows[24],"C","Gestão · outubro 2026; não altera PVP ou valores comerciais.",74)
         summary_rows[24].set("ht","32")
         summary_rows[24].set("customHeight","1")
+        summary_cols=summary.find(Q("cols"))
+        if summary_cols is not None:
+            for index,width in enumerate((36,22,24,18,18,85),1):
+                column=next((c for c in summary_cols if c.get("min")==str(index) and c.get("max")==str(index)),None)
+                if column is None:
+                    column=ET.SubElement(summary_cols,Q("col"),{"min":str(index),"max":str(index)})
+                column.set("width",str(width))
+                column.set("customWidth","1")
+        for number in (*range(4,10),*range(13,23),24):
+            row=summary_rows[number]
+            row.set("ht","80" if number in (9,24) else "44")
+            row.set("customHeight","1")
+            for cell in row.findall(Q("c")):
+                column=re.match(r"[A-Z]+",cell.get("r"))[0]
+                cell.set("s","95" if (13<=number<=22 and column in "CDE") or (number==24 and column=="B") else "94")
+        summary_rows[12].set("ht","36")
+        summary_rows[12].set("customHeight","1")
         changes[summary_path]=ET.tostring(summary,encoding="utf-8",xml_declaration=True)
         with tempfile.NamedTemporaryFile(dir=workbook.parent,suffix=".xlsx",delete=False) as tmp:
             temporary = Path(tmp.name)
@@ -213,10 +248,11 @@ def migrate(pdf, workbook, output, manifest):
                 _, checked, _ = read_dados(check)
                 after = [r for _,r in checked]
                 assert len(after)==535
-                assert [r for r in after if r["Empreendimento"] not in ("The View","BelaFormosa")]==old_external
+                without_geo = lambda r: {k:v for k,v in r.items() if k not in ("Localidade", "Fonte localidade")}
+                assert [without_geo(r) for r in after if r["Empreendimento"] not in ("The View","BelaFormosa")]==[without_geo(r) for r in old_external]
                 for original in view:
                     updated = next(r for r in after if r["Empreendimento"]=="The View" and r["Fração"]==original["Fração"])
-                    assert {k:v for k,v in updated.items() if k not in ("Preço Recomendado","Versão Análise","Justificação Técnica","Garagem")}=={k:v for k,v in original.items() if k not in ("Preço Recomendado","Versão Análise","Justificação Técnica","Garagem")}
+                    assert {k:v for k,v in updated.items() if k not in ("Preço Recomendado","Versão Análise","Justificação Técnica","Garagem","Localidade","Fonte localidade")}=={k:v for k,v in original.items() if k not in ("Preço Recomendado","Versão Análise","Justificação Técnica","Garagem","Localidade","Fonte localidade")}
                     if original["Fração"] not in ("Apartamento 3","Apartamento 11"):
                         assert updated["Garagem"]==original["Garagem"]
         except Exception:

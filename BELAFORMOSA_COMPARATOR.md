@@ -20,7 +20,8 @@ de precos ou estacionamento em JavaScript.
   atribuicao. Restantes garagens inalteradas: 39 lugares associados, sem duplicacao.
 - Apt. 30–35: `Fora de comercializacao` na analise, como anteriormente.
   Nao foram lidos ou alterados os seus estados na base comercial.
-- 280 registos concorrenciais anteriores preservados integralmente.
+- 280 registos concorrenciais anteriores preservados; apenas metadados aditivos
+  de localidade/fonte foram acrescentados onde verificados.
 - Acrescentados 216 BelaFormosa: 60 LB, 48 LF, 60 RB e 48 RF.
 - Concorrencia externa: **280 -> 496**; linhas totais com The View: **319 -> 535**.
 - BelaFormosa: 180 convencionais, 32 rooftops, 4 duplex e 20 reservas.
@@ -87,8 +88,18 @@ O ranking combina peso existente na fonte, segmento, atualidade, estado,
 qualidade, tipologia real/funcional, vista, proximidade de piso e areas.
 Orientacao/estacionamento conhecidos tambem influenciam proximidade; ausencia
 de informacao nao e convertida em ausencia de garagem ou orientacao factual.
-Segmentos explicitamente regionais recebem menor peso que referencias locais
-equivalentes. Nao foram inventadas distancias ou unidades de distancia.
+A localidade e independente do segmento e da qualidade. O fator geografico e 1
+na mesma localidade, 0,7 noutra localidade e 0,85 quando falta confirmacao.
+E uma hipotese de ranking, nao um desconto no preco; nao depende da palavra
+"regional". Nao foram inventadas distancias ou unidades de distancia.
+
+`Localidade` e `Fonte localidade` sao colunas opcionais da fonte canonica:
+EVO Lux Garden e Palacio BR Avenida ficam em Faro, conforme
+[Libertas](https://libertas.pt/portfolio/) e
+[Palacio BR Avenida](https://palaciobravenida.pt/localizacao/).
+The View, BelaFormosa e Del Mar ficam em Olhao; Del Mar e sustentado pela
+[fonte JLL](https://residential.jll.pt/imovel/apartamento-t1-com-varanda-em-olhao-algarve/19744519).
+As restantes localidades continuam por confirmar, sem deducao pelo segmento.
 
 Precos por m2: interior, total e equivalente, apresentados separadamente.
 `Area equivalente = interior + 30% do exterior`, ajustavel entre 0 e 100%
@@ -105,6 +116,13 @@ Selecao inicial curta: ate quatro referencias por camada, maximo duas por
 empreendimento, favorecendo blocos distintos. As restantes ficam em detalhes.
 Cada codigo ocorre apenas numa camada; o BelaFormosa nao ganha peso pelo volume.
 
+Uma secao complementar recupera benchmarks premium fora dos limites de piso ou
+area das quatro camadas. A selecao exclui previamente todos os codigos ja
+classificados em A/B/C/D e produtos especiais. Mantem diversidade por
+empreendimento, fontes, indicadores e o aviso de que nao sao concorrentes diretos.
+Inclui Del Mar BZ, T3/vista 1, para Apt. 36; Del Mar T2 para Apt. 37; e T3 premium
+de outros empreendimentos para Apt. 39. Respeita o filtro de empreendimento.
+
 ## Exemplos verificados
 
 | The View | Recomendado (EUR) | Enquadramento verificado |
@@ -115,7 +133,7 @@ Cada codigo ocorre apenas numa camada; o BelaFormosa nao ganha peso pelo volume.
 | Apt. 36 | 1.500.000 | LF504/RF504 convencionais do piso 5 em C; LF604/RF604 em D. |
 | Apt. 37 | 1.105.000 | LF507/RF507 em C: vista estimada 2–3, nao vista 2 confirmada. |
 | Apt. 38 | 490.000 | RB503/RB504 e equivalentes LB no piso 5; rooftops separados. |
-| Apt. 39 | 1.150.000 | LB507/RB507 em C, com intervalo estimado 3–4. |
+| Apt. 39 | 1.150.000 | LB507/RB507 em C, com intervalo estimado 2–3. |
 
 ## Revisao dos oito empreendimentos anteriores
 
@@ -129,7 +147,7 @@ Cada codigo ocorre apenas numa camada; o BelaFormosa nao ganha peso pelo volume.
 - EVO: 77 registos; qualidade nao informada nao e tratada como alta nem vista confirmada.
 - Prestige V: oito registos e classe comparavel 4 preservados, distinguida da vista factual ausente.
 - Plessis: seis registos premium regionais; area interior ausente nao e inventada,
-  com menor peso geografico que um produto local equivalente.
+  com localidade ainda por confirmar (fator 0,85).
 
 Isto e uma revisao da influencia dos dados existentes, nao uma confirmacao
 em tempo real de disponibilidade ou precos de terceiros.
@@ -143,13 +161,28 @@ Capturas reais: [galeria](docs/belaformosa/README.md).
   reservas, comissoes, propostas e preservacao do codigo comercial.
 - Tres testes Python: ficheiros Excel/JSON coerentes, apenas tres partes XML
   alteradas, importacao repetida identica e falha de fonte sem substituicao.
-- 24 suites Chrome abrangidas. Duas excederam 240 s na primeira passagem;
-  ambas passaram na repeticao isolada com rastreio, sem alterar o codigo comercial.
-  Esses timeouts nao foram contabilizados como aprovacoes.
+- Reexecucao das 24 suites Chrome: 23 passaram. A suite
+  `commercial-client-phase2b-browser.mjs` falhou na linha 39, ao aguardar os seis
+  resultados de pesquisa de "Piso 5"; a consulta continuava em "34". A mesma
+  falha foi reproduzida numa copia inalterada de `1825c6e`, e na repeticao isolada
+  da versao corrigida. Nao foi contabilizada como aprovacao nem foi alterado CRM
+  para a contornar. Os resultados anteriores ficam como historico, nao como
+  substituto desta execucao.
 - Comparador testado em 1440, 1366, 820 e 390 px; sete fracoes representativas,
   filtros, quatro camadas, coeficiente, ausencia de duplicacao/overflow/erros.
 - Zero pedidos a API comercial no teste do comparador; CRM sempre ficticio nas
   restantes suites. Nenhum acesso a Google real.
+- Comparador repetido depois do ajuste CSS mobile: aprovado; BZ visivel no
+  benchmark do Apt. 36, Del Mar T2 no Apt. 37 e T3 de outros projetos no Apt. 39.
+- 119 verificacoes `node --check` aprovadas. Excel e JSON conferem; tres testes
+  Python aprovados, incluindo formatos, preservacao nativa e idempotencia.
+
+Comandos: `node tests/commercial-client-complete-regression.cjs`,
+`node tests/commercial-browser-regression.cjs`,
+`node tests/commercial-browser-regression.cjs commercial-client-phase2b-browser.mjs comparator-belaformosa-browser.mjs`,
+`python tests/test_belaformosa_workbook.py` e
+`python scripts/data_workbook.py --check`. Servidores exclusivamente em loopback
+dedicado, com fixtures ficticias e rede externa bloqueada nos testes de navegador.
 
 Os testes historicos que congelavam toda a tabela ou valores de setembro foram
 atualizados apenas para a alteracao autorizada, mantendo verificacoes exatas
@@ -158,16 +191,19 @@ Nenhuma suite foi retirada. O runner passa a guardar diagnosticos enquanto corre
 
 ## Limitacoes e publicacao
 
-Vistas BelaFormosa continuam estimativas: apenas as posicoes sustentadas pelo
-pedido receberam intervalos (84 fracoes); 132 ficam sem classe atribuida, por
-falta de uma implantacao geometrica unitario-a-unitario confirmada. O piso afeta a
-confianca/proximidade, nao cria uma confirmacao geometrica. Orientacoes e entrega
+Vistas BelaFormosa continuam estimativas: as 216 fracoes recebem os intervalos
+expressamente definidos pela gestao; nenhuma recebe uma vista factual confirmada.
+LF/RF: 4–5 -> 1; 6–8 -> 2–3; 1–3 -> 3–4.
+LB/RB: 6–9 -> 2–3; 2–5 -> 3–4; 1/10/11 -> retaguarda 3–4.
+O piso afeta a confianca/proximidade, nao cria confirmacao geometrica. Orientacoes e entrega
 nao foram inventadas. Nao existe penalizacao por futura construcao suposta.
 
-A leitura independente do Excel confirmou as novas recomendacoes. A biblioteca
-grafica encerrou sem produzir imagem; a validacao visual no Excel desktop fica
-recomendada antes do merge, incluindo Resumo BD e as novas colunas. Os outros
-componentes do ficheiro foram comparados byte a byte e preservados.
+A abertura real no Microsoft Excel 16.0, em modo so de leitura, confirmou as dez
+folhas, tabela A1:AR536, novas colunas e total recomendado. Macros desativadas,
+ligacoes externas sem atualizacao e fecho sem guardar; hash identico antes/depois.
+As exportacoes nativas foram inspecionadas visualmente: corrigidos o formato
+monetario indevido das vistas, linhas de metadados e campos cortados no resumo.
+Os outros componentes do ficheiro foram comparados byte a byte e preservados.
 
 Nenhuma alteracao em commercial.js, modulos CRM, API, Apps Script, autenticacao,
 sincronizacao, config.js ou plantas. Nao e necessario publicar Apps Script.

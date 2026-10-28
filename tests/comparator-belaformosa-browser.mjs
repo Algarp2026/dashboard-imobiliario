@@ -20,16 +20,22 @@ try{
     await p.locator('[data-open-fraction="'+n+'"]').click();const modal=p.locator('#fractionModal:not(.hidden)');await modal.waitFor();
     assert.equal(await modal.locator('.comps-list--analysis>.comp-block').count(),4);
     const ids=await modal.locator('[data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable));assert.equal(ids.length,new Set(ids).size);
+    await modal.locator('#strategicComparisonContent').waitFor();
+    if(n===36)assert.equal(await modal.locator('#strategicComparisonContent [data-comparable="Del Mar Waterfront|BZ"]').count(),1);
+    if(n===37)assert.ok((await modal.locator('#strategicComparisonContent [data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable))).some(k=>k.startsWith('Del Mar Waterfront|')));
+    if(n===39)assert.ok((await modal.locator('#strategicComparisonContent [data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable))).some(k=>!k.startsWith('Del Mar Waterfront|')));
     if(n===1){assert.match(await modal.locator('.comp-block').first().innerText(),/Sem comparável direto/);assert.equal(await modal.locator('.comp-block').first().locator('[data-comparable="BelaFormosa|RF108"]').count(),0)}
     if(n>=36){const expected={36:['LF504','RF504'],37:['LF507','RF507'],38:['RB503','RB504'],39:['LB507','RB507']}[n];for(const code of expected){const card=modal.locator('.comps-list--analysis>.comp-block').nth(2).locator('[data-comparable="BelaFormosa|'+code+'"]');assert.equal(await card.count(),1);assert.match(await card.textContent(),/Vista estimada/)}assert.match(await modal.locator('.comps-list--analysis>.comp-block').last().textContent(),/Rooftop/)}
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     if(n===36){await modal.locator('.modal').evaluate(el=>el.scrollTop=0);await p.screenshot({path:out+'/'+label+'-apt36-summary.png'});await alignCategory(modal);await p.screenshot({path:out+'/'+label+'-apt36-comparables.png'})}
     if(n===37&&label==='mobile'){await alignCategory(modal);await p.screenshot({path:out+'/mobile-apt37-comparables.png'})}
+    if(n===36){await modal.locator('#strategicComparisonContent').evaluate(el=>{const box=el.closest('.modal');box.scrollTop+=el.getBoundingClientRect().top-box.getBoundingClientRect().top-16});await p.screenshot({path:out+'/'+label+'-apt36-strategic.png'})}
     await modal.locator('#compExteriorCoefficient').fill('50');await modal.locator('#compExteriorCoefficient').dispatchEvent('change');assert.equal(await modal.locator('#compExteriorCoefficient').inputValue(),'50');
     await modal.locator('#compExteriorCoefficient').fill('30');await modal.locator('#compExteriorCoefficient').dispatchEvent('change');
     await modal.locator('.modal-close').click();
    }
    await p.locator('#compareDevelopmentFilter').selectOption('BelaFormosa');await p.locator('[data-open-fraction="36"]').click();assert.ok((await p.locator('[data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable))).every(k=>k.startsWith('BelaFormosa|')));await p.locator('#fractionModal .modal-close').click();
+   await p.locator('#compareDevelopmentFilter').selectOption('EVO Lux Garden');await p.locator('[data-open-fraction="36"]').click();assert.match(await p.locator('#fractionModal').textContent(),/Faro · Fator geográfico 0.7/);await p.locator('#fractionModal .modal-close').click();
    assert.equal(await p.evaluate(()=>JSON.stringify({...localStorage})),storage);report.viewports.push({label,width,height,fractionsChecked:[1,9,23,36,37,38,39],exclusiveLayers:true,fifthFloorReferences:true,uncertainViewsVisible:true,coefficientReadOnly:true,noHorizontalOverflow:true});
   }finally{await context.close()}
  }

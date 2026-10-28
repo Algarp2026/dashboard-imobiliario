@@ -16,8 +16,8 @@
     "Duplex": 4
   },
   "anomalies": [],
-  "estimatedViewRanges": 84,
-  "viewsStillUnclassified": 132,
+  "estimatedViewRanges": 216,
+  "viewsStillUnclassified": 0,
   "viewClassification": "Preliminary estimates; no confirmed exact views",
   "discountApplied": false,
   "reservedPrices": "Retained by explicit user approval; not active offers or completed sales"
