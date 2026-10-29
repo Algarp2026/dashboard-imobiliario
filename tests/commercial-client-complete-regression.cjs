@@ -22,7 +22,9 @@ for(const [name,body]of Object.entries(publishedFunctions))if(!reviewedSyncFunct
 for(const file of ['api','server','google_apps_script.gs','google_commercial_integrity.gs'])assert.equal(cp.execFileSync('git',['diff','658da6f','--',file],{cwd:repo,encoding:'utf8'}),'','Auto sync must not change backend/authentication: '+file);
 assert.ok(suites.includes('commercial-ticket-renewal.test.js')&&suites.includes('commercial-auto-sync.test.js'));
 assert.ok(suites.includes('commercial-safe-reconciliation.test.js'),'Reviewed automatic reconciliation requires semantic/CAS/pending-request tests');
-assert.equal(current,cp.execFileSync('git',['show','9d939f3:commercial.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n'),'PR21 automatic reconciliation, PR19 renewal and synchronization must remain exact');
+// PR21 automatic reconciliation, PR19 renewal and synchronization must remain exact;
+// allow only the two precisely reviewed PDF functions, not the sync implementation.
+require('./helpers/presentation-pdf-source.cjs')();
 assert.ok(suites.includes('comparator-belaformosa.test.js'),'Authorized analytical data changes require exact source/table preservation tests');
 const protectedPaths=['api/access.js','api/logout.js','config.js','plantas','server/session.js'];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
