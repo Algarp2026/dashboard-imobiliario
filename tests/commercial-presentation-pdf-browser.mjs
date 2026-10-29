@@ -18,6 +18,9 @@ try{
   for(const n of [21,22])await page.locator('[data-proposal-select="'+n+'"]').setChecked(n===21||count===2);
   await page.locator('#exportClientPdf').click();const checkbox=page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true});assert.equal(await checkbox.isChecked(),true);await checkbox.setChecked(price);await page.locator('#presentationPdfLanguage').selectOption(language);
   for(const n of count===1?[21]:[21,22])await page.locator('[data-presentation-price="'+n+'"]').fill(String(543210+n));
+  await page.evaluate(()=>window.__loadingPersistenceTest.read());
+  assert.equal(await checkbox.isChecked(),price);assert.equal(await page.locator('#presentationPdfLanguage').inputValue(),language);
+  for(const n of count===1?[21]:[21,22])assert.equal(await page.locator('[data-presentation-price="'+n+'"]').inputValue(),String(543210+n));
   const opening=page.waitForEvent('popup');await page.locator('[data-generate-presentation-pdf]').click();const print=await opening;print.on('pageerror',e=>errors.push(e.message));
   const html=await print.content();await print.goto(origin+'/isolated-print-render');await print.setContent(html,{waitUntil:'load'});await print.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0));
   const title='Apresentação_Apt'+(count===1?'21':'21-22')+'_TheView';assert.equal(await print.title(),title);assert.equal(await print.locator('.pdf-page').count(),count);assert.equal(await print.locator('.pdf-price').count(),price?count:0);assert.equal(await print.locator('img.pdf-plant').count(),count);
@@ -26,7 +29,7 @@ try{
   if(!price)assert.equal(await print.locator('.pdf-header').first().evaluate(h=>getComputedStyle(h).gridTemplateColumns.split(' ').length),1,'No empty price track');
   await print.emulateMedia({media:'print'});await print.pdf({path:title+'-'+language+'-'+(price?'com-preco':'sem-preco')+'.pdf',preferCSSPageSize:true,printBackground:true});
   await print.setViewportSize({width:794,height:1123});await print.screenshot({path:'presentation-'+count+'-'+language+'-'+price+'.png',fullPage:true});
-  results.push({title,language,price,count,plansLoaded:true,noEmptyPriceTrack:!price});await print.close();
+  results.push({title,language,price,count,plansLoaded:true,noEmptyPriceTrack:!price,optionsPreservedAcrossRemoteRead:true});await print.close();
  }
  await page.locator('#exportClientPdf').click();await page.setViewportSize({width:390,height:844});assert.equal(await page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true}).uncheck();await page.screenshot({path:'presentation-modal-mobile.png',fullPage:true});await page.locator('#presentationPriceModal [data-close-price-modal]').last().click();
  const after=await read();assert.equal(after.revision,before.revision);assert.deepEqual(after.data,before.data);assert.equal((await(await context.request.get(origin+'/api/test-meta')).json()).writes,writes);assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),cached);assert.deepEqual(errors,[]);

@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),cp=require('node:child_process'),vm=require('node:vm');
+const main='544de8fd7f62e56a50846027bf255a0bcb435fdd',loading='38f868c8ea734c37dc0752e85f8774eab5e10c37';
+const show=(ref,file)=>cp.execFileSync('git',['show',ref+':'+file],{encoding:'utf8'}).replace(/\r\n/g,'\n');
+const read=file=>fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n');
+const body=(s,name)=>{const start=s.indexOf('function '+name+'(');assert.ok(start>=0);const end=s.indexOf('\nfunction ',start+1);assert.ok(end>start);return s.slice(start,end)};
+let expected=show(loading,'commercial.js');
+for(const name of ['openPresentationPriceModal','generateClientPresentationPdf'])expected=expected.replace(body(expected,name),body(show(main,'commercial.js'),name));
+assert.equal(read('commercial.js'),expected,'Exact union: all PR22 code plus only the two approved PR23 PDF functions');
+require('./helpers/loading-persistence-source.cjs')();require('./helpers/presentation-pdf-source.cjs')();
+for(const file of ['api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','data.json','data.xlsx','plantas','commercial.html','commercial.css','middleware.ts','commercial-integrity.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-opportunities.js','commercial-opportunity-ui.js','app.js'])assert.equal(cp.execFileSync('git',['diff',main,'--',file],{encoding:'utf8'}),'','Production data/backend/commercial path stays exact: '+file);
+const catalog=s=>JSON.parse(JSON.stringify(vm.runInNewContext('('+s.match(/const plans=({[\s\S]*?\n});/)[1]+')')));
+const suites={...catalog(show(main,'tests/commercial-browser-regression.cjs')),...catalog(show(loading,'tests/commercial-browser-regression.cjs'))};
+assert.deepEqual(catalog(read('tests/commercial-browser-regression.cjs')),suites,'Every browser suite from both PRs remains executable');assert.equal(Object.keys(suites).length,28);
+const config=JSON.parse(show(main,'vercel.json'));config.git.deploymentEnabled={...config.git.deploymentEnabled,...JSON.parse(show(loading,'vercel.json')).git.deploymentEnabled};
+assert.deepEqual(JSON.parse(read('vercel.json')),config,'Keep complete main configuration and both branch deployment guards');
+console.log('PR22/main integration passed: exact PDF + loading union, 28 browser suites, unchanged commercial data/backend and deployment guards');

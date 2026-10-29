@@ -5,6 +5,7 @@ const {consolidated}=require('./helpers/browser-suite-policy.cjs');
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
+ 'commercial-loading-persistence-browser.mjs':'visual-workspace',
  'commercial-presentation-pdf-browser.mjs':'visual-workspace',
  'commercial-safe-reconciliation-browser.mjs':'visual-workspace',
  'comparator-belaformosa-browser.mjs':'visual-workspace',
@@ -43,6 +44,8 @@ async function ready(server){for(let i=0;i<100;i++){if(server.exitCode!==null)th
 async function test(name){
  await available();const dir=path.join(output,name.replace('.mjs',''));fs.mkdirSync(path.join(dir,'docs/client-profile-complete'),{recursive:true});
  const flags={SAFE_RECONCILIATION_TESTS:String(name==='commercial-safe-reconciliation-browser.mjs'),AUTO_SYNC_TESTS:String(['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs'].includes(name)),D2_SYNTHETIC_CATALOG:String(name.startsWith('crm-')||['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs'].includes(name)),COMPOSITION_D2_FIXTURE:String(name.startsWith('composition-d2')),VISUAL_AUDIT_FIXTURE:String(name==='visual-audit-browser.mjs'),COMPLETE_EXPORT_FIXTURE:String(name==='commercial-client-complete-exports.mjs')};
+ if(name==='commercial-loading-persistence-browser.mjs')Object.assign(flags,{SAFE_RECONCILIATION_TESTS:'true',AUTO_SYNC_TESTS:'true',D2_SYNTHETIC_CATALOG:'true',LOADING_PERSISTENCE_TESTS:'true'});
+ if(name==='commercial-presentation-pdf-browser.mjs')flags.LOADING_PERSISTENCE_TESTS='true';
  const server=cp.spawn(process.execPath,[path.join(repo,'tests/helpers',plans[name]+'-preview.cjs')],{cwd:repo,env:{...env,...flags},windowsHide:true,stdio:['ignore','pipe','pipe']});
  let serverLog='';server.stdout.on('data',b=>serverLog+=b);server.stderr.on('data',b=>serverLog+=b);
  try{
