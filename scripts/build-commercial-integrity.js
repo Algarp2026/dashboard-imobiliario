@@ -19,5 +19,12 @@ function build(){
     '  var integrity = load(function(module, exports, require) {\n'+code[2]+'\n  });\n'+
     '  return {version:1, validate:integrity.validate};\n})();\n';
 }
-if(require.main===module){const expected=build();if(process.argv.includes('--check')){if(!fs.existsSync(target)||fs.readFileSync(target,'utf8').replace(/\r\n/g,'\n')!==expected)throw Error('Commercial integrity bundle is stale');console.log('Commercial integrity bundle matches shared sources')}else{fs.writeFileSync(target,expected);console.log('Generated google_commercial_integrity.gs')}}
+if(require.main===module){
+  const expected=build();
+  // The audited UMD modules must never populate or replace the UI's globals.
+  const browser='// Generated isolated browser validator; shared source unchanged.\nwindow.THE_VIEW_COMMERCIAL_INTEGRITY=(function(){\n  const window=undefined;\n'+expected+'\nreturn THE_VIEW_COMMERCIAL_INTEGRITY;\n})();\n';
+  const targets=new Map([[target,expected],[path.join(root,'commercial-integrity.js'),browser]]);
+  if(process.argv.includes('--check')){for(const [file,code]of targets)if(!fs.existsSync(file)||fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n')!==code)throw Error('Commercial integrity bundle is stale: '+path.basename(file));console.log('Google and isolated browser validators match shared sources')}
+  else{for(const [file,code]of targets)fs.writeFileSync(file,code);console.log('Generated Google and isolated browser commercial integrity bundles')}
+}
 module.exports={build};

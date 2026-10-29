@@ -1,0 +1,391 @@
+{
+  "mainCommit": "a6727b63fe42418da21b8b52e6351444cba6e9ec",
+  "approvedCrmCommit": "9d939f3",
+  "integrationBranch": "codex/safe-crm-reconciliation",
+  "resolvedConflicts": [
+    "tests/commercial-browser-regression.cjs",
+    "tests/commercial-client-complete-regression.cjs",
+    "tests/commercial-composition-d2.test.js",
+    "vercel.json"
+  ],
+  "execution": "Fresh execution after main integration; previous reports are historical only",
+  "nodeSuiteCount": 58,
+  "nodeSuites": [
+    "access-routes.test.js",
+    "commercial-agent-module-guard.test.js",
+    "commercial-apartment16-recovery.test.js",
+    "commercial-audit-defects.test.js",
+    "commercial-auto-sync.test.js",
+    "commercial-browser-policy.test.js",
+    "commercial-capacity.test.js",
+    "commercial-chunk-storage.test.js",
+    "commercial-client-preferences.test.js",
+    "commercial-client-report-grouping.test.js",
+    "commercial-client-reports.test.js",
+    "commercial-client-tabs.test.js",
+    "commercial-client-workflow.test.js",
+    "commercial-client-workspace.test.js",
+    "commercial-composition-d2.test.js",
+    "commercial-concurrency.test.js",
+    "commercial-construction.test.js",
+    "commercial-contact-history.test.js",
+    "commercial-contacts.test.js",
+    "commercial-cycle-boundaries.test.js",
+    "commercial-d2-platform.test.js",
+    "commercial-event-provenance.test.js",
+    "commercial-followups.test.js",
+    "commercial-fraction-recommendations.test.js",
+    "commercial-home-entry.test.js",
+    "commercial-integrity-server.test.js",
+    "commercial-latency.test.js",
+    "commercial-local-backups.test.js",
+    "commercial-opportunities.test.js",
+    "commercial-opportunity-cards.test.js",
+    "commercial-opportunity-matrix.test.js",
+    "commercial-pending-local.test.js",
+    "commercial-persistence-performance.test.js",
+    "commercial-post-audit-api.test.js",
+    "commercial-post-audit.test.js",
+    "commercial-progressive-flow.test.js",
+    "commercial-read-contention.test.js",
+    "commercial-recommendations-ui.test.js",
+    "commercial-recommendations.test.js",
+    "commercial-recovery-client-api.test.js",
+    "commercial-reform-defects.test.js",
+    "commercial-safe-reconciliation.test.js",
+    "commercial-smoke.test.js",
+    "commercial-source-integrity.test.js",
+    "commercial-stage-engine.test.js",
+    "commercial-sync-api.test.js",
+    "commercial-sync-client.test.js",
+    "commercial-sync-final-audit.test.js",
+    "commercial-ticket-renewal.test.js",
+    "commercial-ux.test.js",
+    "commercial-write-integrity.test.js",
+    "commercial-write-recovery.test.js",
+    "comparator-belaformosa.test.js",
+    "compset.test.js",
+    "google-read-check.test.js",
+    "pr20-main-integration.test.js",
+    "pr21-main-integration.test.js",
+    "pricing-analysis.test.js"
+  ],
+  "browserResults": [
+    {
+      "name": "commercial-safe-reconciliation-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "comparator-belaformosa-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-auto-sync-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-safety-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-report-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-post-audit-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-local-quota-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pending-local-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-followup-layout-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-audit-defects-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-stage-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2a-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2b-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-complete-exports.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-contacts-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pr6-regression-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-profile-routing-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-home-entry-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-report-grouping-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-audit.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-dialogs.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "composition-d2-history-routing-probe.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "composition-d2-platform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "visual-audit-browser.mjs",
+      "code": 0,
+      "passed": true
+    }
+  ],
+  "browserPassed": 26,
+  "browserTotal": 26,
+  "pythonWorkbookTests": {
+    "passed": 4,
+    "total": 4,
+    "scope": "Canonical workbook/JSON, native parts, idempotency and exact authorized recommendation fields; temporary copies only"
+  },
+  "syntaxChecks": 127,
+  "safeReconciliation": {
+    "realGoogle": false,
+    "productionNetwork": false,
+    "viewports": [
+      1440,
+      1366,
+      390
+    ],
+    "staleRevisionMultiUnavailable": true,
+    "independentSameClientFields": true,
+    "sameFieldManual": true,
+    "individualEventsAndReasons": true,
+    "indexedDbBackupVerified": true,
+    "reloadPreserved": true,
+    "draftFocusAndFieldsPreserved": true,
+    "lostResponseIdempotentRecovery": true,
+    "unrelatedCommercialDataPreserved": true,
+    "errors": []
+  },
+  "autoSync": {
+    "realGoogle": false,
+    "productionNetwork": false,
+    "localDetectionSamplesMs": [
+      29177,
+      30080,
+      26873
+    ],
+    "localMeanDetectionMs": 28710,
+    "acceleratedFirstCheck": false,
+    "timerWithoutF5": true,
+    "bidirectional": true,
+    "newClientListCountAndDetail": true,
+    "manualCheckDraftPreserved": true,
+    "unsavedModalPreserved": true,
+    "cachedPageDraftGuardPreserved": true,
+    "negotiationDraftPreserved": true,
+    "expiredTicketRenewed": true,
+    "boundedReadRequiredRetry": true,
+    "sameOriginTabs": true,
+    "hiddenReadsAvoided": true,
+    "onlineRecovery": true,
+    "readOnlyPolls": true,
+    "actualHttp409": true,
+    "invalidOriginUnchanged": true,
+    "expiredSessionPreserved": true,
+    "errors": [],
+    "metrics": {
+      "reads": 3,
+      "hiddenSkipped": 0,
+      "coalesced": 3,
+      "lockSkipped": 0,
+      "failures": 0
+    }
+  },
+  "comparator": {
+    "productionNetwork": false,
+    "realCommercialData": false,
+    "viewports": [
+      {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      },
+      {
+        "label": "laptop",
+        "width": 1366,
+        "height": 768,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      },
+      {
+        "label": "tablet",
+        "width": 820,
+        "height": 1080,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      },
+      {
+        "label": "mobile",
+        "width": 390,
+        "height": 844,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      }
+    ],
+    "errors": [],
+    "commercialApiRequests": 0
+  },
+  "approvedCrmFilesExact": [
+    "commercial.js",
+    "commercial.html",
+    "commercial.css",
+    "commercial-integrity.js",
+    "middleware.ts",
+    "scripts/build-commercial-integrity.js",
+    "api",
+    "server",
+    "google_apps_script.gs",
+    "google_commercial_integrity.gs",
+    "config.js",
+    "plantas"
+  ],
+  "mainAnalyticalFilesExact": [
+    "app.js",
+    "style.css",
+    "data.json",
+    "data.xlsx",
+    "scripts/data_workbook.py",
+    "scripts/update_belaformosa.py"
+  ],
+  "allBrowserCatalogsRetained": true,
+  "bothBranchDeploymentsDisabled": true,
+  "recommendedCount": 39,
+  "recommendedTotal": 29675000,
+  "belaFormosa": 216,
+  "previousExternal": 280,
+  "currentCommercialPricesNotReadOrWritten": true,
+  "hashes": {
+    "commercialJs": "8f8e314dc4f24616c6ca27c05882ea889abdf14e0e9dc495170c8e6173977ce7",
+    "appJs": "850739e13319afde68ff00ffef6b70f5f5389fde46ed685f6a77f8b4e03474f9",
+    "dataJson": "2d87d58121250d3d6587327a34229c9a59dde619c47d1537405a9a699f0f183f",
+    "dataXlsx": "8d7a09c33a91c0473360d62455de46059a05d4ddf0446bb5f0bf5c58d4668dbc"
+  },
+  "realGoogle": false,
+  "productionWrites": false,
+  "realDataMigration": false,
+  "mergeToMain": false,
+  "deployment": false
+}
