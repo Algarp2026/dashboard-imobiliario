@@ -22,6 +22,7 @@ global.fetch=async(url,options)=>{
 };
 const allowed=new Set(['commercial.html','commercial.css','view-theme.css','commercial.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','data.json','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','vendor/lucide.min.js']);
 allowed.add('view-workspace.js');
+allowed.add('commercial-integrity.js');
 allowed.add('commercial-opportunities.js');
 allowed.add('commercial-opportunity-ui.js');
 allowed.add('commercial-client-workspace.js');
@@ -70,6 +71,7 @@ http.createServer(async(req,res)=>{
       let source=fs.readFileSync(path.join(repo,name),'utf8');const begin=source.indexOf('const MAJUCA_IMPORT_RECORDS=['),end=source.indexOf('\n];',begin);if(begin<0||end<0)throw Error('Sanitization failed');source=source.slice(0,begin)+'const MAJUCA_IMPORT_RECORDS=[];'+source.slice(end+3);
       if(process.env.LOCAL_BACKUP_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__localBackupTest={archiveRecoveryCopy,localVaultCopies,state,save};'+source.slice(finish)}
       if(process.env.AUTO_SYNC_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__autoSyncTest={check:()=>commercialAutoSync?.check("test"),idle:()=>!commercialAutoSync?.running&&!commercialReadInFlight&&!commercialLoadInFlight&&!sharedSync.busy,metrics:()=>({...commercialAutoSync?.metrics}),editing:protectedCommercialEdit,status:()=>({phase:sharedSync.phase,error:sharedSync.error,dirty:sharedSync.dirty,incoming:sharedSync.incoming,editing:protectedCommercialEdit(),pending:!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),differentRoots:Object.keys(state.data).filter(k=>syncComparable(state.data[k])!==syncComparable(sharedSync.base?.[k])),clientFields:state.data.clients.flatMap((c,i)=>Object.keys(c).filter(k=>syncComparable(c[k])!==syncComparable(sharedSync.base?.clients?.[i]?.[k])).map(k=>i+"."+k)).slice(0,12)})};'+source.slice(finish)}
+      if(process.env.SAFE_RECONCILIATION_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__safeReconcileTest={manual:(n,reason)=>{applyManualStatusChange(n,state.data.statuses[n],"Indisponível",{unavailableReason:reason});save()},clientField:(id,key,value)=>{state.data.clients.find(c=>c.id===id)[key]=value;save()},recover:()=>syncRemote(true),snapshot:()=>JSON.parse(JSON.stringify(state.data)),details:()=>({phase:sharedSync.phase,error:sharedSync.error,autoBlock:sharedSync.autoBlock,revision:sharedSync.revision,busy:sharedSync.busy}),copies:localVaultCopies};'+source.slice(finish)}
       content=Buffer.from(source);
     }else content=fs.readFileSync(path.join(repo,name));
     res.setHeader('Content-Type',mime[path.extname(name)]||'application/octet-stream');res.end(content);

@@ -9,6 +9,7 @@ export const config = {
     "/commercial",
     "/commercial.html",
     "/commercial.js",
+    "/commercial-integrity.js",
     "/commercial.css",
     "/config.js",
     "/comparador",

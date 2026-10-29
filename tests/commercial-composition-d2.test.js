@@ -9,7 +9,7 @@ function declaration(source,name,indent=''){
 }
 // Sync changes are covered by the recovery/API suites; retain the D2 commercial/UI guards.
 for(const file of ['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','data.json'])assert.equal(read(file),previous(file),file+' must remain unchanged');
-assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),previous('middleware.ts'),'Only new module routes added to the unchanged authentication guard');
+assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-integrity\.js|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),previous('middleware.ts'),'Only new protected module routes added to the unchanged authentication guard');
 for(const name of ['effectiveEffect','effectTransition','closingError'])assert.equal(declaration(read('commercial-client-workflow.js'),name,'  '),declaration(previous('commercial-client-workflow.js'),name,'  '),name+' commercial safety changed');
 for(const name of ['hasCriticalCommercialEventChange','protectedEventEditError','replaceEventAndReapplyBusinessRules','applyEventBusinessRules','save','exportPdf','generateClientsSummaryPdf','operationalCommercialSummary'])assert.equal(declaration(read('commercial.js'),name).replace('preserveStorageFailure();',''),declaration(previous('commercial.js'),name),name+' changed outside the quota-failure safeguard');
 assert.doesNotMatch(read('commercial-client-workflow-ui.js'),/function opportunityCards|data-negotiation-unit/,'The retired visual projection must not coexist with the current model');

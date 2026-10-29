@@ -7,7 +7,7 @@ function app(local,options={}){
   const storage=options.storage||new Map(local===undefined?[]:[[KEY,JSON.stringify(local)]]),requests=[],timers=[],now='2026-10-13T12:00:00.000Z';let upstream=options.upstream?clone(options.upstream):root(63),failure='',writeFault='',writes=0,pdf='',initialMigrations=0;
   const revision=()=>createHash('sha256').update(JSON.stringify(upstream)).digest('hex');
   const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
-  const result=()=>({ok:true,data:upstream,revision:revision(),protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1},pendingWrite:null,source:'shared',canWrite:true,confirmedAt:now,readTicket:'1791892800000.'+'a'.repeat(64)});
+  const result=()=>({ok:true,data:upstream,revision:revision(),updatedAt:Object.hasOwn(options,'sourceUpdatedAt')?options.sourceUpdatedAt:now,protocol:'tv-cas-v1',capabilities:{pendingWriteDiagnostics:1},pendingWrite:options.pendingWrite||null,source:'shared',canWrite:options.canWrite!==false,confirmedAt:now,readTicket:'1791892800000.'+'a'.repeat(64)});
   const context={console,Date,AbortController,document:{readyState:'loading',addEventListener(){},querySelector(){return null}},window:{THE_VIEW_CONFIG:{GOOGLE_SHEETS_WEBAPP_URL:'https://never-contact-google.invalid/exec'},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js'),addEventListener(){},open(){return{document:{open(){},write(value){pdf=value},close(){}}}}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},requestAnimationFrame(){},setTimeout(fn){timers.push(fn);return timers.length},clearTimeout(){},fetch:async(url,options={})=>{
     requests.push({url,method:options.method||'GET'});
     if(url==='data.json')return Response.json(JSON.parse(fs.readFileSync(require.resolve('../data.json'),'utf8')));
@@ -38,7 +38,17 @@ function app(local,options={}){
     }
     return response(result());
   }};
-  vm.createContext(context);vm.runInContext(source.slice(0,end)+`const migrationHistory=ensureHistory;el.dataStatus={textContent:''};el.globalErrorBox={textContent:'',classList:{remove(){}}};populate=()=>{};restoreCommercialContext=()=>{};renderAll=()=>{};activateCommercialView=()=>{};renderCommercialUx=()=>{};restoreCommercialScroll=()=>{};commercialUxToast=()=>{};confirmUser=async()=>true;notifyUser=()=>{};applyUpdatedInitialPriceMigration=()=>{globalThis.migrations=(globalThis.migrations||0)+1};migrateCrmData=()=>{globalThis.migrations=(globalThis.migrations||0)+1};ensureHistory=()=>{globalThis.migrations=(globalThis.migrations||0)+1};globalThis.syncTest={state,sharedSync,loadExcel,loadRemoteData,syncRemote,save,flushPendingSyncOnUnload,normalizeData,reconcileSharedData,commercialDataOriginLabel,generateClientsSummaryPdf,buildClientSummaryRows,clientReportIndicators,resetLocal,hasUnconfirmedLocalData,openSyncReconciliation,migrationHistory};`+source.slice(end),context);
+  if(options.auto)context.window.THE_VIEW_COMMERCIAL_INTEGRITY=require('../server/commercial-integrity.js');
+  context.setSourcePending=value=>{options.pendingWrite=value};
+  context.testArchiveFailure=!!options.archiveFailure;
+  const transport=context.fetch;let reads=0;
+  context.fetch=async(url,request={})=>{
+    if(url==='/api/commercial-data'&&request.method!=='POST'&&options.beforeRead){const next=options.beforeRead(clone(upstream),++reads);if(next)upstream=clone(next)}
+    if(request.method==='POST'&&options.beforePost){const next=options.beforePost(JSON.parse(request.body),clone(upstream));if(next)upstream=clone(next)}
+    return transport(url,request);
+  };
+  const autoSetup=options.auto?'globalThis.autoArchives=[];archiveRecoveryCopy=async(kind,value)=>{if(globalThis.testArchiveFailure)throw Object.assign(new Error("Synthetic archive failure"),{code:"LOCAL_STORAGE_FAILED"});globalThis.autoArchives.push({kind,value});return "synthetic-archive"};':'';
+  vm.createContext(context);vm.runInContext(source.slice(0,end)+autoSetup+`const migrationHistory=ensureHistory;el.dataStatus={textContent:''};el.globalErrorBox={textContent:'',classList:{remove(){}}};populate=()=>{};restoreCommercialContext=()=>{};renderAll=()=>{};activateCommercialView=()=>{};renderCommercialUx=()=>{};restoreCommercialScroll=()=>{};commercialUxToast=()=>{};confirmUser=async()=>true;notifyUser=()=>{};applyUpdatedInitialPriceMigration=()=>{globalThis.migrations=(globalThis.migrations||0)+1};migrateCrmData=()=>{globalThis.migrations=(globalThis.migrations||0)+1};ensureHistory=()=>{globalThis.migrations=(globalThis.migrations||0)+1};globalThis.syncTest={state,sharedSync,loadExcel,loadRemoteData,syncRemote,save,flushPendingSyncOnUnload,normalizeData,reconcileSharedData,safeAutomaticReconciliation,reconcileAutomatically,applyManualStatusChange,commercialDataOriginLabel,generateClientsSummaryPdf,buildClientSummaryRows,clientReportIndicators,resetLocal,hasUnconfirmedLocalData,openSyncReconciliation,migrationHistory};`+source.slice(end),context);
   const api=context.syncTest;return{api,storage,requests,get upstream(){return upstream},set upstream(value){upstream=clone(value)},set failure(value){failure=value},set writeFault(value){writeFault=value},get writes(){return writes},get pdf(){return pdf},get migrations(){return context.migrations||0},context};
 }
 async function main(){
@@ -149,4 +159,5 @@ async function main(){
   roundtrip.api.state.data.clients[0].notes='Unmarked local difference';assert.equal(roundtrip.api.hasUnconfirmedLocalData(roundtrip.api.state.data),true);
   console.log('secure sync client tests passed: remote-only edits, 24 rollback/metadata cases, unknown fields, base/revision checks, offline safety, pending edits, three-way conflicts and preserved reports');
 }
-main().catch(error=>{console.error(error);process.exitCode=1});
+module.exports={app,root,clone};
+if(require.main===module)main().catch(error=>{console.error(error);process.exitCode=1});

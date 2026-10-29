@@ -9,7 +9,7 @@ async function main() {
   const {config, default: middleware} = await import(pathToFileURL(path.join(root, 'middleware.ts')).href);
   const protectedPaths = [
     '/', '/index', '/index.html', '/commercial', '/commercial.html',
-    '/commercial.js', '/commercial.css', '/config.js',
+    '/commercial.js', '/commercial-integrity.js', '/commercial.css', '/config.js',
     '/comparador', '/comparador.html', '/app.js', '/data.json',
     '/data.xlsx', '/data.xls', '/precos_iniciais_atualizados.json',
     '/google_apps_script.gs', '/google_commercial_integrity.gs',

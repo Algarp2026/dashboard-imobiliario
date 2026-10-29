@@ -12,15 +12,19 @@ const recoveryBase='9ba65b56f01a22fa04c8d89f95811510c3ae3e3d',mainBase=recoveryB
 const historical=file=>cp.execFileSync('git',['show',recoveryBase+':'+file],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
 const read=file=>fs.readFileSync(path.join(repo,file),'utf8').replace(/\r\n/g,'\n');
 const current=read('commercial.js'),base=historical('commercial.js');
-const reviewedSyncFunctions=['requestCommercialData','loadRemoteData','syncRemote','renderSharedSyncStatus'];
+const reviewedSyncFunctions=['requestCommercialData','loadRemoteData','applyRemoteData','syncRemote','performCommercialWrite','reconcileSharedData','renderSharedSyncStatus'];
 const sync=s=>s.slice(s.indexOf('function readSyncMeta('),s.indexOf('function appDialog('));
 const publishedFunctions=functions(sync(base)),updatedFunctions=functions(sync(current));
-for(const [name,body]of Object.entries(publishedFunctions))if(!reviewedSyncFunctions.includes(name))assert.equal(updatedFunctions[name],body,'Unchanged local vault/rollback/reconciliation function: '+name);
+for(const [name,body]of Object.entries(publishedFunctions))if(!reviewedSyncFunctions.includes(name)){
+  const actual=name==='openSyncReconciliation'?updatedFunctions[name].replace("state.data=next;sharedSync.autoBlock='';","state.data=next;"):updatedFunctions[name];
+  assert.equal(actual,body,'Unchanged local vault/rollback/reconciliation function: '+name);
+}
 for(const file of ['api','server','google_apps_script.gs','google_commercial_integrity.gs'])assert.equal(cp.execFileSync('git',['diff','658da6f','--',file],{cwd:repo,encoding:'utf8'}),'','Auto sync must not change backend/authentication: '+file);
 assert.ok(suites.includes('commercial-ticket-renewal.test.js')&&suites.includes('commercial-auto-sync.test.js'));
+assert.ok(suites.includes('commercial-safe-reconciliation.test.js'),'Reviewed automatic reconciliation requires semantic/CAS/pending-request tests');
 const protectedPaths=['api/access.js','api/logout.js','config.js','data.json','data.xlsx','plantas','server/session.js'];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
-assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),historical('middleware.ts'),'Only protect the three new module paths; authentication behavior unchanged');
+assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-integrity\.js|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),historical('middleware.ts'),'Only protect the new module paths; authentication behavior unchanged');
 function functions(source,indent=''){
   const matches=[...source.matchAll(new RegExp('^'+indent+'(?:async )?function (\\w+)\\(','gm'))];
   return Object.fromEntries(matches.map((m,i)=>[m[1],source.slice(m.index,matches[i+1]?.index??source.indexOf('module.exports=')).trim()]));
