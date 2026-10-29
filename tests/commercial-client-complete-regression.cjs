@@ -12,11 +12,15 @@ const recoveryBase='9ba65b56f01a22fa04c8d89f95811510c3ae3e3d',mainBase=recoveryB
 const historical=file=>cp.execFileSync('git',['show',recoveryBase+':'+file],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
 const read=file=>fs.readFileSync(path.join(repo,file),'utf8').replace(/\r\n/g,'\n');
 const current=read('commercial.js'),base=historical('commercial.js');
-const reviewedSyncFunctions=[];
+const reviewedSyncFunctions=['requestCommercialData','loadRemoteData','syncRemote','renderSharedSyncStatus'];
 const sync=s=>s.slice(s.indexOf('function readSyncMeta('),s.indexOf('function appDialog('));
-assert.equal(sync(current),sync(base),'Entire PR14/15/16 local vault, rollback, transport and reconciliation block remains exact');
-const protectedPaths=['api/access.js','api/logout.js','config.js','plantas','server/session.js'];
+const publishedFunctions=functions(sync(base)),updatedFunctions=functions(sync(current));
+for(const [name,body]of Object.entries(publishedFunctions))if(!reviewedSyncFunctions.includes(name))assert.equal(updatedFunctions[name],body,'Unchanged local vault/rollback/reconciliation function: '+name);
+for(const file of ['api','server','google_apps_script.gs','google_commercial_integrity.gs'])assert.equal(cp.execFileSync('git',['diff','658da6f','--',file],{cwd:repo,encoding:'utf8'}),'','Auto sync must not change backend/authentication: '+file);
+assert.ok(suites.includes('commercial-ticket-renewal.test.js')&&suites.includes('commercial-auto-sync.test.js'));
+assert.equal(current,cp.execFileSync('git',['show','e604861:commercial.js'],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n'),'PR19 automatic sync and renewal must remain exact');
 assert.ok(suites.includes('comparator-belaformosa.test.js'),'Authorized analytical data changes require exact source/table preservation tests');
+const protectedPaths=['api/access.js','api/logout.js','config.js','plantas','server/session.js'];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),historical('middleware.ts'),'Only protect the three new module paths; authentication behavior unchanged');
 function functions(source,indent=''){
@@ -50,5 +54,5 @@ run(['scripts/build-commercial-integrity.js','--check']);
 const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','plantas'];
 for(const file of commercialPaths)assert.equal(cp.execFileSync('git',['diff',mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
-const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,reviewedSourceLatencyFunctions:latencyFunctions,wholePublishedSyncBlockUnchanged:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};
+const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths,reviewedSyncFunctions,reviewedSourceLatencyFunctions:latencyFunctions,wholePublishedSyncBlockUnchanged:false,unmodifiedSyncFunctionsFrozen:true,backendUnchangedSincePr18:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};
 fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'regression-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));

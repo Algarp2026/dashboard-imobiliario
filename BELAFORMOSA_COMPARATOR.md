@@ -1,6 +1,7 @@
 # Comparador e recomendacoes de outubro de 2026
 
 Base: `658da6f038f061aad5f532cb66c98c529591dfe1` (main, PR #18).
+Atualizacao de integracao: main `e604861` (PR #19), preservada integralmente.
 Branch independente: `codex/update-comparator-belaformosa`.
 Sem merge, deployment, acesso a Google Sheets ou alteracoes no CRM.
 
@@ -154,6 +155,10 @@ em tempo real de disponibilidade ou precos de terceiros.
 
 ## Testes e revisao visual
 
+Registo abaixo: validacao anterior a integracao da main, no commit `4967d26`.
+Para a reexecucao atual, incluindo PR #19 e pesquisa Piso 5, consultar
+[main-integration.json](docs/belaformosa/main-integration.json).
+
 Resultados consolidados: [validation.json](docs/belaformosa/validation.json).
 Capturas reais: [galeria](docs/belaformosa/README.md).
 
@@ -205,11 +210,22 @@ As exportacoes nativas foram inspecionadas visualmente: corrigidos o formato
 monetario indevido das vistas, linhas de metadados e campos cortados no resumo.
 Os outros componentes do ficheiro foram comparados byte a byte e preservados.
 
-Nenhuma alteracao em commercial.js, modulos CRM, API, Apps Script, autenticacao,
-sincronizacao, config.js ou plantas. Nao e necessario publicar Apps Script.
+Face a main atual (PR #19), nenhuma alteracao em commercial.js, modulos CRM,
+API, Apps Script, autenticacao, sincronizacao, config.js ou plantas.
+Nao e necessario publicar Apps Script.
 Deployment Git desta branch esta desativado. Nao houve merge/deployment.
 
-A PR #19 e independente e nao foi incorporada nesta branch. Ao integrar ambas,
-preservar as duas entradas de vercel.json e combinar as guardas dos agregadores:
-as protecoes de sincronizacao da #19 e a autorizacao limitada de dados analiticos
-desta PR nao devem substituir-se mutuamente.
+A main com PR #19 foi incorporada nesta branch. Os tres conflitos foram
+combinados manualmente: ambos os catalogos de testes, guardas de seguranca e
+validacoes analiticas, e ambas as entradas de branches em vercel.json.
+O teste `pr20-main-integration.test.js` exige igualdade exata dos ficheiros
+da PR #19 fora dos tres ficheiros combinados e dos dados/comparador aprovados.
+Resultados atuais: [integracao da main](docs/belaformosa/main-integration.json).
+
+Integracao validada: 56 suites Node, 25 suites de navegador (apos repeticoes),
+tres testes Excel/JSON e 123 verificacoes de sintaxe. Piso 5, sincronizacao
+automatica, renovacao de leitura e comparador aprovados. Duas execucoes iniciais
+terminaram sem resultado; na repeticao, o teste de reserva/cancelamento revelou
+uma espera pelo indicador antigo de sincronizacao. O teste passou a exigir a
+resposta POST da operacao concreta, mantendo estado remoto e HTTP 200 obrigatorios.
+Nenhuma regra comercial foi alterada para resolver essa espera.

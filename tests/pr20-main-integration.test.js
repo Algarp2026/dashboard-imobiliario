@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),cp=require('node:child_process');
+const main='e604861',reviewed='4967d26';
+const show=(ref,file)=>cp.execFileSync('git',['show',ref+':'+file],{encoding:'utf8'});
+const changed=cp.execFileSync('git',['diff','--name-only','658da6f',main],{encoding:'utf8'}).trim().split('\n');
+const combined=new Set(['tests/commercial-browser-regression.cjs','tests/commercial-client-complete-regression.cjs','vercel.json']);
+for(const file of changed.filter(file=>!combined.has(file)))assert.equal(cp.execFileSync('git',['diff',main,'--',file],{encoding:'utf8'}),'','PR19 must remain exact: '+file);
+for(const file of ['app.js','style.css','data.json','data.xlsx','scripts/data_workbook.py','scripts/update_belaformosa.py'])assert.equal(cp.execFileSync('git',['diff',reviewed,'--',file],{encoding:'utf8'}),'','Reviewed PR20 must remain exact: '+file);
+const expected=JSON.parse(show(main,'vercel.json')),previous=JSON.parse(show(reviewed,'vercel.json'));
+expected.git.deploymentEnabled={...previous.git.deploymentEnabled,...expected.git.deploymentEnabled};
+assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expected,'Preserve all configuration and both branch deployment guards');
+const browser=fs.readFileSync('tests/commercial-browser-regression.cjs','utf8');
+for(const suite of ['commercial-auto-sync-browser.mjs','comparator-belaformosa-browser.mjs','commercial-client-phase2b-browser.mjs'])assert.ok(browser.includes("'"+suite+"':"),'Browser catalog must include '+suite);
+const node=fs.readFileSync('tests/commercial-client-complete-regression.cjs','utf8');
+for(const guard of ['commercial-ticket-renewal.test.js','commercial-auto-sync.test.js','comparator-belaformosa.test.js','Unchanged local vault/rollback/reconciliation function','PR19 automatic sync and renewal must remain exact','Auto sync must not change backend/authentication'])assert.ok(node.includes(guard),'Missing security/analytical guard: '+guard);
+console.log('PR20/main integration: PR19 source exact, comparator and analytical data exact, both browser catalogs retained, Vercel configuration union verified.');

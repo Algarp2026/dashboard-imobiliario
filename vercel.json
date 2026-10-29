@@ -2,6 +2,7 @@
   "git": {
     "deploymentEnabled": {
       "codex/update-comparator-belaformosa": false,
+      "codex/fix-crm-auto-sync": false,
       "codex/measure-commercial-latency": false,
       "codex/integrate-audited-opportunity-crm": false,
       "codex/optimize-commercial-persistence": false,

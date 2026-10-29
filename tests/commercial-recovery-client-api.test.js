@@ -77,7 +77,7 @@ async function main(){
 
   // A local-only reconciliation archives the obsolete request before replacing it.
   refreshed.app.state.data.clients[0].email='synthetic@example.test';refreshed.app.save();
-  loseResponse=true;google.properties.CRM_API_WRITES_ENABLED='false';assert.equal(await refreshed.app.syncRemote(),false);google.properties.CRM_API_WRITES_ENABLED='true';
+  loseResponse=true;google.properties.CRM_API_WRITES_ENABLED='false';assert.equal(await refreshed.app.syncRemote(),false);google.properties.CRM_API_WRITES_ENABLED='true';loseResponse=false;
   const rejected=refreshed.storage.get(KEY+'.pendingWrite.v1');assert.ok(rejected);
   await refreshed.app.loadRemoteData();refreshed.app.openSyncReconciliation();
   await refreshed.modal.querySelector('[data-sync-merge]').onclick();
