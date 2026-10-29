@@ -1,7 +1,8 @@
 # Comparador BelaFormosa
 
 Capturas locais reais da interface; sem clientes, credenciais ou base Google.
-Os precos recomendados sao a tabela fornecida pela gestao. Os dados concorrentes
+Os precos recomendados sao a analise independente de 29.675.000 EUR. Nao sao os
+precos comerciais atuais definidos pela gestao (27.395.000 EUR). Os dados concorrentes
 sao a fonte de setembro de 2026, com reservas e vistas estimadas identificadas.
 
 ## Desktop: resumo do Apt. 36
@@ -36,6 +37,12 @@ Ficheiro fechado sem guardar; SHA-256 identico antes/depois.
 ![Resumo BD no Excel](excel-summary.png)
 
 [Registo da leitura](excel-reader.json).
+As capturas Excel originais e o registo acima sao historicos, anteriores a
+correcao da tabela. A captura atual de Resumo BD e apresentada abaixo.
+
+![Resumo com recomendacoes independentes](excel-independent-summary.png)
+
+[Validacao da tabela definitiva](independent-prices.json).
 Os formatos e os campos cortados encontrados durante a revisao foram corrigidos.
 Os dados do CRM e Google nao foram consultados.
 

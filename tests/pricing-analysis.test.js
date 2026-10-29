@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const rows = JSON.parse(fs.readFileSync(path.join(root, 'data.json'), 'utf8'));
-const expected = [0,675000,725000,400000,500000,475000,735000,625000,415000,1000000,775000,415000,465000,465000,685000,650000,1100000,825000,450000,385000,435000,675000,695000,1000000,900000,475000,725000,475000,525000,525000,1100000,1025000,500000,750000,880000,700000,1500000,1105000,490000,1150000];
+const expected = [0,675000,785000,420000,535000,510000,795000,675000,425000,1200000,830000,440000,515000,500000,735000,705000,1300000,880000,465000,395000,440000,745000,775000,1075000,940000,490000,815000,510000,565000,545000,1175000,1025000,515000,795000,935000,800000,1750000,1150000,545000,1300000];
 const viewRows = rows.filter(row => row.Empreendimento === 'The View');
 assert.equal(viewRows.length, 39);
 
@@ -50,8 +50,8 @@ const apt24 = app.state.fractions.find(row => row.number === 24);
 assert.deepEqual(Array.from(app.internalComparables(apt24), row => row.number), [2,10,17,24,31,37]);
 app.openFractionModal(apt24);
 assert.match(app.els.fractionModalContent.innerHTML, /Preço base<\/span><strong>700/);
-assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span><strong>900/);
-assert.match(app.els.fractionModalContent.innerHTML, /\+200.*\+28,6%/s);
+assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span><strong>940/);
+assert.match(app.els.fractionModalContent.innerHTML, /\+240.*\+34,3%/s);
 assert.match(app.els.fractionModalContent.innerHTML, /Outubro 2026/);
 assert.match(app.els.fractionModalContent.innerHTML, /Fora de comercialização/);
 assert.match(app.els.fractionModalContent.innerHTML, /Qualidade/);
@@ -61,12 +61,19 @@ assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span>
 const commercial = loadFunctions('commercial.js', ['parseRow','state','recommendedPriceOf','finalPrice']);
 const commercial24 = commercial.parseRow(viewRows.find(row => row['Fração'] === 'Apartamento 24'));
 const historyBefore = JSON.stringify(commercial.state.data.priceHistory);
-assert.equal(commercial.recommendedPriceOf(commercial24), 900000);
+assert.equal(commercial.recommendedPriceOf(commercial24), 940000);
 commercial.state.data.finalPrices[24] = 750000;
 assert.equal(commercial.finalPrice(commercial24), 750000);
-assert.equal(commercial.recommendedPriceOf(commercial24) - commercial.finalPrice(commercial24), 150000);
+assert.equal(commercial.recommendedPriceOf(commercial24) - commercial.finalPrice(commercial24), 190000);
 assert.equal(JSON.stringify(commercial.state.data.priceHistory), historyBefore);
 assert.equal(commercial.recommendedPriceOf(commercial.parseRow({...commercial24.raw,'Preço Recomendado':undefined})), null);
 assert.equal(writes, 0);
+
+// Fictitious persisted prices/history remain independent of all 39 recommendations.
+for(let n=1;n<=39;n++)commercial.state.data.finalPrices[n]=400000+n*1000;
+const persistedBefore=JSON.stringify(commercial.state.data);
+for(const raw of viewRows){const row=commercial.parseRow(raw);assert.equal(commercial.finalPrice(row),400000+row.number*1000);assert.equal(commercial.recommendedPriceOf(row),expected[row.number]);}
+assert.equal(JSON.stringify(commercial.state.data),persistedBefore);
+assert.equal(writes,0);
 
 console.log('pricing analysis tests passed');

@@ -1,0 +1,406 @@
+{
+  "baseline": "a95e1370dc87eaa7a8704794cf4e4d38b6d302c6",
+  "main": "e60486130a3dd362b92691cac80df44567180514",
+  "recommendationMeaning": "Independent technical recommendation; never a commercial/current price fallback",
+  "recommendations": [
+    {
+      "apartment": 1,
+      "recommended": 675000
+    },
+    {
+      "apartment": 2,
+      "recommended": 785000
+    },
+    {
+      "apartment": 3,
+      "recommended": 420000
+    },
+    {
+      "apartment": 4,
+      "recommended": 535000
+    },
+    {
+      "apartment": 5,
+      "recommended": 510000
+    },
+    {
+      "apartment": 6,
+      "recommended": 795000
+    },
+    {
+      "apartment": 7,
+      "recommended": 675000
+    },
+    {
+      "apartment": 8,
+      "recommended": 425000
+    },
+    {
+      "apartment": 9,
+      "recommended": 1200000
+    },
+    {
+      "apartment": 10,
+      "recommended": 830000
+    },
+    {
+      "apartment": 11,
+      "recommended": 440000
+    },
+    {
+      "apartment": 12,
+      "recommended": 515000
+    },
+    {
+      "apartment": 13,
+      "recommended": 500000
+    },
+    {
+      "apartment": 14,
+      "recommended": 735000
+    },
+    {
+      "apartment": 15,
+      "recommended": 705000
+    },
+    {
+      "apartment": 16,
+      "recommended": 1300000
+    },
+    {
+      "apartment": 17,
+      "recommended": 880000
+    },
+    {
+      "apartment": 18,
+      "recommended": 465000
+    },
+    {
+      "apartment": 19,
+      "recommended": 395000
+    },
+    {
+      "apartment": 20,
+      "recommended": 440000
+    },
+    {
+      "apartment": 21,
+      "recommended": 745000
+    },
+    {
+      "apartment": 22,
+      "recommended": 775000
+    },
+    {
+      "apartment": 23,
+      "recommended": 1075000
+    },
+    {
+      "apartment": 24,
+      "recommended": 940000
+    },
+    {
+      "apartment": 25,
+      "recommended": 490000
+    },
+    {
+      "apartment": 26,
+      "recommended": 815000
+    },
+    {
+      "apartment": 27,
+      "recommended": 510000
+    },
+    {
+      "apartment": 28,
+      "recommended": 565000
+    },
+    {
+      "apartment": 29,
+      "recommended": 545000
+    },
+    {
+      "apartment": 30,
+      "recommended": 1175000
+    },
+    {
+      "apartment": 31,
+      "recommended": 1025000
+    },
+    {
+      "apartment": 32,
+      "recommended": 515000
+    },
+    {
+      "apartment": 33,
+      "recommended": 795000
+    },
+    {
+      "apartment": 34,
+      "recommended": 935000
+    },
+    {
+      "apartment": 35,
+      "recommended": 800000
+    },
+    {
+      "apartment": 36,
+      "recommended": 1750000
+    },
+    {
+      "apartment": 37,
+      "recommended": 1150000
+    },
+    {
+      "apartment": 38,
+      "recommended": 545000
+    },
+    {
+      "apartment": 39,
+      "recommended": 1300000
+    }
+  ],
+  "total": 29675000,
+  "analyticalChangesOnly": [
+    "Preço Recomendado",
+    "Justificação Técnica",
+    "Resumo BD B24/C24"
+  ],
+  "allOther535RecordFieldsExact": true,
+  "originalPvpUnchanged": true,
+  "parkingUnchanged": true,
+  "belaFormosa": 216,
+  "previousExternal": 280,
+  "protectedPathsUnchanged": [
+    "commercial.js",
+    "commercial.css",
+    "commercial.html",
+    "api",
+    "server",
+    "google_apps_script.gs",
+    "google_commercial_integrity.gs",
+    "config.js",
+    "plantas",
+    "app.js",
+    "vercel.json",
+    "tests/commercial-browser-regression.cjs",
+    "tests/commercial-client-complete-regression.cjs"
+  ],
+  "commercialPricesPreservedIn39UnitFixture": true,
+  "productionPricesNotReadOrWritten": true,
+  "productionValueComparisonPerformed": false,
+  "nodeSuiteCount": 56,
+  "nodeSuites": [
+    "access-routes.test.js",
+    "commercial-agent-module-guard.test.js",
+    "commercial-apartment16-recovery.test.js",
+    "commercial-audit-defects.test.js",
+    "commercial-auto-sync.test.js",
+    "commercial-browser-policy.test.js",
+    "commercial-capacity.test.js",
+    "commercial-chunk-storage.test.js",
+    "commercial-client-preferences.test.js",
+    "commercial-client-report-grouping.test.js",
+    "commercial-client-reports.test.js",
+    "commercial-client-tabs.test.js",
+    "commercial-client-workflow.test.js",
+    "commercial-client-workspace.test.js",
+    "commercial-composition-d2.test.js",
+    "commercial-concurrency.test.js",
+    "commercial-construction.test.js",
+    "commercial-contact-history.test.js",
+    "commercial-contacts.test.js",
+    "commercial-cycle-boundaries.test.js",
+    "commercial-d2-platform.test.js",
+    "commercial-event-provenance.test.js",
+    "commercial-followups.test.js",
+    "commercial-fraction-recommendations.test.js",
+    "commercial-home-entry.test.js",
+    "commercial-integrity-server.test.js",
+    "commercial-latency.test.js",
+    "commercial-local-backups.test.js",
+    "commercial-opportunities.test.js",
+    "commercial-opportunity-cards.test.js",
+    "commercial-opportunity-matrix.test.js",
+    "commercial-pending-local.test.js",
+    "commercial-persistence-performance.test.js",
+    "commercial-post-audit-api.test.js",
+    "commercial-post-audit.test.js",
+    "commercial-progressive-flow.test.js",
+    "commercial-read-contention.test.js",
+    "commercial-recommendations-ui.test.js",
+    "commercial-recommendations.test.js",
+    "commercial-recovery-client-api.test.js",
+    "commercial-reform-defects.test.js",
+    "commercial-smoke.test.js",
+    "commercial-source-integrity.test.js",
+    "commercial-stage-engine.test.js",
+    "commercial-sync-api.test.js",
+    "commercial-sync-client.test.js",
+    "commercial-sync-final-audit.test.js",
+    "commercial-ticket-renewal.test.js",
+    "commercial-ux.test.js",
+    "commercial-write-integrity.test.js",
+    "commercial-write-recovery.test.js",
+    "comparator-belaformosa.test.js",
+    "compset.test.js",
+    "google-read-check.test.js",
+    "pr20-main-integration.test.js",
+    "pricing-analysis.test.js"
+  ],
+  "browserSuites": [
+    {
+      "name": "comparator-belaformosa-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-auto-sync-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2b-browser.mjs",
+      "code": 0,
+      "passed": true
+    }
+  ],
+  "pythonWorkbookTests": 4,
+  "syntaxChecks": 123,
+  "comparator": {
+    "productionNetwork": false,
+    "realCommercialData": false,
+    "viewports": [
+      {
+        "label": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      },
+      {
+        "label": "laptop",
+        "width": 1366,
+        "height": 768,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      },
+      {
+        "label": "tablet",
+        "width": 820,
+        "height": 1080,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      },
+      {
+        "label": "mobile",
+        "width": 390,
+        "height": 844,
+        "fractionsChecked": [
+          1,
+          9,
+          23,
+          36,
+          37,
+          38,
+          39
+        ],
+        "exclusiveLayers": true,
+        "fifthFloorReferences": true,
+        "uncertainViewsVisible": true,
+        "coefficientReadOnly": true,
+        "noHorizontalOverflow": true
+      }
+    ],
+    "errors": [],
+    "commercialApiRequests": 0
+  },
+  "autoSync": {
+    "realGoogle": false,
+    "productionNetwork": false,
+    "localDetectionSamplesMs": [
+      27557,
+      29449,
+      22610
+    ],
+    "localMeanDetectionMs": 26539,
+    "acceleratedFirstCheck": false,
+    "timerWithoutF5": true,
+    "bidirectional": true,
+    "newClientListCountAndDetail": true,
+    "manualCheckDraftPreserved": true,
+    "unsavedModalPreserved": true,
+    "cachedPageDraftGuardPreserved": true,
+    "negotiationDraftPreserved": true,
+    "expiredTicketRenewed": true,
+    "boundedReadRequiredRetry": true,
+    "sameOriginTabs": true,
+    "hiddenReadsAvoided": true,
+    "onlineRecovery": true,
+    "readOnlyPolls": true,
+    "actualHttp409": true,
+    "invalidOriginUnchanged": true,
+    "expiredSessionPreserved": true,
+    "errors": [],
+    "metrics": {
+      "reads": 3,
+      "hiddenSkipped": 0,
+      "coalesced": 3,
+      "lockSkipped": 0,
+      "failures": 0
+    }
+  },
+  "excel": {
+    "reader": "Microsoft Excel 16.0",
+    "readOnly": true,
+    "macrosDisabled": true,
+    "externalLinkUpdates": 0,
+    "total": 29675000,
+    "hashUnchangedAfterReader": true
+  },
+  "hashes": {
+    "data.xlsx": "8d7a09c33a91c0473360d62455de46059a05d4ddf0446bb5f0bf5c58d4668dbc",
+    "data.json": "2d87d58121250d3d6587327a34229c9a59dde619c47d1537405a9a699f0f183f",
+    "commercial.js": "ec3b681e68d60ef31fb616cf72be52ffcfd3771b9be196b1c599abc4cbb4ee47"
+  },
+  "googleAccess": false,
+  "googleWrites": false,
+  "merge": false,
+  "deployment": false
+}

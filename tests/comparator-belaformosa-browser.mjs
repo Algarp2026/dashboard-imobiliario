@@ -14,14 +14,14 @@ try{
    const auth=await context.request.post(origin+'/api/access',{headers:{Origin:origin},data:{password:'View-Phase2A-Teste'}});assert.equal(auth.status(),200);
    const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));p.on('request',r=>{if(r.url()===origin+'/api/commercial-data')requests.push(r.method())});
    await p.goto(origin+'/comparador.html');await p.locator('#openCompareMode').click();await p.locator('[data-open-fraction="1"]').waitFor();
-   assert.equal(await p.locator('[data-open-fraction]').count(),39);assert.match(await p.locator('#compareKpis').textContent(),/27.395.000/);
+   assert.equal(await p.locator('[data-open-fraction]').count(),39);assert.match(await p.locator('#compareKpis').textContent(),/29.675.000/);
    const storage=await p.evaluate(()=>JSON.stringify({...localStorage}));
    for(const n of [1,9,23,36,37,38,39]){
     await p.locator('[data-open-fraction="'+n+'"]').click();const modal=p.locator('#fractionModal:not(.hidden)');await modal.waitFor();
     assert.equal(await modal.locator('.comps-list--analysis>.comp-block').count(),4);
     const ids=await modal.locator('[data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable));assert.equal(ids.length,new Set(ids).size);
     await modal.locator('#strategicComparisonContent').waitFor();
-    if(n===36)assert.equal(await modal.locator('#strategicComparisonContent [data-comparable="Del Mar Waterfront|BZ"]').count(),1);
+    if(n===36){const bz=modal.locator('#strategicComparisonContent [data-comparable="Del Mar Waterfront|BZ"]');assert.equal(await bz.count(),1);assert.match(await bz.textContent(),/-390.*-22,3%/s)}
     if(n===37)assert.ok((await modal.locator('#strategicComparisonContent [data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable))).some(k=>k.startsWith('Del Mar Waterfront|')));
     if(n===39)assert.ok((await modal.locator('#strategicComparisonContent [data-comparable]').evaluateAll(nodes=>nodes.map(n=>n.dataset.comparable))).some(k=>!k.startsWith('Del Mar Waterfront|')));
     if(n===1){assert.match(await modal.locator('.comp-block').first().innerText(),/Sem comparável direto/);assert.equal(await modal.locator('.comp-block').first().locator('[data-comparable="BelaFormosa|RF108"]').count(),0)}

@@ -2,15 +2,15 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),cp=require('node:child_process');
 const rows=JSON.parse(fs.readFileSync(require.resolve('../data.json'),'utf8'));
 const before=JSON.parse(cp.execFileSync('git',['show','658da6f:data.json'],{encoding:'utf8'}));
-const prices=[675000,725000,400000,500000,475000,735000,625000,415000,1000000,775000,415000,465000,465000,685000,650000,1100000,825000,450000,385000,435000,675000,695000,1000000,900000,475000,725000,475000,525000,525000,1100000,1025000,500000,750000,880000,700000,1500000,1105000,490000,1150000];
+const prices=[675000,785000,420000,535000,510000,795000,675000,425000,1200000,830000,440000,515000,500000,735000,705000,1300000,880000,465000,395000,440000,745000,775000,1075000,940000,490000,815000,510000,565000,545000,1175000,1025000,515000,795000,935000,800000,1750000,1150000,545000,1300000];
 const view=rows.filter(r=>r.Empreendimento==='The View'),bela=rows.filter(r=>r.Empreendimento==='BelaFormosa');
 assert.equal(view.length,39);assert.equal(bela.length,216);assert.equal(rows.length,535);
-const reviewed=JSON.parse(cp.execFileSync('git',['show','1825c6e:data.json'],{encoding:'utf8'}));
+const reviewed=JSON.parse(cp.execFileSync('git',['show','a95e137:data.json'],{encoding:'utf8'}));
 assert.equal(rows.length,reviewed.length);
-rows.forEach((r,i)=>{const allowed=new Set(['Localidade','Fonte localidade',...(r.Empreendimento==='BelaFormosa'?['Vista mínima','Vista máxima','Confiança vista','Observações comerciais']:[])]),keep=x=>Object.fromEntries(Object.entries(x).filter(([k])=>!allowed.has(k)));assert.deepEqual(keep(r),keep(reviewed[i]),'Only authorized view/geography metadata may change: '+r.Empreendimento+' '+r.Fração);if(r.Empreendimento==='BelaFormosa')assert.equal(r['Confiança vista'],r.Piso>=4?'Estimada · média':'Estimada · baixa')});
+rows.forEach((r,i)=>{const allowed=new Set(r.Empreendimento==='The View'?['Preço Recomendado','Justificação Técnica']:[]),keep=x=>Object.fromEntries(Object.entries(x).filter(([k])=>!allowed.has(k)));assert.deepEqual(keep(r),keep(reviewed[i]),'Only recommendations/provenance may change: '+r.Empreendimento+' '+r.Fração);if(r.Empreendimento==='The View'){assert.match(r['Justificação Técnica'],/^Preço recomendado da análise independente/);assert.doesNotMatch(r['Justificação Técnica'],/Preço recomendado definido pela gestão/)}if(r.Empreendimento==='BelaFormosa')assert.equal(r['Confiança vista'],r.Piso>=4?'Estimada · média':'Estimada · baixa')});
 const withoutGeo=r=>Object.fromEntries(Object.entries(r).filter(([k])=>!['Localidade','Fonte localidade'].includes(k)));
 assert.deepEqual(rows.filter(r=>!['The View','BelaFormosa'].includes(r.Empreendimento)).map(withoutGeo),before.filter(r=>r.Empreendimento!=='The View').map(withoutGeo));
-assert.equal(view.reduce((s,r)=>s+r['Preço Recomendado'],0),27395000);
+assert.equal(view.reduce((s,r)=>s+r['Preço Recomendado'],0),29675000);
 for(let n=1;n<=39;n++){
  const row=view.find(r=>r.Fração==='Apartamento '+n),old=before.find(r=>r.Empreendimento==='The View'&&r.Fração===row.Fração);
  assert.equal(row['Preço Recomendado'],prices[n-1]);
@@ -43,4 +43,4 @@ assert.ok(a.comparisonScore(fraction(37),reliable)>a.comparisonScore(fraction(37
 const snapshot=JSON.stringify(a.state.commercialData);for(const n of [1,9,23,36,37,38,39]){a.openFractionModal(fraction(n));const html=a.els.fractionModalContent.innerHTML;assert.match(html,/Preço recomendado/);assert.match(html,/Adjacentes prioritários/);assert.match(html,/Referências especiais/);assert.ok(html.includes('/m² equivalente'));assert.doesNotMatch(html,/NaN|undefined/)}
 assert.equal(JSON.stringify(a.state.commercialData),snapshot);assert.equal(writes,0);
 for(const path of ['commercial.js','commercial.html','commercial.css','api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','plantas'])assert.equal(cp.execFileSync('git',['diff','e604861','--',path],{encoding:'utf8'}),'','Protected PR19 path: '+path);
-console.log('BelaFormosa comparator PASS: 39 management prices, 27.395M, 280 preserved +216, parking, four exclusive layers, uncertain views, sixth floor, special products, diversity, unknown data, no commercial writes.');
+console.log('BelaFormosa comparator PASS: 39 independent recommendations, 29.675M, 496 external records/PVP/parking unchanged, exclusive layers and benchmarks, no commercial writes.');

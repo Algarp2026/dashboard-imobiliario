@@ -83,6 +83,28 @@ class WorkbookTests(unittest.TestCase):
         self.assertEqual(self.workbook.read_bytes(),self.original)
         self.assertFalse(self.output.exists())
 
+    def test_recommendation_only_change_from_reviewed_workbook(self):
+        reviewed=subprocess.check_output(["git","show","a95e137:data.xlsx"],cwd=ROOT)
+        with zipfile.ZipFile(io.BytesIO(reviewed)) as before,zipfile.ZipFile(ROOT/"data.xlsx") as after:
+            self.assertEqual(before.namelist(),after.namelist())
+            self.assertEqual({n for n in before.namelist() if before.read(n)!=after.read(n)},
+                             {"xl/worksheets/sheet1.xml","xl/worksheets/sheet3.xml"})
+            old_headers,old_entries,_=read_dados(before)
+            headers,entries,_=read_dados(after)
+            self.assertEqual(headers,old_headers)
+            for (_,old),(_,current) in zip(old_entries,entries):
+                allowed={"Preço Recomendado","Justificação Técnica"} if old["Empreendimento"]=="The View" else set()
+                self.assertEqual({k:v for k,v in old.items() if k not in allowed},
+                                 {k:v for k,v in current.items() if k not in allowed})
+            old_summary=ET.fromstring(before.read("xl/worksheets/sheet3.xml"))
+            summary=ET.fromstring(after.read("xl/worksheets/sheet3.xml"))
+            for tree in (old_summary,summary):
+                for row in tree.find(Q("sheetData")):
+                    for cell in list(row):
+                        if cell.get("r") in ("B24","C24"):
+                            row.remove(cell)
+            self.assertEqual(ET.tostring(old_summary),ET.tostring(summary))
+
 
 if __name__=="__main__":
     unittest.main()

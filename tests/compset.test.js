@@ -73,7 +73,7 @@ for (const number of [12,13]) {
   app.state.competitors = originalCompetitors;
 }
 const apt13 = app.state.fractions.find(row => row.number === 13);
-assert.equal(app.suggestedPrice(apt13), 465000);
+assert.equal(app.suggestedPrice(apt13), 500000);
 assert.equal(app.finalPrice(apt13), 435000);
 const apt35 = app.state.fractions.find(row => row.number === 35);
 assert.equal(apt35.comparableTypology, 't1');

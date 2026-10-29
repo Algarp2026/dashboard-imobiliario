@@ -13,10 +13,10 @@ from xml.etree import ElementTree as ET
 
 from data_workbook import ROOT, Q, OPTIONAL_COLUMNS, column_name, dados_path, generate, put_value, read_dados
 
-PRICES = [675000,725000,400000,500000,475000,735000,625000,415000,1000000,775000,
-          415000,465000,465000,685000,650000,1100000,825000,450000,385000,435000,
-          675000,695000,1000000,900000,475000,725000,475000,525000,525000,1100000,
-          1025000,500000,750000,880000,700000,1500000,1105000,490000,1150000]
+PRICES = [675000,785000,420000,535000,510000,795000,675000,425000,1200000,830000,
+          440000,515000,500000,735000,705000,1300000,880000,465000,395000,440000,
+          745000,775000,1075000,940000,490000,815000,510000,565000,545000,1175000,
+          1025000,515000,795000,935000,800000,1750000,1150000,545000,1300000]
 FIELDS = OPTIONAL_COLUMNS[1:]
 LOCALITIES = {
     "The View": ("Olhão", "Empreendimento The View Olhão"),
@@ -123,8 +123,8 @@ def extract(pdf):
 
 def migrate(pdf, workbook, output, manifest):
     incoming, audit = extract(pdf)
-    if sum(PRICES) != 27395000:
-        raise ValueError("Invalid management table")
+    if len(PRICES) != 39 or sum(PRICES) != 29675000:
+        raise ValueError("Invalid independent recommendation table")
     with zipfile.ZipFile(workbook) as archive:
         headers, entries, sheet = read_dados(archive)
         before = [r for _, r in entries]
@@ -156,8 +156,14 @@ def migrate(pdf, workbook, output, manifest):
                 n = int(re.search(r"\d+",record["Fração"])[0])
                 updates = {"Preço Recomendado":PRICES[n-1], "Versão Análise":"2026-10"}
                 previous_reason = record.get("Justificação Técnica", "")
-                if not previous_reason.startswith("Preço recomendado definido pela gestão em outubro de 2026."):
-                    updates["Justificação Técnica"] = "Preço recomendado definido pela gestão em outubro de 2026. Não resulta de cálculo automático do compset. Enquadramento anterior (setembro de 2026): " + previous_reason
+                prefix = "Preço recomendado da análise independente de outubro de 2026, conforme tabela técnica validada. Não substitui o preço comercial atual. "
+                context_label = "Enquadramento anterior (setembro de 2026): "
+                if previous_reason.startswith((prefix,"Preço recomendado definido pela gestão em outubro de 2026.")):
+                    _, found, context = previous_reason.partition(context_label)
+                    if not found:
+                        raise ValueError("Unexpected recommendation provenance; explicit review required")
+                    previous_reason = context
+                updates["Justificação Técnica"] = prefix + context_label + previous_reason
                 if n in (3,11):
                     updates["Garagem"] = "Sem estacionamento"
                 for field, value in updates.items():
@@ -217,7 +223,7 @@ def migrate(pdf, workbook, output, manifest):
         summary_rows[22].set("customHeight","1")
         put_value(summary_rows[24],"A","Total recomendado The View",74)
         put_value(summary_rows[24],"B",sum(PRICES),73)
-        put_value(summary_rows[24],"C","Gestão · outubro 2026; não altera PVP ou valores comerciais.",74)
+        put_value(summary_rows[24],"C","Análise independente · outubro 2026; não altera PVP ou preços comerciais atuais.",74)
         summary_rows[24].set("ht","32")
         summary_rows[24].set("customHeight","1")
         summary_cols=summary.find(Q("cols"))

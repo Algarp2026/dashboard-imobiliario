@@ -11,12 +11,16 @@ A folha `Dados` de `data.xlsx` continua a ser a fonte canonica. `data.json` e
 gerado por `scripts/data_workbook.py`; nao existe uma segunda tabela runtime
 de precos ou estacionamento em JavaScript.
 
-- 39 recomendacoes substituidas exatamente pela tabela da gestao.
-- Total recomendado: **27.395.000 EUR**, incluindo os seis produtos fora de comercializacao.
+- 39 recomendacoes da analise independente, conforme tabela tecnica definitiva.
+- Total recomendado: **29.675.000 EUR**, incluindo os seis produtos fora de comercializacao.
+- A tabela anterior de 27.395.000 EUR corresponde aos precos atuais definidos pela
+  gestao, nao a recomendacoes. Esses valores comerciais ja foram introduzidos
+  manualmente no CRM; nao foram consultados, copiados nem gravados nesta correcao.
 - PVP originais, valores propostos/alvo e todos os restantes dados originais
   das 39 fracoes preservados, exceto os campos autorizados de analise/garagem.
 - Versao de analise `2026-10`; justificacoes anteriores mantidas como contexto
-  historico, com identificacao clara da decisao da gestao.
+  historico, com identificacao clara da analise independente e sem substituir
+  precos comerciais atuais.
 - Apt. 3 e 11: `Sem estacionamento`. O lugar `P0Inf — Lugar 02` fica sem
   atribuicao. Restantes garagens inalteradas: 39 lugares associados, sem duplicacao.
 - Apt. 30–35: `Fora de comercializacao` na analise, como anteriormente.
@@ -109,7 +113,7 @@ Areas totais divergentes da soma ficam sinalizadas; falta de ABP nao e
 substituida silenciosamente por area total para calcular o indicador interior.
 
 O ranking ordena referencias; **nunca calcula ou grava os precos recomendados**.
-As diferencas exibidas usam a recomendacao da gestao como referencia, nao o PVP
+As diferencas exibidas usam a recomendacao independente como referencia, nao o PVP
 original nem precos negociados. PVP e recomendacao permanecem visiveis/separados.
 Nao se consultam valores comerciais reais pela pagina publica do comparador.
 
@@ -129,12 +133,12 @@ de outros empreendimentos para Apt. 39. Respeita o filtro de empreendimento.
 | The View | Recomendado (EUR) | Enquadramento verificado |
 | --- | ---: | --- |
 | Apt. 1 | 675.000 | RF108 nao e direto; vista preliminar 2–3 nao equivale a vista 1. |
-| Apt. 9 | 1.000.000 | LF204/RF204 como ajustados; rooftops em D, nao equivalentes. |
-| Apt. 23 | 1.000.000 | LF402/RF402 como ajustados; propostas/precos atuais nao alterados. |
-| Apt. 36 | 1.500.000 | LF504/RF504 convencionais do piso 5 em C; LF604/RF604 em D. |
-| Apt. 37 | 1.105.000 | LF507/RF507 em C: vista estimada 2–3, nao vista 2 confirmada. |
-| Apt. 38 | 490.000 | RB503/RB504 e equivalentes LB no piso 5; rooftops separados. |
-| Apt. 39 | 1.150.000 | LB507/RB507 em C, com intervalo estimado 2–3. |
+| Apt. 9 | 1.200.000 | LF204/RF204 como ajustados; rooftops em D, nao equivalentes. |
+| Apt. 23 | 1.075.000 | LF402/RF402 como ajustados; propostas/precos atuais nao alterados. |
+| Apt. 36 | 1.750.000 | LF504/RF504 convencionais do piso 5 em C; LF604/RF604 em D. |
+| Apt. 37 | 1.150.000 | LF507/RF507 em C: vista estimada 2–3, nao vista 2 confirmada. |
+| Apt. 38 | 545.000 | RB503/RB504 e equivalentes LB no piso 5; rooftops separados. |
+| Apt. 39 | 1.300.000 | LB507/RB507 em C, com intervalo estimado 2–3. |
 
 ## Revisao dos oito empreendimentos anteriores
 
@@ -156,6 +160,10 @@ em tempo real de disponibilidade ou precos de terceiros.
 ## Testes e revisao visual
 
 Registo abaixo: validacao anterior a integracao da main, no commit `4967d26`.
+Os totais e capturas arquivados em validation.json/main-integration.json referem-se
+a versoes anteriores, cuja interpretacao comercial foi corrigida. O total tecnico
+atual e 29.675.000 EUR; resultados atuais em
+[independent-prices.json](docs/belaformosa/independent-prices.json).
 Para a reexecucao atual, incluindo PR #19 e pesquisa Piso 5, consultar
 [main-integration.json](docs/belaformosa/main-integration.json).
 
