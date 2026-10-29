@@ -3650,6 +3650,8 @@ function openPresentationPriceModal(fs, includePlants){
         </select>
       </label>
 
+      <label class="toggle-pill"><input id="presentationPdfShowPrice" type="checkbox" checked /> <span>Apresentar preço no PDF</span></label>
+
       <div class="table-wrap presentation-price-table-wrap">
         <table class="data-table">
           <thead>
@@ -3704,15 +3706,16 @@ function openPresentationPriceModal(fs, includePlants){
   modal.querySelector('[data-generate-presentation-pdf]').addEventListener('click',()=>{
     const priceMap={};
     const pdfLanguage=modal.querySelector('#presentationPdfLanguage')?.value||'pt-en';
+    const showPrice=modal.querySelector('#presentationPdfShowPrice').checked;
     modal.querySelectorAll('[data-presentation-price]').forEach(input=>{
       priceMap[Number(input.dataset.presentationPrice)]=num(input.value)||0;
     });
     close();
-    generateClientPresentationPdf(fs, includePlants, priceMap, pdfLanguage);
+    generateClientPresentationPdf(fs, includePlants, priceMap, pdfLanguage, showPrice);
   });
 }
 
-function generateClientPresentationPdf(fs, include, presentationPrices={}, language='pt-en'){
+function generateClientPresentationPdf(fs, include, presentationPrices={}, language='pt-en', showPrice=true){
   const w=window.open('','_blank');
   if(!w){notifyUser('Autorize pop-ups para gerar o PDF.','Propostas Clientes');return}
 
@@ -3740,6 +3743,7 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
     }
   };
   const copy=copies[language]||copies['pt-en'];
+  const printTitle=`Apresentação_Apt${fs.map(f=>f.number).join('-')}_TheView`;
 
   const pages=fs.map((f,i)=>{
     const plant=(PLANT_MAP[f.number]&&PLANT_MAP[f.number].image)?PLANT_MAP[f.number].image:'';
@@ -3748,13 +3752,13 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
     const totalPublic=abpPublic+extPublic;
 
     return `<section class="pdf-page ${i===fs.length-1?'last':''}">
-      <header class="pdf-header">
+      <header class="pdf-header${showPrice?'':' pdf-header--no-price'}">
         <div>
           <p class="pdf-eyebrow">The View Olhão</p>
           <h1>${esc(f.name)}</h1>
           <p class="pdf-subtitle">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation||'—')}</p>
         </div>
-        <div class="pdf-price"><span>${esc(copy.price)}</span><strong>${money(presentationPriceFor(f))}</strong></div>
+        ${showPrice?`<div class="pdf-price"><span>${esc(copy.price)}</span><strong>${money(presentationPriceFor(f))}</strong></div>`:''}
       </header>
 
       <div class="pdf-cards">
@@ -3773,7 +3777,7 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
   }).join('');
 
   w.document.open();
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The View · Proposta Cliente</title>
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(printTitle)}</title>
   <style>
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
   @page{size:A4 portrait;margin:8mm}
@@ -3782,6 +3786,7 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
   .pdf-page{min-height:calc(297mm - 16mm);page-break-after:always;display:flex;flex-direction:column;gap:6mm}
   .pdf-page.last{page-break-after:auto}
   .pdf-header{display:grid;grid-template-columns:1fr auto;gap:10mm;align-items:start;border-bottom:1px solid #d9e1eb;padding-bottom:4mm}
+  .pdf-header--no-price{grid-template-columns:1fr;gap:0}
   .pdf-eyebrow{margin:0 0 4mm;text-transform:uppercase;letter-spacing:.26em;font-size:9px;font-weight:700;color:#9a7440}
   h1{font-family:'Cormorant Garamond','Times New Roman',serif;margin:0;font-size:29pt;line-height:.95;font-weight:700;letter-spacing:.01em;color:#0e2444}
   .pdf-subtitle{margin:3mm 0 0;font-size:10.5pt;color:#435675;font-weight:500}
