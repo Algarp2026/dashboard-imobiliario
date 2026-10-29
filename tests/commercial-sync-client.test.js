@@ -1,9 +1,9 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),{createHash}=require('node:crypto');
-const source=fs.readFileSync(require.resolve('../commercial.js'),'utf8'),end=source.lastIndexOf('})();');
 const KEY='theView.crmCommercial.v2',clone=value=>JSON.parse(JSON.stringify(value));
 const root=(count)=>({clients:Array.from({length:count},(_,n)=>({id:'client-'+n,name:'Synthetic '+n,stage:'Qualificado',preferences:{typology:'T2'},manualFractions:[],fractions:[],extra:{preserved:true}})),events:[],agents:[],finalPrices:{1:700000},statuses:{},salePrices:{},priceHistory:{},saleCommissions:{},unavailableReasons:{},statusEventIds:{},salePriceEventIds:{},unknownRoot:{preserved:true}});
 function app(local,options={}){
+  const source=options.sourceText||fs.readFileSync(require.resolve('../commercial.js'),'utf8'),end=source.lastIndexOf('})();');
   const storage=options.storage||new Map(local===undefined?[]:[[KEY,JSON.stringify(local)]]),requests=[],timers=[],now='2026-10-13T12:00:00.000Z';let upstream=options.upstream?clone(options.upstream):root(63),failure='',writeFault='',writes=0,pdf='',initialMigrations=0;
   const revision=()=>createHash('sha256').update(JSON.stringify(upstream)).digest('hex');
   const response=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
@@ -47,7 +47,9 @@ function app(local,options={}){
     if(request.method==='POST'&&options.beforePost){const next=options.beforePost(JSON.parse(request.body),clone(upstream));if(next)upstream=clone(next)}
     return transport(url,request);
   };
-  const autoSetup=options.auto?'globalThis.autoArchives=[];archiveRecoveryCopy=async(kind,value)=>{if(globalThis.testArchiveFailure)throw Object.assign(new Error("Synthetic archive failure"),{code:"LOCAL_STORAGE_FAILED"});globalThis.autoArchives.push({kind,value});return "synthetic-archive"};':'';
+  let autoSetup=options.auto?'globalThis.autoArchives=[];archiveRecoveryCopy=async(kind,value)=>{if(globalThis.testArchiveFailure)throw Object.assign(new Error("Synthetic archive failure"),{code:"LOCAL_STORAGE_FAILED"});globalThis.autoArchives.push({kind,value});return "synthetic-archive"};':'';
+  if(options.draftControl){context.testEditing=false;autoSetup+='protectedCommercialEdit=()=>globalThis.testEditing;';}
+  context.testTimers=timers;
   vm.createContext(context);vm.runInContext(source.slice(0,end)+autoSetup+`const migrationHistory=ensureHistory;el.dataStatus={textContent:''};el.globalErrorBox={textContent:'',classList:{remove(){}}};populate=()=>{};restoreCommercialContext=()=>{};renderAll=()=>{};activateCommercialView=()=>{};renderCommercialUx=()=>{};restoreCommercialScroll=()=>{};commercialUxToast=()=>{};confirmUser=async()=>true;notifyUser=()=>{};applyUpdatedInitialPriceMigration=()=>{globalThis.migrations=(globalThis.migrations||0)+1};migrateCrmData=()=>{globalThis.migrations=(globalThis.migrations||0)+1};ensureHistory=()=>{globalThis.migrations=(globalThis.migrations||0)+1};globalThis.syncTest={state,sharedSync,loadExcel,loadRemoteData,syncRemote,save,flushPendingSyncOnUnload,normalizeData,reconcileSharedData,safeAutomaticReconciliation,reconcileAutomatically,applyManualStatusChange,commercialDataOriginLabel,generateClientsSummaryPdf,buildClientSummaryRows,clientReportIndicators,resetLocal,hasUnconfirmedLocalData,openSyncReconciliation,migrationHistory};`+source.slice(end),context);
   const api=context.syncTest;return{api,storage,requests,get upstream(){return upstream},set upstream(value){upstream=clone(value)},set failure(value){failure=value},set writeFault(value){writeFault=value},get writes(){return writes},get pdf(){return pdf},get migrations(){return context.migrations||0},context};
 }

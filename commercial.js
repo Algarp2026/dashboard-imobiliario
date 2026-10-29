@@ -1753,7 +1753,7 @@ function renderPrices(){
     delete commercialUx.priceReasonDrafts[n];
     document.querySelector(`[data-price-reason="${n}"]`).value='';
     RenderFlow.priceChanged();
-    commercialUxToast('Alteração de preço guardada.');
+    commercialUxToast('Preço registado no dispositivo. Confirme a sincronização na base partilhada.');
   });
   renderCommercialUx();
 }
@@ -2911,7 +2911,7 @@ async function saveAgent(){
   }
   closeAgentModal();
   RenderFlow.agentChanged();
-  commercialUxToast(idx>=0?'Agente atualizado.':'Agente guardado.');
+  commercialUxToast('Dados do agente registados no dispositivo. Confirme a sincronização na base partilhada.');
   renderSalesSubTabs&&renderSalesSubTabs();
 }
 function renderAgents(){
@@ -4670,7 +4670,8 @@ async function applyRemoteData({automatic=false}={}){
   // localStorage is shared by tabs. Keep this instance's confirmed baseline,
   // captured before the asynchronous read, not another tab's later metadata.
   const metaAtStart=sharedSync.base&&sharedSync.revision?{base:JSON.parse(JSON.stringify(sharedSync.base)),revision:sharedSync.revision}:readSyncMeta();
-  if(!automatic){sharedSync.verified=false;sharedSync.phase='loading'}else{sharedSync.checking=true;sharedSync.received=false}
+  sharedSync.checking=true;sharedSync.received=false;
+  if(!automatic)sharedSync.verified=false;
   renderSharedSyncStatus({refresh:!automatic});
   try{
     const result=await requestCommercialData(),remote=normalizeData(result.data),meta=metaAtStart;
@@ -4709,14 +4710,18 @@ async function applyRemoteData({automatic=false}={}){
       sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.phase='synced';sharedSync.error='';sharedSync.incoming=false;
       return{revision:result.revision,applied:false};
     }
+    if(result.pendingWrite&&result.pendingWrite.state!=='committed'){
+      if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
+      sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error='WRITE_INCOMPLETE';return {shouldSave:false};
+    }
     if(!automatic&&sharedSync.initialized&&protectedCommercialEdit()){
       sharedSync.incoming=result.revision!==sharedSync.revision;
       if(sharedSync.incoming){sharedSync.phase='conflict';sharedSync.error='REMOTE_UPDATE_DURING_EDIT';sharedSync.verified=false}
+      else if(sharedSync.base&&syncComparable(sharedSync.base)===syncComparable(remote)&&localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)===null&&!sharedSync.autoBlock&&['','SOURCE_TIMEOUT','SOURCE_UNAVAILABLE','UNAUTHENTICATED','REMOTE_UPDATE_DURING_EDIT'].includes(sharedSync.error||'')){
+        sharedSync.ticket=result.readTicket;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';
+        sharedSync.phase=hasPendingLocalSync()||sharedSync.dirty||syncComparable(state.data)!==syncComparable(remote)?'pending':'synced';
+      }
       return{shouldSave:false};
-    }
-    if(result.pendingWrite&&result.pendingWrite.state!=='committed'){
-      if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
-      sharedSync.phase='offline';sharedSync.error='WRITE_INCOMPLETE';return {shouldSave:false};
     }
     if(!hasBusinessData(remote)&&hasBusinessData(state.data)) {sharedSync.phase='conflict';sharedSync.error='EMPTY_SHARED_STORE';return {shouldSave:false}}
     const differs=syncComparable(state.data)!==syncComparable(remote);
@@ -4770,7 +4775,15 @@ async function applyRemoteData({automatic=false}={}){
     if(automatic){sharedSync.incoming=false;sharedSync.received=true;renderCommercialRemoteUpdate()}
     return {shouldSave:false,revision:result.revision,applied:automatic};
   }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;throw error}
-  finally{sharedSync.checking=false;renderSharedSyncStatus({refresh:!automatic||sharedSync.phase==='offline'})}
+  finally{
+    sharedSync.checking=false;
+    // A completed read may leave local writes waiting: never make the write depend
+    // on a second manual click. Preserve requests with uncertain outcomes.
+    if(sharedSync.initialized&&sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.base&&sharedSync.revision&&sharedSync.canWrite&&!sharedSync.busy&&!protectedCommercialEdit()&&localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)===null&&(hasPendingLocalSync()||sharedSync.dirty)&&!sharedSync.autoBlock){
+      clearTimeout(saveTimer);saveTimer=setTimeout(syncRemote,300);
+    }
+    renderSharedSyncStatus({refresh:!automatic||sharedSync.phase==='offline'});
+  }
 }
 let saveTimer=null;
 function sharedStoreMayRegress(local,remote,meta,remoteRevision){

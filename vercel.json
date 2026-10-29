@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "codex/fix-crm-loading-persistence": false,
       "codex/safe-crm-reconciliation": false,
       "codex/update-comparator-belaformosa": false,
       "codex/fix-crm-auto-sync": false,

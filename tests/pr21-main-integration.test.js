@@ -2,13 +2,15 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),cp=require('node:child_process');
 const main='a6727b63fe42418da21b8b52e6351444cba6e9ec',crm='9d939f3';
 const show=(ref,file)=>cp.execFileSync('git',['show',ref+':'+file],{encoding:'utf8'});
-for(const file of ['commercial.js','commercial.html','commercial.css','commercial-integrity.js','middleware.ts','scripts/build-commercial-integrity.js','api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','plantas'])assert.equal(cp.execFileSync('git',['diff',crm,'--',file],{encoding:'utf8'}),'','Approved CRM/security source must remain exact: '+file);
+for(const file of ['commercial.js','commercial.html','commercial.css','commercial-integrity.js','middleware.ts','scripts/build-commercial-integrity.js','api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','plantas'])if(file==='commercial.js')require('./helpers/loading-persistence-source.cjs')();else assert.equal(cp.execFileSync('git',['diff',crm,'--',file],{encoding:'utf8'}),'','Approved CRM/security source must remain exact: '+file);
 for(const file of ['app.js','style.css','data.json','data.xlsx','scripts/data_workbook.py','scripts/update_belaformosa.py'])assert.equal(cp.execFileSync('git',['diff',main,'--',file],{encoding:'utf8'}),'','Approved PR20 analytical source must remain exact: '+file);
 const catalog=source=>JSON.parse(JSON.stringify(vm.runInNewContext('('+source.match(/const plans=({[\s\S]*?\n});/)[1]+')')));
 const expectedCatalog={...catalog(show(main,'tests/commercial-browser-regression.cjs')),...catalog(show(crm,'tests/commercial-browser-regression.cjs'))};
+expectedCatalog['commercial-loading-persistence-browser.mjs']='visual-workspace';
 assert.deepEqual(catalog(fs.readFileSync('tests/commercial-browser-regression.cjs','utf8')),expectedCatalog,'Keep every browser suite from both PRs');
 const expectedConfig=JSON.parse(show(main,'vercel.json'));
 expectedConfig.git.deploymentEnabled={...expectedConfig.git.deploymentEnabled,...JSON.parse(show(crm,'vercel.json')).git.deploymentEnabled};
+expectedConfig.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expectedConfig,'Preserve complete configuration and both disabled branch deployments');
 const rows=JSON.parse(fs.readFileSync('data.json','utf8')),units=rows.filter(r=>r.Empreendimento==='The View');
 assert.equal(units.length,39);assert.equal(units.reduce((sum,r)=>sum+r['Preço Recomendado'],0),29675000);
