@@ -23,8 +23,9 @@ for(const file of ['api','server','google_apps_script.gs','google_commercial_int
 assert.ok(suites.includes('commercial-ticket-renewal.test.js')&&suites.includes('commercial-auto-sync.test.js'));
 assert.ok(suites.includes('commercial-safe-reconciliation.test.js'),'Reviewed automatic reconciliation requires semantic/CAS/pending-request tests');
 // PR21 automatic reconciliation, PR19 renewal and synchronization must remain exact
-// except the explicitly reviewed read-state fix and local/remote toast labels.
+// outside the approved PR22 read-state fix and PR23 PDF-only changes.
 require('./helpers/loading-persistence-source.cjs')();
+require('./helpers/presentation-pdf-source.cjs')();
 assert.ok(suites.includes('comparator-belaformosa.test.js'),'Authorized analytical data changes require exact source/table preservation tests');
 const protectedPaths=['api/access.js','api/logout.js','config.js','plantas','server/session.js'];
 for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);

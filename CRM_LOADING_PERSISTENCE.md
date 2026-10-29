@@ -85,3 +85,68 @@ This fixes a frontend state-transition defect, not Google/OAuth latency or outag
 Existing ambiguous writes and genuine conflicts remain protected and may require
 explicit recovery/reconciliation. No live Google result or production recovery
 is claimed. Publication remains a separate, explicitly authorized operation.
+
+## Integrated main after PR #23
+
+The original results above describe `38f868c8`. This integration adds main
+`544de8fd7f62e56a50846027bf255a0bcb435fdd` to the same PR #22 branch;
+it does not merge PR #22 into main or authorize a deployment.
+
+Six content conflicts were resolved individually:
+
+- `tests/commercial-browser-regression.cjs`: retain both new browser suites and
+  the complete earlier catalog, now 28 suites.
+- `tests/commercial-client-complete-regression.cjs`: execute both exact source guards.
+- `tests/comparator-belaformosa.test.js`: keep analytical assertions and both guards.
+- `tests/pr20-main-integration.test.js`: preserve the isolated loading hook,
+  both guards, both deployment exclusions and all existing security assertions.
+- `tests/pr21-main-integration.test.js`: exact union of both catalogs/configurations.
+- `vercel.json`: keep both branch exclusions and every other main setting.
+
+`commercial.js` merged automatically. No manual runtime edits were needed.
+Its final source is exactly the approved PR22 source with only the two approved
+PR23 PDF functions substituted. The new `pr22-main-integration.test.js` asserts
+that complete equality, not merely the presence of labels or function names.
+
+The read-path SHA-256 and both PDF function SHA-256 expectations are unchanged.
+The loading guard now compares every other byte against approved main `544de8fd`;
+the PDF guard compares every other byte against approved PR22 `38f868c8`.
+Thus neither feature is exempted from verification by the other. Historical
+commercial/backend/data assertions remain intact.
+
+Fresh integrated validation:
+
+- Node: **61/61 suites passed**, including the new exact-union integration test,
+  concurrency, CAS, read tickets, B5/B6, backups, quota, request recovery and rollback.
+- Loading: **18/18 directed cases passed**.
+- PDF generator: **16/16 combinations passed**, with priced output otherwise
+  identical to the original generator except the approved title/inactive CSS.
+- Browser: complete **28/28 suites passed**, with zero failures. Both original
+  catalogs and the PDF/loading interaction checks ran on the integrated source.
+- Integrated PDF browser suite passed all eight price/language/unit combinations.
+  It now performs a manual remote read with the PDF options open, then checks that
+  checkbox, language and individual price drafts survive unchanged. Commercial
+  cache, source revision and source data remain identical, with zero writes.
+- **Eight real PDFs / 12 pages passed** the PDF reader/render checks: correct
+  titles, A4 portrait, one page per unit, embedded plans and optional prices.
+  SHA-256 comparison of all 12 rendered page PNGs with the approved PR23 run:
+  **12/12 identical**. No blank price column or pagination regression.
+- Syntax: **134/134 JavaScript files passed**.
+- Excel/JSON: **4/4 tests passed** using temporary copies only.
+- No conflict markers remain; staged whitespace checks passed.
+
+Test commands remain the complete Node/browser runners documented above, plus
+`node tests/pr22-main-integration.test.js`,
+`node tests/commercial-presentation-pdf.test.js` and
+`python tests/validate_presentation_pdfs.py <isolated browser artifact folder>`.
+Artifacts are outside the repository, in `pr22-integrated-node` and
+`pr22-integrated-browser`; they contain only fictional fixtures.
+
+An exact diff against integrated main is empty for data/Excel, config, API,
+server, both Apps Script files, commercial integrity and workflow/opportunity
+modules, HTML, CSS, middleware, comparator and plans. No production data was
+read or written; no migrations, production merge or deployment were performed.
+
+Residual limits are unchanged: no live Google test is claimed, native print
+filename extension is controlled by the browser, and uncertain requests/genuine
+conflicts remain protected for explicit recovery rather than forced replay.

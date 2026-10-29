@@ -14,6 +14,7 @@ for(const file of changed.filter(file=>!combined.has(file))){
   assert.equal(current.replace(hook,''),show(reconciliation,file).replace(/\r\n/g,'\n'),'Only the explicit isolated loading-test hook may extend the preview');
  }else assert.equal(cp.execFileSync('git',['diff',reconciled.has(file)?reconciliation:main,'--',file],{encoding:'utf8'}),'','Published PR19/PR21 source must remain exact: '+file);
 }
+require('./helpers/presentation-pdf-source.cjs')();
 for(const file of ['style.css','scripts/data_workbook.py'])assert.equal(cp.execFileSync('git',['diff',reviewed,'--',file],{encoding:'utf8'}),'','Reviewed PR20 must remain exact: '+file);
 const analyticalApp=fs.readFileSync('app.js','utf8');
 assert.equal(analyticalApp.replace(/\r\n/g,'\n'),show('c19e297','app.js').replace(/\r\n/g,'\n')
@@ -32,6 +33,7 @@ assert.ok(!analyticalApp.includes('Decisão da gestão; não altera preços come
 const expected=JSON.parse(show(main,'vercel.json')),previous=JSON.parse(show(reviewed,'vercel.json'));
 expected.git.deploymentEnabled={...previous.git.deploymentEnabled,...expected.git.deploymentEnabled,...JSON.parse(show(reconciliation,'vercel.json')).git.deploymentEnabled};
 expected.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
+expected.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
 assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expected,'Preserve all configuration and both branch deployment guards');
 const browser=fs.readFileSync('tests/commercial-browser-regression.cjs','utf8');
 for(const suite of ['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs','comparator-belaformosa-browser.mjs','commercial-client-phase2b-browser.mjs'])assert.ok(browser.includes("'"+suite+"':"),'Browser catalog must include '+suite);
