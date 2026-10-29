@@ -26,7 +26,10 @@ ANALYSIS = (
     "Preço Recomendado", "Versão Análise", "Confiança Recomendação",
     "Justificação Técnica", "Segmento Análise", "Disponibilidade Análise",
 )
-OPTIONAL_COLUMNS = ("Classe vista comparável",)
+OPTIONAL_COLUMNS = (
+    "Classe vista comparável", "Bloco", "Tipo produto", "Vista mínima", "Vista máxima",
+    "Confiança vista", "Fonte vista", "Preço visível na fonte", "Localidade", "Fonte localidade",
+)
 
 
 def dados_path(archive):

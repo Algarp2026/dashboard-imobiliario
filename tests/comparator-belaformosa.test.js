@@ -1,0 +1,46 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),cp=require('node:child_process');
+const rows=JSON.parse(fs.readFileSync(require.resolve('../data.json'),'utf8'));
+const before=JSON.parse(cp.execFileSync('git',['show','658da6f:data.json'],{encoding:'utf8'}));
+const prices=[675000,785000,420000,535000,510000,795000,675000,425000,1200000,830000,440000,515000,500000,735000,705000,1300000,880000,465000,395000,440000,745000,775000,1075000,940000,490000,815000,510000,565000,545000,1175000,1025000,515000,795000,935000,800000,1750000,1150000,545000,1300000];
+const view=rows.filter(r=>r.Empreendimento==='The View'),bela=rows.filter(r=>r.Empreendimento==='BelaFormosa');
+assert.equal(view.length,39);assert.equal(bela.length,216);assert.equal(rows.length,535);
+const reviewed=JSON.parse(cp.execFileSync('git',['show','a95e137:data.json'],{encoding:'utf8'}));
+assert.equal(rows.length,reviewed.length);
+rows.forEach((r,i)=>{const allowed=new Set(r.Empreendimento==='The View'?['Preço Recomendado','Justificação Técnica']:[]),keep=x=>Object.fromEntries(Object.entries(x).filter(([k])=>!allowed.has(k)));assert.deepEqual(keep(r),keep(reviewed[i]),'Only recommendations/provenance may change: '+r.Empreendimento+' '+r.Fração);if(r.Empreendimento==='The View'){assert.match(r['Justificação Técnica'],/^Preço recomendado da análise independente/);assert.doesNotMatch(r['Justificação Técnica'],/Preço recomendado definido pela gestão/)}if(r.Empreendimento==='BelaFormosa')assert.equal(r['Confiança vista'],r.Piso>=4?'Estimada · média':'Estimada · baixa')});
+const withoutGeo=r=>Object.fromEntries(Object.entries(r).filter(([k])=>!['Localidade','Fonte localidade'].includes(k)));
+assert.deepEqual(rows.filter(r=>!['The View','BelaFormosa'].includes(r.Empreendimento)).map(withoutGeo),before.filter(r=>r.Empreendimento!=='The View').map(withoutGeo));
+assert.equal(view.reduce((s,r)=>s+r['Preço Recomendado'],0),29675000);
+for(let n=1;n<=39;n++){
+ const row=view.find(r=>r.Fração==='Apartamento '+n),old=before.find(r=>r.Empreendimento==='The View'&&r.Fração===row.Fração);
+ assert.equal(row['Preço Recomendado'],prices[n-1]);
+ const changed=new Set(['Preço Recomendado','Versão Análise','Justificação Técnica','Localidade','Fonte localidade',...([3,11].includes(n)?['Garagem']:[])]);
+ assert.deepEqual(Object.fromEntries(Object.entries(row).filter(([k])=>!changed.has(k))),Object.fromEntries(Object.entries(old).filter(([k])=>!changed.has(k))));
+ if(n>=30&&n<=35)assert.equal(row['Disponibilidade Análise'],'Fora de comercialização');
+}
+assert.equal(view.find(r=>r.Fração==='Apartamento 3').Garagem,'Sem estacionamento');assert.equal(view.find(r=>r.Fração==='Apartamento 11').Garagem,'Sem estacionamento');assert.ok(view.every(r=>r.Garagem!=='P0Inf — Lugar 02'));
+const spaces=view.flatMap(r=>{const m=r.Garagem.match(/^(.*?) — Lugar(?:es)? (.+)$/);return m?m[2].split('+').map(p=>m[1]+'|'+Number(p)):[]});assert.equal(spaces.length,39);assert.equal(new Set(spaces).size,39);
+assert.equal(new Set(bela.map(r=>r.Fração)).size,216);assert.equal(bela.filter(r=>r.Status==='Reservado').length,20);assert.ok(bela.every(r=>r.PVP>0&&r.Vista===null&&!('Classe vista comparável' in r)));
+assert.equal(bela.filter(r=>r['Tipo produto']==='Rooftop').length,32);assert.equal(bela.filter(r=>r['Tipo produto']==='Duplex').length,4);
+let writes=0;const context={document:{readyState:'loading',addEventListener(){},body:{style:{}}},window:{addEventListener(){}},localStorage:{getItem(){return null},setItem(){writes++}},console};
+const source=fs.readFileSync(require.resolve('../app.js'),'utf8'),end=source.lastIndexOf('})();');vm.createContext(context);vm.runInContext(source.slice(0,end)+'globalThis.a={state,els,parseRow,compMatches,selectDiverseComparables,comparisonLayer,comparisonScore,comparisonReason,equivalentArea,specialProduct,comparableView,openFractionModal,finalPrice,suggestedPrice,strategicBenchmarks,locationFactor};'+source.slice(end),context);
+const a=context.a;a.state.rows=rows.map(a.parseRow);a.state.fractions=a.state.rows.filter(r=>r.isTheView);a.state.competitors=a.state.rows.filter(r=>!r.isTheView);a.els.fractionModalContent={innerHTML:''};a.els.fractionModal={classList:{remove(){}}};
+const fraction=n=>a.state.fractions.find(r=>r.number===n),competitor=code=>a.state.competitors.find(r=>r.development==='BelaFormosa'&&r.fractionRaw===code);
+for(const f of a.state.fractions){const seen=new Set();for(const mode of ['direct','adjacent','indirect','special'])for(const c of a.compMatches(f,mode)){const k=c.development+'|'+c.fractionRaw;assert.ok(!seen.has(k),'Duplicate '+k);seen.add(k);assert.equal(a.comparisonLayer(f,c),mode);if(mode==='direct'||mode==='adjacent'){assert.ok(a.comparableView(c)!==null);assert.ok(!a.specialProduct(c));}if(c.development==='BelaFormosa')assert.ok(!['direct','adjacent'].includes(mode));}}
+assert.notEqual(a.comparisonLayer(fraction(1),competitor('RF108')),'direct');assert.equal(a.comparableView(competitor('LF504')),null);
+for(const [n,codes]of [[36,['LF504','RF504']],[37,['LF507','RF507']],[38,['RB503','RB504']],[39,['LB507','RB507']]])for(const code of codes){assert.equal(a.comparisonLayer(fraction(n),competitor(code)),'indirect');assert.equal(a.specialProduct(competitor(code)),false);assert.ok(a.compMatches(fraction(n),'indirect').some(c=>c.fractionRaw===code));}
+for(const n of [36,37,38,39]){const chosen=a.selectDiverseComparables(a.compMatches(fraction(n),'indirect'),4,2);assert.equal(chosen.filter(r=>r.development==='BelaFormosa').length,2);assert.ok(a.compMatches(fraction(n),'special').every(a.specialProduct));}
+assert.equal(a.comparisonLayer(fraction(36),competitor('LF604')),'special');
+for(const r of bela){const p=Number(r.Fração.slice(2))%100,front=['LF','RF'].includes(r.Bloco),range=front?([4,5].includes(p)?[1,1]:p>=6?[2,3]:[3,4]):p>=6&&p<=9?[2,3]:[3,4];assert.deepEqual([r['Vista mínima'],r['Vista máxima']],range,r.Fração);assert.match(r['Confiança vista'],/Estimada/);assert.equal(r.Vista,null)}
+for(const block of ['LB','RB'])assert.equal(competitor(block+'507').viewMin,2);
+for(const [dev,city]of [['EVO Lux Garden','Faro'],['Palácio BR Avenida','Faro'],['Del Mar Waterfront','Olhão'],['The View','Olhão'],['BelaFormosa','Olhão']]){const matches=rows.filter(r=>r.Empreendimento===dev);assert.ok(matches.length);assert.ok(matches.every(r=>r.Localidade===city&&r['Fonte localidade']));}
+for(const dev of ['EVO Lux Garden','Palácio BR Avenida']){const c=a.state.competitors.find(r=>r.development===dev),f=fraction(36);assert.equal(a.locationFactor(f,c),.7);assert.ok(a.comparisonScore(f,{...c,locality:'Olhão'})>a.comparisonScore(f,c));assert.equal(a.locationFactor(f,{...c,segment:'Premium local'}),.7)}
+assert.equal(a.locationFactor(fraction(36),{locality:'Olhão',segment:'Regional'}),1);assert.equal(a.locationFactor(fraction(36),{}),.85);
+for(const n of [36,37,39]){const f=fraction(n),bench=a.strategicBenchmarks(f,true),seen=new Set(['direct','adjacent','indirect','special'].flatMap(mode=>Array.from(a.compMatches(f,mode),c=>c.development+'|'+c.fractionRaw)));assert.ok(bench.length);for(const c of bench){assert.equal(a.comparisonLayer(f,c),null);const key=c.development+'|'+c.fractionRaw;assert.ok(!seen.has(key));seen.add(key)}if(n===36)assert.ok(bench.some(c=>c.development==='Del Mar Waterfront'&&c.fractionRaw==='BZ'&&c.typology==='T3'&&c.view===1));if(n===37)assert.ok(bench.some(c=>c.development==='Del Mar Waterfront'&&c.comparableTypology==='t2'));if(n===39)assert.ok(bench.some(c=>c.development!=='Del Mar Waterfront'&&c.comparableTypology==='t3'));}
+const sample=competitor('RF507');assert.equal(a.equivalentArea(sample),100.25+.3*19);a.state.compare.exteriorCoefficient=.5;assert.equal(a.equivalentArea(sample),100.25+.5*19);a.state.compare.exteriorCoefficient=.3;
+const reliable={...sample,view:2,viewConfidence:'Confirmada',viewMin:null,viewMax:null,dataQuality:'Alta',floor:6};assert.equal(a.comparisonLayer(fraction(37),reliable),'direct');assert.equal(a.comparisonLayer(fraction(37),{...reliable,floor:5}),'adjacent');assert.equal(a.comparisonLayer(fraction(37),{...reliable,view:4}),'indirect');assert.equal(a.comparisonLayer(fraction(37),{...reliable,price:NaN}),null);
+assert.ok(a.comparisonScore(fraction(37),reliable)>a.comparisonScore(fraction(37),{...reliable,status:'Histórico',referenceYear:2024,dataQuality:'Baixa'}));
+const snapshot=JSON.stringify(a.state.commercialData);for(const n of [1,9,23,36,37,38,39]){a.openFractionModal(fraction(n));const html=a.els.fractionModalContent.innerHTML;assert.match(html,/Preço recomendado/);assert.match(html,/Adjacentes prioritários/);assert.match(html,/Referências especiais/);assert.ok(html.includes('/m² equivalente'));assert.doesNotMatch(html,/NaN|undefined/)}
+assert.equal(JSON.stringify(a.state.commercialData),snapshot);assert.equal(writes,0);
+for(const path of ['commercial.js','commercial.html','commercial.css','api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','plantas'])assert.equal(cp.execFileSync('git',['diff','e604861','--',path],{encoding:'utf8'}),'','Protected PR19 path: '+path);
+console.log('BelaFormosa comparator PASS: 39 independent recommendations, 29.675M, 496 external records/PVP/parking unchanged, exclusive layers and benchmarks, no commercial writes.');

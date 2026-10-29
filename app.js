@@ -62,7 +62,7 @@
   const state = {
     rows: [], fractions: [], competitors: [],
     activeView: 'home', commercialTab: 'dashboard',
-    compare: { typology:'all', floor:'all', view:'all', fraction:'all', development:'all' },
+    compare: { typology:'all', floor:'all', view:'all', fraction:'all', development:'all', exteriorCoefficient:.3 },
     filters: { search:'', typologies:[], floors:[], showSuggested:true, showOriginal:true, showRationale:true, showFunnel:true },
     selected: new Set(),
     commercialData: loadStoredData()
@@ -203,7 +203,13 @@
       recommendationConfidence: safe(raw['Confiança Recomendação']),
       technicalReason: safe(raw['Justificação Técnica']),
       analysisSegment: safe(raw['Segmento Análise']),
-      analysisAvailability: safe(raw['Disponibilidade Análise'])
+      analysisAvailability: safe(raw['Disponibilidade Análise']),
+      block:safe(raw['Bloco']), productType:safe(raw['Tipo produto']),
+      viewMin:parseOptionalNumber(raw['Vista mínima']),viewMax:parseOptionalNumber(raw['Vista máxima']),
+      viewConfidence:safe(raw['Confiança vista']),viewSource:safe(raw['Fonte vista']),
+      locality:safe(raw['Localidade']),localitySource:safe(raw['Fonte localidade']),
+      source:safe(raw['Fonte']),updatedAt:safe(raw['Data de atualização']),
+      notes:safe(raw['Observações comerciais'])
     };
   }
 
@@ -228,7 +234,8 @@
     els.compareKpis.innerHTML = [
       kpi('Frações visíveis', fractions.length, 'Inventário filtrado'),
       kpi('Concorrentes', comps.length, 'Rows do compset'),
-      kpi('€/m² médio', avg ? money(Math.round(avg),0) : '—', 'Área total')
+      kpi('€/m² médio', avg ? money(Math.round(avg),0) : '—', 'PVP original / área total'),
+      kpi('Total recomendado',money(sum(fractions.map(f=>f.recommendedPrice||0))),'Avaliação técnica independente; não altera preços comerciais')
     ].join('');
     els.compareResultCount.textContent = `${fractions.length} frações visíveis`;
     els.compareCardsGrid.innerHTML = fractions.length ? fractions.map(cardHtml).join('') : `<div class="empty-state">Sem frações para apresentar.</div>`;
@@ -239,7 +246,8 @@
     return `<article class="fraction-card">
       <div class="fraction-card__top"><div><h3>${esc(f.name)}</h3><p class="muted small">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p>${f.analysisAvailability ? `<span class="badge badge--warning">${esc(f.analysisAvailability)}</span>` : ''}</div><span class="badge badge--accent">Vista ${f.view || '—'}</span></div>
       <div class="fraction-card__metrics">
-        <div class="metric-box"><span>Preço base</span><strong>${money(f.price)}</strong></div>
+        <div class="metric-box"><span>PVP original</span><strong>${money(f.price)}</strong></div>
+        <div class="metric-box"><span>Preço recomendado</span><strong>${f.recommendedPrice?money(f.recommendedPrice):'—'}</strong></div>
         <div class="metric-box"><span>€/m²</span><strong>${money(Math.round(f.pricePerSqm),0)}</strong></div>
         <div class="metric-box"><span>ABP</span><strong>${area(f.abp)}</strong></div>
         <div class="metric-box"><span>Área total</span><strong>${area(f.totalArea)}</strong></div>
@@ -252,12 +260,12 @@
   function openFractionModal(f) {
     if (!f) return;
     const direct = compMatches(f,'direct');
+    const adjacent = compMatches(f,'adjacent');
     const indirect = compMatches(f,'indirect');
-    const broad = compMatches(f,'broad');
-    const strategic = strategicBenchmarks(f);
+    const special = compMatches(f,'special');
     const internal = internalComparables(f);
     const plantFamily = state.fractions.filter(other => other.number !== f.number && plantFamilyKey(other) === plantFamilyKey(f));
-    const external = [...new Set([...direct,...indirect,...broad])];
+    const external = [...direct,...adjacent,...indirect,...special];
     const historical = external.filter(c => normalize(c.status) === 'historico').length;
     const lowQuality = external.filter(c => normalize(c.dataQuality) === 'baixa').length;
     const delta = f.recommendedPrice == null ? null : f.recommendedPrice - f.price;
@@ -269,17 +277,18 @@
       </header>
       <section class="fraction-analysis__section"><h3>Análise técnica</h3>
         <div class="technical-metrics">
-          ${metric('Preço base',money(f.price))}
+          ${metric('PVP original',money(f.price))}
           ${metric('Preço recomendado',f.recommendedPrice == null ? '—' : money(f.recommendedPrice))}
-          ${metric('Diferença',difference)}
+          ${metric('Diferença: recomendado vs PVP original',difference)}
           ${metric('Confiança',f.recommendationConfidence || '—')}
           ${metric('Versão da análise',analysisVersionLabel(f.analysisVersion))}
           ${metric('Segmento',f.analysisSegment || '—')}
+          ${metric('Vista',viewLabel(f))}${metric('Área interior',area(f.abp))}${metric('Área exterior',area(f.terrace))}
         </div>
       </section>
       <section class="fraction-analysis__section"><h3>Concorrência interna</h3>
         <div class="internal-comps-scroll"><table class="data-table internal-comps-table"><thead><tr>
-          <th>Fração</th><th>Piso</th><th>Tipologia</th><th>Orientação</th><th class="num-col">ABP</th><th class="num-col">Exterior</th><th class="num-col">Preço base</th><th class="num-col">Recomendado</th>
+          <th>Fração</th><th>Piso</th><th>Tipologia</th><th>Orientação</th><th class="num-col">ABP</th><th class="num-col">Exterior</th><th class="num-col">PVP original</th><th class="num-col">Recomendado</th>
         </tr></thead><tbody>${internal.map(other => `<tr class="${other.number===f.number?'internal-comp-current':''}">
           <td><strong>${esc(other.name)}</strong>${other.analysisAvailability ? `<small class="internal-comp-availability">${esc(other.analysisAvailability)}</small>` : ''}</td>
           <td>${esc(other.floorLabel)}</td><td>${esc(other.typology)}</td><td>${esc(other.orientation || '—')}</td>
@@ -292,23 +301,32 @@
         <div class="analysis-reasons">
           <div><h4>Características da fração</h4><p>${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')} · ABP ${area(f.abp)} · Exterior ${area(f.terrace)}.</p></div>
           <div><h4>Concorrência interna</h4><p>${plantFamily.length ? `${plantFamily.length} frações da mesma família de planta. Referências técnicas de ${money(Math.min(...plantFamily.map(x=>x.recommendedPrice || x.price)))} a ${money(Math.max(...plantFamily.map(x=>x.recommendedPrice || x.price)))}.` : 'Sem outra fração da mesma família de planta; ver tipologia, área e pisos próximos na tabela.'}</p></div>
-          <div><h4>Concorrência externa</h4><p>${direct.length} diretos, ${indirect.length} indiretos e ${broad.length} pouco concorrentes. ${historical} históricos; ${lowQuality} com qualidade de dados baixa.</p></div>
+          <div><h4>Concorrência externa</h4><p>${direct.length} diretos, ${adjacent.length} adjacentes prioritários, ${indirect.length} ajustados e ${special.length} produtos especiais. ${historical} históricos; ${lowQuality} com qualidade de dados baixa.</p></div>
         </div>
       </section>
-      <section class="fraction-analysis__section"><h3>Benchmarks estratégicos</h3>
-        <p class="muted small">Referências de posicionamento, selecionadas por atualidade, tipologia, segmento e qualidade dos dados; não exigem o mesmo piso.</p>
-        <div class="strategic-comps">${strategic.length ? strategic.map(strategicItem).join('') : '<p class="muted small">Sem referências estratégicas suficientemente atuais e relevantes.</p>'}</div>
-      </section>
       <section class="fraction-analysis__section"><h3>Concorrência externa</h3>
-        <p class="muted small">Diretos = mesma tipologia comparável, piso e classe comparável de vista (ou vista factual). Indiretos = mesma tipologia e piso. Pouco concorrentes = mesma tipologia e piso ± 1. Segmento, peso, camada, qualidade e data ajudam a avaliar cada referência.</p>
-        <div class="comps-list comps-list--analysis">${compBlock('Diretos',direct,f.analysisSegment)}${compBlock('Indiretos',indirect,f.analysisSegment)}${compBlock('Pouco concorrentes',broad,f.analysisSegment)}</div>
+        <p class="muted small">Preços anunciados, não transações. Vistas estimadas não constituem correspondência exata. Reservas e históricos são identificados separadamente.</p>
+        <label class="field comp-area-assumption"><span>Hipótese analítica: peso da área exterior (%)</span><input id="compExteriorCoefficient" type="number" min="0" max="100" step="5" value="${Math.round(exteriorCoefficient()*100)}"></label>
+        <p class="muted small">Área equivalente = interior + <span id="compCoefficientLabel">${Math.round(exteriorCoefficient()*100)}</span>% do exterior. Hipótese de comparação, não equivalência oficial de avaliação.</p>
+        <div class="comps-list comps-list--analysis">${externalComparisonMarkup(f)}</div>
+        <div id="strategicComparisonContent">${strategicComparisonMarkup(f)}</div>
       </section>
     </div>`;
     els.fractionModal.classList.remove('hidden');
     document.body.style.overflow='hidden';
+    const coefficient=els.fractionModalContent.querySelector?.('#compExteriorCoefficient');
+    if(coefficient)coefficient.onchange=()=>{const value=Number(coefficient.value);if(Number.isFinite(value)&&value>=0&&value<=100){state.compare.exteriorCoefficient=value/100;els.fractionModalContent.querySelector('#compCoefficientLabel').textContent=String(value);els.fractionModalContent.querySelector('.comps-list--analysis').innerHTML=externalComparisonMarkup(f);els.fractionModalContent.querySelector('#strategicComparisonContent').innerHTML=strategicComparisonMarkup(f)}};
   }
 
   function closeModal() { els.fractionModal.classList.add('hidden'); document.body.style.overflow=''; }
+
+  function externalComparisonMarkup(f) {
+    return [['direct','A · Concorrentes diretos'],['adjacent','B · Adjacentes prioritários'],['indirect','C · Indiretos e ajustados'],['special','D · Referências especiais']].map(([mode,title])=>compBlock(title,compMatches(f,mode),f)).join('');
+  }
+
+  function strategicComparisonMarkup(f) {
+    return `<h3>Benchmarks estratégicos complementares</h3><p class="muted small">Referências premium fora dos limites de piso ou área das quatro camadas. Apoiam o posicionamento, mas não são concorrentes diretos nem alteram o preço recomendado.</p><div class="strategic-comparison-list">${compBlock('Referências premium complementares',strategicBenchmarks(f,true),f)}</div>`;
+  }
 
   function plantFamilyKey(f) {
     return PLANT_MAP[f.number]?.pdf || PLANT_MAP[f.number]?.image || String(f.number);
@@ -351,32 +369,38 @@
   function selectDiverseComparables(rows, maxTotal=6, maxPerDevelopment=2) {
     const selected = [];
     const counts = new Map();
+    const blocks = new Set(),deferred=[];
     for (const row of rows) {
       const key = normalize(row.development);
       if ((counts.get(key) || 0) >= maxPerDevelopment) continue;
+      const blockKey=row.block?key+'|'+row.block:null;
+      if(blockKey&&blocks.has(blockKey)){deferred.push(row);continue}
       selected.push(row);
       counts.set(key, (counts.get(key) || 0) + 1);
+      if(blockKey)blocks.add(blockKey);
       if (selected.length === maxTotal) break;
     }
+    for(const row of deferred){if(selected.length>=maxTotal)break;const key=normalize(row.development);if((counts.get(key)||0)>=maxPerDevelopment)continue;selected.push(row);counts.set(key,(counts.get(key)||0)+1)}
     return selected;
   }
 
-  function strategicBenchmarks(f) {
+  function strategicBenchmarks(f, complementary=false) {
     const temporalWeight = year => year >= 2026 ? 1 : year === 2025 ? .6 : year === 2024 ? .2 : .05;
     const qualityWeight = quality => ({alta:1,media:.85,baixa:.6})[normalize(quality)] || .55;
     const layerWeight = layer => ({a:1,b:.8,c:.55})[normalize(layer).charAt(0)] || .55;
     const targetSegment = f.analysisSegment || externalSegment(f);
-    const scored = state.competitors.filter(c => c.comparableTypology === f.comparableTypology && c.price > 0)
+    const pool = complementary ? consolidatedCompetitors(filteredCompetitors()).filter(c=>externalSegment(c)==='Premium'&&!specialProduct(c)&&comparisonLayer(f,c)===null) : state.competitors;
+    const scored = pool.filter(c => c.comparableTypology === f.comparableTypology && Number.isFinite(c.price) && c.price > 0)
       .map(c => {
         const status = normalize(c.status);
         const activeWeight = status === 'ativo' ? 1 : status === 'a validar' ? .35 : .15;
         const segmentWeight = externalSegment(c) === targetSegment ? 1 : targetSegment === 'Standard' ? .8 : .55;
         const typeWeight = c.typology === f.typology ? 1 : .85;
         const score = c.weight * temporalWeight(c.referenceYear) * activeWeight * typeWeight *
-          segmentWeight * layerWeight(c.compsetLayer) * qualityWeight(c.dataQuality);
+          segmentWeight * layerWeight(c.compsetLayer) * qualityWeight(c.dataQuality) * locationFactor(f,c);
         return { row:c, score };
       })
-      .filter(entry => entry.score >= .25)
+      .filter(entry => entry.score >= (complementary ? .15 : .25))
       .sort((a,b) => b.score-a.score || b.row.referenceYear-a.row.referenceYear || a.row.price-b.row.price);
     const ranked = scored.map(entry => entry.row);
     const firstPerDevelopment = selectDiverseComparables(ranked, 6, 1);
@@ -399,15 +423,23 @@
       <div class="num-col"><strong>${money(r.price)}</strong>${sqmArea > 0 ? `<small>${money(Math.round(r.price / sqmArea),0)} ${sqmLabel}</small>` : ''}</div></div></article>`;
   }
 
-  function compBlock(title, rows, targetSegment) {
-    return `<div class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length ? selectDiverseComparables(rows).map(r=>{
-      const segment = externalSegment(r);
-      const viewDetails = `Vista ${r.view||'—'}${r.comparableViewClass == null ? '' : ` · Classe comparável de vista: ${r.comparableViewClass}`}`;
-      return `<div class="comp-item"><div><strong>${esc(r.development)}</strong><small>${esc(r.fractionRaw)} · ${esc(r.typology)} · Piso ${esc(r.floorLabel)} · ${esc(viewDetails)}</small>
-        <small><span class="comp-segment ${segment===targetSegment?'comp-segment--match':''}">${esc(segment)}${segment===targetSegment?' · mesmo segmento':''}</span> · ${esc(r.segment || 'Segmento não indicado')}</small>
-        <small>${esc(r.status)} · ${r.referenceYear || 'Ano n/d'} · ${esc(r.compsetLayer || 'Camada n/d')} · Peso ${new Intl.NumberFormat('pt-PT',{maximumFractionDigits:2}).format(r.weight)} · Qualidade ${esc(r.dataQuality || 'n/d')}</small>
-      </div><div class="num-col"><strong>${money(r.price)}</strong>${r.totalArea > 0 ? `<small>${money(Math.round(r.pricePerSqm),0)} /m² total</small>` : ''}</div></div>`;
-    }).join('') : '<p class="muted small">Sem concorrentes encontrados.</p>'}</div>`;
+  function compBlock(title, rows, target) {
+    const visible=selectDiverseComparables(rows,4,2),remaining=rows.filter(r=>!visible.includes(r));
+    const targetSegment=typeof target==='object'?target.analysisSegment:target;
+    const item=r=>{
+      const segment=externalSegment(r),reason=typeof target==='object'?comparisonReason(target,r):'';
+      const reference=typeof target==='object'?(target.recommendedPrice||target.price):null;
+      const difference=reference&&r.price?`${signedMoney(r.price-reference)} / ${signedPercent((r.price-reference)/reference)} face ao recomendado`:'';
+      const eq=equivalentArea(r),validTotal=totalAreaReliable(r);
+      const variants=r.sourceVariants?`<details><summary>${r.sourceVariants.length} registos divergentes · variante de referência abaixo</summary>${r.sourceVariants.map(v=>`<p class="muted small">${money(v.price)} · Interior ${area(v.abp)} · Exterior ${area(v.terrace)} · ${v.referenceYear||'Data não informada'} · ${esc(v.source||'Fonte por validar')}</p>`).join('')}</details>`:'';
+      return `<article class="comp-item" data-comparable="${esc(r.development+'|'+r.fractionRaw)}"><div><strong>${esc(r.development)} · ${esc(r.fractionRaw)}</strong><small>${esc(r.typology)} · Piso ${esc(r.floorLabel)} · ${esc(viewLabel(r))}</small>
+        <small><span class="comp-segment ${segment===targetSegment?'comp-segment--match':''}">${esc(segment)}</span> · ${esc(r.status)} · ${r.referenceYear||'Ano n/d'} · Qualidade ${esc(r.dataQuality||'não confirmada')}</small>
+        <small>${esc(r.locality||'Localidade por confirmar')} · Fator geográfico ${typeof target==='object'?locationFactor(target,r):'—'}</small>
+        <small>${esc(typeof target==='object'?comparisonHeading(target,r):'')}</small><details class="comp-context"><summary>Motivo, fonte e condições</summary><p class="muted small">${esc(reason)}</p><p class="muted small">${esc(r.orientation||'Orientação não confirmada')} · Estacionamento: ${esc(r.parking||'Não informado')}</p><p class="muted small">${esc(r.viewSource||'')}${r.viewSource?' · ':''}${esc(r.source||'Fonte por validar')}${r.updatedAt?' · '+esc(r.updatedAt):''}</p><p class="muted small">Localização: ${esc(r.localitySource||'Fonte por confirmar')}</p>${variants}</details>
+        <dl class="comp-area-metrics"><div><dt>Interior</dt><dd>${r.abp?area(r.abp):'—'}<small>${r.abp?money(Math.round(r.price/r.abp),0)+' /m² interior':'Não informado'}</small></dd></div><div><dt>Exterior</dt><dd>${Number.isFinite(r.terrace)?area(r.terrace):'—'}</dd></div><div><dt>Total</dt><dd>${r.totalArea?area(r.totalArea):'—'}<small>${validTotal?money(Math.round(r.price/r.totalArea),0)+' /m² total':'Área total por validar'}</small></dd></div><div><dt>Equivalente</dt><dd>${eq?area(eq):'—'}<small>${eq?money(Math.round(r.price/eq),0)+' /m² equivalente':'Interior/exterior por confirmar'}</small></dd></div></dl>
+      </div><div class="num-col"><strong>${money(r.price)}</strong><small>${esc(difference)}</small>${normalize(r.status)==='reservado'?'<small>Reservado · não é venda nem oferta ativa</small>':''}</div></article>`;
+    };
+    return `<section class="comp-block"><h4>${esc(title)} <span class="muted">(${rows.length})</span></h4>${rows.length?visible.map(item).join('')+(remaining.length?`<details class="comp-more"><summary>Ver mais ${remaining.length} referências</summary>${remaining.map(item).join('')}</details>`:''):`<p class="muted small">${title.startsWith('A')?'Sem comparável direto':'Sem referências válidas nesta camada.'}</p>`}</section>`;
   }
 
   function renderCommercialAll() {
@@ -645,8 +677,94 @@
   }
 
   function comparableView(row) {
+    if (row.ambiguousIdentity||normalize(row.dataQuality)==='baixa'||/estimad|incert|por validar/.test(normalize(row.viewConfidence))) return null;
+    if(!row.isTheView&&row.raw&&!['alta','media'].includes(normalize(row.dataQuality))&&row.comparableViewClass==null&&normalize(row.viewConfidence)!=='confirmada')return null;
     if (Number.isFinite(row.comparableViewClass)) return row.comparableViewClass;
     return Number.isFinite(row.view) ? row.view : null;
+  }
+
+  function exteriorCoefficient() {
+    const value=state.compare.exteriorCoefficient;
+    return Number.isFinite(value)&&value>=0&&value<=1?value:.3;
+  }
+  function equivalentArea(row) {
+    if(!(row.abp>0)||!Number.isFinite(row.terrace)||row.terrace<0||row.raw&&row.raw['Varanda/Terraço']==null)return null;
+    return row.abp+exteriorCoefficient()*row.terrace;
+  }
+  function totalAreaReliable(row) {
+    return row.totalArea>0&&(!(row.abp>0)||!Number.isFinite(row.terrace)||Math.abs(row.totalArea-row.abp-row.terrace)<.03);
+  }
+  function specialProduct(row) {
+    return /rooftop|duplex|piscina privativa/.test(normalize([row.productType,row.typology,row.raw?.Piscina].join(' ')));
+  }
+  function viewLabel(row) {
+    const exact=comparableView(row);
+    if(exact!==null)return `Vista ${row.view||'—'}${row.comparableViewClass==null?'':` · Classe comparável de vista: ${row.comparableViewClass}`}`;
+    if(Number.isFinite(row.viewMin)&&Number.isFinite(row.viewMax))return `Vista estimada ${row.viewMin===row.viewMax?row.viewMin:row.viewMin+'–'+row.viewMax} · confiança ${normalize(row.viewConfidence).includes('media')?'média':'baixa'}`;
+    if(Number.isFinite(row.view))return `Vista indicada ${row.view} · fiabilidade por confirmar`;
+    return 'Vista não confirmada';
+  }
+  function consolidatedCompetitors(rows) {
+    const groups=new Map();
+    for(const row of rows){const key=normalize(row.development)+'|'+normalize(row.fractionRaw);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
+    return [...groups.values()].map(variants=>{
+      if(variants.length===1)return variants[0];
+      const ordered=[...variants].sort((a,b)=>b.referenceYear-a.referenceYear||String(b.updatedAt).localeCompare(String(a.updatedAt)));
+      const divergent=variants.some(r=>r.price!==ordered[0].price||r.abp!==ordered[0].abp||r.terrace!==ordered[0].terrace||r.typology!==ordered[0].typology||r.view!==ordered[0].view);
+      return divergent?{...ordered[0],ambiguousIdentity:true,sourceVariants:ordered}:ordered[0];
+    });
+  }
+  function comparisonLayer(f,c) {
+    if(c.comparableTypology!==f.comparableTypology||!Number.isFinite(c.price)||c.price<=0)return null;
+    if(specialProduct(c))return 'special';
+    const gap=Number.isFinite(c.floor)&&Number.isFinite(f.floor)?Math.abs(c.floor-f.floor):null;
+    const exact=comparableView(f)!==null&&comparableView(c)===comparableView(f);
+    if(!specialProduct(f)&&exact&&gap===0)return 'direct';
+    if(!specialProduct(f)&&exact&&gap===1)return 'adjacent';
+    const ratio=c.abp>0&&f.abp>0?c.abp/f.abp:null;
+    if(gap!==null&&gap>3||ratio!==null&&(ratio<.5||ratio>2.5))return null;
+    return 'indirect';
+  }
+  function comparisonScore(f,c) {
+    const gap=Number.isFinite(c.floor)&&Number.isFinite(f.floor)?Math.abs(c.floor-f.floor):4;
+    const view=comparableView(f),other=comparableView(c);
+    const viewWeight=view!==null&&other!==null?1/(1+Math.abs(view-other)):
+      view!==null&&Number.isFinite(c.viewMin)&&Number.isFinite(c.viewMax)?(view>=c.viewMin&&view<=c.viewMax ? .8 : .25):.45;
+    const a=equivalentArea(f),b=equivalentArea(c),areaWeight=a&&b?1/(1+Math.abs(Math.log(b/a))):.65;
+    const interiorWeight=f.abp>0&&c.abp>0?1/(1+Math.abs(Math.log(c.abp/f.abp))):.65;
+    const current=c.referenceYear>=2026?1:c.referenceYear===2025?.7:c.referenceYear===2024?.35:.2;
+    const quality=({alta:1,media:.8,baixa:.5})[normalize(c.dataQuality)]||.5;
+    const status=({ativo:1,reservado:.65,historico:.3,'a validar':.45})[normalize(c.status)]||.4;
+    const segment=externalSegment(c)===(f.analysisSegment||externalSegment(f))?1:.65;
+    const type=normalize(c.typology)===normalize(f.typology)?1:.9;
+    const orientation=c.orientation&&f.orientation&&normalize(c.orientation)!==normalize(f.orientation) ? .9 : 1;
+    const parking=c.parking&&f.parking&&/sem estacionamento/.test(normalize(c.parking))!==/sem estacionamento/.test(normalize(f.parking)) ? .95 : 1;
+    const location=locationFactor(f,c);
+    return (c.weight||.5)*current*quality*status*segment*type*viewWeight*areaWeight*interiorWeight*orientation*parking*location/(1+gap*.3);
+  }
+  function comparisonHeading(f,c) {
+    const layer=comparisonLayer(f,c);
+    return layer===null?'Benchmark estratégico: fora dos limites de comparação direta ou ajustada':layer==='special'?'Produto especial: referência de posicionamento, não equivalente convencional':
+      layer==='direct'?'Mesma família tipológica, piso e classe de vista fiável':
+      layer==='adjacent'?'Piso adjacente e mesma classe de vista fiável':Math.abs(c.floor-f.floor)===1?'Piso adjacente; vista não equivalente ou não confirmada':'Comparável ajustado; características não equivalentes';
+  }
+  function comparisonReason(f,c) {
+    const sameView=comparableView(f)!==null&&comparableView(c)===comparableView(f);
+    const reasons=[comparisonHeading(f,c)];
+    if(normalize(c.typology)!==normalize(f.typology))reasons.push(`Tipologia real ${c.typology}; família funcional ${c.comparableTypology.toUpperCase()}`);
+    if(c.floor!==f.floor)reasons.push(`Piso ${c.floorLabel} face ao piso ${f.floorLabel}`);
+    if(!sameView)reasons.push(comparableView(c)===null?'Vista estimada ou desconhecida; não é correspondência exata':'Classe de vista diferente');
+    if(c.ambiguousIdentity)reasons.push('Código repetido com dados divergentes; versões históricas preservadas, identidade por validar');
+    if(c.abp>0&&f.abp>0)reasons.push(`Interior ${signedPercent((c.abp-f.abp)/f.abp)} face ao The View`);
+    if(!c.orientation)reasons.push('Orientação por confirmar');
+    if(c.parking!==f.parking)reasons.push('Estacionamento não equivalente ou por confirmar');
+    reasons.push(`Comparação ${comparableView(c)===null||normalize(c.dataQuality)==='baixa'?'com confiança limitada':'com confiança condicionada às áreas e à fonte'}`);
+    return reasons.join(' · ');
+  }
+
+  function locationFactor(f,c) {
+    if(!f.locality||!c.locality)return .85;
+    return normalize(f.locality)===normalize(c.locality)?1:.7;
   }
 
   function filteredCommercialFractions() {
@@ -660,11 +778,9 @@
   }
 
   function compMatches(f, mode) {
-    return filteredCompetitors().filter(c => c.comparableTypology === f.comparableTypology).filter(c => {
-      if (mode==='direct') return c.floor===f.floor && comparableView(f)!==null && comparableView(c)===comparableView(f);
-      if (mode==='indirect') return c.floor===f.floor;
-      return c.floor!==null && f.floor!==null && Math.abs(c.floor-f.floor)<=1;
-    }).sort((a,b)=>(b.weight-a.weight)||(b.referenceYear-a.referenceYear)||(a.pricePerSqm-b.pricePerSqm));
+    const layer=mode==='broad'?'indirect':mode;
+    return consolidatedCompetitors(filteredCompetitors()).filter(c=>comparisonLayer(f,c)===layer)
+      .sort((a,b)=>comparisonScore(f,b)-comparisonScore(f,a)||b.referenceYear-a.referenceYear||a.fractionRaw.localeCompare(b.fractionRaw));
   }
 
   function getFraction(n) { return state.fractions.find(f=>f.number===n); }
@@ -740,7 +856,7 @@
   function parseFloor(v) { if (typeof v==='number') return v; const s=safe(v).toUpperCase(); if(!s) return null; if(['R/C','RC','0'].includes(s)) return 0; const m=s.match(/-?\d+/); return m ? Number(m[0]) : null; }
   function naturalNumber(s, fallback=null) { const m=safe(s).match(/\d+/); return m ? Number(m[0]) : fallback; }
   function prettyTypology(v) { return safe(v).replace(/\s+/g,' ').replace(/DUPLEX/i,'Duplex').replace(/DUP$/i,'Duplex'); }
-  function comparableTypology(t) { let s=normalize(t).replace(/[\s_-]*duplex\b/g,'').replace(/[\s_-]+/g,'').replace(/g$/,''); if(s==='t1+1')return't2'; if(s==='t2+1')return't3'; return s; }
+  function comparableTypology(t) { let s=normalize(t).replace(/[\s_+-]*rooftop\b/g,'').replace(/[\s_-]*duplex\b/g,'').replace(/[\s_-]+/g,'').replace(/g$/,''); if(s==='t1+1')return't2'; if(s==='t2+1')return't3'; return s; }
   function safe(v) { return v==null ? '' : String(v).trim(); }
   function normalize(v) { return safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
   function unique(values) { return [...new Set(values.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'pt-PT',{numeric:true,sensitivity:'base'})); }

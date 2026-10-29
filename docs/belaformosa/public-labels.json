@@ -1,0 +1,84 @@
+{
+  "productionNetwork": false,
+  "realCommercialData": false,
+  "viewports": [
+    {
+      "label": "desktop",
+      "width": 1440,
+      "height": 1000,
+      "fractionsChecked": [
+        1,
+        9,
+        23,
+        36,
+        37,
+        38,
+        39
+      ],
+      "exclusiveLayers": true,
+      "fifthFloorReferences": true,
+      "uncertainViewsVisible": true,
+      "coefficientReadOnly": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "laptop",
+      "width": 1366,
+      "height": 768,
+      "fractionsChecked": [
+        1,
+        9,
+        23,
+        36,
+        37,
+        38,
+        39
+      ],
+      "exclusiveLayers": true,
+      "fifthFloorReferences": true,
+      "uncertainViewsVisible": true,
+      "coefficientReadOnly": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "tablet",
+      "width": 820,
+      "height": 1080,
+      "fractionsChecked": [
+        1,
+        9,
+        23,
+        36,
+        37,
+        38,
+        39
+      ],
+      "exclusiveLayers": true,
+      "fifthFloorReferences": true,
+      "uncertainViewsVisible": true,
+      "coefficientReadOnly": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "label": "mobile",
+      "width": 390,
+      "height": 844,
+      "fractionsChecked": [
+        1,
+        9,
+        23,
+        36,
+        37,
+        38,
+        39
+      ],
+      "exclusiveLayers": true,
+      "fifthFloorReferences": true,
+      "uncertainViewsVisible": true,
+      "coefficientReadOnly": true,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "errors": [],
+  "commercialApiRequests": 0
+}

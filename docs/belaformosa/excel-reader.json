@@ -1,0 +1,17 @@
+{
+  "reader": "Microsoft Excel",
+  "version": "16.0",
+  "readOnly": true,
+  "macrosDisabled": true,
+  "externalLinkUpdates": 0,
+  "saved": false,
+  "sheets": 10,
+  "table": "$A$1:$AR$536",
+  "viewMinimumVisible": "3",
+  "viewMaximumVisible": "4",
+  "locality": "Olhão",
+  "recommendedTotal": 27395000.0,
+  "recommendedTotalVisible": "€ 27 395 000",
+  "workbookSha256": "669abe4471b4fd9e5e4133d447120d30b0f277e6ca0d31e136b842289a9e0441",
+  "hashUnchangedAfterReader": true
+}

@@ -9,9 +9,10 @@ const counts = rows.reduce((acc, row) => {
   acc[row.Empreendimento] = (acc[row.Empreendimento] || 0) + 1;
   return acc;
 }, {});
-assert.equal(rows.length, 319);
+assert.equal(rows.length, 535);
 assert.deepEqual(counts, {
   'Aura Living': 27,
+  'BelaFormosa': 216,
   'Del Mar Waterfront': 47,
   'EVO Lux Garden': 77,
   'Le Parc': 59,
@@ -72,7 +73,7 @@ for (const number of [12,13]) {
   app.state.competitors = originalCompetitors;
 }
 const apt13 = app.state.fractions.find(row => row.number === 13);
-assert.equal(app.suggestedPrice(apt13), 440000);
+assert.equal(app.suggestedPrice(apt13), 500000);
 assert.equal(app.finalPrice(apt13), 435000);
 const apt35 = app.state.fractions.find(row => row.number === 35);
 assert.equal(apt35.comparableTypology, 't1');
@@ -101,12 +102,11 @@ assert.equal(sample.length, 8);
 for (const number of [2,12,13,24,35,36,39]) {
   const fraction = app.state.fractions.find(row => row.number === number);
   assert.ok(fraction);
-  for (const mode of ['direct','indirect','broad']) {
+  for (const mode of ['direct','adjacent','indirect','special']) {
     const matches = app.compMatches(fraction, mode);
     assert.ok(matches.every(row => row.comparableTypology === fraction.comparableTypology));
     if (mode === 'direct') assert.ok(matches.every(row => row.floor === fraction.floor && app.comparableView(row) === app.comparableView(fraction)));
-    if (mode === 'indirect') assert.ok(matches.every(row => row.floor === fraction.floor));
-    if (mode === 'broad') assert.ok(matches.every(row => Math.abs(row.floor - fraction.floor) <= 1));
+    if (mode === 'adjacent') assert.ok(matches.every(row => Math.abs(row.floor-fraction.floor) === 1 && app.comparableView(row) === app.comparableView(fraction)));
     const visible = app.selectDiverseComparables(matches);
     assert.ok(visible.length <= 6);
     for (const development of new Set(visible.map(row => row.development))) {
