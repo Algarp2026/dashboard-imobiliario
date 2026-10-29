@@ -1,5 +1,12 @@
 # Comparador e recomendacoes de outubro de 2026
 
+Correcao final de rotulos (Parte A): o total e identificado como avaliacao
+tecnica independente. Na pagina publica, a diferenca e explicitamente
+Recomendado vs PVP original; nao e Preco Atual do CRM. O modulo Comercial/Precos
+continua intacto, comparando Preco Atual persistido vs Recomendado. Nenhuma
+consulta protegida foi acrescentada ao comparador. Os 39 recomendados, os
+496 concorrentes e estacionamento nao mudaram nesta correcao.
+
 Base: `658da6f038f061aad5f532cb66c98c529591dfe1` (main, PR #18).
 Atualizacao de integracao: main `e604861` (PR #19), preservada integralmente.
 Branch independente: `codex/update-comparator-belaformosa`.

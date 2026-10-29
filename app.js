@@ -235,7 +235,7 @@
       kpi('Frações visíveis', fractions.length, 'Inventário filtrado'),
       kpi('Concorrentes', comps.length, 'Rows do compset'),
       kpi('€/m² médio', avg ? money(Math.round(avg),0) : '—', 'PVP original / área total'),
-      kpi('Total recomendado',money(sum(fractions.map(f=>f.recommendedPrice||0))),'Decisão da gestão; não altera preços comerciais')
+      kpi('Total recomendado',money(sum(fractions.map(f=>f.recommendedPrice||0))),'Avaliação técnica independente; não altera preços comerciais')
     ].join('');
     els.compareResultCount.textContent = `${fractions.length} frações visíveis`;
     els.compareCardsGrid.innerHTML = fractions.length ? fractions.map(cardHtml).join('') : `<div class="empty-state">Sem frações para apresentar.</div>`;
@@ -277,9 +277,9 @@
       </header>
       <section class="fraction-analysis__section"><h3>Análise técnica</h3>
         <div class="technical-metrics">
-          ${metric('Preço base',money(f.price))}
+          ${metric('PVP original',money(f.price))}
           ${metric('Preço recomendado',f.recommendedPrice == null ? '—' : money(f.recommendedPrice))}
-          ${metric('Diferença',difference)}
+          ${metric('Diferença: recomendado vs PVP original',difference)}
           ${metric('Confiança',f.recommendationConfidence || '—')}
           ${metric('Versão da análise',analysisVersionLabel(f.analysisVersion))}
           ${metric('Segmento',f.analysisSegment || '—')}

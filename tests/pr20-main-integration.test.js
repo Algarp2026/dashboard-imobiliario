@@ -5,7 +5,15 @@ const show=(ref,file)=>cp.execFileSync('git',['show',ref+':'+file],{encoding:'ut
 const changed=cp.execFileSync('git',['diff','--name-only','658da6f',main],{encoding:'utf8'}).trim().split('\n');
 const combined=new Set(['tests/commercial-browser-regression.cjs','tests/commercial-client-complete-regression.cjs','vercel.json']);
 for(const file of changed.filter(file=>!combined.has(file)))assert.equal(cp.execFileSync('git',['diff',main,'--',file],{encoding:'utf8'}),'','PR19 must remain exact: '+file);
-for(const file of ['app.js','style.css','scripts/data_workbook.py'])assert.equal(cp.execFileSync('git',['diff',reviewed,'--',file],{encoding:'utf8'}),'','Reviewed PR20 must remain exact: '+file);
+for(const file of ['style.css','scripts/data_workbook.py'])assert.equal(cp.execFileSync('git',['diff',reviewed,'--',file],{encoding:'utf8'}),'','Reviewed PR20 must remain exact: '+file);
+const analyticalApp=fs.readFileSync('app.js','utf8');
+assert.equal(analyticalApp,show('c19e297','app.js')
+ .replace('Decisão da gestão; não altera preços comerciais','Avaliação técnica independente; não altera preços comerciais')
+ .replace("metric('Preço base'","metric('PVP original'")
+ .replace("metric('Diferença',difference)","metric('Diferença: recomendado vs PVP original',difference)"),'Only approved public analytical labels may change');
+assert.ok(analyticalApp.includes('Avaliação técnica independente; não altera preços comerciais'));
+assert.ok(analyticalApp.includes('Diferença: recomendado vs PVP original'));
+assert.ok(!analyticalApp.includes('Decisão da gestão; não altera preços comerciais'));
 // Exact recommendation-only data differences and all 39 values are checked by
 // comparator-belaformosa.test.js; the importer remains covered by native-part/idempotency tests.
 const expected=JSON.parse(show(main,'vercel.json')),previous=JSON.parse(show(reviewed,'vercel.json'));
