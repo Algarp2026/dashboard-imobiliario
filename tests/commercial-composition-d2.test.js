@@ -8,7 +8,13 @@ function declaration(source,name,indent=''){
   const rest=source.slice(match.index+1),next=rest.search(new RegExp('\n'+indent+'(?:async )?function '));return source.slice(match.index,next<0?source.length:match.index+1+next);
 }
 // Sync changes are covered by the recovery/API suites; retain the D2 commercial/UI guards.
-for(const file of ['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','data.json'])assert.equal(read(file),previous(file),file+' must remain unchanged');
+for(const file of ['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js'])assert.equal(read(file),previous(file),file+' must remain unchanged');
+// The authorized analytical update has its own exact table/import assertions.
+// Keep the existing operational source fields frozen here as well.
+const currentRows=JSON.parse(read('data.json')),oldRows=JSON.parse(previous('data.json'));
+const withoutGeo=r=>Object.fromEntries(Object.entries(r).filter(([k])=>!['Localidade','Fonte localidade'].includes(k)));
+assert.deepEqual(currentRows.filter(r=>!['The View','BelaFormosa'].includes(r.Empreendimento)).map(withoutGeo),oldRows.filter(r=>r.Empreendimento!=='The View').map(withoutGeo));
+for(const old of oldRows.filter(r=>r.Empreendimento==='The View')){const current=currentRows.find(r=>r.Empreendimento==='The View'&&r.Fração===old.Fração),fields=new Set(['Preço Recomendado','Versão Análise','Justificação Técnica','Localidade','Fonte localidade',...(['Apartamento 3','Apartamento 11'].includes(old.Fração)?['Garagem']:[])]);const keep=r=>Object.fromEntries(Object.entries(r).filter(([k])=>!fields.has(k)));assert.deepEqual(keep(current),keep(old));}
 assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-integrity\.js|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),previous('middleware.ts'),'Only new protected module routes added to the unchanged authentication guard');
 for(const name of ['effectiveEffect','effectTransition','closingError'])assert.equal(declaration(read('commercial-client-workflow.js'),name,'  '),declaration(previous('commercial-client-workflow.js'),name,'  '),name+' commercial safety changed');
 for(const name of ['hasCriticalCommercialEventChange','protectedEventEditError','replaceEventAndReapplyBusinessRules','applyEventBusinessRules','save','exportPdf','generateClientsSummaryPdf','operationalCommercialSummary'])assert.equal(declaration(read('commercial.js'),name).replace('preserveStorageFailure();',''),declaration(previous('commercial.js'),name),name+' changed outside the quota-failure safeguard');

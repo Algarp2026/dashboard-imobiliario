@@ -5,14 +5,14 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const rows = JSON.parse(fs.readFileSync(path.join(root, 'data.json'), 'utf8'));
-const expected = [0,545000,615000,390000,475000,450000,625000,535000,390000,825000,635000,400000,440000,440000,600000,580000,900000,660000,425000,360000,410000,575000,600000,850000,775000,440000,630000,440000,500000,485000,950000,850000,455000,600000,690000,600000,1450000,1000000,470000,1050000];
+const expected = [0,675000,785000,420000,535000,510000,795000,675000,425000,1200000,830000,440000,515000,500000,735000,705000,1300000,880000,465000,395000,440000,745000,775000,1075000,940000,490000,815000,510000,565000,545000,1175000,1025000,515000,795000,935000,800000,1750000,1150000,545000,1300000];
 const viewRows = rows.filter(row => row.Empreendimento === 'The View');
 assert.equal(viewRows.length, 39);
 
 for (const row of viewRows) {
   const number = Number(row['Fração'].match(/\d+/)[0]);
   assert.equal(row['Preço Recomendado'], expected[number]);
-  assert.equal(row['Versão Análise'], '2026-09');
+  assert.equal(row['Versão Análise'], '2026-10');
   assert.ok(['Alta','Média','Baixa'].includes(row['Confiança Recomendação']));
   assert.ok(row['Justificação Técnica']);
   assert.ok(['Standard','Premium'].includes(row['Segmento Análise']));
@@ -49,10 +49,11 @@ app.els.fractionModal = {classList:{remove(){}}};
 const apt24 = app.state.fractions.find(row => row.number === 24);
 assert.deepEqual(Array.from(app.internalComparables(apt24), row => row.number), [2,10,17,24,31,37]);
 app.openFractionModal(apt24);
-assert.match(app.els.fractionModalContent.innerHTML, /Preço base<\/span><strong>700/);
-assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span><strong>775/);
-assert.match(app.els.fractionModalContent.innerHTML, /\+75.*\+10,7%/s);
-assert.match(app.els.fractionModalContent.innerHTML, /Setembro 2026/);
+assert.match(app.els.fractionModalContent.innerHTML, /PVP original<\/span><strong>700/);
+assert.match(app.els.fractionModalContent.innerHTML, /Diferença: recomendado vs PVP original/);
+assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span><strong>940/);
+assert.match(app.els.fractionModalContent.innerHTML, /\+240.*\+34,3%/s);
+assert.match(app.els.fractionModalContent.innerHTML, /Outubro 2026/);
 assert.match(app.els.fractionModalContent.innerHTML, /Fora de comercialização/);
 assert.match(app.els.fractionModalContent.innerHTML, /Qualidade/);
 app.openFractionModal({...apt24,recommendedPrice:null,analysisVersion:''});
@@ -61,12 +62,19 @@ assert.match(app.els.fractionModalContent.innerHTML, /Preço recomendado<\/span>
 const commercial = loadFunctions('commercial.js', ['parseRow','state','recommendedPriceOf','finalPrice']);
 const commercial24 = commercial.parseRow(viewRows.find(row => row['Fração'] === 'Apartamento 24'));
 const historyBefore = JSON.stringify(commercial.state.data.priceHistory);
-assert.equal(commercial.recommendedPriceOf(commercial24), 775000);
+assert.equal(commercial.recommendedPriceOf(commercial24), 940000);
 commercial.state.data.finalPrices[24] = 750000;
 assert.equal(commercial.finalPrice(commercial24), 750000);
-assert.equal(commercial.recommendedPriceOf(commercial24) - commercial.finalPrice(commercial24), 25000);
+assert.equal(commercial.recommendedPriceOf(commercial24) - commercial.finalPrice(commercial24), 190000);
 assert.equal(JSON.stringify(commercial.state.data.priceHistory), historyBefore);
 assert.equal(commercial.recommendedPriceOf(commercial.parseRow({...commercial24.raw,'Preço Recomendado':undefined})), null);
 assert.equal(writes, 0);
+
+// Fictitious persisted prices/history remain independent of all 39 recommendations.
+for(let n=1;n<=39;n++)commercial.state.data.finalPrices[n]=400000+n*1000;
+const persistedBefore=JSON.stringify(commercial.state.data);
+for(const raw of viewRows){const row=commercial.parseRow(raw);assert.equal(commercial.finalPrice(row),400000+row.number*1000);assert.equal(commercial.recommendedPriceOf(row),expected[row.number]);}
+assert.equal(JSON.stringify(commercial.state.data),persistedBefore);
+assert.equal(writes,0);
 
 console.log('pricing analysis tests passed');

@@ -1,7 +1,10 @@
 # Reconciliacao automatica conservadora
 
-Base: main `e60486130a3dd362b92691cac80df44567180514` (PR #19).
-Branch: `codex/safe-crm-reconciliation`. Nao inclui dados/codigo analitico do PR #20.
+Base original: main `e60486130a3dd362b92691cac80df44567180514` (PR #19).
+Branch: `codex/safe-crm-reconciliation` (PR #21).
+Integracao final: main `a6727b63fe42418da21b8b52e6351444cba6e9ec`, com PR #20.
+O comparador/dados dessa main e o CRM aprovado em `9d939f3` permanecem exatos.
+Validacao nova da integracao: `docs/safe-reconciliation/main-integration.json`.
 Sem acesso Google real, merge, deployment, migracoes ou alteracao do Apps Script.
 
 ## Diagnostico e reproducao
@@ -85,7 +88,8 @@ usar a nova politica. Cache divergente entre abas exige revisao, nao sobreposica
 
 ## Validacao e publicacao
 
-Resultados reais dos testes locais em `docs/safe-reconciliation/validation.json`.
+Resultados originais em `docs/safe-reconciliation/validation.json`; nao substituem
+os novos testes da integracao em `docs/safe-reconciliation/main-integration.json`.
 Fixtures, API autenticada e Apps Script VM ficam exclusivamente em memoria.
 Incluem dois portateis e um mobile, IndexedDB, formulario aberto, resposta perdida,
 recuperacao idempotente, revisoes concorrentes e preservacao de historicos.

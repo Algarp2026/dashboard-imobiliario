@@ -1,0 +1,24 @@
+{
+  "source": "BelaFormosa Price List September 2026",
+  "sha256": "5232d802d6640b85c18e05ef242aad562d764a1bd915652a0ed85de01b69a36c",
+  "pages": 7,
+  "records": 216,
+  "blocks": {
+    "LB": 60,
+    "LF": 48,
+    "RB": 60,
+    "RF": 48
+  },
+  "reserved": 20,
+  "products": {
+    "Convencional": 180,
+    "Rooftop": 32,
+    "Duplex": 4
+  },
+  "anomalies": [],
+  "estimatedViewRanges": 216,
+  "viewsStillUnclassified": 0,
+  "viewClassification": "Preliminary estimates; no confirmed exact views",
+  "discountApplied": false,
+  "reservedPrices": "Retained by explicit user approval; not active offers or completed sales"
+}
