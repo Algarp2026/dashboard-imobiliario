@@ -246,7 +246,7 @@
     return `<article class="fraction-card">
       <div class="fraction-card__top"><div><h3>${esc(f.name)}</h3><p class="muted small">${esc(f.typology)} · Piso ${esc(f.floorLabel)} · ${esc(f.orientation || '—')}</p>${f.analysisAvailability ? `<span class="badge badge--warning">${esc(f.analysisAvailability)}</span>` : ''}</div><span class="badge badge--accent">Vista ${f.view || '—'}</span></div>
       <div class="fraction-card__metrics">
-        <div class="metric-box"><span>Preço base</span><strong>${money(f.price)}</strong></div>
+        <div class="metric-box"><span>PVP original</span><strong>${money(f.price)}</strong></div>
         <div class="metric-box"><span>Preço recomendado</span><strong>${f.recommendedPrice?money(f.recommendedPrice):'—'}</strong></div>
         <div class="metric-box"><span>€/m²</span><strong>${money(Math.round(f.pricePerSqm),0)}</strong></div>
         <div class="metric-box"><span>ABP</span><strong>${area(f.abp)}</strong></div>
@@ -288,7 +288,7 @@
       </section>
       <section class="fraction-analysis__section"><h3>Concorrência interna</h3>
         <div class="internal-comps-scroll"><table class="data-table internal-comps-table"><thead><tr>
-          <th>Fração</th><th>Piso</th><th>Tipologia</th><th>Orientação</th><th class="num-col">ABP</th><th class="num-col">Exterior</th><th class="num-col">Preço base</th><th class="num-col">Recomendado</th>
+          <th>Fração</th><th>Piso</th><th>Tipologia</th><th>Orientação</th><th class="num-col">ABP</th><th class="num-col">Exterior</th><th class="num-col">PVP original</th><th class="num-col">Recomendado</th>
         </tr></thead><tbody>${internal.map(other => `<tr class="${other.number===f.number?'internal-comp-current':''}">
           <td><strong>${esc(other.name)}</strong>${other.analysisAvailability ? `<small class="internal-comp-availability">${esc(other.analysisAvailability)}</small>` : ''}</td>
           <td>${esc(other.floorLabel)}</td><td>${esc(other.typology)}</td><td>${esc(other.orientation || '—')}</td>

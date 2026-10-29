@@ -10,7 +10,11 @@ const analyticalApp=fs.readFileSync('app.js','utf8');
 assert.equal(analyticalApp.replace(/\r\n/g,'\n'),show('c19e297','app.js').replace(/\r\n/g,'\n')
  .replace('Decisão da gestão; não altera preços comerciais','Avaliação técnica independente; não altera preços comerciais')
  .replace("metric('Preço base'","metric('PVP original'")
- .replace("metric('Diferença',difference)","metric('Diferença: recomendado vs PVP original',difference)"),'Only approved public analytical labels may change');
+ .replace("metric('Diferença',difference)","metric('Diferença: recomendado vs PVP original',difference)")
+ .replaceAll('>Preço base<','>PVP original<'),'Only approved public analytical labels may change');
+assert.ok(!analyticalApp.includes('Preço base'),'All public analytical labels must identify PVP original');
+assert.ok(analyticalApp.includes('<span>PVP original</span><strong>${money(f.price)}</strong>'),'Fraction card retains original PVP expression');
+assert.ok(analyticalApp.includes('<th class="num-col">PVP original</th>'),'Internal comparison identifies original PVP');
 assert.ok(analyticalApp.includes('Avaliação técnica independente; não altera preços comerciais'));
 assert.ok(analyticalApp.includes('Diferença: recomendado vs PVP original'));
 assert.ok(!analyticalApp.includes('Decisão da gestão; não altera preços comerciais'));
