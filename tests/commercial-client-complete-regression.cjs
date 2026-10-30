@@ -11,7 +11,7 @@ for(const file of suites){run([path.join('tests',file)]);console.log('PASS '+fil
 const recoveryBase='9ba65b56f01a22fa04c8d89f95811510c3ae3e3d',mainBase=recoveryBase;
 const historical=file=>cp.execFileSync('git',['show',recoveryBase+':'+file],{cwd:repo,encoding:'utf8'}).replace(/\r\n/g,'\n');
 const read=file=>fs.readFileSync(path.join(repo,file),'utf8').replace(/\r\n/g,'\n');
-const current=read('commercial.js'),base=historical('commercial.js');
+const current=require('./helpers/recovery-archive-source.cjs').restore(read('commercial.js')),base=historical('commercial.js');
 const reviewedSyncFunctions=['requestCommercialData','loadRemoteData','applyRemoteData','syncRemote','performCommercialWrite','reconcileSharedData','renderSharedSyncStatus'];
 const sync=s=>s.slice(s.indexOf('function readSyncMeta('),s.indexOf('function appDialog('));
 const publishedFunctions=functions(sync(base)),updatedFunctions=functions(sync(current));
