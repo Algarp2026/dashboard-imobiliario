@@ -9,11 +9,13 @@ const catalog=source=>JSON.parse(JSON.stringify(vm.runInNewContext('('+source.ma
 const expectedCatalog={...catalog(show(main,'tests/commercial-browser-regression.cjs')),...catalog(show(crm,'tests/commercial-browser-regression.cjs'))};
 expectedCatalog['commercial-loading-persistence-browser.mjs']='visual-workspace';
 expectedCatalog['commercial-presentation-pdf-browser.mjs']='visual-workspace';
+expectedCatalog['d2-final-review-browser.mjs']='d2-final-review';
 assert.deepEqual(catalog(fs.readFileSync('tests/commercial-browser-regression.cjs','utf8')),expectedCatalog,'Keep every browser suite from both PRs');
 const expectedConfig=JSON.parse(show(main,'vercel.json'));
 expectedConfig.git.deploymentEnabled={...expectedConfig.git.deploymentEnabled,...JSON.parse(show(crm,'vercel.json')).git.deploymentEnabled};
 expectedConfig.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 expectedConfig.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
+expectedConfig.git.deploymentEnabled['codex/complete-d2-loading-ui']=false;
 assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expectedConfig,'Preserve complete configuration and both disabled branch deployments');
 const rows=JSON.parse(fs.readFileSync('data.json','utf8')),units=rows.filter(r=>r.Empreendimento==='The View');
 assert.equal(units.length,39);assert.equal(units.reduce((sum,r)=>sum+r['Preço Recomendado'],0),29675000);

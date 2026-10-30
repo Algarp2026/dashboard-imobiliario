@@ -59,7 +59,7 @@ try{
   await a.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'))});
   const readsBefore=(await a.evaluate(()=>window.__autoSyncTest.metrics())).reads;await a.clock.fastForward(600000);assert.equal((await a.evaluate(()=>window.__autoSyncTest.metrics())).reads,readsBefore);
   await a.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'))});await tick(a);assert.equal(posts.length,postCount);report.hiddenReadsAvoided=true;
-  await control(a,{failure:'offline'});await tick(a);assert.equal(posts.length,postCount);assert.match(await a.locator('#commercialSyncBadge').textContent(),/Sem ligação/);
+  await control(a,{failure:'offline'});await a.clock.fastForward(70000);await tick(a);await until(a,()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='offline');assert.equal(posts.length,postCount);assert.match(await a.locator('#commercialSyncBadge').textContent(),/Sem ligação/);
   await control(a,{failure:''});await a.clock.fastForward(70000);await a.evaluate(()=>window.dispatchEvent(new Event('online')));await tick(a);await until(a,()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced');report.onlineRecovery=true;
   const sourceAfter=await a.evaluate(async()=>await(await fetch('/api/commercial-data')).json());assert.deepEqual(sourceAfter.data,sourceBefore.data);report.readOnlyPolls=true;
   // Hold a real POST after its fresh GET, let another session commit, then

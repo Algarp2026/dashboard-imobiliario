@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';import {newClient as startNewClient,contactSettings,syncAction} from './helpers/current-client-ui.mjs';
+import assert from 'node:assert/strict';import {newClient as startNewClient,contactSettings,syncAction,closeProfile,openOpportunity,clientTab} from './helpers/current-client-ui.mjs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5197',key='theView.crmCommercial.v2';
 const browser=await chromium.launch({headless:true,...(process.env.CHROME_EXECUTABLE?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
@@ -15,8 +15,8 @@ async function ready(p){await p.locator('[data-client="demo-0"]').waitFor({state
 async function synced(p){await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced')}
 const remote=p=>p.evaluate(async()=>await(await fetch('/api/commercial-data')).json());
 const cache=p=>p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
-const tab=(p,name)=>p.getByRole('tab',{name,exact:true}).click();
-async function profile(p,cid){if(await p.locator('.ux-client-profile-active:not(.sales-view-hidden)').count())await p.locator('[data-profile-close]').click();await p.locator(`[data-client="${cid}"]`).click()}
+const tab=(p,name)=>clientTab(p,name);
+async function profile(p,cid){if(await p.locator('.ux-client-profile-active:not(.sales-view-hidden)').count())await closeProfile(p);await p.locator(`[data-client="${cid}"]`).click()}
 async function savePresentation(p,state){const f=p.locator('[data-workflow-form="presentation"]');await f.locator('[name="state"]').selectOption(state);await f.locator('[type="submit"]').click();await f.locator('[name="state"]').waitFor({state:'detached'});await synced(p)}
 async function editPresentation(p,id){await p.locator(`#clientPanel-presentation [data-edit-client-event="${id}"]`).click()}
 async function saveContact(p){const f=p.locator('[data-contact-form]');await f.locator('[type="submit"]').click();await f.waitFor({state:'detached'});await synced(p)}
@@ -40,7 +40,7 @@ try{
   await p.locator('[data-save-selection]').click();await p.locator('#presentationSelectionModal').waitFor({state:'hidden'});await synced(p);
   const selected=async()=> (await remote(p)).data.clients.find(c=>c.id===cid).presentationSelection;assert.deepEqual(await selected(),[9,24,30]);
   await tab(p,'Oportunidades');const card=p.locator('[data-opportunity-unit="24"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('700000');await card.locator('[name="notes"]').fill('Rascunho fictício');
-  await tab(p,'Dados');await tab(p,'Oportunidades');assert.equal(await card.locator('[name="notes"]').inputValue(),'Rascunho fictício');assert.deepEqual(await selected(),[9,24,30]);await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
+  await tab(p,'Dados');await tab(p,'Oportunidades');await openOpportunity(p,24);assert.equal(await card.locator('[name="notes"]').inputValue(),'Rascunho fictício');assert.deepEqual(await selected(),[9,24,30]);await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
   let data=(await remote(p)).data;const presentation=data.events.find(e=>e.clientId===cid&&e.opportunityAction==='present');
   await card.locator('.op-history>summary').click();await card.locator('[data-edit-client-event="'+presentation.id+'"]').click();await card.locator('[name="price-24"]').fill('710000');await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
   data=(await remote(p)).data;assert.deepEqual(data.events.find(e=>e.id===presentation.id),presentation);assert.equal(data.events.filter(e=>e.corrects===presentation.id).length,1);
