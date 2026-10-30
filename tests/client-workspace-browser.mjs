@@ -1,3 +1,4 @@
+import {closeProfile,openOpportunity,reveal,clientTab} from './helpers/current-client-ui.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
@@ -25,7 +26,7 @@ try{
     await p.locator('#clientListSort').selectOption('oldest');await p.locator('#clientSearch').fill('Cliente Exemplo');assert.equal(await p.locator('.client-portfolio-row').count(),1);
     await p.locator('[data-open-profile="demo-0"]').click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();
     assert.match(p.url(),/client=demo-0/);
-    const tab=label=>p.getByRole('tab',{name:label,exact:true}).click();
+    const tab=label=>clientTab(p,label);
     await tab('Dados');await snap('data');
     await p.locator('[data-client-header-edit]').click();await p.locator('#clientModal:not(.hidden)').waitFor();
     assert.equal(await p.locator('#clientProfileDialog').evaluate(e=>e.inert),true);
@@ -34,10 +35,10 @@ try{
     await tab('Procura');await p.locator('#clientFractionManual>summary').click();await p.locator('#clientFractionSearch').fill('1');await snap('fractions');
     await tab('Oportunidades');await snap('presentation');
     const card=p.locator('[data-opportunity-unit="1"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');const form=card.locator('[data-op-form]');await form.waitFor();await form.locator('[name="notes"]').fill('Rascunho ficticio preservado');
-    await tab('Dados');await tab('Oportunidades');assert.equal(await form.locator('[name="notes"]').inputValue(),'Rascunho ficticio preservado');
+    await tab('Dados');await tab('Oportunidades');await openOpportunity(p,1);assert.equal(await form.locator('[name="notes"]').inputValue(),'Rascunho ficticio preservado');
     await tab('Oportunidades');await snap('negotiation');
     await p.reload();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Oportunidades',exact:true}).getAttribute('aria-selected'),'true');
-    await p.locator('[data-profile-close]').click();await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#clientSearch').inputValue(),'Cliente Exemplo');assert.equal(await p.locator('#clientListSort').inputValue(),'oldest');await snap('return');
+    await closeProfile(p);await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#clientSearch').inputValue(),'Cliente Exemplo');assert.equal(await p.locator('#clientListSort').inputValue(),'oldest');await snap('return');
     await p.waitForFunction(()=>document.activeElement?.dataset.openProfile==='demo-0');
     await p.locator('#clientSearch').fill('');await p.locator('#clientListSort').selectOption('newest');
     await p.locator('.client-advanced-filters>summary').click();await p.locator('#clientAgentFilter').selectOption('demo-agent');assert.equal(await p.locator('.client-portfolio-row').count(),1);
@@ -47,9 +48,9 @@ try{
     await nav('sales','agents');await p.locator('.agent-associated-row').waitFor();await snap('agents');
     await p.locator('.agent-associated-row [data-ux-client="demo-0"]').click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();await p.keyboard.press('Escape');await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#agentsPanel').count()?await p.locator('#agentsPanel').isVisible():await p.locator('.agent-associated-row').isVisible(),true);
     await p.locator('[data-agent-portfolio]').click();assert.equal(await p.locator('#clientAgentFilter').inputValue(),'demo-agent');assert.equal(await p.locator('.client-portfolio-row').count(),1);
-    await nav('dashboard');await p.locator('#globalCommercialSearch').fill('Cliente Exemplo');const shortcut=p.locator('#globalCommercialResults [data-ux-client="demo-0"]');await shortcut.click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(new URL(p.url()).searchParams.get('client'),'demo-0');await p.locator('[data-profile-close]').click();assert.equal(await p.locator('#tab-dashboard').isVisible(),true);
+    await nav('dashboard');await p.locator('#globalCommercialSearch').fill('Cliente Exemplo');const shortcut=p.locator('#globalCommercialResults [data-ux-client="demo-0"]');await shortcut.click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(new URL(p.url()).searchParams.get('client'),'demo-0');await closeProfile(p);assert.equal(await p.locator('#tab-dashboard').isVisible(),true);
     await p.goto(origin+'/commercial.html?client=demo-0&clientTab=procura');await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Procura',exact:true}).getAttribute('aria-selected'),'true');
-    await p.locator('[data-profile-close]').click();await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});
+    await closeProfile(p);await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});
     assert.equal(await cache(),initial,name+' consultation changed CRM cache');
     await context.close();
   }

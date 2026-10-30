@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "codex/complete-d2-loading-ui": false,
       "codex/fix-crm-loading-persistence": false,
       "codex/presentation-pdf-price-option": false,
       "codex/safe-crm-reconciliation": false,

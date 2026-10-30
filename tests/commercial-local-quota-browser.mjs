@@ -52,10 +52,11 @@ try{
     assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),setup.local);
     await syncAction(page,'[data-sync-review]');await page.locator('[data-sync-merge]').click();
     if(!reserve){
-      await page.locator('#appDialogModal').waitFor();assert.ok((await page.locator('#commercialSyncStatus').innerText()).includes('LOCAL_STORAGE_FAILED'));
+      await page.locator('#appDialogModal').waitFor();assert.ok((await page.locator('#commercialSyncStatus').textContent()).includes('LOCAL_STORAGE_FAILED'));assert.notEqual(await page.locator('#commercialSyncStatus').getAttribute('data-phase'),'synced');
       assert.equal(await page.evaluate(key=>localStorage.getItem(key+'.pendingWrite.v1'),key),setup.pending);
       assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),setup.local);
       await dismiss(page);await page.locator('[data-sync-close]').click();
+      const technical=page.locator('#commercialSyncStatus .d2-sync-technical');if(await technical.count()&&await technical.getAttribute('open')===null)await technical.locator('summary').click();assert.match(await page.locator('#commercialSyncStatus').innerText(),/LOCAL_STORAGE_FAILED/);
     }else{
       await page.locator('#syncReviewModal').waitFor({state:'detached'});await phase(page,'pending');
       assert.equal(await hasArchivedPending(page,setup.pending),true);
@@ -107,8 +108,9 @@ try{
   await ep.waitForFunction(async()=>{const copies=await window.__localBackupTest.localVaultCopies();return copies.some(copy=>copy.needsReview&&JSON.parse(copy.raw).data.clients[0].manualNextStep==='Fictitious emergency next action')});
   await ep.locator('#commercialSyncBadge').click();
   const emergencyExport=await download(ep,'Exportar cópia local');assert.equal(emergencyExport.data.clients[0].manualNextStep,'Fictitious emergency next action');
-  await ep.reload();await phase(ep,'conflict');assert.ok((await ep.locator('#commercialSyncStatus').innerText()).includes('LOCAL_RECOVERY_AVAILABLE'));assert.equal(emergencyPosts.length,0);
+  await ep.reload();await phase(ep,'conflict');assert.ok((await ep.locator('#commercialSyncStatus').textContent()).includes('LOCAL_RECOVERY_AVAILABLE'));assert.equal(emergencyPosts.length,0);
   await ep.locator('#commercialSyncBadge').click();
+  const recoveryTechnical=ep.locator('#commercialSyncStatus .d2-sync-technical');if(await recoveryTechnical.count()&&await recoveryTechnical.getAttribute('open')===null)await recoveryTechnical.locator('summary').click();assert.match(await ep.locator('#commercialSyncStatus').innerText(),/LOCAL_RECOVERY_AVAILABLE/);
   await move(ep);await dismiss(ep);
   await ep.getByRole('button',{name:'Recuperar última cópia local',exact:true}).click();await dismiss(ep);
   await ep.waitForFunction(key=>JSON.parse(localStorage.getItem(key)).clients[0].manualNextStep==='Fictitious emergency next action',key);

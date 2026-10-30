@@ -9,7 +9,27 @@
     if(followup.status!=='none'&&day>=date&&day<=limit.toISOString().slice(0,10))return 3;
     return row.priority?4:5;
   };
-  root.THE_VIEW_D2={urgency,orderPriorities:(rows,date)=>rows.slice().sort((a,b)=>urgency(a,date)-urgency(b,date)||String(a.followup?.date||'9999').localeCompare(String(b.followup?.date||'9999')))};
+  const syncDisplay=({phase,checking,editing,canWrite,label='',uncertain=false})=>{
+    if(phase==='loading')return'initial';
+    if(uncertain&&phase!=='synced')return'uncertain';
+    if(phase==='conflict')return'conflict';
+    if(phase==='offline')return'offline';
+    if(/A aguardar confirmação|A conciliar/.test(label))return'saving';
+    if(editing)return'draft';
+    if(phase==='pending')return'local';
+    if(checking)return'checking';
+    if(canWrite===false)return'readonly';
+    if(/Atualização recebida/.test(label))return'received';
+    return /Alterações guardadas/.test(label)?'confirmed':'verified';
+  };
+  const waitingSummary=(history,state,today)=>{
+    const waiting=['Resposta nossa pendente','A aguardar cliente'].includes(state),record=history?.at(-1);
+    if(!waiting||record?.value!==state||!Number.isFinite(Date.parse(record?.recordedAt)))return{waiting,since:'',days:null};
+    const since=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Lisbon',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(record.recordedAt));
+    const days=(Date.parse(today+'T12:00:00Z')-Date.parse(since+'T12:00:00Z'))/86400000;
+    return{waiting,since:Number.isFinite(days)&&days>=0?since:'',days:Number.isFinite(days)&&days>=0?Math.floor(days):null};
+  };
+  root.THE_VIEW_D2={urgency,syncDisplay,waitingSummary,orderPriorities:(rows,date)=>rows.slice().sort((a,b)=>urgency(a,date)-urgency(b,date)||String(a.followup?.date||'9999').localeCompare(String(b.followup?.date||'9999')))};
   if(typeof document==='undefined')return;
   const q=(selector,parent=document)=>parent?.querySelector(selector),all=(selector,parent=document)=>[...(parent?.querySelectorAll(selector)||[])];
   const create=(tag,className,text)=>{const e=document.createElement(tag);e.className=className;if(text)e.textContent=text;return e};
@@ -166,12 +186,83 @@
     const count=q('#compareResultCount');if(count)q('.section-heading',result)?.append(count);
     const kpis=q('#compareKpis');if(kpis){const metrics=create('section','d2-comparator-metrics');intro.after(metrics);metrics.append(kpis)}
   }
+  let technicalOpen=false;
+  const groupOpen=new Map();
+  const drawerAnchors=new WeakMap(),identityOpen=new Map();
+  function synchronization(){
+    const bar=q('#commercialSyncStatus'),badge=q('#commercialSyncBadge');if(!bar||!badge)return;
+    const state=syncDisplay({phase:bar.dataset.phase,checking:bar.dataset.checking==='true',editing:bar.dataset.localEdits==='true',canWrite:bar.dataset.canWrite==='true',label:badge.textContent,uncertain:!!q('[data-sync-recover]',bar)});
+    if(badge.dataset.displayState!==state)badge.dataset.displayState=state;
+    if(bar.dataset.displayState!==state)bar.dataset.displayState=state;
+    if(!q('.d2-sync-technical',bar)){
+      const nodes=all('small',bar);if(nodes.length){const details=create('details','d2-sync-technical');details.open=technicalOpen;details.append(create('summary','','Detalhes técnicos e verificação'),...nodes);bar.append(details);details.ontoggle=()=>{technicalOpen=details.open}}
+    }
+  }
+  function followup(){
+    const data=q('#clientPanel-data .op-client-data'),general=q(':scope>.ux-client-section',data),contacts=q('#clientContactSettings',data);if(!general||!contacts)return;
+    const identity=q(':scope>.ux-client-facts',data),cid=q('#clientDetail')?.dataset.clientId;
+    if(identity&&!q(':scope>.d2-client-identity',data)){const details=create('details','d2-client-identity');details.open=!!identityOpen.get(cid);details.append(create('summary','','Identificação e informação complementar'));identity.before(details);details.append(identity);details.ontoggle=()=>identityOpen.set(cid,details.open)}
+    general.classList.add('d2-followup');const heading=q(':scope>h3',general);if(heading)heading.textContent='Seguimento comercial';
+    const settings=q('[data-contact-settings]',contacts);if(settings){settings.classList.add('d2-followup-settings');if(settings.parentElement!==general)general.append(settings)}
+    const label=q('[name="contactState"]',settings)?.closest('.field');if(label)q('span',label).textContent='Resposta pendente';
+    const labels={'Resposta nossa pendente':'Nossa resposta','A aguardar cliente':'Resposta do cliente','Em acompanhamento':'Nenhuma · em acompanhamento','Sem contacto':'Nenhuma · sem contacto registado'};
+    all('[name="contactState"] option',settings).forEach(option=>{const value=option.value;option.value=value;option.textContent=labels[value]||value});
+    const next=q('.ux-next-action',general),caption=q('span',next),edit=q('[data-ux-client-action="plan"]',next);
+    if(caption)caption.textContent=caption.textContent.replace('Próxima ação definida','O que está pendente?');
+    if(edit)edit.textContent='Editar pendência';
+    const secondary=q('.ux-client-secondary-actions',general);
+    if(secondary&&!q('.d2-followup-tools',general)){const tools=create('details','d2-followup-tools');tools.append(create('summary','','Histórico, observações e estado'),secondary);general.append(tools)}
+    const facts=q('.ux-client-facts',contacts);if(facts&&!q('.d2-followup-facts',general)){facts.classList.add('d2-followup-facts');general.insertBefore(facts,next)}
+    const wait=q('.d2-wait-metadata',data);if(wait&&wait.parentElement!==general)general.append(wait);
+    const summary=q(':scope>summary',contacts);if(summary)summary.textContent='Interações e comunicações';
+    const step=q('#clientNextStep');if(step&&q('#clientModal')?.dataset.clientMode==='plan'){const text=q('span',step.closest('.field'));if(text)text.textContent='O que está pendente?';const date=q('span',q('#clientNextFollowup')?.closest('.field'));if(date)date.textContent='Lembrete opcional'}
+  }
+  function searchWorkspace(){
+    const profile=q('#clientPanel-procura .d2-client-match-profile'),manual=q('#clientFractionManual');if(!profile||!manual)return;
+    if(!q('[data-d2-add-fractions]',profile)){const button=create('button','ghost-button compact-button','Adicionar frações');button.type='button';button.dataset.d2AddFractions='';button.onclick=()=>{manual.open=true;manual.scrollIntoView({block:'start'});q('#clientFractionSearch')?.focus({preventScroll:true})};profile.prepend(button)}
+    const title=q('#clientFractionWorkspace>.crm-detail-section__heading h3');if(title)title.textContent='Recomendações e seleção';
+    const edit=q('[data-preferences-edit]');if(edit&&edit.parentElement!==profile)profile.append(edit);
+  }
+  function opportunities(){
+    const host=q('#clientDetail'),list=q('.opportunity-list'),cid=host?.dataset.clientId;if(!list||!cid)return;
+    const names={'Em negociação':['active','Ativas · negociação'], 'Por apresentar':['prepared','Interesses e preparação'],Apresentada:['presented','Apresentadas'],Reservada:['results','Reservadas e vendidas'],Vendida:['results','Reservadas e vendidas'],Recusada:['refused','Recusadas'],'Não concretizada':['closed','Encerradas']};
+    all('[data-opportunity-unit]',host).forEach(card=>{
+      const state=q(':scope>summary>strong',card)?.textContent.trim(),[key,label]=names[state]||['review','Por rever'];
+      let group=q(':scope>[data-d2-op-group="'+key+'"]',list);
+      if(!group){group=create(['refused','closed'].includes(key)?'details':'section','d2-opportunity-group');group.dataset.d2OpGroup=key;group.append(create(group.tagName==='DETAILS'?'summary':'h4','',label));if(group.tagName==='DETAILS'){group.open=!!groupOpen.get(cid+':'+key);group.ontoggle=()=>groupOpen.set(cid+':'+key,group.open)}list.append(group)}
+      const focused=card.contains(document.activeElement)?document.activeElement:null;
+      if(card.open){
+        if(!drawerAnchors.has(card)){if(card.parentElement!==group)group.append(card);const anchor=document.createComment('opportunity position');card.before(anchor);drawerAnchors.set(card,anchor)}
+        if(card.parentElement!==host){host.append(card);focused?.focus({preventScroll:true})}
+        if(group.tagName==='DETAILS')group.open=true;
+      }else{
+        const anchor=drawerAnchors.get(card);if(anchor?.isConnected){anchor.replaceWith(card);drawerAnchors.delete(card);focused?.focus({preventScroll:true})}
+        if(card.parentElement!==group)group.append(card);
+      }
+      const content=q(':scope>.opportunity-card__content',card);
+      if(content&&!q('[data-d2-close-opportunity]',content)){const close=create('button','ux-text-button d2-close-opportunity','Fechar detalhe');close.type='button';close.dataset.d2CloseOpportunity='';close.onclick=()=>{if(q('fieldset:disabled',card))return;card.open=false;q(':scope>summary',card)?.focus({preventScroll:true})};content.prepend(close)}
+      const close=q('[data-d2-close-opportunity]',content);if(close)close.disabled=!!q('fieldset:disabled',card);
+      card.classList.toggle('d2-opportunity-drawer',card.open);
+      if(card.open){card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label','Oportunidade Apt. '+card.dataset.opportunityUnit)}else{card.removeAttribute('role');card.removeAttribute('aria-modal');card.removeAttribute('aria-label')}
+    });
+    const ordered=['active','prepared','presented','results','refused','closed','review'].map(key=>q(':scope>[data-d2-op-group="'+key+'"]',list)).filter(Boolean);
+    ordered.forEach((group,index)=>{if(list.children[index]!==group)list.insertBefore(group,list.children[index]||null)});
+  }
+  document.addEventListener('click',event=>{
+    const summary=event.target.closest?.('.d2-opportunity-drawer[open]>summary');
+    if(summary&&q('fieldset:disabled',summary.parentElement)){event.preventDefault();event.stopImmediatePropagation()}
+  },true);
+  document.addEventListener('keydown',event=>{
+    const card=q('.d2-opportunity-drawer[open]');if(!card||all('.modal-backdrop:not(.hidden)').some(modal=>modal.id!=='clientProfileDialog'&&getComputedStyle(modal).display!=='none'))return;
+    if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();if(q('fieldset:disabled',card))return;card.open=false;q(':scope>summary',card)?.focus({preventScroll:true})}
+    if(event.key==='Tab'){const items=all('summary,button,input,select,textarea,a[href]',card).filter(node=>!node.disabled&&node.getClientRects().length),first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}
+  },true);
   let scheduled=false;
   const observer=new MutationObserver(()=>{if(!scheduled){scheduled=true;requestAnimationFrame(compose)}});
   function compose(){
     scheduled=false;observer.disconnect();
-    try{agents();prices();proposals();history();events();reports();client();modals();comparator()}
-    finally{observer.observe(document.body,{childList:true,subtree:true})}
+    try{agents();prices();proposals();history();events();reports();client();followup();searchWorkspace();opportunities();modals();comparator();synchronization()}
+    finally{observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','disabled','data-phase','data-checking','data-local-edits','data-can-write']})}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',compose,{once:true});else compose();
 })(typeof window==='undefined'?globalThis:window);

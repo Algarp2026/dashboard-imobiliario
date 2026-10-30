@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';import {closeProfile,contactSettings,reveal} from './helpers/current-client-ui.mjs';
+import assert from 'node:assert/strict';import {closeProfile,contactSettings,reveal,openOpportunity,clientTab} from './helpers/current-client-ui.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
@@ -23,7 +23,7 @@ async function session(viewport,blocked=''){
 async function ready(p){await p.locator('[data-client="demo-0"]').waitFor({state:'attached'});await synced(p)}
 async function synced(p){await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced')}
 const remote=p=>p.evaluate(async()=>await(await fetch('/api/commercial-data')).json());
-const tab=(p,name)=>p.getByRole('tab',{name,exact:true}).click();
+const tab=(p,name)=>clientTab(p,name);
 async function shot(p,name){await p.locator('.ux-toast').waitFor({state:'hidden',timeout:6000});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await p.evaluate(()=>scrollTo(0,0));await p.mouse.move(0,0);await p.screenshot({path:path.join(out,name+'.png'),fullPage:true})}
 async function closePresentation(p){await p.locator('[data-workflow="cancel-presentation"]').click();await p.locator('[data-dialog-confirm]').click()}
 async function savePresentation(p,state){const f=p.locator('[data-workflow-form="presentation"]');await f.locator('[name="state"]').selectOption(state);await f.locator('[type="submit"]').click();await f.locator('[name="state"]').waitFor({state:'detached'});await synced(p)}
@@ -39,7 +39,7 @@ try{
   assert.equal(await p.locator('.ux-client-profile-active').count(),1);await p.locator('[data-preferences-cancel]').click();
   await p.reload();await ready(p);assert.equal(await p.getByRole('tab',{name:'Procura',exact:true}).getAttribute('aria-selected'),'true');
   await p.getByRole('button',{name:'Editar preferências',exact:true}).click();assert.equal(await p.locator('#clientPreferencesEditor').isVisible(),true);await p.locator('[data-preferences-cancel]').click();assert.equal(posts,0);
-  await p.locator('[data-profile-close]').click();await shot(p,'desktop-listagem');
+  await closeProfile(p);await shot(p,'desktop-listagem');
   await p.locator('[data-client="demo-0"]').click();await shot(p,'desktop-entrada-ficha');
   // Seed the demonstration through the approved UI using only this memory-backed fixture.
   await tab(p,'Procura');await p.locator('#clientFractionManual').evaluate(e=>e.open=true);
@@ -68,7 +68,7 @@ try{
     await tab(page,'Oportunidades');card=page.locator('[data-opportunity-unit="24"]');assert.equal(await card.count(),1);assert.match(await card.innerText(),/680.000/);if(await card.getAttribute('open')===null)await card.locator('summary').first().click();if(await card.locator('.op-history').getAttribute('open')===null)await card.locator('.op-history>summary').click();await card.locator('[data-edit-client-event="'+presentation.id+'"]').click();assert.equal(await card.locator('[name="price-24"]').inputValue(),'700000');await shot(page,mode+'-apresentacao');await card.locator('[data-op-command="cancel"]').click();
     await card.locator('[data-op-command="round"]').click();await card.locator('[name="amount"]').fill('710000');await shot(page,mode+'-negociacao');await card.locator('[data-op-command="cancel"]').click();
     await page.reload();await ready(page);assert.equal(await page.locator('.ux-client-profile-active').count(),1);assert.equal(await page.getByRole('tab',{name:'Oportunidades',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.locator('[data-opportunity-unit="24"]').count(),1);
-    await page.locator('[data-profile-close]').click();assert.equal(await page.locator('[data-client="demo-0"]').isVisible(),true);await shot(page,mode+'-regresso-listagem');
+    await closeProfile(page);assert.equal(await page.locator('[data-client="demo-0"]').isVisible(),true);await shot(page,mode+'-regresso-listagem');
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false);results.push({mode,threeCurrentComponents:true,multiSelect:true,cancel:true,reload:true,listReturn:true,overflow});
   }
   assert.equal((await p.evaluate(async()=>await(await fetch('/api/test-meta')).json())).writes,readsBefore);

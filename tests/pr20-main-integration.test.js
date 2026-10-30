@@ -8,6 +8,9 @@ const combined=new Set(['tests/commercial-browser-regression.cjs','tests/commerc
 const reconciled=new Set(cp.execFileSync('git',['diff','--name-only',main,reconciliation],{encoding:'utf8'}).trim().split('\n'));
 for(const file of changed.filter(file=>!combined.has(file))){
  if(file==='commercial.js')require('./helpers/loading-persistence-source.cjs')();
+ else if(file==='tests/crm-reform-safety-browser.mjs')require('./helpers/d2-visual-source.cjs').assertBrowserSafety();
+ else if(file==='tests/commercial-auto-sync-browser.mjs')require('./helpers/d2-visual-source.cjs').assertAutoSyncTest();
+ else if(file==='tests/commercial-contacts-browser.mjs')require('./helpers/d2-visual-source.cjs').assertContactsTest();
  else if(file==='tests/helpers/client-phase2a-preview.cjs'){
   const current=fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n');
   const hook="      if(process.env.LOADING_PERSISTENCE_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__loadingPersistenceTest={read:()=>loadRemoteData(),write:()=>syncRemote()};'+source.slice(finish)}\n";
@@ -34,6 +37,7 @@ const expected=JSON.parse(show(main,'vercel.json')),previous=JSON.parse(show(rev
 expected.git.deploymentEnabled={...previous.git.deploymentEnabled,...expected.git.deploymentEnabled,...JSON.parse(show(reconciliation,'vercel.json')).git.deploymentEnabled};
 expected.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 expected.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
+expected.git.deploymentEnabled['codex/complete-d2-loading-ui']=false;
 assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expected,'Preserve all configuration and both branch deployment guards');
 const browser=fs.readFileSync('tests/commercial-browser-regression.cjs','utf8');
 for(const suite of ['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs','comparator-belaformosa-browser.mjs','commercial-client-phase2b-browser.mjs'])assert.ok(browser.includes("'"+suite+"':"),'Browser catalog must include '+suite);

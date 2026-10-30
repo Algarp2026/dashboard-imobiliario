@@ -1,4 +1,4 @@
-import {contactSettings} from './helpers/current-client-ui.mjs';
+import {contactSettings,closeProfile,openOpportunity,reveal} from './helpers/current-client-ui.mjs';
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const origin=process.env.COMMERCIAL_TEST_ORIGIN||'http://127.0.0.1:5201';
@@ -24,7 +24,7 @@ try{
       await page.locator(`[data-client="${id}"]`).click();
       assert.equal(await page.locator('.client-detail-header .badge').innerText(),stage);
       await page.getByRole('tab',{name:'Dados',exact:true}).click();
-      await contactSettings(page);assert.ok((await page.locator('.ux-contact-controls').innerText()).includes(stage));
+      await contactSettings(page);assert.ok((await page.locator('.d2-followup').innerText()).includes(stage));
       await page.getByRole('tab',{name:'Procura',exact:true}).click();
       assert.equal(await page.locator('#clientFractionWorkspace').isVisible(),true);
       await page.getByRole('tab',{name:'Oportunidades',exact:true}).click();
@@ -34,7 +34,7 @@ try{
         const form=card.locator('[data-op-form]');assert.equal(await form.locator('[name="interest"]').count(),0);assert.equal(await form.locator('[name="amount"]').count(),1);assert.equal(await form.locator('[name="terms"]').count(),1);
         assert.equal(await card.locator('[data-op-state] option[value="Reservada"]').count(),1);await card.locator('[data-op-command="cancel"]').click();assert.equal(await card.locator('[data-op-form]').count(),0);
       }
-      await page.locator('[data-profile-close]').click();
+      await closeProfile(page);
     }
     await page.locator('#clientStageFilter').selectOption('Reservado');
     assert.equal(await page.locator('[data-client="demo-0"]').count(),1);
