@@ -4448,11 +4448,29 @@ function renderCommercialRemoteUpdate(){
 }
 async function confirmCommercialRequestArchive(key,payload){
   if(!key||typeof indexedDB==='undefined')return;
-  await localVaultTransaction('readwrite',(store,done)=>{const request=store.getAll();request.onsuccess=()=>{
-    for(const record of request.result){if(record?.kind==='write-request'){
-      const saved=JSON.parse(record.raw).pendingWrite;
-      if(saved?.requestId===payload.requestId&&saved.baseRevision===payload.baseRevision&&syncComparable(saved.data)===syncComparable(payload.data)){record.protected=false;store.put(record)}
-    }}
+  const expected=syncComparable(payload.data),baseline=sharedSync.remote?.revision===payload.baseRevision?sharedSync.remote.data:null;
+  const verified=await verifiedRecoveryCopies();
+  let receipt;try{receipt=recoveryPayload(JSON.parse(JSON.parse(verified.get(key)).raw))}catch{}
+  const saved=receipt?.pendingWrite;
+  if(!knownRecoveryPayload(receipt)||saved?.requestId!==payload.requestId||saved.baseRevision!==payload.baseRevision||Object.keys(saved).some(field=>!['action','data','baseRevision','requestId'].includes(field))||syncComparable(saved.data)!==expected||syncComparable(receipt.data)!==expected)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','O arquivo do pedido original não pode ser confirmado. O pedido pendente foi preservado.');
+  await localVaultTransaction('readwrite',(store,done,abort)=>{const request=store.getAll();request.onsuccess=()=>{
+    if(!request.result.some(record=>record.id===key&&JSON.stringify(record)===verified.get(key))){abort(localArchiveError('LOCAL_BACKUP_CHANGED','O arquivo do pedido mudou durante a confirmação. Preserve o pedido original.'));return}
+    for(const record of request.result){try{
+      if(verified.get(record.id)!==JSON.stringify(record)||!record.protected&&!record.needsReview)continue;
+      const snapshot=recoveryPayload(JSON.parse(record.raw)),saved=snapshot?.pendingWrite;
+      if(!knownRecoveryPayload(snapshot))continue;
+      const remoteKnown=!snapshot.remoteData||syncComparable(snapshot.remoteData)===expected||baseline&&syncComparable(snapshot.remoteData)===syncComparable(baseline);
+      let method='';
+      if(saved?.requestId===payload.requestId&&Object.keys(saved).every(key=>['action','data','baseRevision','requestId'].includes(key))&&saved.baseRevision===payload.baseRevision&&syncComparable(saved.data)===expected&&syncComparable(snapshot.data)===expected&&remoteKnown)method='exact-request';
+      else if(snapshot.pendingWrite===null&&!record.needsReview&&remoteKnown){
+        if(syncComparable(snapshot.data)===expected)method='exact-data';
+        else if(baseline&&snapshot.remoteData&&validSharedData(snapshot.base)&&validSharedData(snapshot.data)&&syncComparable(snapshot.remoteData)===syncComparable(baseline)){
+          const incorporated=reconcileSharedData(snapshot.base,snapshot.data,snapshot.remoteData);
+          if(!incorporated.conflicts.length&&syncComparable(incorporated.data)===expected)method='reconciled';
+        }
+      }
+      if(method){record.protected=false;record.needsReview=false;record.confirmation={requestId:payload.requestId,baseRevision:payload.baseRevision,method};store.put(record)}
+    }catch{}}
     done(true);
   }});
 }
@@ -4476,18 +4494,59 @@ function persistSyncMeta(){
 }
 const LOCAL_BACKUP_LIMIT=64,LOCAL_BACKUP_BYTES=16*1024*1024,LOCAL_CONFIRMED_BACKUPS=5;
 let localVaultPromise=null;
+function localArchiveError(code,message,cause){return Object.assign(new Error(message),{code,...(cause?{cause}: {})})}
+function isLocalArchiveError(error){return /^LOCAL_(BACKUP_|STORAGE_FAILED|VAULT_)/.test(error?.code||'')}
+function recoveryPayload(value){
+  if(value?.legacyRaw!==undefined){if(typeof value.legacyKey!=='string'||typeof value.legacyRaw!=='string'||Object.keys(value).some(key=>!['legacyKey','legacyRaw'].includes(key)))return null;try{return recoveryPayload(JSON.parse(value.legacyRaw))}catch{return null}}
+  return value&&typeof value==='object'&&!Array.isArray(value)?value:null;
+}
+function knownRecoveryPayload(payload){
+  const object=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
+  if(!object(payload)||payload.recoveryFormat!==1||!validSharedData(payload.data)||!validSharedData(payload.base)||!object(payload.syncMeta))return false;
+  if(Object.keys(payload).some(key=>!['recoveryFormat','data','base','pendingWrite','syncMeta','pendingSync','createdAt','remoteData','reason'].includes(key))||Object.keys(payload.syncMeta).some(key=>!['revision','lastConfirmedAt'].includes(key)))return false;
+  if(typeof payload.syncMeta.revision!=='string'||!['createdAt','reason'].every(key=>payload[key]===undefined||typeof payload[key]==='string')||payload.syncMeta.lastConfirmedAt!==undefined&&typeof payload.syncMeta.lastConfirmedAt!=='string'||payload.pendingSync!==undefined&&typeof payload.pendingSync!=='boolean'||payload.remoteData!==undefined&&payload.remoteData!==null&&!validSharedData(payload.remoteData))return false;
+  const request=payload.pendingWrite;
+  return request===null||object(request)&&Object.keys(request).every(key=>['action','data','baseRevision','requestId'].includes(key))&&['save','recover'].includes(request.action)&&typeof request.requestId==='string'&&request.requestId.length>0&&typeof request.baseRevision==='string'&&validSharedData(request.data);
+}
+function knownRecoveryRecord(copy){return !!copy&&typeof copy==='object'&&!Array.isArray(copy)&&['protected','needsReview'].every(key=>copy[key]===undefined||typeof copy[key]==='boolean')&&['id','raw','kind','signature','rawChecksum','createdAt','checkpointAt'].every(key=>copy[key]===undefined||typeof copy[key]==='string')&&(copy.checkpointOrder===undefined||Number.isSafeInteger(copy.checkpointOrder)&&copy.checkpointOrder>0)&&Object.keys(copy).every(key=>['id','kind','raw','signature','rawChecksum','createdAt','protected','needsReview','checkpointAt','checkpointOrder','confirmation'].includes(key))&&(copy.confirmation===undefined||copy.confirmation&&typeof copy.confirmation==='object'&&!Array.isArray(copy.confirmation)&&typeof copy.confirmation.requestId==='string'&&copy.confirmation.requestId.length>0&&/^[a-f0-9]{64}$/.test(copy.confirmation.baseRevision||'')&&Object.keys(copy.confirmation).every(key=>['requestId','baseRevision','method'].includes(key))&&['exact-request','exact-data','reconciled'].includes(copy.confirmation.method))}
+function rememberConfirmedRecoveryBase(data,revision){
+  if(!validSharedData(data)||!/^[a-f0-9]{64}$/.test(revision||''))return;
+  const bases=sharedSync.confirmedRecoveryBases||(sharedSync.confirmedRecoveryBases=new Map());
+  const content=syncComparable(data);if(bases.has(revision)&&bases.get(revision)!==content)return;
+  bases.set(revision,content);while(bases.size>8)bases.delete(bases.keys().next().value);
+}
+function confirmedRecoveryPayload(value){
+  const payload=recoveryPayload(value);
+  if(!knownRecoveryPayload(payload))return false;
+  return payload.pendingWrite===null&&payload.pendingSync===false&&validSharedData(payload.data)&&validSharedData(payload.base)&&sharedSync.confirmedRecoveryBases?.get(payload.syncMeta?.revision)===syncComparable(payload.base)&&syncComparable(payload.data)===syncComparable(payload.base)&&(!payload.remoteData||[...sharedSync.confirmedRecoveryBases.values()].includes(syncComparable(payload.remoteData)));
+}
+function recoveryRequestPresent(value){
+  if(!value||typeof value!=='object')return false;
+  return Object.entries(value).some(([key,item])=>key==='requestId'||key==='pendingSync'&&item!==false||key==='pendingWrite'&&item!==null||key==='legacyRaw'&&(typeof item!=='string'||(()=>{try{return recoveryRequestPresent(JSON.parse(item))}catch{return true}})())||item&&typeof item==='object'&&recoveryRequestPresent(item));
+}
+function recoveryContent(value){
+  const comparable=JSON.parse(JSON.stringify(value));delete comparable.createdAt;
+  if(comparable.syncMeta)delete comparable.syncMeta.lastConfirmedAt;
+  return syncComparable(comparable);
+}
+function recoveryIdentity(value){const copy=JSON.parse(JSON.stringify(value));delete copy.createdAt;return syncComparable(copy)}
+function protectedRecoveryCopy(copy,checkpointId){try{const value=JSON.parse(copy.raw),payload=recoveryPayload(value);return !knownRecoveryRecord(copy)||!knownRecoveryPayload(payload)||copy.needsReview===true||copy.id===checkpointId||payload.pendingSync!==false||payload.pendingWrite!==null||recoveryRequestPresent(value)||syncComparable(payload.data)!==syncComparable(payload.base)}catch{return true}}
+async function recoveryChecksum(text){
+  if(typeof crypto==='undefined'||!crypto.subtle)throw localArchiveError('LOCAL_BACKUP_UNVERIFIABLE','Não foi possível verificar a integridade do arquivo neste navegador.');
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),byte=>byte.toString(16).padStart(2,'0')).join('');
+}
 function localBackupKeys(){
   return Object.keys(localStorage).filter(key=>key===LOCAL_REMOTE_BACKUP_KEY||key===KEY+'.backupBeforeMajucaImport.v1'||[KEY+'.conflictBackup.',KEY+'.confirmedReadBackup.',LOCAL_REMOTE_BACKUP_KEY+'.archive.'].some(prefix=>key.startsWith(prefix)));
 }
 function openLocalVault(){
   if(!localVaultPromise)localVaultPromise=new Promise((resolve,reject)=>{
     let settled=false;
-    const fail=message=>{if(settled)return;settled=true;clearTimeout(timer);reject(Object.assign(new Error(message),{code:'LOCAL_STORAGE_FAILED'}))};
-    const timer=setTimeout(()=>fail('Arquivo local sem confirmação.'),10000);
-    const request=indexedDB.open(KEY+'.recovery.v1',1);
+    const fail=(message,code='LOCAL_VAULT_UNAVAILABLE',cause)=>{if(settled)return;settled=true;clearTimeout(timer);reject(localArchiveError(code,message,cause))};
+    const timer=setTimeout(()=>fail('O arquivo local não respondeu a tempo. Preserve uma exportação e volte a tentar.','LOCAL_VAULT_TIMEOUT'),10000);
+    let request;try{request=indexedDB.open(KEY+'.recovery.v1',1)}catch(error){fail('O navegador recusou o acesso ao arquivo local.','LOCAL_VAULT_UNAVAILABLE',error);return}
     request.onupgradeneeded=()=>request.result.createObjectStore('copies',{keyPath:'id'});
-    request.onerror=()=>fail('Arquivo local indisponível.');
-    request.onblocked=()=>fail('Feche os outros separadores antes de abrir o arquivo local.');
+    request.onerror=()=>fail('Arquivo local indisponível. Preserve os dados e verifique as permissões do navegador.','LOCAL_VAULT_UNAVAILABLE',request.error);
+    request.onblocked=()=>fail('Feche os outros separadores antes de abrir o arquivo local.','LOCAL_VAULT_BLOCKED');
     request.onsuccess=()=>{const db=request.result;if(settled){db.close();return}settled=true;clearTimeout(timer);db.onversionchange=()=>{db.close();localVaultPromise=null};resolve(db)};
   }).catch(error=>{localVaultPromise=null;throw error});
   return localVaultPromise;
@@ -4495,10 +4554,10 @@ function openLocalVault(){
 async function localVaultTransaction(mode,action){
   const db=await openLocalVault();
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction('copies',mode);let result,failure;
-    const timer=setTimeout(()=>{failure=Object.assign(new Error('Arquivo local sem confirmação.'),{code:'LOCAL_STORAGE_FAILED'});try{tx.abort()}catch{}},10000);
+    let tx;try{tx=db.transaction('copies',mode)}catch(error){localVaultPromise=null;reject(localArchiveError('LOCAL_VAULT_UNAVAILABLE','Não foi possível iniciar a operação do arquivo local.',error));return}let result,failure;
+    const timer=setTimeout(()=>{failure=localArchiveError('LOCAL_VAULT_TIMEOUT','O arquivo local não confirmou a operação a tempo.');try{tx.abort()}catch{}},10000);
     tx.oncomplete=()=>{clearTimeout(timer);resolve(result)};
-    tx.onabort=tx.onerror=()=>{clearTimeout(timer);reject(failure||Object.assign(new Error('Não foi possível guardar o arquivo local.'),{code:'LOCAL_STORAGE_FAILED'}))};
+    tx.onabort=tx.onerror=()=>{clearTimeout(timer);reject(failure||localArchiveError(tx.error?.name==='QuotaExceededError'?'LOCAL_STORAGE_FAILED':'LOCAL_VAULT_ABORTED','A operação do arquivo local foi interrompida; nenhuma limpeza foi confirmada.',tx.error))};
     try{action(tx.objectStore('copies'),value=>{result=value},error=>{failure=error;try{tx.abort()}catch{}})}catch(error){failure=error;try{tx.abort()}catch{}}
   });
 }
@@ -4506,31 +4565,50 @@ async function localVaultCopies(){
   if(typeof indexedDB==='undefined')return localBackupKeys().map(key=>({id:key,kind:'legacy',raw:localStorage.getItem(key),protected:true}));
   return localVaultTransaction('readonly',(store,done)=>{const request=store.getAll();request.onsuccess=()=>done(request.result)});
 }
+async function verifiedRecoveryCopies(){
+  const verified=new Map();
+  for(const copy of await localVaultCopies())try{
+    if(!knownRecoveryRecord(copy))continue;
+    const content=recoveryContent(JSON.parse(copy.raw));
+    if(copy.rawChecksum&&await recoveryChecksum(copy.raw)!==copy.rawChecksum)continue;
+    if(copy.signature===content||/^[a-f0-9]{64}$/.test(copy.signature)&&await recoveryChecksum(content)===copy.signature)verified.set(copy.id,JSON.stringify(copy));
+  }catch{}
+  return verified;
+}
 async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
-  const raw=JSON.stringify(value),comparable=JSON.parse(raw);
-  delete comparable.createdAt;
-  if(comparable.syncMeta)delete comparable.syncMeta.lastConfirmedAt;
-  const content=syncComparable(comparable);
+  const raw=JSON.stringify(value),content=recoveryContent(value);
+  // A caller flag or checksum is not evidence of remote confirmation.
+  confirmed=kind!=='storage-failure'&&confirmedRecoveryPayload(value);
   if(typeof indexedDB==='undefined'){
     const keys=localBackupKeys();
-    for(const key of keys){if(localStorage.getItem(key)===raw)return key}
+    for(const key of keys){try{if(recoveryContent(JSON.parse(localStorage.getItem(key)))===content)return key}catch{}}
     if(keys.length>=LOCAL_BACKUP_LIMIT)throw Object.assign(new Error('Arquivo local cheio. Exporte as cópias antes de continuar.'),{code:'LOCAL_BACKUP_CAPACITY'});
     const prefix=kind==='confirmed'?'.confirmedReadBackup.':'.conflictBackup.';
     const stem=KEY+prefix+Date.now()+'.'+id();let key=stem,index=0;
     while(localStorage.getItem(key)!==null)key=stem+'.'+(++index);
     try{localStorage.setItem(key,raw)}catch{throw Object.assign(new Error('Não há espaço para confirmar o backup local.'),{code:'LOCAL_STORAGE_FAILED'})}
+    if(localStorage.getItem(key)!==raw)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A cópia local não passou a verificação.');
     return key;
   }
   const signature=typeof crypto!=='undefined'&&crypto.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(content))),byte=>byte.toString(16).padStart(2,'0')).join(''):content;
   const entry={id:Date.now()+'.'+id(),kind,raw,signature,createdAt:new Date().toISOString(),protected:!confirmed,needsReview:kind==='storage-failure'};
+  if(typeof crypto!=='undefined'&&crypto.subtle)entry.rawChecksum=await recoveryChecksum(raw);
+  // Hash outside the transaction, then recheck the exact entry before changing
+  // protection or retention. A concurrent or unknown copy is never discarded.
+  const eligible=new Map(),verifiedEntries=await verifiedRecoveryCopies();
+  for(const [key,rawEntry]of verifiedEntries){const copy=JSON.parse(rawEntry);if(copy.protected&&!copy.needsReview&&confirmedRecoveryPayload(JSON.parse(copy.raw)))eligible.set(key,rawEntry)}
   const stored=await localVaultTransaction('readwrite',(store,done,abort)=>{
     const request=store.getAll();request.onsuccess=()=>{try{
-      const entries=request.result,duplicate=entries.find(item=>item.signature===signature);
-      if(duplicate){duplicate.protected=duplicate.protected||entry.protected;if(entry.needsReview){duplicate.needsReview=true;duplicate.checkpointAt=entry.createdAt}store.put(duplicate);done(duplicate);return}
-      const candidates=[...entries,entry],confirmedEntries=candidates.filter(item=>!item.protected).sort((a,b)=>a.id===entry.id?-1:b.id===entry.id?1:b.createdAt.localeCompare(a.createdAt));
+      const entries=request.result;
+      if(entry.needsReview){const last=entries.reduce((max,copy)=>Math.max(max,Number.isSafeInteger(copy.checkpointOrder)?copy.checkpointOrder:0),0);if(last>=Number.MAX_SAFE_INTEGER)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A ordenação do arquivo exige revisão administrativa.');entry.checkpointOrder=last+1}
+      const verifiedIds=new Set(entries.filter(copy=>verifiedEntries.get(copy.id)===JSON.stringify(copy)).map(copy=>copy.id));
+      for(const copy of entries)if(eligible.get(copy.id)===JSON.stringify(copy)){copy.protected=false;store.put(copy)}
+      const duplicate=entries.find(item=>verifiedIds.has(item.id)&&item.signature===signature&&recoveryContent(JSON.parse(item.raw))===content);
+      if(duplicate){duplicate.protected=duplicate.protected||entry.protected;if(entry.needsReview){duplicate.needsReview=true;duplicate.checkpointAt=entry.createdAt;duplicate.checkpointOrder=entry.checkpointOrder}store.put(duplicate);done(duplicate);return}
+      const candidates=[...entries,entry],confirmedEntries=candidates.filter(item=>!item.protected&&!item.needsReview&&(item.id===entry.id||verifiedIds.has(item.id))&&knownRecoveryPayload(recoveryPayload(JSON.parse(item.raw)))&&(confirmedRecoveryPayload(JSON.parse(item.raw))||item.confirmation&&knownRecoveryRecord(item))).sort((a,b)=>a.id===entry.id?-1:b.id===entry.id?1:b.createdAt.localeCompare(a.createdAt));
       const remove=new Set(confirmedEntries.slice(LOCAL_CONFIRMED_BACKUPS).map(item=>item.id));
       let kept=candidates.filter(item=>!remove.has(item.id));
-      const bytes=items=>items.reduce((sum,item)=>sum+2*(item.raw.length+item.signature.length),0);
+      const bytes=items=>items.reduce((sum,item)=>sum+2*(item.raw.length+(item.signature||'').length+(item.rawChecksum||'').length),0);
       for(const item of confirmedEntries.slice().reverse()){
         if(kept.length<=LOCAL_BACKUP_LIMIT&&bytes(kept)<=LOCAL_BACKUP_BYTES)break;
         if(item.id===entry.id)continue;
@@ -4538,17 +4616,71 @@ async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
       }
       if(kept.length>LOCAL_BACKUP_LIMIT||bytes(kept)>LOCAL_BACKUP_BYTES){abort(Object.assign(new Error('Arquivo de recuperação cheio. As cópias não confirmadas foram preservadas; exporte o arquivo.'),{code:'LOCAL_BACKUP_CAPACITY'}));return}
       store.add(entry);for(const key of remove)store.delete(key);done(entry);
-    }catch(error){abort(error)}};
+    }catch(error){abort(isLocalArchiveError(error)?error:localArchiveError(['TransactionInactiveError','AbortError','ConstraintError'].includes(error.name)?'LOCAL_VAULT_ABORTED':error.name==='QuotaExceededError'?'LOCAL_STORAGE_FAILED':'LOCAL_BACKUP_INTEGRITY','Não foi possível confirmar a operação do arquivo; as cópias anteriores foram preservadas.',error))}};
   });
   const verified=await localVaultTransaction('readonly',(store,done)=>{const request=store.get(stored.id);request.onsuccess=()=>done(request.result)});
-  if(!verified||verified.raw!==stored.raw||verified.signature!==signature)throw Object.assign(new Error('Cópia local não confirmada.'),{code:'LOCAL_STORAGE_FAILED'});
+  if(!verified||verified.raw!==stored.raw||verified.signature!==signature||verified.rawChecksum&&await recoveryChecksum(verified.raw)!==verified.rawChecksum)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A cópia do arquivo não passou a verificação. Preserve os dados e exporte uma cópia.');
+  if(['LOCAL_BACKUP_CAPACITY','LOCAL_VAULT_UNAVAILABLE','LOCAL_VAULT_BLOCKED','LOCAL_VAULT_ABORTED','LOCAL_VAULT_TIMEOUT'].includes(sharedSync.archiveWarning))sharedSync.archiveWarning='';
   return stored.id;
 }
 async function exportLocalBackupArchive(){
   try{
     const records=typeof indexedDB==='undefined'?[]:await localVaultCopies(),legacy=localBackupKeys().map(key=>({id:key,kind:'legacy-localStorage',raw:localStorage.getItem(key),protected:true}));
-    downloadJson({recoveryArchiveFormat:1,records:[...records,...legacy],current:localRecoveryExport(),createdAt:new Date().toISOString()},'the-view-arquivo-recuperacao.json');
-  }catch{exportLocalRecoveryCopy();notifyUser('Não foi possível ler todo o arquivo. A exportação disponível contém a ficha local atual; os backups não foram eliminados.','Exportação parcial')}
+    const archive={recoveryArchiveFormat:2,records:[...records,...legacy],current:localRecoveryExport(),localEntries:localArchiveEntries(),createdAt:new Date().toISOString()};
+    archive.checksum=await recoveryChecksum(syncComparable(archive));
+    showRecoveryDownload(archive,'the-view-arquivo-recuperacao.json');
+  }catch(error){notifyUser((error.message||'Não foi possível ler todo o arquivo.')+' Nenhum backup foi eliminado. Pode tentar exportar a cópia local atual.','Exportação do arquivo interrompida')}
+}
+function localArchiveEntries(){return Object.fromEntries([KEY,LOCAL_SYNC_META_KEY,LOCAL_PENDING_SYNC_KEY,LOCAL_SYNC_REQUEST_KEY,...localBackupKeys()].map(key=>[key,localStorage.getItem(key)]))}
+let localArchiveDownload=null;
+function showRecoveryDownload(value,filename){
+  const main=document.querySelector('main');if(!main)throw localArchiveError('LOCAL_BACKUP_EXPORT_FAILED','A área de exportação não está disponível.');
+  const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json;charset=utf-8'}));
+  const previous=document.getElementById('localArchiveDownload');if(previous)previous.remove();
+  if(localArchiveDownload){const previousUrl=localArchiveDownload;setTimeout(()=>URL.revokeObjectURL(previousUrl),60000)}
+  localArchiveDownload=url;
+  const panel=document.createElement('section');panel.id='localArchiveDownload';panel.className='panel';
+  panel.innerHTML='<h3>Exportação preparada</h3><p>Guarde o ficheiro e verifique-o antes de libertar espaço. O navegador não permite confirmar aqui que o ficheiro foi guardado.</p>';
+  const link=document.createElement('a');link.className='ghost-button compact-button';link.href=url;link.download=filename;link.textContent='Descarregar ficheiro';panel.appendChild(link);
+  const close=document.createElement('button');close.type='button';close.className='ghost-button compact-button';close.textContent='Fechar exportação';close.onclick=()=>{panel.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);if(localArchiveDownload===url)localArchiveDownload=null};panel.appendChild(close);
+  main.prepend(panel);try{link.click()}catch{const notice=document.createElement('p');notice.textContent='O navegador não iniciou o download automático. Utilize Descarregar ficheiro para tentar novamente.';panel.appendChild(notice)}panel.scrollIntoView({block:'start'});
+}
+async function verifyLocalArchive(archive){
+  if(archive?.recoveryArchiveFormat!==2||!Array.isArray(archive.records))throw localArchiveError('LOCAL_BACKUP_UNVERIFIABLE','Selecione uma exportação completa recente, preparada por esta versão.');
+  const {checksum,...content}=archive;
+  if(await recoveryChecksum(syncComparable(content))!==checksum)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','O ficheiro não passou a verificação de integridade.');
+  const records=await localVaultCopies(),legacy=typeof indexedDB==='undefined'?[]:localBackupKeys().map(key=>({id:key,kind:'legacy-localStorage',raw:localStorage.getItem(key),protected:true}));
+  if(syncComparable(archive.records)!==syncComparable([...records,...legacy])||syncComparable(archive.localEntries)!==syncComparable(localArchiveEntries())||recoveryIdentity(archive.current)!==recoveryIdentity(localRecoveryExport()))throw localArchiveError('LOCAL_BACKUP_CHANGED','O arquivo ou os dados locais mudaram. Exporte e verifique uma nova cópia.');
+  return records;
+}
+async function releaseVerifiedLocalArchive(archive,ids){
+  if(typeof indexedDB==='undefined')throw localArchiveError('LOCAL_VAULT_UNAVAILABLE','Esta operação exige IndexedDB.');
+  const copies=await verifyLocalArchive(archive),checkpoint=newestLocalCheckpoint(copies),wanted=new Set(ids);
+  if(!wanted.size)throw localArchiveError('LOCAL_BACKUP_UNVERIFIABLE','Selecione as cópias a arquivar externamente.');
+  const selected=copies.filter(copy=>wanted.has(copy.id));
+  if(selected.length!==wanted.size||selected.some(copy=>protectedRecoveryCopy(copy,checkpoint?.id)))throw localArchiveError('LOCAL_BACKUP_PROTECTED','Alterações por confirmar, pedidos, formatos desconhecidos e pontos de recuperação por resolver não podem ser removidos nesta operação.');
+  const local=syncComparable(localArchiveEntries()),memory=recoveryIdentity(localRecoveryExport());
+  return localVaultTransaction('readwrite',(store,done,abort)=>{const request=store.getAll();request.onsuccess=()=>{
+    if(syncComparable(localArchiveEntries())!==local||recoveryIdentity(localRecoveryExport())!==memory||syncComparable(request.result)!==syncComparable(copies)){abort(localArchiveError('LOCAL_BACKUP_CHANGED','Outra operação alterou o arquivo. Nada foi removido.'));return}
+    for(const copy of selected)store.delete(copy.id);done(selected.length);
+  }});
+}
+function openLocalArchiveManagement(){
+  const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;
+  input.onchange=async()=>{input.remove();if(!input.files?.length)return;try{
+    const archive=JSON.parse(await input.files[0].text()),copies=await verifyLocalArchive(archive),checkpoint=newestLocalCheckpoint(copies);
+    const panel=document.createElement('section');panel.className='panel';panel.id='localArchiveManagement';
+    panel.innerHTML='<h3>Arquivo externo verificado</h3><p>Selecione apenas as cópias antigas que pretende conservar exclusivamente no ficheiro externo. Os dados atuais não serão alterados.</p>';
+    const list=document.createElement('div');
+    for(const copy of copies){const label=document.createElement('label'),choice=document.createElement('input');choice.type='checkbox';choice.value=copy.id;choice.disabled=protectedRecoveryCopy(copy,checkpoint?.id);label.append(choice,document.createTextNode(' '+copy.kind+' · '+copy.createdAt+' · '+Math.ceil(copy.raw.length*2/1024)+' KiB'));list.append(label,document.createElement('br'))}panel.appendChild(list);
+    const status=document.createElement('p');status.setAttribute('role','status');panel.appendChild(status);
+    const release=document.createElement('button');release.type='button';release.className='ghost-button compact-button';release.textContent='Libertar espaço das cópias selecionadas';release.onclick=async()=>{try{
+      const ids=[...list.querySelectorAll('input:checked')].map(node=>node.value);if(!ids.length){status.textContent='Selecione pelo menos uma cópia elegível.';return}
+      if(!await confirmUser('Confirma que guardou o ficheiro externo verificado e pretende retirar '+ids.length+' cópias deste navegador? Guarde esse ficheiro num local seguro.','Confirmar arquivo externo'))return;
+      release.disabled=true;const count=await releaseVerifiedLocalArchive(archive,ids);status.textContent=count+' cópias retiradas após verificação. Os dados atuais e pedidos pendentes foram preservados.';sharedSync.archiveWarning='';release.remove();
+    }catch(error){status.textContent=error.message;release.disabled=false}};panel.appendChild(release);
+    const close=document.createElement('button');close.type='button';close.className='ghost-button compact-button';close.textContent='Fechar';close.onclick=()=>panel.remove();panel.appendChild(close);document.getElementById('localArchiveManagement')?.remove();document.querySelector('main').prepend(panel);panel.scrollIntoView({block:'start'});
+  }catch(error){notifyUser(error.message||'Não foi possível verificar o ficheiro. Nada foi removido.','Arquivo local')}};input.oncancel=()=>input.remove();document.body.appendChild(input);input.click();
 }
 async function migrateLegacyLocalBackups(){
   if(typeof indexedDB==='undefined'){notifyUser('O arquivo IndexedDB não está disponível. Exporte as cópias; nada foi eliminado.','Arquivo local');return}
@@ -4585,13 +4717,16 @@ async function preserveStorageFailure(){
 async function latestLocalCheckpoint(){
   if(typeof indexedDB==='undefined')return null;
   const copies=await localVaultCopies();
-  return copies.filter(copy=>copy.needsReview).sort((a,b)=>(b.checkpointAt||b.createdAt).localeCompare(a.checkpointAt||a.createdAt))[0]||null;
+  const checkpoint=newestLocalCheckpoint(copies);
+  if(checkpoint){try{const content=recoveryContent(JSON.parse(checkpoint.raw));if(checkpoint.signature!==content&&await recoveryChecksum(content)!==checkpoint.signature||checkpoint.rawChecksum&&await recoveryChecksum(checkpoint.raw)!==checkpoint.rawChecksum)throw Error('Checksum mismatch')}catch(error){throw isLocalArchiveError(error)?error:localArchiveError('LOCAL_BACKUP_INTEGRITY','O último ponto de recuperação não passou a verificação. Preserve o arquivo para revisão administrativa.',error)}}
+  return checkpoint;
 }
+function newestLocalCheckpoint(copies){return copies.filter(copy=>copy.needsReview).sort((a,b)=>(b.checkpointOrder||0)-(a.checkpointOrder||0)||String(b.checkpointAt||b.createdAt||'').localeCompare(String(a.checkpointAt||a.createdAt||'')))[0]||null}
 async function acknowledgeLocalCheckpoint(checkpoint){
   if(!checkpoint||typeof indexedDB==='undefined')return;
   const until=checkpoint.checkpointAt||checkpoint.createdAt;
   await localVaultTransaction('readwrite',(store,done)=>{
-    const request=store.getAll();request.onsuccess=()=>{for(const copy of request.result)if(copy.needsReview&&(copy.checkpointAt||copy.createdAt)<=until){copy.needsReview=false;store.put(copy)}done(true)};
+    const request=store.get(checkpoint.id);request.onsuccess=()=>{const copy=request.result;if(copy&&copy.raw===checkpoint.raw&&copy.checkpointOrder===checkpoint.checkpointOrder&&(copy.checkpointAt||copy.createdAt)===until){copy.needsReview=false;store.put(copy)}done(true)};
   });
 }
 async function restoreLocalCheckpoint(){
@@ -4620,7 +4755,7 @@ function localRecoveryExport(){
     pendingSync:hasPendingLocalSync(),createdAt:new Date().toISOString()}));
 }
 function exportLocalRecoveryCopy(){
-  try{downloadJson(localRecoveryExport(),'the-view-alteracoes-locais-pendentes.json')}
+  try{showRecoveryDownload(localRecoveryExport(),'the-view-alteracoes-locais-pendentes.json')}
   catch(error){notifyUser(error.message||'Não foi possível exportar a cópia. Os dados e o pedido original não foram alterados.','Exportar cópia local')}
 }
 function validateSyncDiagnostics(result,read){
@@ -4680,6 +4815,7 @@ async function applyRemoteData({automatic=false}={}){
   renderSharedSyncStatus({refresh:!automatic});
   try{
     const result=await requestCommercialData(),remote=normalizeData(result.data),meta=metaAtStart;
+    sharedSync.sourceReachable=true;
     sharedSync.httpStatus=null;
     sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite,pendingWrite:result.pendingWrite,capabilities:result.capabilities};
     const observedMeta=readSyncMeta();
@@ -4687,6 +4823,7 @@ async function applyRemoteData({automatic=false}={}){
       if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
       sharedSync.phase='conflict';sharedSync.error='POSSIBLE_SHARED_ROLLBACK';return{shouldSave:false};
     }
+    rememberConfirmedRecoveryBase(remote,result.revision);
     if(automatic){
       const changed=result.revision!==sharedSync.revision;
       const protectedNow=protectedCommercialEdit()||editVersion!==commercialDraftGuard?.version();
@@ -4765,7 +4902,7 @@ async function applyRemoteData({automatic=false}={}){
     if(!await backupLocalBeforeRemoteLoad(state.data,remote))throw Object.assign(new Error('Backup local não confirmado'),{code:'LOCAL_STORAGE_FAILED'});
     if(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null){
       try{await archiveRecoveryCopy('confirmed',localRecoveryExport(),{confirmed:true})}
-      catch{throw Object.assign(new Error('Pedido original não arquivado'),{code:'LOCAL_STORAGE_FAILED'})}
+      catch(error){throw isLocalArchiveError(error)?error:localArchiveError('LOCAL_STORAGE_FAILED','Pedido original não arquivado',error)}
     }
     if(generation!==sharedSync.generation||pendingRaw!==localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||storedBefore!==localStorage.getItem(KEY)||automatic&&(memoryBefore!==syncComparable(state.data)||protectedCommercialEdit()||editVersion!==commercialDraftGuard?.version())){
       if(automatic||storedBefore!==localStorage.getItem(KEY)){
@@ -4775,11 +4912,12 @@ async function applyRemoteData({automatic=false}={}){
       sharedSync.phase='conflict';sharedSync.error='LOCAL_CHANGED_DURING_BACKUP';return{shouldSave:false};
     }
     commitLocalCache(remote,{base:remote,revision:result.revision,lastConfirmedAt:result.confirmedAt});
+    if(sharedSync.archiveWarning==='LOCAL_STORAGE_FAILED')sharedSync.archiveWarning='';
     state.data=remote;sharedSync.base=JSON.parse(JSON.stringify(remote));sharedSync.revision=result.revision;sharedSync.ticket=result.readTicket;sharedSync.lastConfirmedAt=result.confirmedAt;sharedSync.canWrite=!!result.canWrite;sharedSync.verified=true;sharedSync.error='';
     clearPendingLocalSync();sharedSync.dirty=false;localStorage.removeItem(LOCAL_SYNC_REQUEST_KEY);sharedSync.phase='synced';
     if(automatic){sharedSync.incoming=false;sharedSync.received=true;renderCommercialRemoteUpdate()}
     return {shouldSave:false,revision:result.revision,applied:automatic};
-  }catch(error){sharedSync.remote=null;sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;throw error}
+  }catch(error){if(isLocalArchiveError(error))sharedSync.archiveWarning=error.code;else{sharedSync.remote=null;sharedSync.sourceReachable=false}sharedSync.phase='offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;throw error}
   finally{
     sharedSync.checking=false;
     // A completed read may leave local writes waiting: never make the write depend
@@ -4904,17 +5042,19 @@ function mergeCommercialData(remoteData={},localData={}){
   });
 }
 async function backupLocalBeforeRemoteLoad(localData, remoteData){
+  let snapshot;
   try{
     const local=normalizeData(localData||{}),remote=normalizeData(remoteData||{});
     if(syncComparable(local)===syncComparable(normalizeData())||syncComparable(local)===syncComparable(remote))return true;
     if(typeof indexedDB!=='undefined'){
-      await archiveRecoveryCopy('before-remote',{...localRecoveryExport(),data:local,remoteData:remote});
+      snapshot={...localRecoveryExport(),data:local,remoteData:remote};
+      await archiveRecoveryCopy('before-remote',snapshot);sharedSync.archiveWarning='';
       return true;
     }
     const previous=localStorage.getItem(LOCAL_REMOTE_BACKUP_KEY);
-    if(!previous&&localBackupKeys().length>=LOCAL_BACKUP_LIMIT)throw new Error('Backup capacity');
+    if(!previous&&localBackupKeys().length>=LOCAL_BACKUP_LIMIT)throw localArchiveError('LOCAL_BACKUP_CAPACITY','Arquivo local cheio.');
     if(previous&&(syncComparable(JSON.parse(previous).data)!==syncComparable(local)||syncComparable(JSON.parse(previous).remoteData)!==syncComparable(remote))){
-      if(localBackupKeys().length>=LOCAL_BACKUP_LIMIT)throw new Error('Backup capacity');
+      if(localBackupKeys().length>=LOCAL_BACKUP_LIMIT)throw localArchiveError('LOCAL_BACKUP_CAPACITY','Arquivo local cheio.');
       const prefix=LOCAL_REMOTE_BACKUP_KEY+'.archive.'+Date.now();let key=prefix,index=0;
       while(localStorage.getItem(key))key=prefix+'.'+(++index);
       localStorage.setItem(key,previous);
@@ -4927,7 +5067,11 @@ async function backupLocalBeforeRemoteLoad(localData, remoteData){
     }));
     return true;
   }catch(err){
-    return false;
+    // A redundant copy of an already confirmed baseline must not block a read.
+    // Never apply this exemption to edits, requests, checkpoints or other failures.
+    if(isLocalArchiveError(err))sharedSync.archiveWarning=err.code;
+    if(err.code==='LOCAL_BACKUP_CAPACITY'&&snapshot&&confirmedRecoveryPayload(snapshot))return true;
+    throw isLocalArchiveError(err)?err:localArchiveError('LOCAL_STORAGE_FAILED','Não foi possível preservar a cópia local antes da leitura.',err);
   }
 }
 function save(){
@@ -5001,9 +5145,11 @@ async function performCommercialWrite(recovery=false){
     const original=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null');
     if(!original||original.requestId!==payload.requestId||original.baseRevision!==payload.baseRevision||syncComparable(original.data)!==syncComparable(payload.data))throw Object.assign(new Error('O pedido pendente mudou noutra aba. A confirmação foi preservada no arquivo.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
     await confirmCommercialRequestArchive(requestArchive,payload);
+    rememberConfirmedRecoveryBase(payload.data,result.revision);
     const confirmedCache=localStorage.getItem(KEY);
     if(confirmedCache&&syncComparable(normalizeData(JSON.parse(confirmedCache)))!==syncComparable(state.data))throw Object.assign(new Error('Outra aba alterou a cópia local durante a confirmação. Preserve as versões antes de continuar.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
     commitLocalCache(state.data,{base:payload.data,revision:result.revision,lastConfirmedAt:result.confirmedAt});
+    if(sharedSync.archiveWarning==='LOCAL_STORAGE_FAILED')sharedSync.archiveWarning='';
     const checkpoint=await latestLocalCheckpoint();if(checkpoint&&syncComparable(normalizeData(JSON.parse(checkpoint.raw).data))===syncComparable(normalizeData(payload.data)))await acknowledgeLocalCheckpoint(checkpoint);
     const live=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null'),liveCache=localStorage.getItem(KEY);
     if(!live||live.requestId!==payload.requestId||live.baseRevision!==payload.baseRevision||syncComparable(live.data)!==syncComparable(payload.data)||liveCache&&syncComparable(normalizeData(JSON.parse(liveCache)))!==syncComparable(state.data))throw Object.assign(new Error('Outra aba alterou a cópia local. O pedido confirmado está preservado no arquivo.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
@@ -5013,7 +5159,7 @@ async function performCommercialWrite(recovery=false){
     return true;
   }catch(error){
     // A rejected retry does not prove that an earlier attempt failed; preserve its recovery ID.
-    if(error.code!=='CONFLICT')sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED','LOCAL_RECOVERY_AVAILABLE'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;if(error.code==='LOCAL_STORAGE_FAILED')await preserveStorageFailure();return false;
+    if(isLocalArchiveError(error))sharedSync.archiveWarning=error.code;else if(error.code!=='CONFLICT')sharedSync.remote=null;sharedSync.phase=['CONFLICT','PENDING_REQUEST_REVIEW_REQUIRED','LOCAL_RECOVERY_AVAILABLE'].includes(error.code)?'conflict':'offline';sharedSync.verified=false;sharedSync.error=error.code||'SOURCE_UNAVAILABLE';sharedSync.httpStatus=error.httpStatus||null;if(error.code==='LOCAL_STORAGE_FAILED')await preserveStorageFailure();return false;
   }
   finally{sharedSync.busy=false;renderSharedSyncStatus()}
 }
@@ -5187,7 +5333,7 @@ function renderSharedSyncStatus({refresh=true}={}){
   const labels={loading:'A consultar base partilhada…',synced:sharedSync.lastWriteConfirmedAt?'Alterações guardadas na base partilhada':'Base partilhada verificada',offline:'Dados locais — Sem ligação',pending:'Alteração registada neste dispositivo — a sincronizar',conflict:'Existem alterações incompatíveis que precisam de revisão'};
   const editing=protectedCommercialEdit();
   const localPending=hasPendingLocalSync()||sharedSync.dirty;
-  const label=sharedSync.reconciling?'A conciliar alterações de outros utilizadores…':sharedSync.busy?'Gravação solicitada — A aguardar confirmação':editing?(sharedSync.incoming?'Atualização disponível — Edição preservada':'Alterações por guardar'):sharedSync.checking?'A verificar base partilhada':localPending&&sharedSync.phase==='synced'?labels.pending:sharedSync.received&&sharedSync.phase==='synced'?'Atualização recebida — Dados confirmados':labels[sharedSync.phase]||labels.offline;
+  const label=isLocalArchiveError({code:sharedSync.error})?(sharedSync.sourceReachable?'Base partilhada acessível — Armazenamento local requer atenção':'Armazenamento local requer atenção'):sharedSync.reconciling?'A conciliar alterações de outros utilizadores…':sharedSync.busy?'Gravação solicitada — A aguardar confirmação':editing?(sharedSync.incoming?'Atualização disponível — Edição preservada':'Alterações por guardar'):sharedSync.checking?'A verificar base partilhada':localPending&&sharedSync.phase==='synced'?labels.pending:sharedSync.received&&sharedSync.phase==='synced'?'Atualização recebida — Dados confirmados':labels[sharedSync.phase]||labels.offline;
   if(el.dataStatus)el.dataStatus.textContent=label;
   if(!document.getElementById||!document.createElement)return;
   let bar=document.getElementById('commercialSyncStatus');
@@ -5206,18 +5352,26 @@ function renderSharedSyncStatus({refresh=true}={}){
   bar.innerHTML=`<div><strong>${esc(label)}</strong>${message?`<p>${esc(message)}</p>`:''}${sharedSync.verified&&!sharedSync.canWrite?'<p>Gravação remota desativada neste ambiente.</p>':''}${sharedSync.lastConfirmedAt?`<small>Última confirmação: ${esc(new Date(sharedSync.lastConfirmedAt).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}))}</small>`:''}</div><div class="top-actions"><button type="button" class="ghost-button compact-button" data-sync-retry ${sharedSync.busy||sharedSync.phase==='loading'?'disabled':''}>${sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite?'Sincronizar':'Tentar novamente'}</button>${sharedSync.phase==='conflict'?'<button type="button" class="ghost-button compact-button" data-sync-review>Rever diferenças</button>':''}${recovery&&!sharedSync.verified?'<button type="button" class="ghost-button compact-button" data-sync-recover>Retomar gravação pendente</button>':''}${sharedSync.error==='UNAUTHENTICATED'?'<a class="ghost-link" href="/access.html">Renovar acesso</a>':''}</div>`;
   bar.querySelector('[data-sync-retry]').onclick=async()=>{if(sharedSync.phase==='pending'&&sharedSync.verified&&sharedSync.canWrite){await syncRemote();return}try{await loadRemoteData();if(!protectedCommercialEdit())renderAll()}catch{}renderSharedSyncStatus()};
   if(sharedSync.error){const diagnostic=document.createElement('small');diagnostic.textContent=(sharedSync.httpStatus?'HTTP '+sharedSync.httpStatus+' - ':'')+sharedSync.error;bar.appendChild(diagnostic)}
+  if(isLocalArchiveError({code:sharedSync.error})||sharedSync.archiveWarning){
+    const warning=document.createElement('p');warning.dataset.localArchiveStatus='';
+    const code=isLocalArchiveError({code:sharedSync.error})?sharedSync.error:sharedSync.archiveWarning;
+    warning.textContent=code==='LOCAL_BACKUP_CAPACITY'?'O arquivo de recuperação atingiu o limite deste navegador. Exporte o arquivo, verifique o ficheiro e utilize a gestão do arquivo para libertar espaço de forma segura.':code==='LOCAL_VAULT_TIMEOUT'?'O arquivo local não respondeu a tempo. Mantenha a página aberta, exporte a cópia disponível e tente novamente.':code==='LOCAL_VAULT_BLOCKED'?'O arquivo local está bloqueado por outro separador. Feche os outros separadores e tente novamente.':code==='LOCAL_BACKUP_INTEGRITY'||code==='LOCAL_BACKUP_UNVERIFIABLE'?'Não foi possível verificar a integridade de uma cópia. Preserve o arquivo e solicite revisão administrativa.':'Falha no armazenamento deste navegador. Preserve uma cópia externa e verifique as permissões e o espaço disponível.';
+    bar.prepend(warning);
+    const misleading=bar.querySelector('div>p');if(isLocalArchiveError({code:sharedSync.error})&&misleading)misleading.textContent='A cópia local e as operações pendentes foram preservadas. Este problema não significa falta de ligação à fonte partilhada. A confirmação de gravação permanece bloqueada.';
+  }
   if(['SYNC_DIAGNOSTICS_UNAVAILABLE','INVALID_SYNC_DIAGNOSTICS'].includes(sharedSync.error)){
     const explanation=document.createElement('p');explanation.textContent='Sincronização bloqueada: os componentes do servidor não disponibilizam um diagnóstico compatível de gravações pendentes. Os dados locais e o pedido original estão preservados. Peça ao administrador para verificar as versões antes de voltar a sincronizar.';bar.appendChild(explanation);
   }
   const dates=document.createElement('small');
   const indicator=document.getElementById('commercialSyncBadge');if(indicator){indicator.dataset.localEdits=String(editing||localPending);indicator.dataset.checking=String(!!sharedSync.checking)}
-  bar.querySelector('small')?.remove();
+  bar.querySelector(':scope>div>small')?.remove();
   const date=value=>value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('pt-PT',{timeZone:'Europe/Lisbon'}):'—';
   dates.textContent='Última verificação: '+date(sharedSync.lastCheckedAt)+' · Última gravação confirmada nesta sessão: '+date(sharedSync.lastWriteConfirmedAt)+' · Versão partilhada atualizada: '+date(sharedSync.remoteUpdatedAt)+' · Alterações locais por guardar: '+(localPending?'sim':'não')+' · Pedido pendente: '+(recovery?'sim':'não')+(sharedSync.autoBlock?' · '+sharedSync.autoBlock:'');bar.querySelector('div').appendChild(dates);
   if(sharedSync.phase!=='synced'){
     const button=document.createElement('button');button.type='button';button.className='ghost-button compact-button';button.textContent='Exportar cópia local';button.onclick=exportLocalRecoveryCopy;bar.querySelector('.top-actions').appendChild(button);
   }
   const archiveButton=document.createElement('button');archiveButton.type='button';archiveButton.className='ghost-button compact-button';archiveButton.textContent='Exportar arquivo local';archiveButton.onclick=exportLocalBackupArchive;bar.querySelector('.top-actions').appendChild(archiveButton);
+  const manage=document.createElement('button');manage.type='button';manage.className='ghost-button compact-button';manage.textContent='Verificar arquivo externo e gerir espaço';manage.onclick=openLocalArchiveManagement;bar.querySelector('.top-actions').appendChild(manage);
   if(sharedSync.error==='LOCAL_RECOVERY_AVAILABLE'){const restore=document.createElement('button');restore.type='button';restore.className='ghost-button compact-button';restore.textContent='Recuperar última cópia local';restore.onclick=restoreLocalCheckpoint;bar.querySelector('.top-actions').appendChild(restore)}
   if(localBackupKeys().length){const move=document.createElement('button');move.type='button';move.className='ghost-button compact-button';move.textContent='Transferir backups antigos';move.onclick=migrateLegacyLocalBackups;bar.querySelector('.top-actions').appendChild(move)}
   const review=bar.querySelector('[data-sync-review]');if(review)review.onclick=openSyncReconciliation;
@@ -5339,9 +5493,7 @@ function downloadJson(rows, filename){
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  try{a.click()}finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
 }
 
 
