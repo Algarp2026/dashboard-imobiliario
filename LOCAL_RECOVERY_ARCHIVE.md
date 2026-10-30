@@ -30,6 +30,20 @@ Os limites nao foram aumentados: 64 registos, 16 MiB estimados, cinco copias con
 6. A retencao reduzida remove exclusivamente copias confirmadas verificadas e sem revisao pendente, na mesma transacao que grava a nova copia. Abortos revertem inclusoes e remocoes. Leituras de verificacao confirmam a copia gravada.
 7. Checkpoints novos recebem uma ordem monotonica local, atribuida dentro da transacao, para nao depender de timestamps iguais ou de um relogio que recua. Registos antigos sem essa ordem continuam suportados. A confirmacao de checkpoint incide apenas no id/raw/ordem efetivamente revistos.
 
+### Complemento da auditoria da PR #25
+
+A revisao de ccb14a2 encontrou dois caminhos demasiado permissivos: a gestao administrativa so procurava pedidos/identificadores, ignorando pendingSync, e a criacao de arquivo aceitava confirmed:true como prova. Estes caminhos foram corrigidos sem alterar o protocolo remoto.
+
+- pendingSync:true e protegido mesmo com pendingWrite:null e sem requestId, incluindo wrappers legacy. Ausencia de sinal explicito de sincronizacao concluida nao autoriza remocao administrativa.
+- A remocao administrativa exige envelope e metadados conhecidos, tipos estruturais reconhecidos, ausencia de pedido/alteracao pendente, data igual a base e ausencia de needsReview. Todos os checkpoints por resolver ficam protegidos, nao apenas o mais recente. Continua a exigir arquivo externo integral verificado e identidade exata dentro da transacao.
+- confirmed:true e apenas uma indicacao do chamador e nao desprotege dados. A criacao/promocao automatica exige a revisao e o conteudo efetivamente confirmados pela fonte autenticada nesta sessao. O SHA-256 comprova integridade, nao confirmacao comercial.
+- A rotacao tambem rejeita registos antigos protected:false sem prova: exige confirmacao autenticada atual ou o recibo de confirmacao persistido pelo caminho de resposta de gravacao validada (exact-request, exact-data ou reconciled). O recibo so e emitido depois de verificar o pedido original, baseRevision e conteudo integral, ou incorporacao sem conflitos; nao se fabrica um recibo a partir de confirmed:true.
+- Formatos desconhecidos e checkpoints nao resolvidos podem continuar a ocupar espaco. Sao preservados para analise/recuperacao administrativa especifica, nao convertidos nem descartados silenciosamente.
+
+Os novos testes verificam rejeicao administrativa sem qualquer alteracao do arquivo, resistencia a confirmed:true, rotacao com prova efetiva e libertacao de uma copia legacy segura depois de verificacao externa. As fixtures de capacidade usam agora envelopes conhecidos sem confirmacao remota nesta sessao; os testes de rotacao usam copias realmente confirmadas, em vez de confiar no flag do chamador. A fixture de aborto prepara explicitamente cinco copias elegiveis para garantir que testa uma eliminacao real.
+
+A regressao de quota existente tambem dependia do flag confirmed:true: foi adaptada para utilizar a base confirmada por leitura autenticada da fonte ficticia, mantendo as exigencias de cinco copias confirmadas, 64 entradas no limite e preservacao do pedido unico. Durante o reforco estrutural, a regressao de resposta perdida detetou uma rejeicao indevida da operacao recover; corrigiu-se a lista de operacoes conhecidas para save e recover, acrescentando teste explicito. Operacoes desconhecidas continuam recusadas. Estas falhas e respetivas repeticoes ficam discriminadas nas evidencias complementares; nao se apresentam tentativas anteriores falhadas como aprovadas.
+
 O object store e o nome/versao do IndexedDB permanecem os mesmos. rawChecksum e checkpointOrder sao metadados aditivos do arquivo local, nao campos de clientes/eventos nem uma migracao comercial. Nenhum arquivo antigo e reescrito em massa.
 
 ### Consulta com arquivo cheio
@@ -91,7 +105,7 @@ Manual v1 e reconhecido pelo identificador e campos copies (registos id/raw) e l
 
 Para futura recuperacao: trabalhar primeiro numa copia isolada, reconstruir cada raw conservando id/tipo/flags/checksums e os pedidos originais, identificar divergencias, validar contra leitura autenticada autorizada e obter aprovacao para qualquer importacao. Nao executar Apps Script sobre a copia nem sobrescrever a fonte real como teste. Esta PR nao implementa importacao automatica ou restauracao de producao.
 
-## Testes e evidencias
+## Testes e evidencias iniciais (ccb14a2)
 
 | Execucao | Resultado real |
 | --- | --- |
@@ -101,7 +115,7 @@ Para futura recuperacao: trabalhar primeiro numa copia isolada, reconstruir cada
 | Sintaxe JS/CJS/MJS | 140 verificacoes aprovadas |
 | Diff | Sem erros de whitespace; dados, backend, modelos comerciais e ficheiros visuais protegidos inalterados |
 
-[Node](docs/local-recovery-archive/node-results.json), [navegador](docs/local-recovery-archive/browser-results.json), [arquivo](docs/local-recovery-archive/archive-results.json) e [repeticao direcionada final](docs/local-recovery-archive/archive-final-targeted-results.json) contêm apenas resultados/contagens, nao backups nem dados de clientes. O hash do commercial.js testado coincide com o ficheiro final. Os campos de base do agregador historico referem auditorias anteriores; a base desta branch e 54dfd0a e o guard recovery-archive-source reconstitui exatamente essa versao fora dos trechos locais revistos.
+[Node](docs/local-recovery-archive/node-results.json), [navegador](docs/local-recovery-archive/browser-results.json), [arquivo](docs/local-recovery-archive/archive-results.json) e [repeticao direcionada final](docs/local-recovery-archive/archive-final-targeted-results.json) contêm apenas resultados/contagens, nao backups nem dados de clientes. Estes resultados correspondem ao commit inicial ccb14a2; a validacao complementar abaixo identifica o novo hash testado. Os campos de base do agregador historico referem auditorias anteriores; a base desta branch e 54dfd0a e o guard recovery-archive-source reconstitui exatamente essa versao fora dos trechos locais revistos.
 
 Evidencias sao exclusivamente ficticias. A suite nova usa IndexedDB nativo e downloads do Chrome; eventos de abertura bloqueada e timeouts sao injetados/relogio controlado, nao medicoes de falha fisica do disco. Nenhum resultado e apresentado como validacao da base real. Uma fixture de conflito foi corrigida para usar um preco ficticio definido/finito em vez de undefined; a exigencia de preservar o conflito foi mantida.
 
@@ -114,6 +128,15 @@ node --check commercial.js
 ```
 
 A suite nova cobre as 22 copias, 15,67/16 MiB, rejeicao sem alteracao, deduplicacao, retencao confirmada, pedidos pendentes, confirmacao exata, checkpoints mais recentes/mesmo milissegundo, corrupcao, dois separadores, limpeza abortada, arquivo completo, comparacao do ficheiro, falha de preparacao/download e fallback, IndexedDB indisponivel/bloqueado/timeouts e consulta automatica sem POST indevido. As suites existentes continuam a cobrir perda de resposta, idempotencia, CAS, read tickets, reconciliacao, precos/historicos, reservas e vendas.
+
+## Validacao complementar da PR #25
+
+- 63/63 suites Node novamente aprovadas; 140 verificacoes de sintaxe aprovadas.
+- Repeticao final dirigida: 5/5 suites aprovadas (arquivo, loading, PDF, reconciliacao com resposta perdida e comparador).
+- Resultado final do catalogo: 29/29 suites com ultimo resultado aprovado, apos as repeticoes acima; zero falhas pendentes. A ultima passagem completa teve 28/29 antes da correcao de recover; a repeticao final substitui apenas os resultados das cinco suites efetivamente reexecutadas, conservando os resultados das outras 24 e todos os registos das falhas anteriores. [Catalogo original](docs/local-recovery-archive/review-browser-catalog.json) e [resumo consolidado](docs/local-recovery-archive/review-summary.json).
+- Hash SHA-256 do commercial.js estabilizado: b169e4156823ac64a3537c44980e2c39f4689206a2071e83c199a369eb918cbb, coincidente com a execucao Node e sem alteracoes durante as repeticoes finais.
+- Evidencias: [Node](docs/local-recovery-archive/review-node-results.json), [primeiro catalogo](docs/local-recovery-archive/review-initial-browser.json), [repeticoes finais](docs/local-recovery-archive/review-browser-reruns.json) e [cenarios do arquivo](docs/local-recovery-archive/review-archive-results.json).
+- O primeiro catalogo terminou em 28/29: fixture de quota baseada apenas em confirmed:true. A passagem seguinte identificou a incompatibilidade save/recover introduzida no reforco estrutural. Ambos os problemas foram corrigidos e os testes correspondentes repetidos, sem remover ou enfraquecer verificacoes.
 
 ## Diff, publicacao futura e riscos
 

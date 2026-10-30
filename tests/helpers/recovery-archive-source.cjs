@@ -3,7 +3,7 @@ const fs=require('node:fs'),cp=require('node:child_process'),crypto=require('nod
 const root=path.resolve(__dirname,'../..'),read=s=>s.replace(/\r\n/g,'\n');
 const ranges=[
  ['confirmation','async function confirmCommercialRequestArchive(','function hasBusinessData(','15ecc6296817fc9ee89d8d9bab6c18f5d5426e74cdf06babb77579cc0bd219ee'],
- ['vault','const LOCAL_BACKUP_LIMIT=','async function migrateLegacyLocalBackups(','47a2019c13581a9455c9b86ded46421c037227624166c5b05cc2a741942fbb84'],
+ ['vault','const LOCAL_BACKUP_LIMIT=','async function migrateLegacyLocalBackups(','30dcfb5529da63f3a6434ff3f7d1b259fa662d005ca1d3fd3f3fb7d0741ae054'],
  ['checkpoint','async function latestLocalCheckpoint(','async function restoreLocalCheckpoint(','1180246f1d9389fdb1cb3a714db25778c78c46926d679cb4b2bb7ab2575cc8f0'],
  ['export','function exportLocalRecoveryCopy(','function validateSyncDiagnostics(','f5ebca8efa0fa51497d3088e12195441f79448dd8693c5e7ee89b7e5efe1b7df'],
  ['read','async function applyRemoteData(','let saveTimer=null;','b3f00417b917d4ddeb5e355cc4c357024435f45b9ac827e1987c181ac3b73240'],

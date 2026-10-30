@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync(require.resolve('../commercial.js'),'utf8'),end=source.lastIndexOf('})();');
 const values=new Map(),storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};
 const context={console,Date,Map,TextEncoder,crypto:webcrypto,AbortController,setTimeout,clearTimeout,requestAnimationFrame(){},localStorage:storage,window:{addEventListener(){},THE_VIEW_CONFIG:{}},document:{readyState:'loading',addEventListener(){},getElementById(){return null},querySelector(){return null}}};
-vm.createContext(context);vm.runInContext(source.slice(0,end)+'globalThis.api={confirmedRecoveryPayload,rememberConfirmedRecoveryBase,recoveryContent,recoveryIdentity,recoveryChecksum,recoveryRequestPresent,protectedRecoveryCopy,localArchiveError,isLocalArchiveError,normalizeData,sharedSync};'+source.slice(end),context);
+vm.createContext(context);vm.runInContext(source.slice(0,end)+'globalThis.api={knownRecoveryPayload,confirmedRecoveryPayload,rememberConfirmedRecoveryBase,recoveryContent,recoveryIdentity,recoveryChecksum,recoveryRequestPresent,protectedRecoveryCopy,localArchiveError,isLocalArchiveError,normalizeData,sharedSync};'+source.slice(end),context);
 const api=context.api,clone=x=>JSON.parse(JSON.stringify(x));
 (async()=>{
  const data=clone(api.normalizeData({clients:[{id:'fiction-client',name:'Fictitious'}],events:[],agents:[],statuses:{8:'Reservado',24:'Reservado'},finalPrices:{16:400000},unknown:{preserved:true}})),revision='a'.repeat(64);
@@ -21,6 +21,15 @@ const api=context.api,clone=x=>JSON.parse(JSON.stringify(x));
  assert.equal(api.protectedRecoveryCopy({id:'fiction-checkpoint',raw:JSON.stringify(payload)},'fiction-checkpoint'),true);
  assert.equal(api.protectedRecoveryCopy({id:'fiction-invalid',raw:'invalid'},''),true);
  assert.equal(api.protectedRecoveryCopy({id:'fiction-safe',raw:JSON.stringify(payload)},''),false);
+ for(const changed of [{...payload,pendingSync:true},{legacyKey:'fiction-old',legacyRaw:JSON.stringify({...payload,pendingSync:true})},{...payload,unknownEnvelope:true},{...payload,syncMeta:{...payload.syncMeta,unknownMetadata:true}},{...payload,data:[]},{...payload,recoveryFormat:99}])assert.equal(api.protectedRecoveryCopy({id:'fiction-protected',raw:JSON.stringify(changed)},''),true);
+ assert.equal(api.recoveryRequestPresent({...payload,pendingSync:true,pendingWrite:null}),true);
+ assert.equal(api.protectedRecoveryCopy({id:'fiction-old-checkpoint',raw:JSON.stringify(payload),needsReview:true},'fiction-new-checkpoint'),true);
+ assert.equal(api.protectedRecoveryCopy({id:'fiction-metadata',raw:JSON.stringify(payload),unknownRecoveryMetadata:true},''),true);
+ assert.equal(api.protectedRecoveryCopy({id:'fiction-legacy-safe',raw:JSON.stringify({legacyKey:'fiction-old',legacyRaw:JSON.stringify(payload)})},''),false);
+ for(const changed of [{...payload,reason:{unknown:'preserve'}},{...payload,syncMeta:{revision:{unknown:'preserve'}}},{...payload,remoteData:false},{legacyKey:{unknown:'preserve'},legacyRaw:JSON.stringify(payload)}])assert.equal(api.protectedRecoveryCopy({id:'fiction-unknown-structure',raw:JSON.stringify(changed)},''),true);
+ assert.equal(api.protectedRecoveryCopy({id:'fiction-invalid-review-flag',raw:JSON.stringify(payload),needsReview:'unknown'},''),true);
+ for(const action of ['save','recover'])assert.equal(api.knownRecoveryPayload({...payload,pendingSync:true,pendingWrite:{action,requestId:'fiction-original',baseRevision:revision,data}}),true,'Existing save/recover requests remain interpretable, not disposable');
+ assert.equal(api.knownRecoveryPayload({...payload,pendingWrite:{action:'unknown',requestId:'fiction-original',baseRevision:revision,data}}),false);
  assert.equal(api.recoveryContent(payload),api.recoveryContent({...payload,createdAt:'2099',syncMeta:{...payload.syncMeta,lastConfirmedAt:'2099'}}));
  assert.notEqual(api.recoveryIdentity(payload),api.recoveryIdentity({...payload,syncMeta:{...payload.syncMeta,lastConfirmedAt:'2099'}}),'External verification must preserve confirmation metadata');
  const original=JSON.stringify(payload),checksum=await api.recoveryChecksum(original);assert.match(checksum,/^[a-f0-9]{64}$/);assert.notEqual(await api.recoveryChecksum(original+' '),checksum);assert.equal(JSON.stringify(payload),original);

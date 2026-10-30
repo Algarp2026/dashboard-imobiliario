@@ -4497,11 +4497,18 @@ let localVaultPromise=null;
 function localArchiveError(code,message,cause){return Object.assign(new Error(message),{code,...(cause?{cause}: {})})}
 function isLocalArchiveError(error){return /^LOCAL_(BACKUP_|STORAGE_FAILED|VAULT_)/.test(error?.code||'')}
 function recoveryPayload(value){
-  if(value?.legacyRaw!==undefined){if(Object.keys(value).some(key=>!['legacyKey','legacyRaw'].includes(key)))return null;try{return recoveryPayload(JSON.parse(value.legacyRaw))}catch{return null}}
+  if(value?.legacyRaw!==undefined){if(typeof value.legacyKey!=='string'||typeof value.legacyRaw!=='string'||Object.keys(value).some(key=>!['legacyKey','legacyRaw'].includes(key)))return null;try{return recoveryPayload(JSON.parse(value.legacyRaw))}catch{return null}}
   return value&&typeof value==='object'&&!Array.isArray(value)?value:null;
 }
-function knownRecoveryPayload(payload){return !!payload&&Object.keys(payload).every(key=>['recoveryFormat','data','base','pendingWrite','syncMeta','pendingSync','createdAt','remoteData','reason'].includes(key))&&Object.keys(payload.syncMeta||{}).every(key=>['revision','lastConfirmedAt'].includes(key))}
-function knownRecoveryRecord(copy){return Object.keys(copy).every(key=>['id','kind','raw','signature','rawChecksum','createdAt','protected','needsReview','checkpointAt','checkpointOrder','confirmation'].includes(key))&&(copy.confirmation===undefined||copy.confirmation&&typeof copy.confirmation==='object'&&!Array.isArray(copy.confirmation)&&Object.keys(copy.confirmation).every(key=>['requestId','baseRevision','method'].includes(key))&&['exact-request','exact-data','reconciled'].includes(copy.confirmation.method))}
+function knownRecoveryPayload(payload){
+  const object=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
+  if(!object(payload)||payload.recoveryFormat!==1||!validSharedData(payload.data)||!validSharedData(payload.base)||!object(payload.syncMeta))return false;
+  if(Object.keys(payload).some(key=>!['recoveryFormat','data','base','pendingWrite','syncMeta','pendingSync','createdAt','remoteData','reason'].includes(key))||Object.keys(payload.syncMeta).some(key=>!['revision','lastConfirmedAt'].includes(key)))return false;
+  if(typeof payload.syncMeta.revision!=='string'||!['createdAt','reason'].every(key=>payload[key]===undefined||typeof payload[key]==='string')||payload.syncMeta.lastConfirmedAt!==undefined&&typeof payload.syncMeta.lastConfirmedAt!=='string'||payload.pendingSync!==undefined&&typeof payload.pendingSync!=='boolean'||payload.remoteData!==undefined&&payload.remoteData!==null&&!validSharedData(payload.remoteData))return false;
+  const request=payload.pendingWrite;
+  return request===null||object(request)&&Object.keys(request).every(key=>['action','data','baseRevision','requestId'].includes(key))&&['save','recover'].includes(request.action)&&typeof request.requestId==='string'&&request.requestId.length>0&&typeof request.baseRevision==='string'&&validSharedData(request.data);
+}
+function knownRecoveryRecord(copy){return !!copy&&typeof copy==='object'&&!Array.isArray(copy)&&['protected','needsReview'].every(key=>copy[key]===undefined||typeof copy[key]==='boolean')&&['id','raw','kind','signature','rawChecksum','createdAt','checkpointAt'].every(key=>copy[key]===undefined||typeof copy[key]==='string')&&(copy.checkpointOrder===undefined||Number.isSafeInteger(copy.checkpointOrder)&&copy.checkpointOrder>0)&&Object.keys(copy).every(key=>['id','kind','raw','signature','rawChecksum','createdAt','protected','needsReview','checkpointAt','checkpointOrder','confirmation'].includes(key))&&(copy.confirmation===undefined||copy.confirmation&&typeof copy.confirmation==='object'&&!Array.isArray(copy.confirmation)&&typeof copy.confirmation.requestId==='string'&&copy.confirmation.requestId.length>0&&/^[a-f0-9]{64}$/.test(copy.confirmation.baseRevision||'')&&Object.keys(copy.confirmation).every(key=>['requestId','baseRevision','method'].includes(key))&&['exact-request','exact-data','reconciled'].includes(copy.confirmation.method))}
 function rememberConfirmedRecoveryBase(data,revision){
   if(!validSharedData(data)||!/^[a-f0-9]{64}$/.test(revision||''))return;
   const bases=sharedSync.confirmedRecoveryBases||(sharedSync.confirmedRecoveryBases=new Map());
@@ -4515,7 +4522,7 @@ function confirmedRecoveryPayload(value){
 }
 function recoveryRequestPresent(value){
   if(!value||typeof value!=='object')return false;
-  return Object.entries(value).some(([key,item])=>key==='requestId'||key==='pendingWrite'&&item!==null||key==='legacyRaw'&&(typeof item!=='string'||(()=>{try{return recoveryRequestPresent(JSON.parse(item))}catch{return true}})())||item&&typeof item==='object'&&recoveryRequestPresent(item));
+  return Object.entries(value).some(([key,item])=>key==='requestId'||key==='pendingSync'&&item!==false||key==='pendingWrite'&&item!==null||key==='legacyRaw'&&(typeof item!=='string'||(()=>{try{return recoveryRequestPresent(JSON.parse(item))}catch{return true}})())||item&&typeof item==='object'&&recoveryRequestPresent(item));
 }
 function recoveryContent(value){
   const comparable=JSON.parse(JSON.stringify(value));delete comparable.createdAt;
@@ -4523,7 +4530,7 @@ function recoveryContent(value){
   return syncComparable(comparable);
 }
 function recoveryIdentity(value){const copy=JSON.parse(JSON.stringify(value));delete copy.createdAt;return syncComparable(copy)}
-function protectedRecoveryCopy(copy,checkpointId){try{return copy.id===checkpointId||recoveryRequestPresent(JSON.parse(copy.raw))}catch{return true}}
+function protectedRecoveryCopy(copy,checkpointId){try{const value=JSON.parse(copy.raw),payload=recoveryPayload(value);return !knownRecoveryRecord(copy)||!knownRecoveryPayload(payload)||copy.needsReview===true||copy.id===checkpointId||payload.pendingSync!==false||payload.pendingWrite!==null||recoveryRequestPresent(value)||syncComparable(payload.data)!==syncComparable(payload.base)}catch{return true}}
 async function recoveryChecksum(text){
   if(typeof crypto==='undefined'||!crypto.subtle)throw localArchiveError('LOCAL_BACKUP_UNVERIFIABLE','Não foi possível verificar a integridade do arquivo neste navegador.');
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),byte=>byte.toString(16).padStart(2,'0')).join('');
@@ -4570,7 +4577,8 @@ async function verifiedRecoveryCopies(){
 }
 async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
   const raw=JSON.stringify(value),content=recoveryContent(value);
-  confirmed=kind!=='storage-failure'&&(confirmed||confirmedRecoveryPayload(value));
+  // A caller flag or checksum is not evidence of remote confirmation.
+  confirmed=kind!=='storage-failure'&&confirmedRecoveryPayload(value);
   if(typeof indexedDB==='undefined'){
     const keys=localBackupKeys();
     for(const key of keys){try{if(recoveryContent(JSON.parse(localStorage.getItem(key)))===content)return key}catch{}}
@@ -4597,7 +4605,7 @@ async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
       for(const copy of entries)if(eligible.get(copy.id)===JSON.stringify(copy)){copy.protected=false;store.put(copy)}
       const duplicate=entries.find(item=>verifiedIds.has(item.id)&&item.signature===signature&&recoveryContent(JSON.parse(item.raw))===content);
       if(duplicate){duplicate.protected=duplicate.protected||entry.protected;if(entry.needsReview){duplicate.needsReview=true;duplicate.checkpointAt=entry.createdAt;duplicate.checkpointOrder=entry.checkpointOrder}store.put(duplicate);done(duplicate);return}
-      const candidates=[...entries,entry],confirmedEntries=candidates.filter(item=>!item.protected&&!item.needsReview&&(item.id===entry.id||verifiedIds.has(item.id)&&knownRecoveryPayload(recoveryPayload(JSON.parse(item.raw))))).sort((a,b)=>a.id===entry.id?-1:b.id===entry.id?1:b.createdAt.localeCompare(a.createdAt));
+      const candidates=[...entries,entry],confirmedEntries=candidates.filter(item=>!item.protected&&!item.needsReview&&(item.id===entry.id||verifiedIds.has(item.id))&&knownRecoveryPayload(recoveryPayload(JSON.parse(item.raw)))&&(confirmedRecoveryPayload(JSON.parse(item.raw))||item.confirmation&&knownRecoveryRecord(item))).sort((a,b)=>a.id===entry.id?-1:b.id===entry.id?1:b.createdAt.localeCompare(a.createdAt));
       const remove=new Set(confirmedEntries.slice(LOCAL_CONFIRMED_BACKUPS).map(item=>item.id));
       let kept=candidates.filter(item=>!remove.has(item.id));
       const bytes=items=>items.reduce((sum,item)=>sum+2*(item.raw.length+(item.signature||'').length+(item.rawChecksum||'').length),0);
@@ -4650,7 +4658,7 @@ async function releaseVerifiedLocalArchive(archive,ids){
   const copies=await verifyLocalArchive(archive),checkpoint=newestLocalCheckpoint(copies),wanted=new Set(ids);
   if(!wanted.size)throw localArchiveError('LOCAL_BACKUP_UNVERIFIABLE','Selecione as cópias a arquivar externamente.');
   const selected=copies.filter(copy=>wanted.has(copy.id));
-  if(selected.length!==wanted.size||selected.some(copy=>protectedRecoveryCopy(copy,checkpoint?.id)))throw localArchiveError('LOCAL_BACKUP_PROTECTED','Pedidos de gravação, cópias não interpretáveis e o último ponto de recuperação não podem ser removidos nesta operação.');
+  if(selected.length!==wanted.size||selected.some(copy=>protectedRecoveryCopy(copy,checkpoint?.id)))throw localArchiveError('LOCAL_BACKUP_PROTECTED','Alterações por confirmar, pedidos, formatos desconhecidos e pontos de recuperação por resolver não podem ser removidos nesta operação.');
   const local=syncComparable(localArchiveEntries()),memory=recoveryIdentity(localRecoveryExport());
   return localVaultTransaction('readwrite',(store,done,abort)=>{const request=store.getAll();request.onsuccess=()=>{
     if(syncComparable(localArchiveEntries())!==local||recoveryIdentity(localRecoveryExport())!==memory||syncComparable(request.result)!==syncComparable(copies)){abort(localArchiveError('LOCAL_BACKUP_CHANGED','Outra operação alterou o arquivo. Nada foi removido.'));return}

@@ -120,17 +120,19 @@ try{
   await emergency.context.close();
   // Retention is transactional: confirmed records rotate, unique protected records never do.
   const {page,context}=await session();
-  const retention=await page.evaluate(async()=>{
+  await phase(page,'synced');
+  const retention=await page.evaluate(async key=>{
     const api=window.__localBackupTest;
+    const meta=JSON.parse(localStorage.getItem(key+'.syncMeta.v1')),confirmed={recoveryFormat:1,data:api.state.data,base:meta.base,pendingWrite:null,pendingSync:false,syncMeta:{revision:meta.revision,lastConfirmedAt:meta.lastConfirmedAt}};
     await api.archiveRecoveryCopy('protected',{data:{fiction:'unique unconfirmed'},pendingWrite:{requestId:'fiction-protected'}});
-    for(let i=0;i<9;i++)await api.archiveRecoveryCopy('confirmed',{data:{fiction:i}},{confirmed:true});
+    for(let i=0;i<9;i++)await api.archiveRecoveryCopy('confirmed',{...confirmed,reason:'Fictitious confirmed '+i},{confirmed:true});
     const first=await api.localVaultCopies();
     for(let i=0;i<58;i++)await api.archiveRecoveryCopy('protected',{data:{fiction:'pending-'+i}});
     let blocked=false;
     try{for(let i=0;i<10;i++)await api.archiveRecoveryCopy('protected',{data:{fiction:'overflow-'+i}})}catch(error){blocked=error.code==='LOCAL_BACKUP_CAPACITY'}
     const final=await api.localVaultCopies();
     return{confirmed:first.filter(record=>!record.protected).length,protectedPreserved:final.some(record=>JSON.parse(record.raw).pendingWrite?.requestId==='fiction-protected'),blocked,total:final.length};
-  });
+  },key);
   assert.equal(retention.confirmed,5);assert.equal(retention.protectedPreserved,true);assert.equal(retention.blocked,true);assert.equal(retention.total,64);
   await context.close();assert.deepEqual(errors,[]);console.log(JSON.stringify({results,retention,errors,productionNetwork:false}));
 }finally{await browser.close()}

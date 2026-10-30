@@ -1,0 +1,27 @@
+[
+  {
+    "name": "commercial-recovery-archive-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-loading-persistence-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-presentation-pdf-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-safe-reconciliation-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "comparator-belaformosa-browser.mjs",
+    "code": 0,
+    "passed": true
+  }
+]
