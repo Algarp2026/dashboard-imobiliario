@@ -1,5 +1,7 @@
 # Arquivo local: capacidade, recuperacao e exportacao
 
+Estado actual da PR25 e validacao final: [fiabilidade local e consultas](PR25_LOCAL_RELIABILITY.md). Os resultados abaixo documentam as etapas anteriores do arquivo; as respectivas proteccoes permanecem preservadas.
+
 ## Origem e restricoes
 
 Branch `codex/fix-local-recovery-archive`, criada da main `54dfd0a55e643dfeda0a4589ad8b7e050b565a03`, confirmada no GitHub antes do trabalho. A PR visual #24 nao faz parte desta base e nao foi alterada. Sem acesso a arquivos reais, Google Sheets, Apps Script ou configuracoes de producao; testes exclusivamente ficticios.

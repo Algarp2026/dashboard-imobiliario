@@ -12,10 +12,10 @@ for(const file of ['api','server','google_apps_script.gs','google_commercial_int
 const catalog=s=>JSON.parse(JSON.stringify(vm.runInNewContext('('+s.match(/const plans=({[\s\S]*?\n});/)[1]+')')));
 const suites={...catalog(show(main,'tests/commercial-browser-regression.cjs')),...catalog(show(loading,'tests/commercial-browser-regression.cjs'))};
 suites['commercial-recovery-archive-browser.mjs']='recovery-archive';
-suites['commercial-deployment-browser.mjs']='deployment-guard';
-suites['commercial-fraction-origin-browser.mjs']='fraction-origin';
+suites['commercial-consultation-browser.mjs']='consultation';
+suites['commercial-fraction-draft-browser.mjs']='consultation';
 assert.deepEqual(catalog(read('tests/commercial-browser-regression.cjs')),suites,'Every browser suite from both PRs remains executable');assert.equal(Object.keys(suites).length,31);
 const config=JSON.parse(show(main,'vercel.json'));config.git.deploymentEnabled={...config.git.deploymentEnabled,...JSON.parse(show(loading,'vercel.json')).git.deploymentEnabled};
 config.git.deploymentEnabled['codex/fix-local-recovery-archive']=false;
-assert.deepEqual(require('./helpers/deployment-source.cjs').config(JSON.parse(read('vercel.json'))),config,'Keep complete main configuration and both branch deployment guards');
-console.log('PR22/main integration passed: exact PDF + loading union with reviewed archive/deployment extensions, 31 browser suites, unchanged commercial data/backend and deployment guards');
+assert.deepEqual(JSON.parse(read('vercel.json')),config,'Keep complete main configuration and both branch deployment guards');
+console.log('PR22/main integration passed: exact PDF + loading union with reviewed archive/consultation extensions, 31 browser suites, unchanged commercial data/backend and deployment guards');

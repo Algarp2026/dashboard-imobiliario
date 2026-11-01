@@ -8,7 +8,6 @@ const middleware=entryTests?import('../../middleware.ts'):null;
 Object.assign(process.env,{COMMERCIAL_ACCESS_PASSWORD:'View-Phase2A-Teste',COMMERCIAL_ACCESS_SECRET:crypto.randomBytes(32).toString('hex'),VERCEL_ENV:'preview',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-token',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true'});
 const session=require('../../server/session.js'),access=require('../../api/access.js'),api=require('../../api/commercial-data.js'),makeStore=require('./apps-script-store.js'),fixture=require(process.env.FRACTION_DRAFT_TESTS==='true'?'./fraction-draft-fixture.cjs':process.env.PHASE2B_FIXTURE==='true'?'./client-phase2b-fixture.js':'./client-phase2a-fixture.js');
 let store=makeStore(fixture()),reads=0,writes=0,failure='',delay=0;
-let testDeployment='a'.repeat(64);
 const realNow=Date.now;let clockOffset=0,readRequired=0;
 if(process.env.AUTO_SYNC_TESTS==='true')Date.now=()=>realNow()+clockOffset;
 global.fetch=async(url,options)=>{
@@ -28,14 +27,12 @@ allowed.add('commercial-opportunities.js');
 allowed.add('commercial-opportunity-ui.js');
 allowed.add('commercial-client-workspace.js');
 allowed.add('commercial-client-workspace.css');
-if(process.env.DEPLOYMENT_GUARD_TESTS==='true')for(const name of ['deployment-guard.js','deployment-guard.css'])allowed.add(name);
 if(entryTests)for(const name of ['comparador.html','app.js','style.css'])allowed.add(name);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.jpg':'image/jpeg','.pdf':'application/pdf','.png':'image/png'};
 http.createServer(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');const url=new URL(req.url,'http://127.0.0.1:'+port),name=url.pathname.slice(1)||'commercial.html';
   const reply={statusCode:200,setHeader:(key,value)=>res.setHeader(key,value),status(value){this.statusCode=value;return this},json(body){res.statusCode=this.statusCode;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));return this}};
   try{
-    if(process.env.DEPLOYMENT_GUARD_TESTS==='true'&&name==='deployment-version.json'){reply.json({format:1,version:testDeployment,environment:'preview'});return}
     if(entryTests){
       const redirect=entryRedirects.find(rule=>rule.source===url.pathname);
       if(redirect){res.writeHead(redirect.permanent?308:307,{Location:redirect.destination+url.search});res.end();return}
@@ -45,7 +42,7 @@ http.createServer(async(req,res)=>{
         if(result){res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return}
       }
     }
-    if(!['api/access','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','favicon.ico',...(process.env.DEPLOYMENT_GUARD_TESTS==='true'?['deployment-guard.js','deployment-guard.css']:[])].includes(name)&&!await session.hasValidSession(req)){res.writeHead(name.startsWith('api/')?401:302,name.startsWith('api/')?{'Content-Type':'application/json'}:{Location:'/access.html'});res.end(name.startsWith('api/')?JSON.stringify({ok:false,code:'UNAUTHENTICATED'}):'');return}
+    if(!['api/access','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','favicon.ico'].includes(name)&&!await session.hasValidSession(req)){res.writeHead(name.startsWith('api/')?401:302,name.startsWith('api/')?{'Content-Type':'application/json'}:{Location:'/access.html'});res.end(name.startsWith('api/')?JSON.stringify({ok:false,code:'UNAUTHENTICATED'}):'');return}
     if(name.startsWith('api/')){
       let raw='';for await(const part of req){raw+=part;if(raw.length>1000000)throw Error('Too large')}req.body=raw?JSON.parse(raw):undefined;
       if(name==='api/commercial-data'&&req.method==='POST'&&readRequired>0){readRequired--;reply.status(403).json({ok:false,code:'READ_REQUIRED'});return}
@@ -53,7 +50,6 @@ http.createServer(async(req,res)=>{
       if(name==='api/test-control'&&req.method==='POST'){
         if(req.headers.origin!=='http://127.0.0.1:'+port){reply.status(403).json({ok:false});return}
         const input=req.body||{};
-        if(process.env.DEPLOYMENT_GUARD_TESTS==='true'&&/^[a-f0-9]{64}$/.test(input.deployment||''))testDeployment=input.deployment;
         if(process.env.AUTO_SYNC_TESTS==='true'){
           if(Number.isFinite(input.clockOffsetMs))clockOffset=Math.min(9*3600000,Math.max(0,input.clockOffsetMs));
           if(Number.isInteger(input.readRequired))readRequired=Math.min(2,Math.max(0,input.readRequired));
@@ -76,11 +72,11 @@ http.createServer(async(req,res)=>{
       if(process.env.LOCAL_BACKUP_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__localBackupTest={archiveRecoveryCopy,localVaultCopies,state,save};'+source.slice(finish)}
       if(process.env.RECOVERY_ARCHIVE_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__recoveryArchiveTest={confirmCommercialRequestArchive,archiveRecoveryCopy,localVaultCopies,localVaultTransaction,latestLocalCheckpoint,acknowledgeLocalCheckpoint,backupLocalBeforeRemoteLoad,exportLocalBackupArchive,exportLocalRecoveryCopy,verifyLocalArchive,releaseVerifiedLocalArchive,localRecoveryExport,localArchiveEntries,recoveryChecksum,recoveryContent,confirmedRecoveryPayload,openLocalVault,state,sharedSync,read:()=>loadRemoteData({automatic:true}),render:()=>renderSharedSyncStatus(),resetConnection:async()=>{if(localVaultPromise)try{(await localVaultPromise).close()}catch{}localVaultPromise=null}};'+source.slice(finish)}
       if(process.env.AUTO_SYNC_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__autoSyncTest={check:()=>commercialAutoSync?.check("test"),idle:()=>!commercialAutoSync?.running&&!commercialReadInFlight&&!commercialLoadInFlight&&!sharedSync.busy,metrics:()=>({...commercialAutoSync?.metrics}),editing:protectedCommercialEdit,status:()=>({phase:sharedSync.phase,error:sharedSync.error,dirty:sharedSync.dirty,incoming:sharedSync.incoming,editing:protectedCommercialEdit(),pending:!!localStorage.getItem(LOCAL_SYNC_REQUEST_KEY),differentRoots:Object.keys(state.data).filter(k=>syncComparable(state.data[k])!==syncComparable(sharedSync.base?.[k])),clientFields:state.data.clients.flatMap((c,i)=>Object.keys(c).filter(k=>syncComparable(c[k])!==syncComparable(sharedSync.base?.clients?.[i]?.[k])).map(k=>i+"."+k)).slice(0,12)})};'+source.slice(finish)}
+      if(process.env.FRACTION_DRAFT_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__fractionDraftTest={snapshot:()=>{const d=commercialUx.fractionSelectionDraft;return d?{clientId:d.clientId,original:d.original,values:[...d.values],approvals:[...d.approvals]}:null}};'+source.slice(finish)}
       if(process.env.SAFE_RECONCILIATION_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__safeReconcileTest={manual:(n,reason)=>{applyManualStatusChange(n,state.data.statuses[n],"Indisponível",{unavailableReason:reason});save()},clientField:(id,key,value)=>{state.data.clients.find(c=>c.id===id)[key]=value;save()},recover:()=>syncRemote(true),snapshot:()=>JSON.parse(JSON.stringify(state.data)),details:()=>({phase:sharedSync.phase,error:sharedSync.error,autoBlock:sharedSync.autoBlock,revision:sharedSync.revision,busy:sharedSync.busy}),copies:localVaultCopies};'+source.slice(finish)}
       if(process.env.LOADING_PERSISTENCE_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__loadingPersistenceTest={read:()=>loadRemoteData(),write:()=>syncRemote()};'+source.slice(finish)}
       content=Buffer.from(source);
     }else content=fs.readFileSync(path.join(repo,name));
-    if(process.env.DEPLOYMENT_GUARD_TESTS==='true'&&name.endsWith('.html'))content=Buffer.from(require('../../scripts/build-deployment-version.cjs').stamp(content.toString(),testDeployment));
     res.setHeader('Content-Type',mime[path.extname(name)]||'application/octet-stream');res.end(content);
   }catch{if(!res.headersSent)reply.status(500).json({ok:false,code:'ISOLATED_TEST_ERROR'});else res.end()}
 }).listen(port,'127.0.0.1',()=>console.log('Phase 2A isolated preview: http://127.0.0.1:'+port+'/commercial.html; 64 fictitious clients; all writes stay in memory.'));

@@ -1,5 +1,6 @@
 {
-  "baseline": "fd978eeaae2098ecd854f9ec72ea5681af1b199f",
+  "baseline": "49d5ba839e78b36b5adc4bb883edfc46ec27f105",
+  "approvedArchiveBaseline": "869397c",
   "branch": "codex/fix-local-recovery-archive",
   "node": {
     "passed": 65,
@@ -23,11 +24,11 @@
       "commercial-composition-d2.test.js",
       "commercial-concurrency.test.js",
       "commercial-construction.test.js",
+      "commercial-consultation-guards.test.js",
       "commercial-contact-history.test.js",
       "commercial-contacts.test.js",
       "commercial-cycle-boundaries.test.js",
       "commercial-d2-platform.test.js",
-      "commercial-deployment-version.test.js",
       "commercial-event-provenance.test.js",
       "commercial-followups.test.js",
       "commercial-fraction-draft.test.js",
@@ -77,12 +78,12 @@
     "failed": 0,
     "suites": [
       {
-        "name": "commercial-fraction-origin-browser.mjs",
+        "name": "commercial-consultation-browser.mjs",
         "code": 0,
         "passed": true
       },
       {
-        "name": "commercial-deployment-browser.mjs",
+        "name": "commercial-fraction-draft-browser.mjs",
         "code": 0,
         "passed": true
       },
@@ -232,29 +233,40 @@
         "passed": true
       }
     ],
-    "finalAffectedReruns": [
+    "finalTargetedReruns": [
       {
-        "name": "commercial-deployment-browser.mjs",
+        "name": "commercial-consultation-browser.mjs",
         "code": 0,
         "passed": true
       },
       {
-        "name": "commercial-recovery-archive-browser.mjs",
+        "name": "commercial-fraction-draft-browser.mjs",
         "code": 0,
         "passed": true
       }
     ]
   },
   "syntax": {
-    "passed": 150,
+    "passed": 147,
     "failed": 0
   },
-  "validatedHashes": {
-    "commercial.js": "47433104b37bc7fc50761702db01d8e9314d2fe4e64f5f244dd393c6f9c24406",
-    "commercial-client-workflow.js": "93746877cd4f99d356e877131ab1035e43c17063228e3c4729c9a3091e879904",
-    "commercial-client-workflow-ui.js": "0f7a2cdfb0bc7c0f1d1ec31cc9f5059074ffbb587b966f7bf73119e4d778085a",
-    "commercial-recommendations.js": "b360e7d57fcb346f1c688bd76ea046fbd29074b81e06cba293721e316a82c615"
+  "operationalResidualScan": {
+    "operationalReferences": 0,
+    "files": [
+      "commercial.js",
+      "index.html",
+      "commercial.html",
+      "comparador.html",
+      "access.html",
+      "vercel.json",
+      "scripts/build-commercial-integrity.js",
+      "scripts/check-google-read.js",
+      "scripts/prepare-apartment16-recovery.js",
+      "scripts/verify-browser-archive.cjs"
+    ],
+    "negativeTestsExcluded": true
   },
+  "sourceHash": "0a7c1f12150d8492f552ba0ccd4e74f7edab8e5ab7ad3eca3ec55123e22fe8f0",
   "unchangedFromAuditedCommit": [
     "api",
     "server",
@@ -264,22 +276,18 @@
     "data.json",
     "data.xlsx",
     "plantas",
-    "commercial.css",
     "commercial.html",
+    "commercial.css",
+    "app.js",
     "commercial-client-workflow.js",
     "commercial-client-workflow-ui.js",
     "commercial-opportunities.js",
-    "commercial-opportunity-ui.js",
-    "vercel.json"
+    "commercial-opportunity-ui.js"
   ],
+  "vercelExactlyMatchesPreMonitor": true,
+  "archiveAndTransportExactlyMatchPreMonitorOutsideConsultationGuards": true,
   "realGoogle": false,
-  "realVercel": false,
+  "realData": false,
   "merge": false,
-  "deployment": false,
-  "notes": [
-    "Complete existing 30-suite browser catalog and new targeted suite executed separately on isolated ports.",
-    "Final deployment/archive suites re-executed after the last reviewed source change.",
-    "Earlier new-test authoring failures involved missing charset, already-open profile navigation and approval-dialog busy state; final runs all pass.",
-    "Catalog equality assertions extended by one suite, none removed."
-  ]
+  "deployment": false
 }

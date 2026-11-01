@@ -39,7 +39,7 @@ expected.git.deploymentEnabled={...previous.git.deploymentEnabled,...expected.gi
 expected.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 expected.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
 expected.git.deploymentEnabled['codex/fix-local-recovery-archive']=false;
-assert.deepEqual(require('./helpers/deployment-source.cjs').config(JSON.parse(fs.readFileSync('vercel.json','utf8'))),expected,'Preserve all configuration and both branch deployment guards');
+assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expected,'Preserve all configuration and both branch deployment guards');
 const browser=fs.readFileSync('tests/commercial-browser-regression.cjs','utf8');
 for(const suite of ['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs','comparator-belaformosa-browser.mjs','commercial-client-phase2b-browser.mjs'])assert.ok(browser.includes("'"+suite+"':"),'Browser catalog must include '+suite);
 const node=fs.readFileSync('tests/commercial-client-complete-regression.cjs','utf8');

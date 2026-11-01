@@ -1,0 +1,30 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "allModuleFiltersClean": true,
+      "orientationSearchClean": true,
+      "orderingClean": true,
+      "noConsultationPendingMarker": true,
+      "remoteUpdateWithFilter": true,
+      "focusClean": true,
+      "pristinePreferencesClean": true,
+      "preferenceChipsProtected": true,
+      "realDraftPreserved": true
+    },
+    {
+      "width": 390,
+      "allModuleFiltersClean": true,
+      "orientationSearchClean": true,
+      "orderingClean": true,
+      "noConsultationPendingMarker": true,
+      "remoteUpdateWithFilter": true,
+      "focusClean": true,
+      "pristinePreferencesClean": true,
+      "preferenceChipsProtected": true,
+      "realDraftPreserved": true
+    }
+  ],
+  "errors": [],
+  "production": false
+}

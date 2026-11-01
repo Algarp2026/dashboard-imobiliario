@@ -13,13 +13,13 @@ const ranges=[
  ['download','function downloadJson(','function fill(','494862d225bc4971eb4c551d801616fcc86b72121d25b91fe3b3a6d41f5c6e86']
 ];
 function restore(source){
- source=require('./deployment-source.cjs').restore(source);
+ source=require('./consultation-source.cjs').restore(source);
  const base=read(cp.execFileSync('git',['show','54dfd0a:commercial.js'],{cwd:root,encoding:'utf8'}));let restored=read(source);
  for(const [name,start,end,hash]of ranges){const extract=s=>{const a=s.indexOf(start),b=s.indexOf(end,a+start.length);assert.ok(a>=0&&b>a,'Reviewed range '+name);return s.slice(a,b)};const current=extract(restored);assert.equal(crypto.createHash('sha256').update(current).digest('hex'),hash,'Only explicitly reviewed local recovery changes: '+name);restored=restored.replace(current,extract(base))}
  assert.equal(restored,base,'All data, business, PDF, CAS and transport code outside reviewed local-archive ranges remains exact');return restored;
 }
 function restorePreview(source){
- source=require('./deployment-source.cjs').restorePreview(source);
+ source=require('./consultation-source.cjs').restorePreview(source);
  const line=source.split('\n').find(line=>line.includes("if(process.env.RECOVERY_ARCHIVE_TESTS==='true')"));
  assert.ok(line);assert.equal(crypto.createHash('sha256').update(line).digest('hex'),'51dab19cfd8041a35da57e2952823ae24277471cfd42856fe410458b93801653','Only the explicitly isolated recovery test hook');return source.replace(line+'\n','');
 }

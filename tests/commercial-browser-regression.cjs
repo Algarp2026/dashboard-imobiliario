@@ -5,8 +5,8 @@ const {consolidated}=require('./helpers/browser-suite-policy.cjs');
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
- 'commercial-fraction-origin-browser.mjs':'fraction-origin',
- 'commercial-deployment-browser.mjs':'deployment-guard',
+ 'commercial-consultation-browser.mjs':'consultation',
+ 'commercial-fraction-draft-browser.mjs':'consultation',
  'commercial-recovery-archive-browser.mjs':'recovery-archive',
  'commercial-loading-persistence-browser.mjs':'visual-workspace',
  'commercial-presentation-pdf-browser.mjs':'visual-workspace',
