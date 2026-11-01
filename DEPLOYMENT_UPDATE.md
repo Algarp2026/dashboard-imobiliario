@@ -1,5 +1,7 @@
 # PR #25: consultas, rascunhos e novas publicacoes
 
+Complemento da auditoria de `fd978ee`: [rascunhos de fracao, origens e verificacao do refresh](PR25_FINAL_AUDIT.md). Os resultados abaixo documentam a etapa anterior; o complemento tem resultados proprios.
+
 ## Ambito e seguranca
 
 Complemento da mesma branch `codex/fix-local-recovery-archive`, a partir de `869397c`. Sem merge, deployment, acesso a fontes comerciais reais ou alteracao de credenciais. API, Apps Script, integridade Google, dados, precos, estados, PDF e arquivo local anteriormente auditado permanecem inalterados.
@@ -16,7 +18,7 @@ O epoch de edicao continua a mudar para edicoes comerciais, preservando a protec
 
 - Incorpora a identidade no HTML de index, commercial, comparador e access; nao a deduz da primeira resposta da rede.
 - Versiona os URLs dos scripts/estilos locais para evitar uma mistura de HTML novo com JS antigo na cache.
-- Gera deployment-version.json, contendo apenas format e version, sem dados CRM, ambiente privado ou credenciais.
+- Gera deployment-version.json, contendo apenas format, version e o identificador publico do ambiente (production/preview/development), sem dados CRM ou credenciais.
 - Em production incorpora o dominio VERCEL_PROJECT_PRODUCTION_URL: ate um endereco imutavel de deployment consulta a versao ativa na producao. Previews consultam exclusivamente a propria origem, nunca a producao.
 
 O manifesto e publico para funcionar tambem no acesso/login; apenas este ficheiro recebe CORS publico. Consultas a outra origem omitem cookies. Os headers de navegador e CDN sao no-store, e cada GET usa cache:no-store e um parametro unico. Autenticacao das paginas, ficheiros comerciais e API nao foi alterada.

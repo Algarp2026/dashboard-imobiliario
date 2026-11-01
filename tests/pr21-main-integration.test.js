@@ -11,6 +11,7 @@ expectedCatalog['commercial-loading-persistence-browser.mjs']='visual-workspace'
 expectedCatalog['commercial-presentation-pdf-browser.mjs']='visual-workspace';
 expectedCatalog['commercial-recovery-archive-browser.mjs']='recovery-archive';
 expectedCatalog['commercial-deployment-browser.mjs']='deployment-guard';
+expectedCatalog['commercial-fraction-origin-browser.mjs']='fraction-origin';
 assert.deepEqual(catalog(fs.readFileSync('tests/commercial-browser-regression.cjs','utf8')),expectedCatalog,'Keep every browser suite from both PRs');
 const expectedConfig=JSON.parse(show(main,'vercel.json'));
 expectedConfig.git.deploymentEnabled={...expectedConfig.git.deploymentEnabled,...JSON.parse(show(crm,'vercel.json')).git.deploymentEnabled};

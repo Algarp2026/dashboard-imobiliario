@@ -1994,8 +1994,8 @@ function refreshClientFractionResults(){
   if(!root||!c||!engine)return;
   const rows=clientFractionSource(),result=engine.evaluate(c,rows),browse=clientFractionBrowse(c),draft=clientFractionDraft(c),selected=clientFractionSelected(c),filtered=engine.filter(result,browse.filter);
   root.querySelector('#clientFractionSourceNotice').textContent=rows[0]?.sourceCurrent?'Preços e estados explícitos da última base confirmada. Valores em falta não são inferidos.':'Base por confirmar: os valores registados são cópias locais, não condições comerciais verificadas. As recomendações exigem confirmação da fonte.';
-  const selection=root.querySelector('#clientFractionSelection');
-  selection.innerHTML=`<div class="ux-fraction-selection-heading"><strong>${selected.length} ${selected.length===1?'fração selecionada':'frações selecionadas'}${draft?' · por guardar':''}</strong><div class="top-actions">${draft?`<button class="primary-button compact-button" type="button" data-fraction-save ${draft.saving||draft.checking?'disabled':''}>${uxIcon('check')}Guardar seleção</button><button class="ghost-button compact-button" type="button" data-fraction-cancel ${draft.saving||draft.checking?'disabled':''}>Cancelar</button>`:''}<button class="ux-text-button" type="button" data-ux-client-action="select-presentation">${uxIcon('list-checks')}Adicionar frações</button></div></div>${selected.length?`<div class="ux-fraction-selected">${selected.map(n=>{const row=rows.find(f=>f.number===n);return`<button class="ux-preference-chip" type="button" data-fraction-select="${n}" ${draft?.saving||draft?.checking?'disabled':''}>Apt. ${n} ${uxIcon('x')}</button>${!row||!row.statusConfirmed||row.status!=='Disponível'?`<span class="ux-fraction-warning">Apt. ${n}: ${esc(row?clientFractionStatus(row):'referência não encontrada')}. Seleção mantida; confirmar condições.</span>`:''}`}).join('')}</div>`:''}`;
+  const selection=root.querySelector('#clientFractionSelection'),selectionChanged=modifiedFractionSelection(draft);
+  selection.innerHTML=`<div class="ux-fraction-selection-heading"><strong>${selected.length} ${selected.length===1?'fração selecionada':'frações selecionadas'}${selectionChanged?' · por guardar':''}</strong><div class="top-actions">${draft?`<button class="primary-button compact-button" type="button" data-fraction-save ${draft.saving||draft.checking?'disabled':''}>${uxIcon('check')}Guardar seleção</button><button class="ghost-button compact-button" type="button" data-fraction-cancel ${draft.saving||draft.checking?'disabled':''}>Cancelar</button>`:''}<button class="ux-text-button" type="button" data-ux-client-action="select-presentation">${uxIcon('list-checks')}Adicionar frações</button></div></div>${selected.length?`<div class="ux-fraction-selected">${selected.map(n=>{const row=rows.find(f=>f.number===n);return`<button class="ux-preference-chip" type="button" data-fraction-select="${n}" ${draft?.saving||draft?.checking?'disabled':''}>Apt. ${n} ${uxIcon('x')}</button>${!row||!row.statusConfirmed||row.status!=='Disponível'?`<span class="ux-fraction-warning">Apt. ${n}: ${esc(row?clientFractionStatus(row):'referência não encontrada')}. Seleção mantida; confirmar condições.</span>`:''}`}).join('')}</div>`:''}`;
   root.querySelector('#clientFractionRecommendations').innerHTML=!result.profile.known?`<p class="muted">${esc(result.profile.message)}</p>`:[['main','Correspondências principais'],['alternative','Alternativas próximas']].map(([group,label])=>{const groupRows=filtered.filter(row=>row.group===group);return`<section class="ux-client-section"><h3>${label} <span class="muted small">${groupRows.length}</span></h3>${groupRows.length?`<div class="ux-fraction-options">${clientFractionCards(c,groupRows)}</div>`:'<p class="muted small">Nenhuma fração com condições confirmadas neste grupo e filtro.</p>'}</section>`}).join('');
   const manual=engine.search(rows,browse.search);root.querySelector('#clientFractionManualCount').textContent=`${manual.length} ${manual.length===1?'fração encontrada':'frações encontradas'}`;
   root.querySelector('#clientFractionManualResults').innerHTML=manual.length?clientFractionCards(c,manual):'<p class="muted">Nenhuma fração encontrada.</p>';
@@ -4429,8 +4429,35 @@ function createCommercialDraftGuard(document){
   return{editing,modified,version:()=>epoch,dispose(){document.removeEventListener('focusin',remember,true);document.removeEventListener('input',change,true);document.removeEventListener('change',change,true)}};
 }
 let commercialAutoSync=null,commercialDraftGuard=null,commercialReadInFlight=null,commercialLoadInFlight=null,commercialAutoCleanup=null;
+function fractionDraftNumbers(values){
+  if(!Array.isArray(values)||values.some(value=>!['string','number'].includes(typeof value)||String(value).trim()===''||!Number.isSafeInteger(Number(value))||Number(value)<=0))throw new Error('Seleção de frações não interpretável. Preserve o rascunho para revisão.');
+  return [...new Set(values.map(Number))].sort((a,b)=>a-b);
+}
+function modifiedFractionSelection(draft=commercialUx.fractionSelectionDraft){
+  if(!draft)return false;
+  try{return JSON.stringify(fractionDraftNumbers(draft.values))!==JSON.stringify(fractionDraftNumbers(typeof draft.original==='string'?JSON.parse(draft.original):draft.original))}catch{return true}
+}
+function fractionSelectionRecovery(){
+  const draft=commercialUx.fractionSelectionDraft;if(!draft)return null;
+  if(!['string','number'].includes(typeof draft.clientId)||!String(draft.clientId)||!(draft.approvals instanceof Map))throw new Error('Contexto da seleção não interpretável. Não atualize antes de o preservar.');
+  const original=typeof draft.original==='string'?JSON.parse(draft.original):draft.original;
+  const originalValues=fractionDraftNumbers(original),normalizedValues=fractionDraftNumbers(draft.values),approvals=[...draft.approvals];
+  for(const [number,reference]of approvals){fractionDraftNumbers([number]);if(typeof reference!=='string')throw new Error('Aprovação não interpretável. O rascunho foi preservado.');}
+  return{clientId:draft.clientId,original:typeof draft.original==='string'?draft.original:[...original],originalValues,values:[...draft.values],normalizedValues,approvals,checking:!!draft.checking,saving:!!draft.saving,baseRevision:sharedSync.revision,remoteRevision:sharedSync.remote?.revision||null,context:{selectedClientId:state.selectedClientId,tab:state.tab,clientTab:commercialUx.clientDetailTab||'data'}};
+}
+async function commercialOriginCanBeLeft(){
+  if(protectedCommercialEdit()||hasPendingLocalSync()||sharedSync.dirty||sharedSync.busy||!sharedSync.verified||localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null)return false;
+  const meta=readSyncMeta();
+  if(!meta||meta.revision!==sharedSync.revision||hasUnconfirmedLocalData(state.data)||localBackupKeys().length)return false;
+  try{if(syncComparable(JSON.parse(localStorage.getItem(KEY)))!==syncComparable(state.data))return false}catch{return false}
+  const verified=await verifiedRecoveryCopies();
+  for(const copy of await localVaultCopies())try{
+    if(verified.get(copy.id)!==JSON.stringify(copy)||copy.protected||protectedRecoveryCopy(copy,'')||!confirmedRecoveryPayload(JSON.parse(copy.raw))&&!copy.confirmation)return false;
+  }catch{return false}
+  return true;
+}
 function protectedCommercialEdit(){
-  if(commercialDraftGuard?.modified())return true;
+  if(commercialDraftGuard?.modified()||modifiedFractionSelection())return true;
   const api=window.THE_VIEW_CLIENT_PREFERENCES,records=[commercialUx.preferenceDraft,...(commercialUx.preferenceDrafts?.values()||[])].filter(Boolean);
   return records.some(record=>{try{return !api||syncComparable(record.values)!==syncComparable(api.draft(JSON.parse(record.original)))}catch{return true}});
 }
@@ -4438,8 +4465,9 @@ function startCommercialAutoSync(){
   if(commercialAutoSync||!REMOTE_URL||typeof document.hasFocus!=='function')return;
   commercialDraftGuard ||= createCommercialDraftGuard(document);
   window.THE_VIEW_DEPLOYMENT_GUARD?.register({
-    status:()=>({draft:protectedCommercialEdit(),pending:hasPendingLocalSync()||sharedSync.dirty||localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null,busy:sharedSync.busy,initializing:!sharedSync.initialized}),
-    snapshot:async()=>{const current=localRecoveryExport();delete current.createdAt;return{current,records:await localVaultCopies(),preferences:commercialUx.preferenceDraft||null,storedPreferences:[...(commercialUx.preferenceDrafts||new Map())],priceReasons:commercialUx.priceReasonDrafts}},
+    status:()=>({draft:protectedCommercialEdit(),pending:hasPendingLocalSync()||sharedSync.dirty||localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null,busy:sharedSync.busy||!!commercialUx.fractionSelectionDraft?.checking||!!commercialUx.fractionSelectionDraft?.saving,initializing:!sharedSync.initialized}),
+    snapshot:async()=>{const current=localRecoveryExport();delete current.createdAt;return{current,records:await localVaultCopies(),fractionSelectionDraft:fractionSelectionRecovery(),preferences:commercialUx.preferenceDraft||null,storedPreferences:[...(commercialUx.preferenceDrafts||new Map())],priceReasons:commercialUx.priceReasonDrafts}},
+    canLeaveOrigin:commercialOriginCanBeLeft,
     pause:()=>commercialAutoSync?.stop()
   });
   let channel=null;try{if(typeof BroadcastChannel==='function')channel=new BroadcastChannel('theView.crm.revisions.v1')}catch{}

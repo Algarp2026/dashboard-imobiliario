@@ -1,0 +1,58 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "openFilterClean": true,
+      "addRemoveRevertCancel": true,
+      "noSelectionPost": true,
+      "sameClientUpdateDraftAndApprovalsPreserved": true,
+      "explicitMapExport": true,
+      "staleExportBlocked": true,
+      "verifiedSameOriginRefresh": true,
+      "noAutomaticImport": true,
+      "saveConfirmedAndReloaded": true,
+      "unrelatedDataPreserved": true
+    },
+    {
+      "width": 390,
+      "openFilterClean": true,
+      "addRemoveRevertCancel": true,
+      "noSelectionPost": true,
+      "sameClientUpdateDraftAndApprovalsPreserved": true,
+      "explicitMapExport": true,
+      "staleExportBlocked": true,
+      "verifiedSameOriginRefresh": true,
+      "noAutomaticImport": true,
+      "saveConfirmedAndReloaded": true,
+      "unrelatedDataPreserved": true
+    },
+    {
+      "productionDomainRefresh": true,
+      "targetLoadedAndMarkersCleared": true
+    },
+    {
+      "immutableToActiveProduction": true,
+      "noCookieOrStorageTransfer": true
+    },
+    {
+      "verifiedBackupDoesNotAuthorizeCrossOrigin": true,
+      "originalRequestIdAndDraftPreserved": true
+    },
+    {
+      "unresolvedRecoveryArchiveBlocksOriginChange": true
+    },
+    {
+      "previewEnvironmentMismatchIgnored": true,
+      "previewNotRedirectedToProduction": true
+    },
+    {
+      "failedRefreshNoAutomaticRepeat": true,
+      "sameTargetManualRetryBlocked": true,
+      "laterReleaseAccepted": true,
+      "staleMarkersCleared": true
+    }
+  ],
+  "errors": [],
+  "realGoogle": false,
+  "realVercel": false
+}

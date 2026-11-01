@@ -6,7 +6,7 @@ const entryRedirects=entryTests?JSON.parse(fs.readFileSync(path.join(repo,'verce
 const middleware=entryTests?import('../../middleware.ts'):null;
 // Test process only: no env file, production secrets, Google calls or disk CRM store.
 Object.assign(process.env,{COMMERCIAL_ACCESS_PASSWORD:'View-Phase2A-Teste',COMMERCIAL_ACCESS_SECRET:crypto.randomBytes(32).toString('hex'),VERCEL_ENV:'preview',CRM_GOOGLE_DEPLOYMENT_ID:'test-deployment',CRM_GOOGLE_SPREADSHEET_ID:'test-sheet',CRM_GOOGLE_CLIENT_ID:'fictitious-client',CRM_GOOGLE_CLIENT_SECRET:'fictitious-secret',CRM_GOOGLE_REFRESH_TOKEN:'fictitious-token',CRM_GOOGLE_WRITES_ENABLED:'true',CRM_GOOGLE_TEST_WRITES_ENABLED:'true'});
-const session=require('../../server/session.js'),access=require('../../api/access.js'),api=require('../../api/commercial-data.js'),makeStore=require('./apps-script-store.js'),fixture=require(process.env.PHASE2B_FIXTURE==='true'?'./client-phase2b-fixture.js':'./client-phase2a-fixture.js');
+const session=require('../../server/session.js'),access=require('../../api/access.js'),api=require('../../api/commercial-data.js'),makeStore=require('./apps-script-store.js'),fixture=require(process.env.FRACTION_DRAFT_TESTS==='true'?'./fraction-draft-fixture.cjs':process.env.PHASE2B_FIXTURE==='true'?'./client-phase2b-fixture.js':'./client-phase2a-fixture.js');
 let store=makeStore(fixture()),reads=0,writes=0,failure='',delay=0;
 let testDeployment='a'.repeat(64);
 const realNow=Date.now;let clockOffset=0,readRequired=0;
@@ -35,7 +35,7 @@ http.createServer(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');const url=new URL(req.url,'http://127.0.0.1:'+port),name=url.pathname.slice(1)||'commercial.html';
   const reply={statusCode:200,setHeader:(key,value)=>res.setHeader(key,value),status(value){this.statusCode=value;return this},json(body){res.statusCode=this.statusCode;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));return this}};
   try{
-    if(process.env.DEPLOYMENT_GUARD_TESTS==='true'&&name==='deployment-version.json'){reply.json({format:1,version:testDeployment});return}
+    if(process.env.DEPLOYMENT_GUARD_TESTS==='true'&&name==='deployment-version.json'){reply.json({format:1,version:testDeployment,environment:'preview'});return}
     if(entryTests){
       const redirect=entryRedirects.find(rule=>rule.source===url.pathname);
       if(redirect){res.writeHead(redirect.permanent?308:307,{Location:redirect.destination+url.search});res.end();return}
