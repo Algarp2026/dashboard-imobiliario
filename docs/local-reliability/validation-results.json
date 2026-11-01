@@ -1,0 +1,293 @@
+{
+  "baseline": "49d5ba839e78b36b5adc4bb883edfc46ec27f105",
+  "approvedArchiveBaseline": "869397c",
+  "branch": "codex/fix-local-recovery-archive",
+  "node": {
+    "passed": 65,
+    "failed": 0,
+    "suites": [
+      "access-routes.test.js",
+      "commercial-agent-module-guard.test.js",
+      "commercial-apartment16-recovery.test.js",
+      "commercial-archive-verifier.test.js",
+      "commercial-audit-defects.test.js",
+      "commercial-auto-sync.test.js",
+      "commercial-browser-policy.test.js",
+      "commercial-capacity.test.js",
+      "commercial-chunk-storage.test.js",
+      "commercial-client-preferences.test.js",
+      "commercial-client-report-grouping.test.js",
+      "commercial-client-reports.test.js",
+      "commercial-client-tabs.test.js",
+      "commercial-client-workflow.test.js",
+      "commercial-client-workspace.test.js",
+      "commercial-composition-d2.test.js",
+      "commercial-concurrency.test.js",
+      "commercial-construction.test.js",
+      "commercial-consultation-guards.test.js",
+      "commercial-contact-history.test.js",
+      "commercial-contacts.test.js",
+      "commercial-cycle-boundaries.test.js",
+      "commercial-d2-platform.test.js",
+      "commercial-event-provenance.test.js",
+      "commercial-followups.test.js",
+      "commercial-fraction-draft.test.js",
+      "commercial-fraction-recommendations.test.js",
+      "commercial-home-entry.test.js",
+      "commercial-integrity-server.test.js",
+      "commercial-latency.test.js",
+      "commercial-loading-persistence.test.js",
+      "commercial-local-backups.test.js",
+      "commercial-opportunities.test.js",
+      "commercial-opportunity-cards.test.js",
+      "commercial-opportunity-matrix.test.js",
+      "commercial-pending-local.test.js",
+      "commercial-persistence-performance.test.js",
+      "commercial-post-audit-api.test.js",
+      "commercial-post-audit.test.js",
+      "commercial-presentation-pdf.test.js",
+      "commercial-progressive-flow.test.js",
+      "commercial-read-contention.test.js",
+      "commercial-recommendations-ui.test.js",
+      "commercial-recommendations.test.js",
+      "commercial-recovery-archive.test.js",
+      "commercial-recovery-client-api.test.js",
+      "commercial-reform-defects.test.js",
+      "commercial-safe-reconciliation.test.js",
+      "commercial-smoke.test.js",
+      "commercial-source-integrity.test.js",
+      "commercial-stage-engine.test.js",
+      "commercial-sync-api.test.js",
+      "commercial-sync-client.test.js",
+      "commercial-sync-final-audit.test.js",
+      "commercial-ticket-renewal.test.js",
+      "commercial-ux.test.js",
+      "commercial-write-integrity.test.js",
+      "commercial-write-recovery.test.js",
+      "comparator-belaformosa.test.js",
+      "compset.test.js",
+      "google-read-check.test.js",
+      "pr20-main-integration.test.js",
+      "pr21-main-integration.test.js",
+      "pr22-main-integration.test.js",
+      "pricing-analysis.test.js"
+    ]
+  },
+  "browser": {
+    "passed": 31,
+    "failed": 0,
+    "suites": [
+      {
+        "name": "commercial-consultation-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-fraction-draft-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-recovery-archive-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-loading-persistence-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-presentation-pdf-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-safe-reconciliation-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "comparator-belaformosa-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-auto-sync-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-reform-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-reform-safety-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-reform-report-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "crm-post-audit-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-local-quota-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-pending-local-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-followup-layout-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-audit-defects-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-stage-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-phase2a-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-phase2b-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-complete-exports.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-contacts-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-pr6-regression-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-profile-routing-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-home-entry-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-report-grouping-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "client-workspace-audit.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "client-workspace-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "client-workspace-dialogs.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "composition-d2-history-routing-probe.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "composition-d2-platform-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "visual-audit-browser.mjs",
+        "code": 0,
+        "passed": true
+      }
+    ],
+    "finalTargetedReruns": [
+      {
+        "name": "commercial-consultation-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-fraction-draft-browser.mjs",
+        "code": 0,
+        "passed": true
+      }
+    ]
+  },
+  "syntax": {
+    "passed": 147,
+    "failed": 0
+  },
+  "operationalResidualScan": {
+    "operationalReferences": 0,
+    "files": [
+      "commercial.js",
+      "index.html",
+      "commercial.html",
+      "comparador.html",
+      "access.html",
+      "vercel.json",
+      "scripts/build-commercial-integrity.js",
+      "scripts/check-google-read.js",
+      "scripts/prepare-apartment16-recovery.js",
+      "scripts/verify-browser-archive.cjs"
+    ],
+    "negativeTestsExcluded": true
+  },
+  "sourceHash": "0a7c1f12150d8492f552ba0ccd4e74f7edab8e5ab7ad3eca3ec55123e22fe8f0",
+  "unchangedFromAuditedCommit": [
+    "api",
+    "server",
+    "google_apps_script.gs",
+    "google_commercial_integrity.gs",
+    "config.js",
+    "data.json",
+    "data.xlsx",
+    "plantas",
+    "commercial.html",
+    "commercial.css",
+    "app.js",
+    "commercial-client-workflow.js",
+    "commercial-client-workflow-ui.js",
+    "commercial-opportunities.js",
+    "commercial-opportunity-ui.js"
+  ],
+  "vercelExactlyMatchesPreMonitor": true,
+  "archiveAndTransportExactlyMatchPreMonitorOutsideConsultationGuards": true,
+  "realGoogle": false,
+  "realData": false,
+  "merge": false,
+  "deployment": false
+}

@@ -1,0 +1,67 @@
+{
+  "results": [
+    {
+      "incident22Copies": true,
+      "internalCapacityReproduced": true,
+      "protectedCopiesUnchanged": true
+    },
+    {
+      "completeExportVerified": true,
+      "downloadObservable": true,
+      "downloadLinkRetained": true,
+      "corruptionRejected": true,
+      "twoTabRaceBlocked": true,
+      "explicitRelease10": true,
+      "capacityRecovered": true
+    },
+    {
+      "automaticReadWithFullArchive": true,
+      "remoteUpdateReceivedWithoutPost": true
+    },
+    {
+      "fullArchive": true,
+      "confirmedReadNotBlocked": true,
+      "pendingWritePreserved": true,
+      "localErrorNotNetwork": true
+    },
+    {
+      "equivalentCopiesDeduplicated": true,
+      "confirmedRetentionBounded": true
+    },
+    {
+      "unknownEnvelopePreserved": true
+    },
+    {
+      "exactConfirmationRetiresOnlyMatchingCopies": true,
+      "newerCheckpointProtected": true,
+      "pendingCannotBeAdministrativelyPruned": true,
+      "cleanupAbortTransactional": true
+    },
+    {
+      "confirmedReconciliationStopsAccumulating": true,
+      "unresolvedConflictAndUnknownMetadataProtected": true
+    },
+    {
+      "invalidOriginalReceiptBlocksAcknowledgement": true
+    },
+    {
+      "sameMillisecondOrderSafe": true,
+      "checkpointCorruptionDetected": true,
+      "localEntriesAndUnselectedCopiesExact": true
+    },
+    {
+      "transactionAbortPreservesCopies": true,
+      "indexedDBDeniedDistinct": true,
+      "exportFailureHonest": true
+    },
+    {
+      "manualDownloadFallback": true,
+      "blockedOpenDistinct": true,
+      "openTimeoutDistinct": true,
+      "transactionTimeoutPreservesArchive": true,
+      "acknowledgementDoesNotClearOtherCheckpoints": true
+    }
+  ],
+  "production": false,
+  "errors": []
+}

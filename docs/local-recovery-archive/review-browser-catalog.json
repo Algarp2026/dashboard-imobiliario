@@ -1,0 +1,147 @@
+[
+  {
+    "name": "commercial-recovery-archive-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-loading-persistence-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-presentation-pdf-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-safe-reconciliation-browser.mjs",
+    "code": 1,
+    "passed": false
+  },
+  {
+    "name": "comparator-belaformosa-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-auto-sync-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "crm-reform-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "crm-reform-safety-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "crm-reform-report-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "crm-post-audit-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-local-quota-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-pending-local-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-followup-layout-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-audit-defects-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-stage-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-client-phase2a-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-client-phase2b-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-client-complete-exports.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-contacts-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-pr6-regression-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-profile-routing-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-home-entry-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-client-report-grouping-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "client-workspace-audit.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "client-workspace-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "client-workspace-dialogs.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "composition-d2-history-routing-probe.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "composition-d2-platform-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "visual-audit-browser.mjs",
+    "code": 0,
+    "passed": true
+  }
+]

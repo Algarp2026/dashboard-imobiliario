@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "consultationClean": true,
+      "addRemoveRevertCancelProtected": true,
+      "realBeforeUnloadPreservesDraft": true,
+      "noSelectionPost": true,
+      "sameClientUpdatePreservesApprovals": true,
+      "saveConfirmedAndReloaded": true,
+      "unrelatedDataPreserved": true,
+      "originalPendingAndArchivePreserved": true,
+      "noVersionUiOrNetwork": true
+    },
+    {
+      "width": 390,
+      "consultationClean": true,
+      "addRemoveRevertCancelProtected": true,
+      "realBeforeUnloadPreservesDraft": true,
+      "noSelectionPost": true,
+      "sameClientUpdatePreservesApprovals": true,
+      "saveConfirmedAndReloaded": true,
+      "unrelatedDataPreserved": true,
+      "originalPendingAndArchivePreserved": true,
+      "noVersionUiOrNetwork": true
+    }
+  ],
+  "errors": [],
+  "versionRequests": [],
+  "production": false
+}

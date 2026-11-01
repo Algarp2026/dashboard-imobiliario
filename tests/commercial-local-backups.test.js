@@ -8,7 +8,7 @@ const storage={getItem(key){return Object.hasOwn(this,key)?this[key]:null},setIt
   this[key]=text;
 },removeItem(key){delete this[key]}};
 const context={console,Date,AbortController,window:{THE_VIEW_CONFIG:{GOOGLE_SHEETS_WEBAPP_URL:'https://fixture.invalid'},addEventListener(){}},document:{readyState:'loading',addEventListener(){},getElementById(){return null},querySelector(){return null}},localStorage:storage,requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){}};
-vm.createContext(context);vm.runInContext(source.slice(0,end)+`renderSharedSyncStatus=()=>{};notifyUser=()=>{};globalThis.downloads=[];downloadJson=value=>downloads.push(value);globalThis.app={state,sharedSync,normalizeData,commitLocalCache,archiveRecoveryCopy,localRecoveryExport,exportLocalRecoveryCopy,save,localBackupKeys};`+source.slice(end),context);
+vm.createContext(context);vm.runInContext(source.slice(0,end)+`renderSharedSyncStatus=()=>{};notifyUser=()=>{};globalThis.downloads=[];showRecoveryDownload=value=>downloads.push(value);globalThis.app={state,sharedSync,normalizeData,commitLocalCache,archiveRecoveryCopy,localRecoveryExport,exportLocalRecoveryCopy,save,localBackupKeys};`+source.slice(end),context);
 const app=context.app,clone=value=>JSON.parse(JSON.stringify(value)),snapshot=()=>JSON.stringify(Object.fromEntries(Object.keys(storage).filter(k=>typeof storage[k]==='string').map(k=>[k,storage[k]])));
 async function main(){
   const base=clone(app.normalizeData({clients:[{id:'fiction-client',notes:'Fictitious'}],events:[],agents:[],finalPrices:{16:400000},statuses:{8:'Reservado',24:'Reservado'},priceHistory:{16:[{price:400000}]}}));

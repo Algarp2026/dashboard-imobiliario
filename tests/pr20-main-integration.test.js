@@ -8,8 +8,12 @@ const combined=new Set(['tests/commercial-browser-regression.cjs','tests/commerc
 const reconciled=new Set(cp.execFileSync('git',['diff','--name-only',main,reconciliation],{encoding:'utf8'}).trim().split('\n'));
 for(const file of changed.filter(file=>!combined.has(file))){
  if(file==='commercial.js')require('./helpers/loading-persistence-source.cjs')();
+ else if(file==='tests/commercial-sync-final-audit.test.js'){
+  const current=fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n').replace('downloadJson=showRecoveryDownload=','downloadJson=');
+  assert.equal(current,show(reconciled.has(file)?reconciliation:main,file).replace(/\r\n/g,'\n'),'Only the recovery-download mock changes; all privacy, request identity and recovery assertions remain exact');
+ }
  else if(file==='tests/helpers/client-phase2a-preview.cjs'){
-  const current=fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n');
+  const current=require('./helpers/recovery-archive-source.cjs').restorePreview(fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n'));
   const hook="      if(process.env.LOADING_PERSISTENCE_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__loadingPersistenceTest={read:()=>loadRemoteData(),write:()=>syncRemote()};'+source.slice(finish)}\n";
   assert.equal(current.replace(hook,''),show(reconciliation,file).replace(/\r\n/g,'\n'),'Only the explicit isolated loading-test hook may extend the preview');
  }else assert.equal(cp.execFileSync('git',['diff',reconciled.has(file)?reconciliation:main,'--',file],{encoding:'utf8'}),'','Published PR19/PR21 source must remain exact: '+file);
@@ -34,6 +38,7 @@ const expected=JSON.parse(show(main,'vercel.json')),previous=JSON.parse(show(rev
 expected.git.deploymentEnabled={...previous.git.deploymentEnabled,...expected.git.deploymentEnabled,...JSON.parse(show(reconciliation,'vercel.json')).git.deploymentEnabled};
 expected.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 expected.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
+expected.git.deploymentEnabled['codex/fix-local-recovery-archive']=false;
 assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expected,'Preserve all configuration and both branch deployment guards');
 const browser=fs.readFileSync('tests/commercial-browser-regression.cjs','utf8');
 for(const suite of ['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs','comparator-belaformosa-browser.mjs','commercial-client-phase2b-browser.mjs'])assert.ok(browser.includes("'"+suite+"':"),'Browser catalog must include '+suite);

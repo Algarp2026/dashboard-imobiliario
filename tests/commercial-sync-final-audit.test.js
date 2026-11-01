@@ -39,7 +39,7 @@ function browser(){
     if(method==='GET')await onRead();
     return Response.json(result,{status:response.statusCode});
   }};
-  vm.createContext(context);vm.runInContext(code.slice(0,end)+`el.dataStatus={textContent:''};el.globalErrorBox={textContent:'',classList:{remove(){}}};populate=()=>{};restoreCommercialContext=()=>{};renderAll=()=>{};activateCommercialView=()=>{};renderCommercialUx=()=>{};restoreCommercialScroll=()=>{};commercialUxToast=()=>{};renderSharedSyncStatus=()=>{};notifyUser=message=>globalThis.notify(message);confirmUser=async()=>true;downloadJson=(value,name)=>globalThis.download(value,name);globalThis.app={state,sharedSync,loadExcel,loadRemoteData,save,syncRemote,openSyncReconciliation,localRecoveryExport,exportLocalRecoveryCopy};`+code.slice(end),context);
+  vm.createContext(context);vm.runInContext(code.slice(0,end)+`el.dataStatus={textContent:''};el.globalErrorBox={textContent:'',classList:{remove(){}}};populate=()=>{};restoreCommercialContext=()=>{};renderAll=()=>{};activateCommercialView=()=>{};renderCommercialUx=()=>{};restoreCommercialScroll=()=>{};commercialUxToast=()=>{};renderSharedSyncStatus=()=>{};notifyUser=message=>globalThis.notify(message);confirmUser=async()=>true;downloadJson=showRecoveryDownload=(value,name)=>globalThis.download(value,name);globalThis.app={state,sharedSync,loadExcel,loadRemoteData,save,syncRemote,openSyncReconciliation,localRecoveryExport,exportLocalRecoveryCopy};`+code.slice(end),context);
   context.notify=message=>messages.push(message);context.download=(value,name)=>downloads.push({value:clone(value),name});
   return{app:context.app,storage,requests,downloads,messages,timers,invoke,get modal(){return modal},set apiTransform(fn){apiTransform=fn},set onRead(fn){onRead=fn}};
 }
