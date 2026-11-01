@@ -10,13 +10,14 @@ const expectedCatalog={...catalog(show(main,'tests/commercial-browser-regression
 expectedCatalog['commercial-loading-persistence-browser.mjs']='visual-workspace';
 expectedCatalog['commercial-presentation-pdf-browser.mjs']='visual-workspace';
 expectedCatalog['commercial-recovery-archive-browser.mjs']='recovery-archive';
+expectedCatalog['commercial-deployment-browser.mjs']='deployment-guard';
 assert.deepEqual(catalog(fs.readFileSync('tests/commercial-browser-regression.cjs','utf8')),expectedCatalog,'Keep every browser suite from both PRs');
 const expectedConfig=JSON.parse(show(main,'vercel.json'));
 expectedConfig.git.deploymentEnabled={...expectedConfig.git.deploymentEnabled,...JSON.parse(show(crm,'vercel.json')).git.deploymentEnabled};
 expectedConfig.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 expectedConfig.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
 expectedConfig.git.deploymentEnabled['codex/fix-local-recovery-archive']=false;
-assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expectedConfig,'Preserve complete configuration and both disabled branch deployments');
+assert.deepEqual(require('./helpers/deployment-source.cjs').config(JSON.parse(fs.readFileSync('vercel.json','utf8'))),expectedConfig,'Preserve complete configuration and both disabled branch deployments');
 const rows=JSON.parse(fs.readFileSync('data.json','utf8')),units=rows.filter(r=>r.Empreendimento==='The View');
 assert.equal(units.length,39);assert.equal(units.reduce((sum,r)=>sum+r['Preço Recomendado'],0),29675000);
 assert.equal(rows.filter(r=>r.Empreendimento==='BelaFormosa').length,216);assert.equal(rows.filter(r=>!['The View','BelaFormosa'].includes(r.Empreendimento)).length,280);

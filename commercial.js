@@ -93,7 +93,7 @@ function bind(){
   window.addEventListener('pagehide',flushPendingSyncOnUnload);
   window.addEventListener('pagehide',event=>commercialAutoCleanup?.(event.persisted));
   window.addEventListener('pageshow',event=>{if(event.persisted)startCommercialAutoSync()});
-  window.addEventListener('beforeunload',event=>{if(['LOCAL_STORAGE_FAILED','LOCAL_BACKUP_CAPACITY'].includes(sharedSync.error)||commercialDraftGuard?.modified()||commercialUx.preferenceDraft||commercialUx.fractionSelectionDraft){event.preventDefault();event.returnValue=''}});
+  window.addEventListener('beforeunload',event=>{if(!window.THE_VIEW_DEPLOYMENT_GUARD?.refreshing&&(['LOCAL_STORAGE_FAILED','LOCAL_BACKUP_CAPACITY'].includes(sharedSync.error)||protectedCommercialEdit())){event.preventDefault();event.returnValue=''}});
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab,b.dataset.view||''));
   const proposalsShortcut=document.getElementById('openProposalsArea');
   if(proposalsShortcut)proposalsShortcut.onclick=()=>switchTab('proposals');
@@ -4405,12 +4405,18 @@ function createCommercialAutoSync(o){
 function createCommercialDraftGuard(document){
   const dirty=new Set(),baselines=new WeakMap();let epoch=0;
   const visible=node=>!!node?.isConnected&&!node.closest('[hidden],.hidden')&&!!node.getClientRects().length;
-  const fields=group=>[...group.querySelectorAll('input,select,textarea')].map(n=>[n.name||n.id,n.value,n.checked,n.tagName==='SELECT'?[...n.selectedOptions].map(x=>x.value):null]);
-  const signature=group=>JSON.stringify(group.matches('input,select,textarea')?[[group.value,group.checked]]:fields(group));
+  const fields=group=>[...group.querySelectorAll('input,select,textarea')].filter(editable).map(n=>[n.name||n.id,n.value,n.checked,n.tagName==='SELECT'?[...n.selectedOptions].map(x=>x.value):null]);
+  const signature=group=>JSON.stringify(group.matches('input,select,textarea,[contenteditable="true"]')?[[group.isContentEditable?group.textContent:group.value,group.checked]]:fields(group));
   const group=node=>node.closest('form')||(node.closest('.modal-backdrop')?.id!=='clientProfileDialog'?node.closest('.modal'):null)||node;
-  function editable(node){return node?.matches?.('input,select,textarea,[contenteditable="true"]')&&!node.matches('[type="search"],[id$="Search"],[id$="Filter"],#selectedClient,#compareA,#compareB,#compareFractions')}
-  function remember(event){if(!editable(event.target))return;const g=group(event.target);if(!baselines.has(g))baselines.set(g,signature(g))}
-  function change(event){if(!editable(event.target))return;const g=group(event.target);dirty.add(g);epoch++}
+  function editable(node){
+    if(!node?.matches?.('input,select,textarea,[contenteditable="true"]')||node.matches('[type="search"],[type="hidden"],[type="password"],[name="addUnit"]'))return false;
+    if(node.closest('#priceListModal,#clientsSummaryPdfModal,#presentationPriceModal,#presentationSelectionModal,[data-consultation-only]'))return false;
+    if(node.closest('#clientModal,#eventModal,#agentModal,form')||node.matches('[data-price],[data-price-reason],[data-sale-price],[data-status]'))return true;
+    if(node.closest('.filters-grid,.ux-fraction-filters,.ux-inventory-toolbar')||/search|filter|sort|^proposal|^compare|^selectedClient$|^historyFraction/i.test(node.id||''))return false;
+    return !node.matches('select,[type="checkbox"],[type="radio"]');
+  }
+  function remember(event){if(!editable(event.target))return;const g=group(event.target);if(!dirty.has(g))baselines.set(g,signature(g))}
+  function change(event){if(!editable(event.target))return;const g=group(event.target);if(!baselines.has(g))baselines.set(g,null);dirty.add(g);epoch++}
   document.addEventListener('focusin',remember,true);document.addEventListener('input',change,true);document.addEventListener('change',change,true);
   function modified(){
     for(const g of dirty){if(!visible(g)||baselines.get(g)===signature(g)){dirty.delete(g);baselines.delete(g)}}
@@ -4418,17 +4424,24 @@ function createCommercialDraftGuard(document){
   }
   function editing(){
     if(modified())return true;
-    if([...document.querySelectorAll('.modal-backdrop:not(.hidden)')].some(n=>n.id!=='clientProfileDialog'&&visible(n)))return true;
-    if([...document.querySelectorAll('#clientPreferencesEditor,[data-op-form],[data-contact-form],[data-workflow-form]')].some(visible))return true;
-    return editable(document.activeElement)&&visible(document.activeElement);
+    return false;
   }
   return{editing,modified,version:()=>epoch,dispose(){document.removeEventListener('focusin',remember,true);document.removeEventListener('input',change,true);document.removeEventListener('change',change,true)}};
 }
 let commercialAutoSync=null,commercialDraftGuard=null,commercialReadInFlight=null,commercialLoadInFlight=null,commercialAutoCleanup=null;
-function protectedCommercialEdit(){return !!commercialDraftGuard?.editing()||!!commercialUx.preferenceDraft||!!commercialUx.fractionSelectionDraft}
+function protectedCommercialEdit(){
+  if(commercialDraftGuard?.modified())return true;
+  const api=window.THE_VIEW_CLIENT_PREFERENCES,records=[commercialUx.preferenceDraft,...(commercialUx.preferenceDrafts?.values()||[])].filter(Boolean);
+  return records.some(record=>{try{return !api||syncComparable(record.values)!==syncComparable(api.draft(JSON.parse(record.original)))}catch{return true}});
+}
 function startCommercialAutoSync(){
   if(commercialAutoSync||!REMOTE_URL||typeof document.hasFocus!=='function')return;
   commercialDraftGuard ||= createCommercialDraftGuard(document);
+  window.THE_VIEW_DEPLOYMENT_GUARD?.register({
+    status:()=>({draft:protectedCommercialEdit(),pending:hasPendingLocalSync()||sharedSync.dirty||localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)!==null,busy:sharedSync.busy,initializing:!sharedSync.initialized}),
+    snapshot:async()=>{const current=localRecoveryExport();delete current.createdAt;return{current,records:await localVaultCopies(),preferences:commercialUx.preferenceDraft||null,storedPreferences:[...(commercialUx.preferenceDrafts||new Map())],priceReasons:commercialUx.priceReasonDrafts}},
+    pause:()=>commercialAutoSync?.stop()
+  });
   let channel=null;try{if(typeof BroadcastChannel==='function')channel=new BroadcastChannel('theView.crm.revisions.v1')}catch{}
   commercialAutoSync=createCommercialAutoSync({visible:()=>document.visibilityState!=='hidden',ready:()=>sharedSync.initialized&&!sharedSync.busy&&!commercialLoadInFlight,
     revision:()=>sharedSync.revision,channel,locks:typeof navigator!=='undefined'?navigator.locks:null,
@@ -4785,6 +4798,7 @@ function requestCommercialData(payload,readTicket=sharedSync.ticket){
   return commercialReadInFlight;
 }
 async function requestCommercialTransport(payload,readTicket){
+  if(payload&&window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)throw Object.assign(new Error('Atualize a plataforma antes de enviar uma gravação. O pedido original foi preservado.'),{code:'DEPLOYMENT_UPDATE_REQUIRED'});
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
   try{
     const response=await fetch(COMMERCIAL_DATA_API,{method:payload?'POST':'GET',credentials:'same-origin',cache:'no-store',redirect:'error',signal:controller.signal,headers:payload?{'Content-Type':'application/json','X-CRM-Read-Ticket':readTicket}:{},...(payload?{body:JSON.stringify(payload)}:{})});
@@ -4805,6 +4819,7 @@ function loadRemoteData(options={}){
   return commercialLoadInFlight;
 }
 async function applyRemoteData({automatic=false}={}){
+  if(window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)return{shouldSave:false};
   const generation=sharedSync.generation;
   const editVersion=commercialDraftGuard?.version(),storedBefore=localStorage.getItem(KEY),memoryBefore=syncComparable(state.data);
   // localStorage is shared by tabs. Keep this instance's confirmed baseline,
@@ -4815,6 +4830,7 @@ async function applyRemoteData({automatic=false}={}){
   renderSharedSyncStatus({refresh:!automatic});
   try{
     const result=await requestCommercialData(),remote=normalizeData(result.data),meta=metaAtStart;
+    if(window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)return{shouldSave:false};
     sharedSync.sourceReachable=true;
     sharedSync.httpStatus=null;
     sharedSync.remote={data:remote,revision:result.revision,ticket:result.readTicket,confirmedAt:result.confirmedAt,canWrite:!!result.canWrite,pendingWrite:result.pendingWrite,capabilities:result.capabilities};
@@ -5096,6 +5112,7 @@ async function syncRemote(recovery=false){
   return performCommercialWrite(recovery);
 }
 async function performCommercialWrite(recovery=false){
+  if(window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)return false;
   if(!REMOTE_URL||sharedSync.busy||!sharedSync.initialized||!recovery&&(!hasPendingLocalSync()&&!hasUnconfirmedLocalData(state.data)||!sharedSync.verified||!sharedSync.base||!sharedSync.revision||!sharedSync.canWrite||sharedSync.phase!=='pending'))return false;
   let payload;
   try{
@@ -5104,6 +5121,7 @@ async function performCommercialWrite(recovery=false){
     // A new client must also detect an old API before sending any POST. Recovery
     // uses the same probe, without altering or discarding the original request.
     let probe=await requestCommercialData();
+    if(window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)return false;
     sharedSync.remote={data:normalizeData(probe.data),revision:probe.revision,ticket:probe.readTicket,confirmedAt:probe.confirmedAt,canWrite:!!probe.canWrite,pendingWrite:probe.pendingWrite,capabilities:probe.capabilities};
     const unsaved=await latestLocalCheckpoint();if(unsaved&&syncComparable(normalizeData(JSON.parse(unsaved.raw).data))!==syncComparable(state.data)&&syncComparable(normalizeData(JSON.parse(unsaved.raw).data))!==syncComparable(normalizeData(probe.data)))throw Object.assign(new Error('Existe uma cópia local mais recente por recuperar. Exporte o arquivo ou recupere essa cópia antes de sincronizar.'),{code:'LOCAL_RECOVERY_AVAILABLE'});
     if(probe.pendingWrite?.state==='blocked'||!recovery&&probe.pendingWrite?.state==='pending'&&probe.pendingWrite.requestId!==payload?.requestId)throw Object.assign(new Error('Gravação incompleta'),{code:'WRITE_INCOMPLETE'});
@@ -5133,12 +5151,14 @@ async function performCommercialWrite(recovery=false){
     };
     let requestArchive;
     if(typeof indexedDB!=='undefined')requestArchive=await archiveRecoveryCopy('write-request',{recoveryFormat:1,data:payload.data,base:sharedSync.base,pendingWrite:payload,syncMeta:{revision:payload.baseRevision,lastConfirmedAt:sharedSync.lastConfirmedAt}});
+    if(window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)return false;
     // A freshly validated GET renews the session/revision-bound proof, not CAS.
     let result;
     try{result=await requestCommercialData(payload,validateRead(probe))}
     catch(error){
       if(recovery||error.httpStatus!==403||error.code!=='READ_REQUIRED')throw error;
       const renewed=await requestCommercialData();
+      if(window.THE_VIEW_DEPLOYMENT_GUARD?.outdated)return false;
       if(syncComparable(normalizeData(payload.data))!==syncComparable(state.data))throw Object.assign(new Error('O pedido original difere dos dados locais atuais.'),{code:'PENDING_REQUEST_REVIEW_REQUIRED'});
       result=await requestCommercialData(payload,validateRead(renewed));
     }

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "commercial-deployment-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-auto-sync-browser.mjs",
+    "code": 0,
+    "passed": true
+  },
+  {
+    "name": "commercial-safe-reconciliation-browser.mjs",
+    "code": 0,
+    "passed": true
+  }
+]

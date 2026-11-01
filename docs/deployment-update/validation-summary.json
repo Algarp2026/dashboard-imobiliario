@@ -1,0 +1,171 @@
+{
+  "baseCommit": "869397c",
+  "nodeSuites": 64,
+  "syntaxChecks": 146,
+  "catalogFirstPassCount": 26,
+  "catalogTotal": 30,
+  "finalBrowserPassed": 30,
+  "finalBrowserTotal": 30,
+  "aggregation": "Last completed result per suite; original failures and incomplete runs retained",
+  "finalBrowserResults": [
+    {
+      "name": "commercial-deployment-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-recovery-archive-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-loading-persistence-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-presentation-pdf-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-safe-reconciliation-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "comparator-belaformosa-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-auto-sync-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-safety-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-report-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-post-audit-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-local-quota-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pending-local-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-followup-layout-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-audit-defects-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-stage-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2a-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2b-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-complete-exports.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-contacts-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pr6-regression-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-profile-routing-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-home-entry-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-report-grouping-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-audit.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-dialogs.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "composition-d2-history-routing-probe.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "composition-d2-platform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "visual-audit-browser.mjs",
+      "code": 0,
+      "passed": true
+    }
+  ],
+  "testedHashes": {
+    "commercial.js": "1463b218b83ced11ee243e7f2872c3ec52c8d767cddf5005bb781166a0065d79",
+    "deployment-guard.js": "914ec0be61852fece0eba5f77ad4f85e1646d1071ed15b026184cefe9d7942be",
+    "deployment-guard.css": "697853d07bd50912da2f83c1434340f5673162460d05eae9021fbd1e0ec6b00c",
+    "scripts/build-deployment-version.cjs": "4416f0a76774692d2fbec5c0718cbed845ec40ef548de04b58e3e275deec4c01",
+    "vercel.json": "470956d216b55ac2a8419d22e4bceb5fe5e61afa95cbcbe5de222e3654952171"
+  },
+  "productionAccess": false,
+  "realDeploymentPerformed": false
+}

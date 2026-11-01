@@ -1,4 +1,14 @@
 {
+  "buildCommand": "node scripts/build-deployment-version.cjs",
+  "outputDirectory": ".",
+  "headers": [
+    { "source": "/deployment-version.json", "headers": [
+      { "key": "Cache-Control", "value": "no-store, max-age=0" },
+      { "key": "CDN-Cache-Control", "value": "no-store" },
+      { "key": "Vercel-CDN-Cache-Control", "value": "no-store" },
+      { "key": "Access-Control-Allow-Origin", "value": "*" }
+    ] }
+  ],
   "git": {
     "deploymentEnabled": {
       "codex/fix-local-recovery-archive": false,
