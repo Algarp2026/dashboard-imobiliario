@@ -158,8 +158,13 @@
         if(action==='old-event')a.oldEvent();
       });
     }
-    function edit(ev){if(ev.communicationHistory){newContact(ev.clientId,ev.type==='Contacto recebido',ev);return true}if(model.latest(ev)){newPresentation(ev.clientId,ev);return true}if(ev.negotiationVersion===1){newMovement(ev.clientId,ev.fractions?.[0],ev);return true}return false}
-    const sharedEditors={presentationMarkup,negotiationMarkup,contactMarkup,bind,edit,newPresentation,newContact};
+    function edit(ev){
+      const kind=ev.communicationHistory?'contact':model.latest(ev)?'presentation':ev.negotiationVersion===1?'negotiation':null;
+      if(kind&&draft(ev.clientId,kind)?.id===ev.id){a.render();a.tab(kind==='contact'?'data':'opportunities');return true}
+      if(ev.communicationHistory){newContact(ev.clientId,ev.type==='Contacto recebido',ev);return true}if(model.latest(ev)){newPresentation(ev.clientId,ev);return true}if(ev.negotiationVersion===1){newMovement(ev.clientId,ev.fractions?.[0],ev);return true}return false;
+    }
+    function discard(ev){if(!ev)return;for(const kind of ['contact','presentation','negotiation'])if(draft(ev.clientId,kind)?.id===ev.id)drafts.delete(ev.clientId+':'+kind)}
+    const sharedEditors={presentationMarkup,negotiationMarkup,contactMarkup,bind,edit,newPresentation,newContact,discard,busy:()=>saving,modified:()=>saving||drafts.size>0};
     if(typeof root.createOpportunityWorkflow!=='function')throw Error('OPPORTUNITY_UI_UNAVAILABLE');
     return root.createOpportunityWorkflow(a,sharedEditors);
   };

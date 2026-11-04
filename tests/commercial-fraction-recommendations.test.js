@@ -28,3 +28,5 @@ assert.ok(engine.filter(r,'plus5').every(f=>f.overBudgetAmount>0&&f.overBudgetPe
 assert.deepEqual(engine.search(fractions,'Apt. 30').map(f=>f.number),[30]);assert.ok(engine.search(fractions,'Piso 5').every(f=>f.floor===5));assert.ok(engine.search(fractions,'Este').length);assert.ok(engine.search(fractions,'T2+1').every(f=>f.typology==='T2+1'));
 assert.deepEqual(evaluate(data.clients[0],fractions.slice().reverse()),r);assert.equal(JSON.stringify({data,fractions}),bytes);
 console.log('Phase 2B engine: 64 fictitious clients / 39 structural units, exact/adjacent types, strict legacy, multi-floor, OR composite orientations, exclusive indifferent, min/max/5% cent boundaries, explicit source confirmation, stable ranking, manual search and immutable inputs passed.');
+const tied=evaluate(client({typology:'T2',floor:'4',orientation:'Sul ou Este'}),[f(1,{orientation:'Sul'}),f(2,{orientation:'Sul/Este'})]);
+assert.deepEqual(tied.main.map(row=>row.number),[2,1],'Only when other commercial criteria tie, both requested orientations outrank one; OR still accepts both units');

@@ -47,7 +47,15 @@ try{
  await other.evaluate(async()=>{const a=window.__storageGrowthTest;a.state.data.clients[4].notes='Fictitious interrupted original';a.save();await a.sync()});
  const interrupted=await other.evaluate(key=>localStorage.getItem(key+'.pendingWrite.v1'),key);assert.ok(interrupted);
  await other.evaluate(()=>{const a=window.__storageGrowthTest;a.state.data.clients[4].notes='Fictitious newer unsent edit';a.save()});
- await other.evaluate(()=>window.__storageGrowthTest.maintain());await other.reload();await other.waitForFunction(()=>window.__storageGrowthTest?.sharedSync.initialized);
+ // A background plan may be invalidated by the preceding local save. This is
+ // the designed no-delete outcome, not permission to discard the pending data.
+ const maintenance=await other.evaluate(async()=>{try{await window.__storageGrowthTest.maintain();return'ok'}catch(error){return error.code||error.message}});
+ if(maintenance==='LOCAL_BACKUP_CHANGED'){
+  assert.equal(await other.evaluate(key=>localStorage.getItem(key+'.pendingWrite.v1'),key),interrupted);
+  assert.equal(await other.evaluate(()=>window.__storageGrowthTest.state.data.clients[4].notes),'Fictitious newer unsent edit');
+  await other.evaluate(()=>window.__storageGrowthTest.maintain());
+ }else assert.equal(maintenance,'ok','Only the explicitly protected stale-plan result may be retried once');
+ await other.reload();await other.waitForFunction(()=>window.__storageGrowthTest?.sharedSync.initialized);
  assert.equal(await other.evaluate(key=>localStorage.getItem(key+'.pendingWrite.v1'),key),interrupted);assert.equal(await other.evaluate(()=>window.__storageGrowthTest.state.data.clients[4].notes),'Fictitious newer unsent edit');assert.notEqual(await other.evaluate(()=>window.__storageGrowthTest.sharedSync.phase),'synced');
  assert.ok((await other.evaluate(()=>window.__storageGrowthTest.localVaultCopies())).some(c=>JSON.parse(c.raw).pendingWrite?.requestId===JSON.parse(interrupted).requestId));results.push({beforeDeliveryFailure:true,newerLocalEditAndOriginalRequestPreserved:true});
  await other.context().close();contexts.splice(contexts.indexOf(other.context()),1);

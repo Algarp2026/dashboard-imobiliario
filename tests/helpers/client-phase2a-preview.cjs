@@ -22,6 +22,7 @@ global.fetch=async(url,options)=>{
 };
 const allowed=new Set(['commercial.html','commercial.css','view-theme.css','commercial.js','commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-client-workflow.js','commercial-client-workflow-ui.js','commercial-recommendations.js','data.json','access.html','access.js','Olhao_Ext_Piscina_Web.jpg','vendor/lucide.min.js']);
 allowed.add('view-workspace.js');
+allowed.add('commercial-client-followup.js');
 allowed.add('commercial-integrity.js');
 allowed.add('commercial-opportunities.js');
 allowed.add('commercial-opportunity-ui.js');

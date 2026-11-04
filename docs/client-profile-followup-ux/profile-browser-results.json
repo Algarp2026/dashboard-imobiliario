@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "threeTabs": true,
+      "selectionSidebar": true,
+      "nativeDialog": true,
+      "escapeAndFocus": true,
+      "noPageOverflow": true,
+      "followupPersistedAndReloaded": true,
+      "noUnrelatedMutations": true,
+      "pdfModalAccessible": true,
+      "reminderDueVisible": true
+    },
+    {
+      "name": "laptop",
+      "width": 1366,
+      "threeTabs": true,
+      "selectionSidebar": true,
+      "nativeDialog": true,
+      "escapeAndFocus": true,
+      "noPageOverflow": true,
+      "followupPersistedAndReloaded": true,
+      "noUnrelatedMutations": true,
+      "pdfModalAccessible": true,
+      "reminderDueVisible": true
+    },
+    {
+      "name": "tablet",
+      "width": 820,
+      "threeTabs": true,
+      "selectionSidebar": true,
+      "nativeDialog": true,
+      "escapeAndFocus": true,
+      "noPageOverflow": true,
+      "followupPersistedAndReloaded": true,
+      "noUnrelatedMutations": true,
+      "pdfModalAccessible": true,
+      "reminderDueVisible": true
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "threeTabs": true,
+      "selectionSidebar": true,
+      "nativeDialog": true,
+      "escapeAndFocus": true,
+      "noPageOverflow": true,
+      "followupPersistedAndReloaded": true,
+      "noUnrelatedMutations": true,
+      "pdfModalAccessible": true,
+      "reminderDueVisible": true
+    },
+    {
+      "twoIndependentSessions": true,
+      "automaticReadKeepsFollowingDraft": true,
+      "cas409": true,
+      "remoteWinnerPreserved": true,
+      "localPendingReloadPreserved": true
+    }
+  ],
+  "errors": [],
+  "production": false
+}

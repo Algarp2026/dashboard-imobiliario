@@ -1,0 +1,18 @@
+{
+  "base": "8c5026cdc38b6e2a9765880f4202af0e9c6b0c62",
+  "branch": "codex/client-profile-followup-ux",
+  "normalization": "LF",
+  "hashes": {
+    "commercial.js": "7cf89f09e79b02b021e99dd03ba6877932467b0f5cd40b5ea6aebab900bfc670",
+    "commercial-client-followup.js": "8dd06494f828ad7f554d9903630e3b5850a6bef932636d74af52b29fe017abf7",
+    "commercial-opportunity-ui.js": "4225fe8ac913267cff08f608483f6ff569476719e2d1484bbf739eb971dbf2fa",
+    "commercial-client-workflow-ui.js": "14c4e75cc59e469cee38ec7b808ec16f91dacbbf4ccd2f9a6cd1be5ff4402c2c",
+    "commercial-client-workspace.js": "adca5f0369c0b6d72275e82987e83ba5b50a48f987cf394dce16ee6ce0346c8c",
+    "commercial-client-workspace.css": "92d8c6f42df8221a15c44f9c291b8f6cd5f084f4ee4ef46c3e8245dc2d505e32",
+    "commercial.css": "b9a91d85659513d583f40d8b3e8dcf663062a47238addd15574f902075efbf49",
+    "commercial.html": "95d0686805ac33cb0ead94e6580cdf4c4f042abf44004f5792d7cbf3b31946c9",
+    "commercial-fraction-recommendations.js": "8e9adbb2361712f1231bb30555dc92a80768d3516f75760f51da47bc421bc586",
+    "view-workspace.js": "5f62d5909c0ef395115ab55cbd1b4d940ecc1ba2813d48675a87e3c7de503b6d"
+  },
+  "productionAccess": false
+}

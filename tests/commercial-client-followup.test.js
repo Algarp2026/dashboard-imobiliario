@@ -1,0 +1,51 @@
+'use strict';
+const assert=require('node:assert/strict');
+const model=require('../commercial-client-followup.js');
+const workflow=require('../commercial-client-workflow.js');
+const c={id:'synthetic-client',name:'Fictitious client',unknown:{preserve:true},followupDate:'2025-01-01',nextStep:'Legacy action'};
+const events=[{id:'synthetic-event',clientId:c.id,type:'Contacto recebido',date:'2026-01-02'}];
+const legacy=state=>({state,lastContact:'2026-01-02'});
+const view=(client,state='Sem contacto',source=events)=>model.view(client,legacy(state),source,'2026-01-10',workflow.isEffectiveContact);
+for(const state of workflow.contactStates){const info=view(c,state);assert.equal(info.internalState,state);assert.equal(info.daysWithoutInteraction,8);assert.equal(c.followupV1,undefined);assert.equal(info.daysWaiting,null)}
+const input={response:'client',pendingDescription:'Fictitious pending answer',lastInteraction:'2026-01-04',waitingSince:'2026-01-03',observation:'',reminder:null};
+let seq=0;const update=(client,patch)=>model.update(client,{...input,...patch},{id:'synthetic-change-'+(++seq),recordedAt:'2026-01-10T12:00:00Z',legacyState:'Sem contacto'});
+const saved=update(c,{}),original=JSON.stringify(saved);
+assert.equal(view(saved).daysWithoutInteraction,6);assert.equal(view(saved).daysWaiting,7);
+assert.deepEqual(saved.unknown,c.unknown);assert.equal(saved.followupDate,c.followupDate);assert.equal(saved.nextStep,c.nextStep);
+for(const reminder of [{date:'2026-01-10',state:'open'},{date:'2026-01-11',state:'open'},{date:'2026-01-11',state:'done'},{date:'2026-01-11',state:'removed'},null]){const next=update(saved,{reminder,observation:'Changed note'});assert.equal(view(next).daysWithoutInteraction,6);assert.equal(view(next).daysWaiting,7);assert.equal(next.followupV1.history.length,2)}
+assert.equal(JSON.stringify(saved),original);
+assert.equal(view(update(saved,{response:'none'})).internalState,'Sem contacto');
+assert.equal(view(update(saved,{response:'none'})).daysWaiting,null);
+assert.equal(view(JSON.parse(JSON.stringify(saved))).daysWaiting,7);
+assert.equal(view(saved,'Sem contacto',[...events,{id:'admin',clientId:c.id,type:'Outro',administrative:true,date:'2026-01-09'}]).lastInteraction,'2026-01-04');
+assert.equal(view(saved,'Sem contacto',[...events,{id:'later',clientId:c.id,type:'Contacto enviado',date:'2026-01-08'}]).lastInteraction,'2026-01-08');
+const unknown={...saved,followupV1:{...saved.followupV1,futureMetadata:{keep:true}}};assert.deepEqual(update(unknown,{observation:'New'}).followupV1.futureMetadata,{keep:true});
+assert.throws(()=>view({...c,followupV1:{version:2}}));assert.throws(()=>update(c,{waitingSince:'2026-02-30'}));
+assert.throws(()=>view({...saved,followupV1:{...saved.followupV1,history:[null]}}));
+assert.throws(()=>view({...saved,followupV1:{...saved.followupV1,history:[...saved.followupV1.history,...saved.followupV1.history]}}));
+assert.equal(view(update(saved,{lastInteraction:'2026-01-06'})).daysWaiting,7);
+assert.equal(view(update(saved,{waitingSince:'2026-01-05'})).daysWithoutInteraction,6);
+assert.equal(update(saved,{}).followupV1.history.length,1);
+const laterDecision={...saved,contactStateHistory:[{version:1,value:'Resposta nossa pendente',source:'communication',recordedAt:'2026-01-10T13:00:00Z'}]};
+assert.equal(view(laterDecision).internalState,'Resposta nossa pendente','A later explicit legacy communication decision must remain effective');
+const historicalDecision={...saved,contactStateHistory:[{version:1,value:'Sem contacto',source:'manual',recordedAt:'2026-01-09T13:00:00Z'}]};
+assert.equal(view(historicalDecision).internalState,'A aguardar cliente','An older decision must not replace the new following state');
+console.log('Client followup model: legacy states, independent dates, reminders, no-op updates, history and unknown fields PASS; fictitious data only.');
+// Exercise the real source validator in the isolated Apps Script emulator.
+const makeStore=require('./helpers/apps-script-store.js');
+const data={clients:[c],events:[],agents:[],statuses:{8:'Reservado',24:'Reservado'},salePrices:{},statusEventIds:{},salePriceEventIds:{},saleCommissions:{},finalPrices:{},priceHistory:{},unavailableReasons:{},unknown:{preserve:true}};
+const store=makeStore(data),next=JSON.parse(JSON.stringify(data));next.clients[0]=saved;
+const result=store.write({requestId:'synthetic-followup-write',baseRevision:store.revision,data:next});
+assert.equal(result.ok,true);assert.deepEqual(store.data,next);assert.deepEqual(store.data.statuses,data.statuses);
+console.log('Source compatibility: actual isolated Apps Script write preserves unrelated fields and accepts additive followup model.');
+const {app,root}=require('./commercial-sync-client.test.js');
+(async()=>{
+ const base=root(2);base.clients[0]=saved;
+ const remote=JSON.parse(JSON.stringify(base));remote.clients[0]=update(saved,{observation:'Fictitious second device update',waitingSince:'2026-01-05'});
+ const f=app(base,{upstream:base});f.context.document.querySelectorAll=()=>[];await f.api.loadExcel();f.upstream=remote;await f.api.loadRemoteData({automatic:true});
+ assert.equal(f.api.sharedSync.phase,'synced');assert.equal(f.api.state.data.clients[0].followupV1.observation,'Fictitious second device update');assert.equal(f.writes,0);
+ assert.equal(f.api.state.data.clients[0].followupV1.history.length,2);
+ const preserved=JSON.stringify(f.api.state.data);const rollback=JSON.parse(JSON.stringify(remote));delete rollback.clients[0].followupV1;f.upstream=rollback;
+ await f.api.loadRemoteData({automatic:true});assert.equal(f.api.sharedSync.phase,'conflict');assert.equal(JSON.stringify(f.api.state.data),preserved);
+ console.log('Followup sync: legitimate second-device edit accepted read-only, history retained, missing-field rollback blocked.');
+})().catch(error=>{console.error(error);process.exitCode=1});

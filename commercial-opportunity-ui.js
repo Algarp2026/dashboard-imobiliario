@@ -1,10 +1,31 @@
 (function(root){
   'use strict';
+  function dialogKeyboard(dialog,close,event){
+    event.stopPropagation();
+    if(event.key==='Escape'){event.preventDefault();close();return}
+    if(event.key!=='Tab')return;
+    const controls=[...dialog.querySelectorAll('button,input,select,textarea,a[href],summary,[tabindex="0"]')].filter(node=>!node.disabled&&!node.closest('[inert]')&&node.getClientRects().length);
+    const first=controls[0],last=controls.at(-1),active=document.activeElement;
+    if(!first){event.preventDefault();dialog.focus();return}
+    if(event.shiftKey&&(active===first||!dialog.contains(active))){event.preventDefault();last.focus()}
+    else if(!event.shiftKey&&(active===last||!dialog.contains(active))){event.preventDefault();first.focus()}
+  }
   root.createOpportunityWorkflow=function(a,sharedEditors){
     const originalTimeline=a.timeline;
     a={...a,timeline:e=>originalTimeline(e)+ops.priceRows(e).filter(row=>row.observation).map(row=>`<p class="muted">Apt. ${Number(row.fraction||row.unitId)} · ${esc(row.observation)}</p>`).join('')};
+    const confirm=a.confirm,confirmClosing=a.confirmClosing;
+    async function suspendDialog(operation){
+      const dialog=root.document?.querySelector('.client-opportunity-dialog[open]');
+      if(!dialog)return operation();
+      const focus=root.document.activeElement,scroll=dialog.scrollTop;dialog.close();
+      try{return await operation()}
+      finally{if(dialog.isConnected&&!dialog.closest('[hidden],.hidden')){dialog.showModal();dialog.scrollTop=scroll;if(focus?.isConnected)focus.focus({preventScroll:true})}}
+    }
+    a={...a,confirm:(...args)=>suspendDialog(()=>confirm(...args)),confirmClosing:(...args)=>suspendDialog(()=>confirmClosing(...args))};
     const ops=root.THE_VIEW_OPPORTUNITIES,model=root.THE_VIEW_CLIENT_WORKFLOW,esc=a.esc,drafts=new Map(),opened=new Map();
-    let saving=false,audit=null,feedback='';
+    let saving=false,audit=null,auditReturnUnit=null,feedback='';
+    const followup=root.createClientFollowupUI?.({...a,contactInfo:c=>model.contactInfo(c,a.events(),a.today()),isEffectiveContact:model.isEffectiveContact,priority:model.priority,setPriority:(c,value)=>model.decision(c,'priorityHistory',value,{id:a.id(),recordedAt:new Date().toISOString(),source:'manual'})});
+    if(!followup)throw Error('CLIENT_FOLLOWUP_UNAVAILABLE');
     const field=(label,name,value='',type='text',extra='')=>`<label class="field"><span>${label}</span><input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
     const select=(label,name,values,value)=>`<label class="field"><span>${label}</span><select name="${name}">${values.map(v=>`<option value="${esc(v)}" ${v===value?'selected':''}>${esc(v)}</option>`).join('')}</select></label>`;
     const area=(label,name,value='')=>`<label class="field"><span>${label}</span><textarea name="${name}" rows="2">${esc(value)}</textarea></label>`;
@@ -57,19 +78,34 @@
       const n=info.number,r=a.rows().find(r=>r.number===n),d=drafts.get(identity(c.id,n)),last=info.rounds.at(-1);
       const history=model.ordered([...info.history,...(info.origin&&!info.history.some(e=>e.id===info.origin.event.id)?[info.origin.event]:[])]);
       const canClose=!transitions(c,info).find(choice=>choice.state==='Não concretizada').reason;
-      return`<details class="opportunity-card" data-opportunity-unit="${n}" ${opened.get(c.id)===n?'open':''}>
-        <summary><span><strong>Apt. ${n}</strong><small>${esc(r?.typology||'—')} · Piso ${esc(r?.floorLabel||'—')}</small></span><strong>${esc(info.commercialState)}</strong><span>${info.commercialState==='Em negociação'?`${last?a.money(last.amount):'Negociação legada'}<small>${esc(info.situation)} · ${info.rounds.length} rondas</small>`:info.effect?a.money(info.effect.amount):info.informed?a.money(info.informed.informedPrice):'Preço comunicado por definir'}</span><span>${a.icon('chevron-down')}</span></summary>
+      return`<article class="opportunity-card" data-opportunity-unit="${n}">
+        <button type="button" class="opportunity-card__open" data-opportunity-open="${n}" aria-haspopup="dialog"><span><strong>Apt. ${n}</strong><small>${esc(r?.typology||'—')} · Piso ${esc(r?.floorLabel||'—')}</small></span><strong>${esc(info.commercialState)}</strong><span>${info.commercialState==='Em negociação'?`${last?a.money(last.amount):'Negociação legada'}<small>${esc(info.situation)} · ${info.rounds.length} rondas</small>`:info.effect?a.money(info.effect.amount):info.informed?a.money(info.informed.informedPrice):'Preço comunicado por definir'}</span><span>${esc(a.status(r))}${info.review.length?' · Rever':''}</span></button>
+        <dialog id="clientOpportunityDialog-${n}" class="client-opportunity-dialog" aria-labelledby="opportunity-title-${n}"><header><h3 id="opportunity-title-${n}">Apt. ${n} · ${esc(info.commercialState)}</h3><button type="button" class="ghost-button ux-icon-button" data-opportunity-close aria-label="Fechar oportunidade" title="Fechar oportunidade">${a.icon('x')}</button></header>
         <div class="opportunity-card__content"><p class="muted">Disponibilidade global: <strong>${esc(a.status(r))}</strong> · Preço oficial: ${r?a.price(r):'Não confirmado'}</p>
         ${info.origin?`<p class="opportunity-origin">${esc(info.origin.label)} · ${esc(info.origin.event.date)} · Origem ${esc(info.origin.event.id)}</p>`:''}${reviewMarkup(info.review,n)}${stateControl(c,info)}${d?editor(c,n):''}
         ${info.commercialState==='Em negociação'?`<div class="top-actions">${command('round','Nova ronda',n)}${info.effectiveRounds.length?command('decision','Registar decisão',n,'check')+command('agreement','Acordo sem reserva',n,'handshake'):''}${canClose?command('close','Encerrar sem acordo',n,'x'):''}</div><p>${esc(info.situation)}</p><details class="op-round-history"><summary>Rondas e condições (${info.rounds.length})</summary>${info.rounds.map(round=>`<article><strong>${esc(round.date)} · ${esc(round.party)} · ${a.money(round.amount)}</strong><p>${esc(round.terms||'Sem condições adicionais')}</p><span>${esc(round.decision)} · ${esc(round.id)}${round.supersededBy?' · Corrigida por '+esc(round.supersededBy):''}</span>${round.response?`<p>Decisão ${esc(round.response.date)} · ${esc(round.response.id)}</p>`:''}</article>`).join('')||'<p>Movimentos legados preservados no histórico original.</p>'}</details>`:''}
         <div class="top-actions">${command('pdf','PDF de proposta',n,'file-text')}${info.commercialState==='Reservada'?command('cancel-reservation','Cancelar reserva',n,'x'):''}</div>
-        <details class="op-history"><summary>Histórico da fração (${history.length})</summary><div class="timeline">${history.map(e=>a.timeline({...e,fractions:[n],informedPrices:ops.priceRows(e).filter(p=>Number(p.fraction||p.unitId)===n),presentationHistory:undefined})).join('')}</div></details></div></details>`;
+        <details class="op-history"><summary>Histórico da fração (${history.length})</summary><div class="timeline">${history.map(e=>a.timeline({...e,fractions:[n],informedPrices:ops.priceRows(e).filter(p=>Number(p.fraction||p.unitId)===n),presentationHistory:undefined})).join('')}</div></details></div></dialog></article>`;
+    }
+    function groupedCards(c,items){
+      const groups=[['Em negociação','Negociação'],['Por apresentar','Por apresentar'],['Apresentada','Apresentações'],['Reservada','Reservas'],['Vendida','Vendas'],['Não concretizada','Encerradas'],['Recusada','Recusadas']];
+      const known=new Set(groups.map(([state])=>state));
+      for(const state of new Set(items.map(item=>item.commercialState)))if(!known.has(state))groups.push([state,state]);
+      return groups.map(([state,label])=>{
+        const entries=items.filter(item=>item.commercialState===state);if(!entries.length)return'';
+        const content=`<div class="opportunity-group-cards">${entries.map(info=>card(c,info)).join('')}</div>`;
+        return state==='Recusada'?`<details class="opportunity-group opportunity-group--refused" ${entries.some(item=>opened.get(c.id)===item.number)?'open':''}><summary>${esc(label)} (${entries.length})</summary>${content}</details>`:`<section class="opportunity-group"><h4>${esc(label)} <span>${entries.length}</span></h4>${content}</section>`;
+      }).join('');
     }
     function opportunityMarkup(c){
       const items=rows(c),pending=items.filter(r=>r.commercialState==='Por apresentar');
-      return`<section class="opportunity-workspace"><div class="crm-detail-section__heading"><h3>Oportunidades <span>${items.length}</span></h3>${pending.length?command('multi-present','Apresentar várias frações','','presentation'):''}</div><p role="status" class="op-workspace-feedback">${esc(feedback)}</p>${items.length?`<div class="opportunity-list">${items.map(info=>card(c,info)).join('')}</div>`:'<p class="empty-state">Selecione frações na Procura para iniciar as oportunidades.</p>'}${audit?`<details class="op-audit" open><summary>Edição administrativa de registo histórico</summary>${command('close-audit','Fechar consulta administrativa','','x')}${audit.presentationHistory?sharedEditors.presentationMarkup(c):audit.negotiationVersion?sharedEditors.negotiationMarkup(c):`<div class="timeline">${a.timeline(audit)}</div>`}</details>`:''}<details id="clientFullHistory"><summary>Histórico comercial original</summary><button class="ux-text-button" type="button" data-ux-client-action="event">Adicionar evento</button><div class="timeline">${model.ordered(a.events().filter(e=>e.clientId===c.id)).reverse().map(a.timeline).join('')}</div></details></section>`;
+      return`<section class="opportunity-workspace"><div class="crm-detail-section__heading"><h3>Oportunidades <span>${items.length}</span></h3>${pending.length?command('multi-present','Apresentar várias frações','','presentation'):''}</div><p role="status" class="op-workspace-feedback">${esc(feedback)}</p>${items.length?`<div class="opportunity-list">${groupedCards(c,items)}</div>`:'<p class="empty-state">Selecione frações na Procura para iniciar as oportunidades.</p>'}${audit?`<dialog id="clientOpportunityAudit" class="client-opportunity-dialog op-audit" aria-labelledby="clientOpportunityAuditTitle"><header><h3 id="clientOpportunityAuditTitle">Edição administrativa de registo histórico</h3><button type="button" class="ghost-button ux-icon-button" data-op-command="close-audit" aria-label="Fechar edição administrativa" title="Fechar edição administrativa">${a.icon('x')}</button></header><div class="opportunity-card__content">${audit.presentationHistory?sharedEditors.presentationMarkup(c):audit.negotiationVersion?sharedEditors.negotiationMarkup(c):`<div class="timeline">${a.timeline(audit)}</div>`}</div></dialog>`:''}<details id="clientFullHistory"><summary>Histórico comercial original</summary><button class="ux-text-button" type="button" data-ux-client-action="event">Adicionar evento</button><div class="timeline">${model.ordered(a.events().filter(e=>e.clientId===c.id)).reverse().map(a.timeline).join('')}</div></details></section>`;
     }
     function dataMarkup(c){
+      const fields=[['NIF',c.nif],['Nacionalidade',c.nationality],['Orçamento indicativo',c.budget?a.money(c.budget):''],['Observações gerais',c.notes]].filter(([,value])=>value);
+      return`<section class="op-client-data">${followup.markup(c)}<details id="clientAdditionalData" class="ux-client-details"><summary>Dados complementares</summary>${a.facts(fields)}</details><details id="clientLegacyActivity" class="ux-client-details" ${sharedEditors.contactMarkup(c).includes('data-contact-form')?'open':''}><summary>Comunicações, agendamentos e administração anteriores</summary>${legacyDataMarkup(c)}</details></section>`;
+    }
+    function legacyDataMarkup(c){
       const items=rows(c),agent=a.agents().find(g=>g.id===c.agentId);
       const counts=ops.states.map(s=>[s,items.filter(r=>r.commercialState===s).length]);
       return`<section class="op-client-data">${a.facts([['Nome',c.name],['Telefone / WhatsApp',c.phone],['Email',c.email],['Origem',c.originManual||c.origin],['Agente',agent?.name||c.agent],['Imobiliária',agent?.agency||c.agency],['NIF',c.nif],['Nacionalidade',c.nationality],['Observações gerais',c.notes],['Último contacto efetivo',model.contactInfo(c,a.events(),a.today()).lastContact||'—']])}${a.general(c)}<details id="clientContactSettings" class="ux-client-details" ${sharedEditors.contactMarkup(c).includes('data-contact-form')?'open':''}><summary>Contactos e acompanhamento</summary>${sharedEditors.contactMarkup(c)}</details><h3>Resumo comercial</h3><div data-op-relevant-summary>${items.length?a.facts(counts.filter(([,count])=>count>0)):'<p class="muted">Sem oportunidades registadas.</p>'}</div><details class="op-full-summary"><summary>Consultar todos os estados</summary>${a.facts(counts)}</details>${ops.cycleInfo(a.data(),c.id,{date:a.today()}).blocked?command('requalify','Confirmar requalificação','','check'):''}</section>`;
@@ -100,23 +136,38 @@
     }
     function bind(c,container){
       sharedEditors.bind(c,container);
+      followup.bind(c,container);
+      const auditDialog=container.querySelector('dialog.op-audit');
+      if(auditDialog){
+        auditDialog.showModal();
+        const close=()=>auditDialog.querySelector('[data-op-command="close-audit"]').click();
+        auditDialog.addEventListener('cancel',event=>{event.preventDefault();event.stopPropagation();close()});
+        auditDialog.addEventListener('keydown',event=>dialogKeyboard(auditDialog,close,event));
+      }
       for(const info of rows(c)){
         if(info.agreement){const content=container.querySelector(`[data-opportunity-unit="${info.number}"] .opportunity-card__content`);if(content&&!content.querySelector('[data-op-agreement]')){const line=document.createElement('p');line.dataset.opAgreement='';line.textContent='Acordo: '+info.agreement.id+' · '+a.money(info.agreement.amount)+' · '+(info.agreement.terms||'Sem condições adicionais');content.prepend(line)}}
         if(!info.informed)continue;
         const content=container.querySelector(`[data-opportunity-unit="${info.number}"] .opportunity-card__content`);
         if(content&&!content.querySelector('[data-op-presented-price]')){const line=document.createElement('p');line.dataset.opPresentedPrice='';line.textContent='Preço apresentado: '+a.money(info.informed.informedPrice)+' · '+info.informed.date+(info.informed.observation?' · '+info.informed.observation:'');content.prepend(line)}
       }
-      container.querySelectorAll('[data-opportunity-unit]').forEach(details=>details.addEventListener('toggle',()=>{
-        if(!details.isConnected)return;
-        if(details.open){opened.set(c.id,Number(details.dataset.opportunityUnit));container.querySelectorAll('[data-opportunity-unit]').forEach(other=>{if(other!==details)other.open=false})}
-        else if(opened.get(c.id)===Number(details.dataset.opportunityUnit))opened.delete(c.id);
-      }));
-      container.querySelectorAll('[data-opportunity-unit]>summary').forEach(summary=>summary.addEventListener('click',()=>{const details=summary.parentElement;if(!details.open){opened.set(c.id,Number(details.dataset.opportunityUnit));container.querySelectorAll('[data-opportunity-unit]').forEach(other=>{if(other!==details)other.open=false})}}));
+      container.querySelectorAll('[data-opportunity-unit]').forEach(card=>{
+        const n=Number(card.dataset.opportunityUnit),dialog=card.querySelector('dialog'),opener=card.querySelector('[data-opportunity-open]');
+        const open=()=>{opened.set(c.id,n);if(!dialog.open)dialog.showModal()};
+        const close=async()=>{
+          if(saving||sharedEditors.busy?.()||card.querySelector('fieldset:disabled'))return;
+          if(drafts.has(identity(c.id,n))&&!await a.confirm('Fechar o painel mantendo o rascunho nesta sessão?','Oportunidade'))return;
+          opened.delete(c.id);dialog.close();opener.focus({preventScroll:true});
+        };
+        opener.onclick=open;dialog.querySelector('[data-opportunity-close]').onclick=close;
+        dialog.addEventListener('cancel',event=>{event.preventDefault();event.stopPropagation();close()});
+        dialog.addEventListener('keydown',event=>dialogKeyboard(dialog,close,event));
+        if(opened.get(c.id)===n)open();
+      });
       container.querySelectorAll('[data-op-form]').forEach(form=>{if(drafts.get(identity(c.id,Number(form.dataset.opForm)))?.saved){form.querySelectorAll('input,select,textarea').forEach(input=>input.disabled=true);form.querySelector('[type="submit"]').textContent='Confirmar sincronização pendente'}});
       container.querySelectorAll('[data-op-state]').forEach(select=>select.onchange=()=>{const action={'Por apresentar':'reopen','Apresentada':'present','Recusada':'refuse','Em negociação':'round','Não concretizada':'close','Reservada':'reserve','Vendida':'sale'}[select.value];begin(c,Number(select.dataset.opState),action)});
       container.querySelectorAll('[data-op-form]').forEach(form=>{const n=Number(form.dataset.opForm),d=drafts.get(identity(c.id,n));form.oninput=()=>collect(form,d);form.onchange=()=>{collect(form,d);const g=form.querySelector('[data-op-agent]');if(g)g.hidden=!d.withAgent};form.onsubmit=e=>{e.preventDefault();submit(c,n,form)}});
       container.querySelectorAll('[data-op-command]').forEach(button=>button.onclick=async()=>{
-        if(saving)return;const n=Number(button.dataset.number),action=button.dataset.opCommand;
+        if(saving||sharedEditors.busy?.())return;const n=Number(button.dataset.number),action=button.dataset.opCommand;
         if(action==='requalify'){
           const revision=a.revision(),snapshot=JSON.stringify(a.data());
           if(!await a.confirm('Confirma a requalificação e o início de um novo ciclo? O histórico anterior permanece encerrado; reservas, vendas e preços não serão alterados.','Requalificação do cliente'))return;
@@ -124,22 +175,35 @@
           saving=true;try{a.apply({id:a.id(),clientId:c.id,type:'Preferências recebidas',date:a.today(),time:new Date().toLocaleTimeString('pt-PT',{timeZone:'Europe/Lisbon',hour12:false}).slice(0,5),createdAt:new Date().toISOString(),fractions:[],administrative:true,actualCommunication:false,requalificationConfirmed:true,source:'opportunity-requalification',notes:'Novo ciclo confirmado explicitamente pelo utilizador.'},null);feedback=await a.persist()?'Requalificação guardada e sincronizada.':'Requalificação local preservada. Sincronização por confirmar.'}catch(error){feedback=error.message}finally{saving=false;a.render();a.tab('data')}return;
         }
         if(action==='cancel'){drafts.delete(identity(c.id,n));a.render();return}
-        if(action==='pdf'){a.pdfFor?a.pdfFor([n]):a.pdf();return}
-        if(action==='close-audit'){audit=null;a.render();return}
+        if(action==='pdf'){
+          const before=new Set(root.document?.querySelectorAll('.modal-backdrop')||[]);
+          await suspendDialog(async()=>{
+            a.pdfFor?a.pdfFor([n]):a.pdf();
+            const modal=[...(root.document?.querySelectorAll('.modal-backdrop')||[])].find(node=>!before.has(node));
+            if(modal)await new Promise(resolve=>{const observer=new root.MutationObserver(()=>{if(!modal.isConnected||modal.classList.contains('hidden')){observer.disconnect();resolve()}});observer.observe(root.document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']})});
+          });return;
+        }
+        if(action==='close-audit'){
+          if(!await a.confirm('Fechar a edição administrativa? As alterações do formulário que ainda não foram guardadas serão descartadas. Os dados já guardados e pedidos pendentes serão preservados.','Fechar edição'))return;
+          sharedEditors.discard?.(audit);audit=null;if(auditReturnUnit!==null)opened.set(c.id,auditReturnUnit);auditReturnUnit=null;a.render();return;
+        }
         if(action==='multi-present'){const pending=rows(c).filter(r=>r.commercialState==='Por apresentar').map(r=>r.number);if(!pending.length)return;begin(c,pending[0],'present');Object.assign(drafts.get(identity(c.id,pending[0])),{fractions:pending,candidates:pending});a.render();return}
         begin(c,n,action);
       });
 
     }
-    return{...sharedEditors,opportunityMarkup,dataMarkup,reviewMarkup,bind,
+    return{...sharedEditors,opportunityMarkup,dataMarkup,reviewMarkup,bind,modified:()=>saving||drafts.size>0||!!audit||followup.modified()||sharedEditors.modified?.(),
       edit(ev){
         if(ev.opportunityVersion&&['present','round','refuse','close'].includes(ev.opportunityAction)){
+          audit=null;auditReturnUnit=null;
           const c=a.client(ev.clientId),n=ev.fractions[0];begin(c,n,ev.opportunityAction,ev);
           const d=drafts.get(identity(c.id,n));Object.assign(d,{corrects:ev.id,date:ev.date,fractions:[...ev.fractions],amount:ev.amount,terms:ev.terms||'',party:ev.party||'cliente',reason:ev.reason||'',notes:ev.notes||''});
           for(const r of ev.informedPrices||[])d['price-'+r.fraction]=r.informedPrice;
           a.render();return true;
         }
-        if(ev.communicationHistory){audit=null;return sharedEditors.edit(ev)}
+        if(ev.communicationHistory){audit=null;opened.delete(ev.clientId);return sharedEditors.edit(ev)}
+        if(!ev.opportunityVersion&&!model.latest(ev)&&ev.negotiationVersion!==1)return sharedEditors.edit(ev);
+        auditReturnUnit=opened.get(ev.clientId)??null;opened.delete(ev.clientId);
         audit=ev;if(ev.opportunityVersion){a.render();a.tab('opportunities');return true}return sharedEditors.edit(ev);
       },
       newPresentation(cid){const c=a.client(cid),pending=rows(c).filter(r=>r.commercialState==='Por apresentar');if(pending.length)begin(c,pending[0].number,'present')},

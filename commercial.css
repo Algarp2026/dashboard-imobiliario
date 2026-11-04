@@ -631,3 +631,58 @@ body:has(#tab-sales:not(.hidden) .ux-client-profile-active:not(.sales-view-hidde
   .ux-workflow .data-table .ux-sr-only { position: static!important; width: auto; height: auto; clip: auto; clip-path: none; white-space: normal; overflow: visible; }
   .ux-workflow .data-table input[type=number] { width: 100%; text-align: left; }
 }
+
+/* Client profile: one scroll surface, independent selected-unit sidebar. */
+#clientProfileDialog .client-preference-strip {
+  position: sticky; top: 0; z-index: 3; background: var(--surface, #fff);
+  border-bottom: 1px solid var(--line, #dfe5e7); padding: 10px 0;
+}
+#clientProfileDialog .client-preference-strip .ux-client-facts {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0;
+}
+#clientProfileDialog .client-preference-strip dd { font-size: 14px; overflow-wrap: anywhere; }
+#clientProfileDialog .client-search-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+#clientProfileDialog .client-search-selection { position: sticky; top: var(--client-preference-strip-height, 92px); padding: 12px 0; min-width: 0; }
+#clientProfileDialog .client-search-results { min-width: 0; }
+#clientProfileDialog .client-search-selection .ux-fraction-selection-heading { display: grid; gap: 12px; }
+#clientProfileDialog .client-search-selection .top-actions { flex-wrap: wrap; }
+#clientProfileDialog .client-search-selection .ux-fraction-selected { display: flex; flex-wrap: wrap; gap: 6px; }
+#clientProfileDialog .ux-fraction-option { padding: 12px; border-radius: 6px; }
+#clientProfileDialog .ux-fraction-option p { margin: 6px 0; font-size: 13px; }
+#clientProfileDialog .ux-fraction-explanation { font-size: 12px; }
+.client-followup { padding-bottom: 18px; }
+.client-followup h3 { margin: 0 0 14px; }
+.client-followup fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.client-followup .form-grid { gap: 12px 20px; }
+.client-followup [data-followup-reminder] { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0; }
+.client-followup small { color: var(--muted, #5f6f78); }
+.opportunity-group { margin: 18px 0; }
+.opportunity-group h4 { margin: 0 0 10px; }
+.opportunity-group--refused > summary { padding: 12px 0; cursor: pointer; }
+.opportunity-group-cards { display: grid; gap: 8px; }
+.opportunity-card__open { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; align-items: center; gap: 14px; width: 100%; padding: 14px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }
+.opportunity-card__open small { display: block; color: var(--muted, #5f6f78); margin-top: 4px; }
+.opportunity-card__open:focus-visible { outline: 2px solid #26715b; outline-offset: -2px; }
+.client-opportunity-dialog { width: min(820px, calc(100% - 32px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid #dfe5e7; border-radius: 8px; color: #20313e; background: #fff; overflow: auto; overscroll-behavior: contain; }
+.client-opportunity-dialog::backdrop { background: rgb(20 31 39 / 45%); }
+.client-opportunity-dialog > header { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; background: #fff; border-bottom: 1px solid #dfe5e7; }
+.client-opportunity-dialog > header h3 { margin: 0; font-size: 18px; }
+.client-opportunity-dialog .opportunity-card__content { display: block; padding: 20px; }
+.client-opportunity-dialog .top-actions { flex-wrap: wrap; }
+@media (max-width: 900px) {
+  #clientProfileDialog .client-search-layout { grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }
+  .opportunity-card__open { grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+@media (max-width: 600px) {
+  #clientProfileDialog .client-preference-strip .ux-client-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+  #clientProfileDialog .client-search-layout { display: block; }
+  #clientProfileDialog .client-search-selection { position: sticky; z-index: 2; background: var(--bg, #fff); border-bottom: 1px solid var(--line, #dfe5e7); margin-bottom: 12px; padding-block: 6px; }
+  #clientProfileDialog .client-search-selection .ux-fraction-selected { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; margin: 6px 0 0; }
+  #clientProfileDialog .client-search-selection .ux-preference-chip { flex-shrink: 0; }
+  #clientProfileDialog .client-search-selection .ux-fraction-selection-heading { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 6px 0; border: 0; }
+  #clientProfileDialog .client-search-selection .ux-fraction-selection-heading > strong { font-size: 12px; }
+  #clientProfileDialog .client-search-selection .ux-fraction-selection-heading .top-actions { margin: 0; gap: 6px; }
+  .client-opportunity-dialog { width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+  .client-opportunity-dialog .opportunity-card__content { padding: 14px; }
+  .client-followup .form-grid { grid-template-columns: 1fr; }
+}
