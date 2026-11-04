@@ -130,7 +130,7 @@
     const fractions=q('#clientPanel-procura');
     if(fractions){
       const workspace=q('#clientFractionWorkspace',fractions);
-      if(workspace&&!q('.d2-client-match-workspace',workspace)){
+      if(workspace&&!workspace.classList.contains('client-search-workspace')&&!q('.d2-client-match-workspace',workspace)){
         const facts=q(':scope>dl',workspace),notice=q('#clientFractionSourceNotice',workspace),selection=q('#clientFractionSelection',workspace),filters=q(':scope>.ux-fraction-filters',workspace),results=q('#clientFractionRecommendations',workspace),manual=q('#clientFractionManual',workspace);
         const layout=group(workspace,'d2-client-match-workspace',[facts,notice,selection,filters,results,manual]);
         const profile=group(layout,'d2-client-match-profile',[facts,notice,selection],'aside');if(profile)title(profile,'Critérios e seleção');

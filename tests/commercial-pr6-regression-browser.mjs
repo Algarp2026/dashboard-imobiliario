@@ -15,7 +15,7 @@ async function ready(p){await p.locator('[data-client="demo-0"]').waitFor({state
 async function synced(p){await p.waitForFunction(()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced')}
 const remote=p=>p.evaluate(async()=>await(await fetch('/api/commercial-data')).json());
 const cache=p=>p.evaluate(k=>JSON.parse(localStorage.getItem(k)),key);
-const tab=(p,name)=>p.getByRole('tab',{name,exact:true}).click();
+const tab=(p,name)=>changeClientTab(p,name);
 async function profile(p,cid){if(await p.locator('.ux-client-profile-active:not(.sales-view-hidden)').count())await p.locator('[data-profile-close]').click();await p.locator(`[data-client="${cid}"]`).click()}
 async function savePresentation(p,state){const f=p.locator('[data-workflow-form="presentation"]');await f.locator('[name="state"]').selectOption(state);await f.locator('[type="submit"]').click();await f.locator('[name="state"]').waitFor({state:'detached'});await synced(p)}
 async function editPresentation(p,id){await p.locator(`#clientPanel-presentation [data-edit-client-event="${id}"]`).click()}
@@ -39,21 +39,20 @@ try{
   for(const n of [9,24,30]){await p.locator('#presentationSelectionSearch').fill(String(n));await p.locator('[data-pick-fraction="'+n+'"]').click()}
   await p.locator('[data-save-selection]').click();await p.locator('#presentationSelectionModal').waitFor({state:'hidden'});await synced(p);
   const selected=async()=> (await remote(p)).data.clients.find(c=>c.id===cid).presentationSelection;assert.deepEqual(await selected(),[9,24,30]);
-  await tab(p,'Oportunidades');const card=p.locator('[data-opportunity-unit="24"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('700000');await card.locator('[name="notes"]').fill('Rascunho fictício');
-  await tab(p,'Dados');await tab(p,'Oportunidades');assert.equal(await card.locator('[name="notes"]').inputValue(),'Rascunho fictício');assert.deepEqual(await selected(),[9,24,30]);await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
+  await tab(p,'Oportunidades');const card=p.locator('[data-opportunity-unit="24"]');await openOpportunity(p,card);await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('700000');await card.locator('[name="notes"]').fill('Rascunho fictício');
+  await tab(p,'Dados');await tab(p,'Oportunidades');await openOpportunity(p,card);assert.equal(await card.locator('[name="notes"]').inputValue(),'Rascunho fictício');assert.deepEqual(await selected(),[9,24,30]);await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
   let data=(await remote(p)).data;const presentation=data.events.find(e=>e.clientId===cid&&e.opportunityAction==='present');
   await card.locator('.op-history>summary').click();await card.locator('[data-edit-client-event="'+presentation.id+'"]').click();await card.locator('[name="price-24"]').fill('710000');await card.locator('[type=submit]').click();await synced(p);assert.deepEqual(await selected(),[9,30]);
   data=(await remote(p)).data;assert.deepEqual(data.events.find(e=>e.id===presentation.id),presentation);assert.equal(data.events.filter(e=>e.corrects===presentation.id).length,1);
   await p.reload();await ready(p);await profile(p,cid);assert.deepEqual(await selected(),[9,30]);
-  await tab(p,'Oportunidades');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('720000');await card.locator('[type=submit]').click();await synced(p);
+  await tab(p,'Oportunidades');await openOpportunity(p,card);await card.locator('[data-op-state]').selectOption('Apresentada');await card.locator('[name="price-24"]').fill('720000');await card.locator('[type=submit]').click();await synced(p);
   assert.equal((await remote(p)).data.events.filter(e=>e.id===presentation.id).length,1);assert.deepEqual(await selected(),[9,30]);
   await communication(p,'2026-08-03','A aguardar cliente','Fictitious first contact');
   const oldContact=(await remote(p)).data.events.find(e=>e.clientId===cid&&e.notes==='Fictitious first contact');
-  const beforeBackdated=await p.locator('.ux-contact-controls').innerText();
+  const beforeBackdated=await p.locator('[data-client-followup] [name="lastInteraction"]').inputValue();assert.ok(beforeBackdated);
   await communication(p,'2026-07-01','Resposta nossa pendente','Fictitious backdated contact');
   assert.equal(await contactState(p),'Resposta nossa pendente');
-  const lastContact=text=>text.match(/Último contacto efetivo\s+([^\n]+)/)?.[1];
-  assert.equal(lastContact(await p.locator('.ux-contact-controls').innerText()),lastContact(beforeBackdated));
+  assert.equal(await p.locator('[data-client-followup] [name="lastInteraction"]').inputValue(),beforeBackdated);
   await contactSettings(p);const settings=p.locator('[data-contact-settings]');await settings.locator('[name="contactState"]').selectOption('Em acompanhamento');await settings.locator('[name="priority"]').check();await settings.locator('[type="submit"]').click();await synced(p);
   await p.waitForFunction(()=>!document.querySelector('[data-contact-settings] [type="submit"]')?.disabled);
   const manual=(await remote(p)).data.clients.find(c=>c.id===cid);assert.equal(manual.contactStateHistory.at(-1).source,'manual');
@@ -74,3 +73,4 @@ try{
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
   console.log(JSON.stringify({subset:[9,30],draftsPreserved:true,historicalEditsPreserved:true,repeatedHistory:true,noDuplicateOnEditOrRetry:true,backdatedContacts:true,manualStatePreserved:true,newExplicitDecision:true,reload:true,observerSync:true,unrelatedClientsAndCommercialDataUnchanged:true,javascriptErrors:errors,productionAccess:false}));
 }finally{for(const c of contexts)await c.close();await browser.close()}
+import {openOpportunity,changeClientTab} from './helpers/current-client-ui.mjs';

@@ -10,7 +10,8 @@ const panels=keys.map(key=>({dataset:{clientPanel:key},hidden:true}));
 const nav={scrollLeft:0,getBoundingClientRect(){return{left:0,right:500}}};
 const detail={innerHTML:'',dataset:{},querySelector(selector){return selector==='.ux-client-tabs'?nav:selector.startsWith('#clientTab-')?buttons.find(b=>b.dataset.uxClientTab===selector.slice(11)):null},querySelectorAll(selector){return selector==='[role="tab"]'?buttons:selector==='[data-client-panel]'?panels:[]}};
 const context={console,document:{readyState:'loading',addEventListener(){},getElementById(){return null},querySelector(){return null},querySelectorAll(){return[]}},window:{THE_VIEW_CONFIG:{},THE_VIEW_RECOMMENDATIONS:require('../commercial-recommendations.js')},localStorage:{getItem(){return null},setItem(){writes++}},fetch(){requests++;throw new Error('Unexpected request')}};
-Object.assign(context.window,{THE_VIEW_CLIENT_PREFERENCES:require('../commercial-client-preferences.js'),THE_VIEW_FRACTION_RECOMMENDATIONS:require('../commercial-fraction-recommendations.js'),THE_VIEW_CLIENT_WORKFLOW:require('../commercial-client-workflow.js'),THE_VIEW_CLIENT_WORKSPACE:require('../commercial-client-workspace.js'),THE_VIEW_OPPORTUNITIES:require('../commercial-opportunities.js')});
+Object.assign(context.window,{THE_VIEW_CLIENT_PREFERENCES:require('../commercial-client-preferences.js'),THE_VIEW_FRACTION_RECOMMENDATIONS:require('../commercial-fraction-recommendations.js'),THE_VIEW_CLIENT_WORKFLOW:require('../commercial-client-workflow.js'),THE_VIEW_CLIENT_WORKSPACE:require('../commercial-client-workspace.js'),THE_VIEW_OPPORTUNITIES:require('../commercial-opportunities.js'),THE_VIEW_CLIENT_FOLLOWUP:require('../commercial-client-followup.js')});
+context.window.createClientFollowupUI=globalThis.createClientFollowupUI;
 vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(root,'commercial-opportunity-ui.js'),'utf8'),context);vm.runInContext(fs.readFileSync(path.join(root,'commercial-client-workflow-ui.js'),'utf8'),context);const end=source.lastIndexOf('})();');
 vm.runInContext(source.slice(0,end)+'globalThis.tabs={state,el,commercialUx,parseRow,CLIENT_DETAIL_TABS,renderClientDetail,activateClientDetailTab,clientPresentedFractionRows,clientAutomaticRecommendation,clientNextActionMarkup,openClientProfile,closeClientProfile,clientPreferenceDisplay};'+source.slice(end),context);
 const app=context.tabs;app.el.clientDetail=detail;
@@ -26,7 +27,7 @@ assert.equal(app.commercialUx.clientDetailTab,'data');assert.equal(panels.filter
 assert.equal((detail.innerHTML.match(/role="tabpanel"/g)||[]).length,3);assert.match(detail.innerHTML,/Old &lt;fixture&gt;/);
 assert.match(detail.innerHTML,/clientFractionWorkspace/);
 assert.doesNotMatch(detail.innerHTML,/Sem alternativas adicionais identificadas/);
-assert.match(detail.innerHTML,/Orçamento indicativo/);assert.match(detail.innerHTML,/Alterar situação comercial/);assert.match(detail.innerHTML,/Histórico da fração/);assert.match(detail.innerHTML,/data-contact-settings/);
+assert.match(detail.innerHTML,/Investimento/);assert.match(detail.innerHTML,/Alterar situação comercial/);assert.match(detail.innerHTML,/Histórico da fração/);assert.match(detail.innerHTML,/data-contact-settings/);
 assert.match(detail.innerHTML,/800\.000/);assert.match(detail.innerHTML,/900\.000/);assert.match(detail.innerHTML,/Fictitious &lt;price note&gt;/);
 for(const key of keys){app.activateClientDetailTab(key,true);assert.equal(focused,key);assert.equal(panels.filter(p=>!p.hidden).length,1);assert.equal(panels.find(p=>!p.hidden).dataset.clientPanel,key);assert.equal(buttons.find(b=>b.dataset.uxClientTab===key).attributes['aria-selected'],'true')}
 app.activateClientDetailTab('procura');app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'procura');
@@ -50,7 +51,7 @@ const recommendation={clientId:'old',primary:{code:'manual-undated',priority:'M�
 const original=JSON.stringify(recommendation),automatic=app.clientAutomaticRecommendation(recommendation);
 assert.equal(automatic.primary.code,'proposal');assert.equal(automatic.secondary.length,0);assert.equal(JSON.stringify(recommendation),original);
 assert.match(app.clientNextActionMarkup({label:'Sem data',step:'Preserved action',status:'undated'},recommendation,true),/Existing undated action needs review/);
-app.state.selectedClientId='incomplete';app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'data');assert.match(detail.innerHTML,/Não informado/);assert.match(detail.innerHTML,/data-contact-settings/);
+app.state.selectedClientId='incomplete';app.renderClientDetail();assert.equal(app.commercialUx.clientDetailTab,'data');assert.match(detail.innerHTML,/<dt>Tipologia<\/dt><dd>—<\/dd>/);assert.match(detail.innerHTML,/data-contact-settings/);
 const preferencesModule=context.window.THE_VIEW_CLIENT_PREFERENCES;delete context.window.THE_VIEW_CLIENT_PREFERENCES;app.renderClientDetail();assert.match(detail.innerHTML,/data-client-module-error/);assert.doesNotMatch(detail.innerHTML,/role="tabpanel"|Editar preferências/);context.window.THE_VIEW_CLIENT_PREFERENCES=preferencesModule;
 const workspaceModule=context.window.THE_VIEW_CLIENT_WORKSPACE;delete context.window.THE_VIEW_CLIENT_WORKSPACE;app.renderClientDetail();assert.match(detail.innerHTML,/data-client-module-error|Navegação dos clientes/);assert.doesNotMatch(detail.innerHTML,/role="tabpanel"/);context.window.THE_VIEW_CLIENT_WORKSPACE=workspaceModule;
 assert.equal(JSON.stringify(app.state.data),before);assert.equal(writes,0);assert.equal(requests,0);

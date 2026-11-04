@@ -50,7 +50,7 @@ try{
   await b.evaluate(()=>{const field=document.createElement('input');field.id='fictitious-unsaved-inline';document.body.appendChild(field);field.focus()});await b.locator('#fictitious-unsaved-inline').fill('Fictitious retained draft');
   await b.evaluate(()=>{document.activeElement.blur();window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}))});
   assert.equal(await b.evaluate(()=>window.__autoSyncTest.editing()),true);assert.equal(await b.locator('#fictitious-unsaved-inline').inputValue(),'Fictitious retained draft');await b.locator('#fictitious-unsaved-inline').evaluate(n=>n.remove());report.cachedPageDraftGuardPreserved=true;
-  await profile(b);await b.getByRole('tab',{name:'Oportunidades',exact:true}).click();const card=b.locator('[data-opportunity-unit="9"]');await card.locator('summary').first().click();await card.locator('[data-op-command="round"]').click();await card.locator('[name="notes"]').fill('Fictitious negotiation draft');
+  await profile(b);await b.getByRole('tab',{name:'Oportunidades',exact:true}).click();const card=b.locator('[data-opportunity-unit="9"]');await openOpportunity(b,card);await card.locator('[data-op-command="round"]').click();await card.locator('[name="notes"]').fill('Fictitious negotiation draft');
   await edit(a,'demo-3','Fictitious remote negotiation guard');await save(a);await tick(b);assert.equal(await card.locator('[name="notes"]').inputValue(),'Fictitious negotiation draft');await card.locator('[data-op-command="cancel"]').click();await tick(b);await named(b,'demo-3','Fictitious remote negotiation guard');report.negotiationDraftPreserved=true;
   await control(a,{clockOffsetMs:3600001});await edit(a,'demo-4','Fictitious hour-long session');await save(a);assert.equal(posts.at(-1).status,200);await control(a,{clockOffsetMs:0});report.expiredTicketRenewed=true;
   await control(a,{readRequired:1});await edit(a,'demo-5','Fictitious bounded retry');const before=posts.length;await save(a);const retry=posts.slice(before);assert.deepEqual(retry.map(x=>x.status),[403,200]);assert.equal(retry[0].body.requestId,retry[1].body.requestId);report.boundedReadRequiredRetry=true;
@@ -81,3 +81,4 @@ try{
   assert.deepEqual(errors,[]);report.errors=errors;report.metrics=await b.evaluate(()=>window.__autoSyncTest.metrics());
   fs.writeFileSync('auto-sync-results.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }finally{for(const c of contexts)await c.close();await browser.close()}
+import {openOpportunity} from './helpers/current-client-ui.mjs';

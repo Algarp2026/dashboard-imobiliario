@@ -25,7 +25,7 @@ try{
     await p.locator('#clientListSort').selectOption('oldest');await p.locator('#clientSearch').fill('Cliente Exemplo');assert.equal(await p.locator('.client-portfolio-row').count(),1);
     await p.locator('[data-open-profile="demo-0"]').click();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();
     assert.match(p.url(),/client=demo-0/);
-    const tab=label=>p.getByRole('tab',{name:label,exact:true}).click();
+    const tab=label=>changeClientTab(p,label);
     await tab('Dados');await snap('data');
     await p.locator('[data-client-header-edit]').click();await p.locator('#clientModal:not(.hidden)').waitFor();
     assert.equal(await p.locator('#clientProfileDialog').evaluate(e=>e.inert),true);
@@ -33,10 +33,10 @@ try{
     await tab('Procura');await p.locator('[data-preferences-edit]').click();await p.locator('[data-preference-key="typology"]').first().waitFor();await snap('preferences');await p.locator('[data-preferences-cancel]').click();
     await tab('Procura');await p.locator('#clientFractionManual>summary').click();await p.locator('#clientFractionSearch').fill('1');await snap('fractions');
     await tab('Oportunidades');await snap('presentation');
-    const card=p.locator('[data-opportunity-unit="1"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');const form=card.locator('[data-op-form]');await form.waitFor();await form.locator('[name="notes"]').fill('Rascunho ficticio preservado');
-    await tab('Dados');await tab('Oportunidades');assert.equal(await form.locator('[name="notes"]').inputValue(),'Rascunho ficticio preservado');
+    const card=p.locator('[data-opportunity-unit="1"]');await openOpportunity(p,card);await card.locator('[data-op-state]').selectOption('Apresentada');const form=card.locator('[data-op-form]');await form.waitFor();await form.locator('[name="notes"]').fill('Rascunho ficticio preservado');
+    await tab('Dados');await tab('Oportunidades');await openOpportunity(p,card);assert.equal(await form.locator('[name="notes"]').inputValue(),'Rascunho ficticio preservado');
     await tab('Oportunidades');await snap('negotiation');
-    await p.reload();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Oportunidades',exact:true}).getAttribute('aria-selected'),'true');
+    p.once('dialog',dialog=>{assert.equal(dialog.type(),'beforeunload');dialog.accept()});await p.reload();await p.locator('#clientProfileDialog:not(.hidden)').waitFor();assert.equal(await p.getByRole('tab',{name:'Oportunidades',exact:true}).getAttribute('aria-selected'),'true');
     await p.locator('[data-profile-close]').click();await p.locator('#clientProfileDialog.hidden').waitFor({state:'attached'});assert.equal(await p.locator('#clientSearch').inputValue(),'Cliente Exemplo');assert.equal(await p.locator('#clientListSort').inputValue(),'oldest');await snap('return');
     await p.waitForFunction(()=>document.activeElement?.dataset.openProfile==='demo-0');
     await p.locator('#clientSearch').fill('');await p.locator('#clientListSort').selectOption('newest');
@@ -57,3 +57,4 @@ try{
   assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);assert.deepEqual(writes,[]);
   console.log('Workspace browser PASS: four current responsive sizes, filters/sort, three functional tabs, editing/Escape, draft retention, refresh/deep links, agents and dashboard origins, return focus and zero business writes.');
 }finally{await browser.close()}
+import {openOpportunity,changeClientTab} from './helpers/current-client-ui.mjs';

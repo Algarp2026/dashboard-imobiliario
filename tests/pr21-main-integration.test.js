@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),cp=require('node:child_process');
 const main='a6727b63fe42418da21b8b52e6351444cba6e9ec',crm='9d939f3';
 const show=(ref,file)=>cp.execFileSync('git',['show',ref+':'+file],{encoding:'utf8'});
-for(const file of ['commercial.js','commercial.html','commercial.css','commercial-integrity.js','middleware.ts','scripts/build-commercial-integrity.js','api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','plantas'])if(file==='commercial.js')require('./helpers/loading-persistence-source.cjs')();else assert.equal(cp.execFileSync('git',['diff',crm,'--',file],{encoding:'utf8'}),'','Approved CRM/security source must remain exact: '+file);
+for(const file of ['commercial.js','commercial.html','commercial.css','commercial-integrity.js','middleware.ts','scripts/build-commercial-integrity.js','api','server','google_apps_script.gs','google_commercial_integrity.gs','config.js','plantas'])if(file==='commercial.js')require('./helpers/loading-persistence-source.cjs')();else if(Object.hasOwn(require('./helpers/profile-followup-source.cjs').files,file))assert.equal(require('./helpers/profile-followup-source.cjs').restoreFile(file,fs.readFileSync(file,'utf8')),show(crm,file).replace(/\r\n/g,'\n'),'Exact requested profile UI snapshot: '+file);else assert.equal(cp.execFileSync('git',['diff',file==='plantas'?'8c5026c':crm,'--',file],{encoding:'utf8'}),'','Approved CRM/security source must remain exact: '+file);
 require('./helpers/presentation-pdf-source.cjs')();
 for(const file of ['app.js','style.css','data.json','data.xlsx','scripts/data_workbook.py','scripts/update_belaformosa.py'])assert.equal(cp.execFileSync('git',['diff',main,'--',file],{encoding:'utf8'}),'','Approved PR20 analytical source must remain exact: '+file);
 const catalog=source=>JSON.parse(JSON.stringify(vm.runInNewContext('('+source.match(/const plans=({[\s\S]*?\n});/)[1]+')')));
@@ -12,6 +12,7 @@ expectedCatalog['commercial-presentation-pdf-browser.mjs']='visual-workspace';
 expectedCatalog['commercial-recovery-archive-browser.mjs']='recovery-archive';
 expectedCatalog['commercial-consultation-browser.mjs']='consultation';
 expectedCatalog['commercial-fraction-draft-browser.mjs']='consultation';
+expectedCatalog['commercial-profile-followup-browser.mjs']='visual-workspace';
 expectedCatalog['commercial-storage-growth-browser.mjs']='storage-growth';
 expectedCatalog['commercial-storage-reliability-browser.mjs']='storage-growth';
 assert.deepEqual(catalog(fs.readFileSync('tests/commercial-browser-regression.cjs','utf8')),expectedCatalog,'Keep every browser suite from both PRs');

@@ -42,11 +42,11 @@
       const directions=norm(f.orientation).split(/[\s/,;|]+/).filter(value=>['sul','este','oeste'].includes(value));
       const orientationMatch=p.choices.orientation.state!=='selected'||p.choices.orientation.values.some(value=>directions.includes(norm(value)));
       if(p.choices.orientation.state==='selected')orientationMatch?reasons.push('Orientação preferida'):differences.push(directions.length?'Orientação diferente da preferida':'Orientação não confirmada');
-      const row={...f,group:differences.length?'alternative':'main',reasons,differences,overBudgetAmount:over,overBudgetPercent:over?over/p.max*100:0,typeExact,preferenceScore:Number(p.choices.floor.state==='selected'&&floorMatch)+Number(p.choices.orientation.state==='selected'&&orientationMatch),explanation:[...reasons,...differences].join(' · ')||'Disponível; cumpre os critérios informados'};
+      const row={...f,orientationTieBreak:!differences.length&&p.choices.orientation.state==='selected'?new Set(p.choices.orientation.values.filter(value=>directions.includes(norm(value)))).size:0,group:differences.length?'alternative':'main',reasons,differences,overBudgetAmount:over,overBudgetPercent:over?over/p.max*100:0,typeExact,preferenceScore:Number(p.choices.floor.state==='selected'&&floorMatch)+Number(p.choices.orientation.state==='selected'&&orientationMatch),explanation:[...reasons,...differences].join(' · ')||'Disponível; cumpre os critérios informados'};
       (row.group==='main'?main:alternatives).push(row);
     }
     // Lexicographic priorities, with stable price/number tie-breakers; no generated scores or prose.
-    const rank=(a,b)=>Number(b.typeExact)-Number(a.typeExact)||Number(a.overBudgetAmount>0)-Number(b.overBudgetAmount>0)||b.preferenceScore-a.preferenceScore||a.differences.length-b.differences.length||a.currentPrice-b.currentPrice||a.number-b.number;
+    const rank=(a,b)=>Number(b.typeExact)-Number(a.typeExact)||Number(a.overBudgetAmount>0)-Number(b.overBudgetAmount>0)||b.preferenceScore-a.preferenceScore||a.differences.length-b.differences.length||a.currentPrice-b.currentPrice||b.orientationTieBreak-a.orientationTieBreak||a.number-b.number;
     return{profile:p,main:main.sort(rank),alternatives:alternatives.sort(rank)};
   }
   function filter(result,mode='all'){

@@ -48,7 +48,7 @@ try{
     if(mode==='after')assert.equal(await page.locator('.d2-preference-choices .ux-preference-selector').count(),3);
     await page.locator('[data-preference-key="typology"]').first().click();await page.locator('[data-preferences-cancel]').click();
     await page.getByRole('tab',{name:'Procura',exact:true}).click();await shot('client-fractions');
-    await page.getByRole('tab',{name:'Oportunidades',exact:true}).click();const card=page.locator('[data-opportunity-unit="1"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Apresentada');await shot('presentation-editor','[data-op-form]');await card.locator('[data-op-command="cancel"]').click();await shot('opportunities');assert.equal(await page.locator('.opportunity-workspace').count(),1);
+    await page.getByRole('tab',{name:'Oportunidades',exact:true}).click();const card=page.locator('[data-opportunity-unit="1"]');await openOpportunity(page,card);await card.locator('[data-op-state]').selectOption('Apresentada');await shot('presentation-editor','[data-op-form]');await card.locator('[data-op-command="cancel"]').click();await shot('opportunities');assert.equal(await page.locator('.opportunity-workspace').count(),1);
     await page.reload();await page.locator('.ux-client-tabs').waitFor();await page.locator('[data-profile-close]:visible, [data-client-return]:visible').first().click();
     assert.equal(await cache(),before);const after=await(await context.request.get(origin+'/api/test-meta')).json();assert.equal(after.revision,meta.revision);assert.equal(after.writes,0);
     await page.goto(origin+'/comparador.html');await page.locator('#openCompareMode').click();await page.locator('#compareCardsGrid').waitFor();await shot('comparator');
@@ -62,3 +62,4 @@ try{
   fs.writeFileSync(`${out}/results.json`,JSON.stringify({results,errors,failures,writes,source:'fictitious in-memory only'},null,2)+'\n');
   console.log('D2 platform PASS: current modules at four resolutions; filters, editors, cancellation, refresh, selection, original handlers, no JS/load errors, page overflow or commercial writes.');
 }finally{await browser.close()}
+import {openOpportunity} from './helpers/current-client-ui.mjs';

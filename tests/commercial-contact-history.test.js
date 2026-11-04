@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const model=require('../commercial-client-workflow.js'),copy=x=>JSON.parse(JSON.stringify(x));
 const window={THE_VIEW_CLIENT_WORKFLOW:model};
+require('./helpers/followup-ui-fixture.cjs')(window);
 vm.runInNewContext(fs.readFileSync(require.resolve('../commercial-client-workflow-ui.js'),'utf8'),{window,console});vm.runInNewContext(fs.readFileSync(require.resolve('../commercial-opportunity-ui.js'),'utf8'),{window,console});
 (async()=>{
   let client={id:'fiction',preferences:{},manualPreferences:{},priorityHistory:[{version:1,value:true}]},events=[],writes=0,nextId=0;

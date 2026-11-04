@@ -28,13 +28,13 @@ try{
       await page.getByRole('tab',{name:'Procura',exact:true}).click();
       assert.equal(await page.locator('#clientFractionWorkspace').isVisible(),true);
       await page.getByRole('tab',{name:'Oportunidades',exact:true}).click();
-      if(id==='demo-0'){assert.match(await page.locator('[data-opportunity-unit="9"]>summary').innerText(),/Reservada/);await page.locator('[data-opportunity-unit="9"]>summary').click();assert.match(await page.locator('[data-opportunity-unit="9"]').innerText(),/Reservado/)}
+      if(id==='demo-0'){assert.match(await page.locator('[data-opportunity-unit="9"]>[data-opportunity-open]').innerText(),/Reservada/);await openOpportunity(page,page.locator('[data-opportunity-unit="9"]'));assert.match(await page.locator('[data-opportunity-unit="9"]').innerText(),/Reservado/)}
       if(id==='demo-2'){
-        const card=page.locator('[data-opportunity-unit="24"]');await card.locator('summary').first().click();await card.locator('[data-op-state]').selectOption('Em negociação');
+        const card=page.locator('[data-opportunity-unit="24"]');await openOpportunity(page,card);await card.locator('[data-op-state]').selectOption('Em negociação');
         const form=card.locator('[data-op-form]');assert.equal(await form.locator('[name="interest"]').count(),0);assert.equal(await form.locator('[name="amount"]').count(),1);assert.equal(await form.locator('[name="terms"]').count(),1);
         assert.equal(await card.locator('[data-op-state] option[value="Reservada"]').count(),1);await card.locator('[data-op-command="cancel"]').click();assert.equal(await card.locator('[data-op-form]').count(),0);
       }
-      await page.locator('[data-profile-close]').click();
+      await closeClientProfile(page);
     }
     await page.locator('#clientStageFilter').selectOption('Reservado');
     assert.equal(await page.locator('[data-client="demo-0"]').count(),1);
@@ -51,3 +51,4 @@ try{
   assert.ok(external.every(url=>!url.includes('script.google')&&!url.includes('dashboard-imobiliario.vercel')));
   console.log('Desktop/mobile passed: list/profile/fractions/negotiation share projected stages; deterministic movement form, cancel, filters, reload, identical CRM cache and zero commercial writes.');
 }finally{await browser.close()}
+import {openOpportunity,closeProfile as closeClientProfile} from './helpers/current-client-ui.mjs';

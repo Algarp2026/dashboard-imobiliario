@@ -38,7 +38,7 @@
     dialog.innerHTML='<section class="modal panel client-profile-modal" role="dialog" aria-modal="true" aria-label="Ficha do cliente" tabindex="-1"><div class="client-profile-toolbar"><strong>Ficha do cliente</strong><span data-profile-sync role="status"></span><nav aria-label="Navegar entre clientes"><button class="ghost-button ux-icon-button" type="button" data-profile-prev title="Cliente anterior" aria-label="Cliente anterior"><i data-lucide="arrow-left"></i></button><button class="ghost-button ux-icon-button" type="button" data-profile-next title="Cliente seguinte" aria-label="Cliente seguinte"><i data-lucide="arrow-right"></i></button><button class="ghost-button ux-icon-button" type="button" data-profile-close title="Fechar ficha" aria-label="Fechar ficha"><i data-lucide="x"></i></button></nav></div></section>';
     (document.querySelector('.ux-app-shell')||document.body).append(dialog);
     const surface=dialog.firstElementChild,details=adapter.detail;surface.append(details);
-    let opened=false,current='',origin=null,lastUrl='',scheduled=false,lastCount=0;
+    let opened=false,current='',origin=null,lastUrl='',scheduled=false,lastCount=0,suspendedOpportunity=null;
     const openOrder=new Map(),originalStyles=new Map(),inertNodes=new Map(),scroll=new Map();let sequence=0;
     const visible=element=>!element.classList.contains('hidden')&&element.getClientRects().length;
     const allDialogs=()=>[...document.querySelectorAll('.modal-backdrop,.ux-drawer-backdrop')].filter(visible);
@@ -46,6 +46,23 @@
     const focusables=element=>[...element.querySelectorAll('button,a[href],input,select,textarea,summary,[tabindex="0"]')].filter(node=>!node.disabled&&!node.closest('[inert]')&&node.getClientRects().length);
     function busy(){return !!details.querySelector('fieldset:disabled,button[type="submit"]:disabled,[data-fraction-save]:disabled')}
     function focusProfile(){(details.querySelector('.client-detail-header h2')||surface).focus({preventScroll:true})}
+    function coordinateOpportunity(){
+      if(!opened){for(const child of details.querySelectorAll('.client-opportunity-dialog[open]'))child.close();suspendedOpportunity=null;return}
+      const external=allDialogs().filter(element=>element!==dialog),native=details.querySelector('.client-opportunity-dialog[open]');
+      if(external.length){
+        if(native){
+          if(suspendedOpportunity?.client!==current||suspendedOpportunity.id!==native.id)suspendedOpportunity={client:current,id:native.id,element:native,scroll:native.scrollTop,focus:document.activeElement};
+          else suspendedOpportunity.element=native;
+          native.close();const active=top();(focusables(active)[0]||active.querySelector('[role="dialog"]'))?.focus({preventScroll:true});
+        }
+        return;
+      }
+      const saved=suspendedOpportunity;suspendedOpportunity=null;
+      if(saved&&saved.client===current&&saved.element.isConnected&&!saved.element.closest('[hidden],.hidden')){
+        if(!saved.element.open)saved.element.showModal();saved.element.scrollTop=saved.scroll;
+        if(saved.focus?.isConnected)saved.focus.focus({preventScroll:true});
+      }
+    }
     function syncStack(){
       const active=allDialogs();
       for(const element of active)if(!openOrder.has(element)){openOrder.set(element,++sequence);originalStyles.set(element,{z:element.style.getPropertyValue('z-index'),priority:element.style.getPropertyPriority('z-index'),focus:document.activeElement})}
@@ -73,6 +90,7 @@
           const ids=adapter.visibleIds(),index=ids.indexOf(current);dialog.querySelector('[data-profile-prev]').disabled=index<=0;dialog.querySelector('[data-profile-next]').disabled=index<0||index>=ids.length-1;
         }
         syncStack();
+        coordinateOpportunity();
       }finally{observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']})}
     }
     function route(id,tab,push){
@@ -113,6 +131,7 @@
       const button=[...active.querySelectorAll('[data-dialog-cancel],.modal-close,[data-close-clients-summary],[data-close-price-list-modal]')].find(node=>node.getClientRects().length&&!node.disabled);button?.click();
     }
     document.addEventListener('keydown',event=>{
+      if(event.target.closest?.('.client-opportunity-dialog[open]'))return;
       const active=top();if(!active)return;
       if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();closeTop();return}
       if(event.key!=='Tab')return;

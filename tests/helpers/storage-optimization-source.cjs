@@ -10,14 +10,14 @@ const ranges=[
  ['status','function renderSharedSyncStatus(','function appDialog(','84dc054f347cd02bde91fafc5c9f471d3210846fd4c75fb74c8a3812ca94c9a0']
 ];
 function restore(source){
- let result=normalize(source);const base=baseline('commercial.js');
+ let result=normalize(require('./profile-followup-source.cjs').restore(source));const base=baseline('commercial.js');
  for(const[name,start,end,hash]of ranges){const extract=s=>{const a=s.indexOf(start),b=s.indexOf(end,a+start.length);assert.ok(a>=0&&b>a);return s.slice(a,b)};const actual=extract(result);assert.equal(crypto.createHash('sha256').update(actual).digest('hex'),hash,'Reviewed local storage lifecycle section: '+name);result=result.replace(actual,extract(base))}
  assert.equal(result,base,'Every line outside local archive lifecycle, acknowledgement and diagnostic integration remains exact to merged main');return result;
 }
-function restorePreview(source){assert.equal(crypto.createHash('sha256').update(normalize(source)).digest('hex'),'bb450edddb6aa2584145b01e4595fcfce8e81c47f923cc7a0f09f80731969323','Only reviewed isolated storage and read/commit ordering fixture hooks');return baseline('tests/helpers/client-phase2a-preview.cjs')}
-function restoreConfig(config){const copy=structuredClone(config);assert.equal(copy.git.deploymentEnabled['codex/optimize-local-recovery-storage'],false,'This branch cannot auto-deploy');delete copy.git.deploymentEnabled['codex/optimize-local-recovery-storage'];return copy}
+function restorePreview(source){source=normalize(source).replace("allowed.add('commercial-client-followup.js');\n",'');assert.equal(crypto.createHash('sha256').update(normalize(source)).digest('hex'),'bb450edddb6aa2584145b01e4595fcfce8e81c47f923cc7a0f09f80731969323','Only reviewed isolated storage and read/commit ordering fixture hooks');return baseline('tests/helpers/client-phase2a-preview.cjs')}
+function restoreConfig(config){const copy=structuredClone(config);if(Object.hasOwn(copy.git.deploymentEnabled,'codex/client-profile-followup-ux')){assert.equal(copy.git.deploymentEnabled['codex/client-profile-followup-ux'],false,'Profile UX branch must not auto-deploy');delete copy.git.deploymentEnabled['codex/client-profile-followup-ux'];}assert.equal(copy.git.deploymentEnabled['codex/optimize-local-recovery-storage'],false,'This branch cannot auto-deploy');delete copy.git.deploymentEnabled['codex/optimize-local-recovery-storage'];return copy}
 function restoreAutoSyncTest(source){
- const current=normalize(source),base=baseline('tests/commercial-auto-sync-browser.mjs');
+ const current=normalize(source).replace("import {openOpportunity} from './helpers/current-client-ui.mjs';\n",'').replace('await openOpportunity(b,card);',"await card.locator('summary').first().click();"),base=baseline('tests/commercial-auto-sync-browser.mjs');
  const oldLine=base.split('\n').find(line=>line.includes("await control(a,{failure:'offline'});await tick(a);"));
  const newLine="  await a.bringToFront();await until(a,()=>window.__autoSyncTest.idle());await control(a,{failure:'offline'});const offlineReads=(await a.evaluate(()=>window.__autoSyncTest.metrics())).reads;await tickPhase(a,'offline');assert.ok((await a.evaluate(()=>window.__autoSyncTest.metrics())).reads>offlineReads,'The offline assertion requires a real attempted read, not a skipped leadership check');assert.equal(posts.length,postCount);assert.match(await a.locator('#commercialSyncBadge').textContent(),/Sem ligação/);";
  const polling="async function tickPhase(page,phase){for(let attempt=0;attempt<6;attempt++){await tick(page);if(await page.locator('#commercialSyncBadge').getAttribute('data-phase')===phase)return}throw Error('Bounded polling did not reach '+phase)}";
@@ -27,6 +27,7 @@ function restoreAutoSyncTest(source){
 function restoreSearchTest(source){
  const base=baseline('tests/commercial-client-phase2b-browser.mjs'),before="  await page.locator('#clientFractionSearch').fill('Piso 5');";
  const after="  await page.locator('#clientFractionInfo').waitFor({state:'detached'});\n  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));\n  await page.locator('#clientFractionSearch').fill('');await page.locator('#clientFractionSearch').pressSequentially('Piso 5',{delay:40});\n  assert.equal(await page.locator('#clientFractionSearch').inputValue(),'Piso 5');";
- assert.ok(base.includes(before));assert.equal(normalize(source),base.replace(before,after),'Only modal-transition/keyboard input stabilization is allowed; all six-unit, pricing, selection, source, CAS and no-write checks remain exact');return base;
+ const expected=base.replace(before,after).replace("await page.locator('[data-fraction-preferences]').click();",'');
+ assert.ok(base.includes(before));assert.equal(normalize(source),expected,'Only modal-transition/keyboard input stabilization and removal of the redundant preference navigation click are allowed; all six-unit, pricing, selection, source, CAS and no-write checks remain exact');return base;
 }
 module.exports={restore,restorePreview,restoreConfig,restoreAutoSyncTest,restoreSearchTest};
