@@ -23,6 +23,7 @@ async function edit(page,id,name){await profile(page,id);await page.getByRole('b
 async function save(page){await page.locator('#saveClient').click();await page.locator('#clientModal.hidden').waitFor({state:'attached'})}
 async function until(page,predicate,arg){const deadline=Date.now()+45000;while(Date.now()<deadline){if(await page.evaluate(predicate,arg))return;await new Promise(r=>setTimeout(r,40))}throw Error('Isolated condition timed out: '+JSON.stringify(await page.evaluate(()=>({...window.__autoSyncTest.status(),metrics:window.__autoSyncTest.metrics(),visibility:document.visibilityState}))))}
 async function tick(page){await page.clock.fastForward(34000);await page.evaluate(()=>window.__autoSyncTest.check());await until(page,()=>window.__autoSyncTest.idle())}
+async function tickPhase(page,phase){for(let attempt=0;attempt<6;attempt++){await tick(page);if(await page.locator('#commercialSyncBadge').getAttribute('data-phase')===phase)return}throw Error('Bounded polling did not reach '+phase)}
 async function named(page,id,name){await until(page,({key,id,name})=>JSON.parse(localStorage.getItem(key)).clients.find(c=>c.id===id)?.name===name,{key,id,name})}
 async function control(page,body){await page.evaluate(async body=>{const r=await fetch('/api/test-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw Error('Fixture control failed')},body)}
 try{
@@ -59,8 +60,8 @@ try{
   await a.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'))});
   const readsBefore=(await a.evaluate(()=>window.__autoSyncTest.metrics())).reads;await a.clock.fastForward(600000);assert.equal((await a.evaluate(()=>window.__autoSyncTest.metrics())).reads,readsBefore);
   await a.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'))});await tick(a);assert.equal(posts.length,postCount);report.hiddenReadsAvoided=true;
-  await control(a,{failure:'offline'});await tick(a);assert.equal(posts.length,postCount);assert.match(await a.locator('#commercialSyncBadge').textContent(),/Sem ligação/);
-  await control(a,{failure:''});await a.clock.fastForward(70000);await a.evaluate(()=>window.dispatchEvent(new Event('online')));await tick(a);await until(a,()=>document.getElementById('commercialSyncBadge')?.dataset.phase==='synced');report.onlineRecovery=true;
+  await a.bringToFront();await until(a,()=>window.__autoSyncTest.idle());await control(a,{failure:'offline'});const offlineReads=(await a.evaluate(()=>window.__autoSyncTest.metrics())).reads;await tickPhase(a,'offline');assert.ok((await a.evaluate(()=>window.__autoSyncTest.metrics())).reads>offlineReads,'The offline assertion requires a real attempted read, not a skipped leadership check');assert.equal(posts.length,postCount);assert.match(await a.locator('#commercialSyncBadge').textContent(),/Sem ligação/);
+  await control(a,{failure:''});await a.clock.fastForward(70000);await a.evaluate(()=>window.dispatchEvent(new Event('online')));await tickPhase(a,'synced');report.onlineRecovery=true;
   const sourceAfter=await a.evaluate(async()=>await(await fetch('/api/commercial-data')).json());assert.deepEqual(sourceAfter.data,sourceBefore.data);report.readOnlyPolls=true;
   // Hold a real POST after its fresh GET, let another session commit, then
   // release it: server-side CAS must still return an actual HTTP 409.
