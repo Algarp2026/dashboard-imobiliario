@@ -38,5 +38,18 @@ try{
   results.push({width,consultationClean:true,addRemoveRevertCancelProtected:true,realBeforeUnloadPreservesDraft:true,noSelectionPost:true,sameClientUpdatePreservesApprovals:true,saveConfirmedAndReloaded:true,unrelatedDataPreserved:true,originalPendingAndArchivePreserved:true,noVersionUiOrNetwork:true});
   await p.context().close();await writer.context().close();const reset=await session();await control(reset,{reset:true});await reset.context().close();
  }
+ // The same read/write ordering must remain coherent even when native checkpoint
+ // I/O completes only after the write acknowledgement, with no longer timeout.
+ for(const width of [1440,390]){
+  const p=await session(width),before=(await remote(p)).data,posts=[];p.on('response',r=>{if(r.url()===origin+'/api/commercial-data'&&r.request().method()==='POST')posts.push(r.status())});
+  await p.waitForFunction(()=>window.__readCommitOrderTest.begin());await p.waitForFunction(()=>window.__readCommitOrderTest.held());
+  assert.equal(await p.evaluate(width=>window.__readCommitOrderTest.write('Fictitious ordered commit '+width),width),true);
+  const confirmed=await p.evaluate(()=>window.__readCommitOrderTest.inspect());assert.equal(confirmed.phase,'synced');assert.equal(confirmed.pending,false);assert.equal(confirmed.cacheMatchesBase,true);
+  const outcome=await p.evaluate(()=>window.__readCommitOrderTest.release());assert.equal(outcome.applied,false);assert.equal(outcome.revision,confirmed.revision);await synced(p);
+  const flags=await p.evaluate(()=>window.__readCommitOrderTest.inspect());assert.deepEqual(flags,{phase:'synced',busy:false,dirty:false,verified:true,error:'',pending:false,marker:false,revision:confirmed.revision,revisionPreserved:true,metadataRevisionMatches:true,cacheMatchesState:true,cacheMatchesBase:true,metadataBaseMatches:true});assert.deepEqual(posts,[200]);
+  const after=(await remote(p)).data;assert.equal(after.clients[0].notes,'Fictitious ordered commit '+width);for(const field of Object.keys(before).filter(field=>field!=='clients'))assert.deepEqual(after[field],before[field]);assert.deepEqual(after.clients.slice(1),before.clients.slice(1));
+  await p.reload();await p.locator('[data-open-profile="demo-0"]').waitFor();await synced(p);const refreshed=await p.evaluate(()=>window.__readCommitOrderTest.inspect());assert.equal(refreshed.metadataRevisionMatches,true);assert.equal(refreshed.cacheMatchesBase,true);assert.equal(refreshed.pending,false);assert.equal(refreshed.dirty,false);assert.deepEqual(posts,[200],'Refresh must not duplicate an already acknowledged write');
+  results.push({width,lateCheckpointReadIgnored:true,confirmedRevisionPreserved:true,cacheAndPendingCoherent:true,onePostOnly:true,refreshDoesNotDuplicate:true});await p.context().close();
+ }
  assert.deepEqual(versionRequests,[]);assert.deepEqual(errors,[]);await fs.writeFile('fraction-draft-results.json',JSON.stringify({results,errors,versionRequests,production:false},null,2));console.log(JSON.stringify({results,errors}));
 }finally{for(const context of contexts)await context.close().catch(()=>{});await browser.close()}

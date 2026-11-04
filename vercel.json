@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "codex/optimize-local-recovery-storage": false,
       "codex/fix-local-recovery-archive": false,
       "codex/fix-crm-loading-persistence": false,
       "codex/presentation-pdf-price-option": false,

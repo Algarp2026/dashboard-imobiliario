@@ -1,0 +1,699 @@
+{
+  "base": "8148c67eb8dee274b201ae570026c5dd45b798e0",
+  "commercialSourceSha256": "ea40a377e18910422f68bc968603a48321d550f352560a0c74e682ac0d54a0b3",
+  "productionAccess": false,
+  "googleOperations": 0,
+  "limits": {
+    "records": 64,
+    "estimatedBytes": 16777216,
+    "confirmed": 5
+  },
+  "node": {
+    "passed": 66,
+    "failed": 0,
+    "suites": [
+      "access-routes.test.js",
+      "commercial-agent-module-guard.test.js",
+      "commercial-apartment16-recovery.test.js",
+      "commercial-archive-verifier.test.js",
+      "commercial-audit-defects.test.js",
+      "commercial-auto-sync.test.js",
+      "commercial-browser-policy.test.js",
+      "commercial-capacity.test.js",
+      "commercial-chunk-storage.test.js",
+      "commercial-client-preferences.test.js",
+      "commercial-client-report-grouping.test.js",
+      "commercial-client-reports.test.js",
+      "commercial-client-tabs.test.js",
+      "commercial-client-workflow.test.js",
+      "commercial-client-workspace.test.js",
+      "commercial-composition-d2.test.js",
+      "commercial-concurrency.test.js",
+      "commercial-construction.test.js",
+      "commercial-consultation-guards.test.js",
+      "commercial-contact-history.test.js",
+      "commercial-contacts.test.js",
+      "commercial-cycle-boundaries.test.js",
+      "commercial-d2-platform.test.js",
+      "commercial-event-provenance.test.js",
+      "commercial-followups.test.js",
+      "commercial-fraction-draft.test.js",
+      "commercial-fraction-recommendations.test.js",
+      "commercial-home-entry.test.js",
+      "commercial-integrity-server.test.js",
+      "commercial-latency.test.js",
+      "commercial-loading-persistence.test.js",
+      "commercial-local-backups.test.js",
+      "commercial-opportunities.test.js",
+      "commercial-opportunity-cards.test.js",
+      "commercial-opportunity-matrix.test.js",
+      "commercial-pending-local.test.js",
+      "commercial-persistence-performance.test.js",
+      "commercial-post-audit-api.test.js",
+      "commercial-post-audit.test.js",
+      "commercial-presentation-pdf.test.js",
+      "commercial-progressive-flow.test.js",
+      "commercial-read-contention.test.js",
+      "commercial-recommendations-ui.test.js",
+      "commercial-recommendations.test.js",
+      "commercial-recovery-archive.test.js",
+      "commercial-recovery-client-api.test.js",
+      "commercial-reform-defects.test.js",
+      "commercial-safe-reconciliation.test.js",
+      "commercial-smoke.test.js",
+      "commercial-source-integrity.test.js",
+      "commercial-stage-engine.test.js",
+      "commercial-storage-lifecycle.test.js",
+      "commercial-sync-api.test.js",
+      "commercial-sync-client.test.js",
+      "commercial-sync-final-audit.test.js",
+      "commercial-ticket-renewal.test.js",
+      "commercial-ux.test.js",
+      "commercial-write-integrity.test.js",
+      "commercial-write-recovery.test.js",
+      "comparator-belaformosa.test.js",
+      "compset.test.js",
+      "google-read-check.test.js",
+      "pr20-main-integration.test.js",
+      "pr21-main-integration.test.js",
+      "pr22-main-integration.test.js",
+      "pricing-analysis.test.js"
+    ]
+  },
+  "syntax": {
+    "passed": 153,
+    "failed": 0
+  },
+  "browser": {
+    "catalogPassed": 33,
+    "catalogFailed": 0,
+    "singleUninterruptedGreenRun": false,
+    "runs": [
+      {
+        "name": "storage-final-browser",
+        "results": [
+          {
+            "name": "commercial-storage-growth-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-storage-reliability-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-consultation-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-fraction-draft-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-recovery-archive-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-loading-persistence-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-presentation-pdf-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-safe-reconciliation-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "comparator-belaformosa-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-auto-sync-browser.mjs",
+            "code": 1,
+            "passed": false
+          },
+          {
+            "name": "crm-reform-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "crm-reform-safety-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "crm-reform-report-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "crm-post-audit-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-local-quota-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-pending-local-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-followup-layout-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-audit-defects-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-stage-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-client-phase2a-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-client-phase2b-browser.mjs",
+            "code": 1,
+            "passed": false
+          },
+          {
+            "name": "commercial-client-complete-exports.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-contacts-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-pr6-regression-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-profile-routing-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-home-entry-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-client-report-grouping-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "client-workspace-audit.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "client-workspace-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "client-workspace-dialogs.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "composition-d2-history-routing-probe.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "composition-d2-platform-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "visual-audit-browser.mjs",
+            "code": 0,
+            "passed": true
+          }
+        ]
+      },
+      {
+        "name": "storage-final-targeted",
+        "results": [
+          {
+            "name": "commercial-storage-growth-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-storage-reliability-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-auto-sync-browser.mjs",
+            "code": 1,
+            "passed": false
+          },
+          {
+            "name": "commercial-client-phase2b-browser.mjs",
+            "code": 1,
+            "passed": false
+          },
+          {
+            "name": "commercial-recovery-archive-browser.mjs",
+            "code": 0,
+            "passed": true
+          }
+        ]
+      },
+      {
+        "name": "storage-ui-final",
+        "results": [
+          {
+            "name": "commercial-auto-sync-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-client-phase2b-browser.mjs",
+            "code": 1,
+            "passed": false
+          }
+        ]
+      },
+      {
+        "name": "storage-final-confirmation",
+        "results": [
+          {
+            "name": "commercial-client-phase2b-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-storage-growth-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-storage-reliability-browser.mjs",
+            "code": 0,
+            "passed": true
+          }
+        ]
+      },
+      {
+        "name": "storage-commit-qa",
+        "results": [
+          {
+            "name": "commercial-storage-reliability-browser.mjs",
+            "code": 0,
+            "passed": true
+          },
+          {
+            "name": "commercial-recovery-archive-browser.mjs",
+            "code": 0,
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "final": [
+      {
+        "name": "commercial-storage-growth-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-confirmation"
+      },
+      {
+        "name": "commercial-storage-reliability-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-commit-qa"
+      },
+      {
+        "name": "commercial-consultation-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-fraction-draft-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-recovery-archive-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-commit-qa"
+      },
+      {
+        "name": "commercial-loading-persistence-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-presentation-pdf-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-safe-reconciliation-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "comparator-belaformosa-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-auto-sync-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-ui-final"
+      },
+      {
+        "name": "crm-reform-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "crm-reform-safety-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "crm-reform-report-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "crm-post-audit-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-local-quota-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-pending-local-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-followup-layout-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-audit-defects-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-stage-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-client-phase2a-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-client-phase2b-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-confirmation"
+      },
+      {
+        "name": "commercial-client-complete-exports.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-contacts-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-pr6-regression-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-profile-routing-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-home-entry-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "commercial-client-report-grouping-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "client-workspace-audit.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "client-workspace-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "client-workspace-dialogs.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "composition-d2-history-routing-probe.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "composition-d2-platform-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      },
+      {
+        "name": "visual-audit-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "validatedIn": "storage-final-browser"
+      }
+    ],
+    "previousMainControl": {
+      "source": "8148c67eb8dee274b201ae570026c5dd45b798e0",
+      "searchDiagnosticCaptureEnabled": true,
+      "results": [
+        {
+          "name": "commercial-auto-sync-browser.mjs",
+          "code": 0,
+          "passed": true
+        },
+        {
+          "name": "commercial-client-phase2b-browser.mjs",
+          "code": 0,
+          "passed": true
+        }
+      ]
+    }
+  },
+  "growth": {
+    "baseline": {
+      "simulation": "400 unchanged reads + 400 distinct confirmed revisions; volatile confirmation cache reset every 5 revisions; final idle maintenance",
+      "unchangedBefore": 0,
+      "unchangedAfter": 0,
+      "completed": 65,
+      "error": "LOCAL_BACKUP_CAPACITY",
+      "peakCount": 64,
+      "peakBytes": 9169368,
+      "peakPhysicalBytes": 9186904,
+      "finalPhysicalBytes": 9186904,
+      "diagnostics": null,
+      "elapsedMs": 6373,
+      "realGoogle": false
+    },
+    "candidate": {
+      "simulation": "400 unchanged reads + 400 distinct confirmed revisions; volatile confirmation cache reset every 5 revisions; final idle maintenance",
+      "unchangedBefore": 0,
+      "unchangedAfter": 0,
+      "completed": 400,
+      "error": "",
+      "peakCount": 5,
+      "peakBytes": 716380,
+      "peakPhysicalBytes": 724250,
+      "finalPhysicalBytes": 195506,
+      "diagnostics": {
+        "total": 5,
+        "confirmed": 5,
+        "protected": 0,
+        "review": 0,
+        "estimatedBytes": 195506,
+        "expandedBytes": 715100,
+        "recoverableBytes": 0,
+        "limits": {
+          "records": 64,
+          "bytes": 16777216,
+          "confirmed": 5
+        },
+        "reasons": {
+          "confirmada": 5
+        },
+        "metrics": {
+          "avoided": 0,
+          "consolidated": 0,
+          "compressionFallbacks": 0,
+          "stalePlans": 1
+        },
+        "browser": {
+          "usage": 110592,
+          "quota": 10737528832
+        }
+      },
+      "elapsedMs": 28469,
+      "realGoogle": false
+    }
+  },
+  "stress": {
+    "results": [
+      {
+        "successiveConfirmedWrites": 120,
+        "peakRecords": 6,
+        "afterReopen": 5,
+        "unrelatedCommercialFieldsExact": true
+      },
+      {
+        "twoComputersIndependentEdits": true
+      },
+      {
+        "lostResponseOriginalIdentity": true,
+        "reloadAndIdempotentRecovery": true,
+        "noDuplicateEvents": true
+      },
+      {
+        "beforeDeliveryFailure": true,
+        "newerLocalEditAndOriginalRequestPreserved": true
+      },
+      {
+        "cas409": true,
+        "losingOriginalProposalArchived": true
+      },
+      {
+        "nativeTransactionAbortPreservesOriginals": true,
+        "dedupOnlyExactIdentity": true,
+        "gzipRetainsLatestPlain": true,
+        "readableExportOfflineVerified": true,
+        "recoveryEquivalent": true
+      },
+      {
+        "compressionFailurePreservesPlainBytes": true,
+        "decompressionFailurePreservesOpaqueBytes": true
+      },
+      {
+        "twoTabsStalePlanCannotDeleteOrReplace": true
+      },
+      {
+        "fullProtectedArchiveBlocksSafely": true,
+        "legacyPendingAndUnknownMetadataPreserved": true,
+        "exportWhileFull": true,
+        "aggregateDiagnosticWithoutPersonalData": true
+      },
+      {
+        "nativeIndexedDBQuotaExceeded": true,
+        "quotaSimulation": {
+          "quotaReached": true,
+          "completed": 5
+        },
+        "unconfirmedOriginalPreserved": true,
+        "notIncorrectlySynced": true,
+        "noPostAfterLocalQuotaFailure": true,
+        "externalExportWithoutStorageSpace": true
+      }
+    ],
+    "realGoogle": false,
+    "errors": []
+  },
+  "unchangedSinceMain": [
+    "api",
+    "server",
+    "google_apps_script.gs",
+    "google_commercial_integrity.gs",
+    "commercial-integrity.js",
+    "commercial-opportunities.js",
+    "commercial-opportunity-ui.js",
+    "commercial-client-workflow.js",
+    "commercial-client-workflow-ui.js",
+    "commercial-client-preferences.js",
+    "commercial-client-workspace.js",
+    "commercial-client-workspace.css",
+    "commercial.html",
+    "commercial.css",
+    "app.js",
+    "style.css",
+    "view-theme.css",
+    "data.json",
+    "data.xlsx",
+    "config.js",
+    "plantas",
+    "middleware.ts"
+  ]
+}

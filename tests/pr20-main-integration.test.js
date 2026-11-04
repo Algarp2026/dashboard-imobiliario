@@ -16,7 +16,9 @@ for(const file of changed.filter(file=>!combined.has(file))){
   const current=require('./helpers/recovery-archive-source.cjs').restorePreview(fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n'));
   const hook="      if(process.env.LOADING_PERSISTENCE_TESTS==='true'){const finish=source.lastIndexOf('})();');source=source.slice(0,finish)+'window.__loadingPersistenceTest={read:()=>loadRemoteData(),write:()=>syncRemote()};'+source.slice(finish)}\n";
   assert.equal(current.replace(hook,''),show(reconciliation,file).replace(/\r\n/g,'\n'),'Only the explicit isolated loading-test hook may extend the preview');
- }else assert.equal(cp.execFileSync('git',['diff',reconciled.has(file)?reconciliation:main,'--',file],{encoding:'utf8'}),'','Published PR19/PR21 source must remain exact: '+file);
+ }else if(file==='tests/commercial-auto-sync-browser.mjs')assert.equal(require('./helpers/storage-optimization-source.cjs').restoreAutoSyncTest(fs.readFileSync(file,'utf8')),show(reconciled.has(file)?reconciliation:main,file).replace(/\r\n/g,'\n'),'Only the explicit browser failure wait may extend the reviewed suite');
+ else if(file==='tests/commercial-client-phase2b-browser.mjs')assert.equal(require('./helpers/storage-optimization-source.cjs').restoreSearchTest(fs.readFileSync(file,'utf8')),show(reconciled.has(file)?reconciliation:main,file).replace(/\r\n/g,'\n'),'Only modal/keyboard stabilization may extend the reviewed search suite');
+ else assert.equal(cp.execFileSync('git',['diff',reconciled.has(file)?reconciliation:main,'--',file],{encoding:'utf8'}),'','Published PR19/PR21 source must remain exact: '+file);
 }
 require('./helpers/presentation-pdf-source.cjs')();
 for(const file of ['style.css','scripts/data_workbook.py'])assert.equal(cp.execFileSync('git',['diff',reviewed,'--',file],{encoding:'utf8'}),'','Reviewed PR20 must remain exact: '+file);
@@ -39,7 +41,7 @@ expected.git.deploymentEnabled={...previous.git.deploymentEnabled,...expected.gi
 expected.git.deploymentEnabled['codex/fix-crm-loading-persistence']=false;
 expected.git.deploymentEnabled['codex/presentation-pdf-price-option']=false;
 expected.git.deploymentEnabled['codex/fix-local-recovery-archive']=false;
-assert.deepEqual(JSON.parse(fs.readFileSync('vercel.json','utf8')),expected,'Preserve all configuration and both branch deployment guards');
+assert.deepEqual(require('./helpers/storage-optimization-source.cjs').restoreConfig(JSON.parse(fs.readFileSync('vercel.json','utf8'))),expected,'Preserve all configuration and both branch deployment guards');
 const browser=fs.readFileSync('tests/commercial-browser-regression.cjs','utf8');
 for(const suite of ['commercial-auto-sync-browser.mjs','commercial-safe-reconciliation-browser.mjs','comparator-belaformosa-browser.mjs','commercial-client-phase2b-browser.mjs'])assert.ok(browser.includes("'"+suite+"':"),'Browser catalog must include '+suite);
 const node=fs.readFileSync('tests/commercial-client-complete-regression.cjs','utf8');

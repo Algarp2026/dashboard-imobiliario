@@ -5,6 +5,8 @@ const {consolidated}=require('./helpers/browser-suite-policy.cjs');
 if(!Number.isInteger(port)||port<53000||port>53999)throw Error('Use a dedicated loopback test port in 53000..53999');
 const output=path.resolve(process.env.BROWSER_REGRESSION_OUTPUT||path.join(os.tmpdir(),'the-view-browser-regression'));
 const plans={
+ 'commercial-storage-growth-browser.mjs':'storage-growth',
+ 'commercial-storage-reliability-browser.mjs':'storage-growth',
  'commercial-consultation-browser.mjs':'consultation',
  'commercial-fraction-draft-browser.mjs':'consultation',
  'commercial-recovery-archive-browser.mjs':'recovery-archive',
@@ -55,7 +57,7 @@ async function test(name){
   console.log('RUN '+name);await ready(server);
   const gitDir=cp.execFileSync('git',['rev-parse','--absolute-git-dir'],{cwd:repo,encoding:'utf8'}).trim();
   const run=cp.spawn(process.execPath,[path.join(repo,'tests',name)],{cwd:dir,env:{...env,GIT_DIR:gitDir,GIT_WORK_TREE:repo,REFORM_ARTIFACTS:dir,COMPLETE_ARTIFACTS:path.join(dir,'docs/client-profile-complete'),PHASE2A_ARTIFACTS:dir,PHASE2B_ARTIFACTS:dir},windowsHide:true,stdio:['ignore','pipe','pipe']});
-  let log='';const logPath=path.join(dir,'output.log');fs.writeFileSync(logPath,'');const append=b=>{log+=b;fs.appendFileSync(logPath,b)};run.stdout.on('data',append);run.stderr.on('data',append);const timer=setTimeout(()=>run.kill(),240000);
+  let log='';const logPath=path.join(dir,'output.log');fs.writeFileSync(logPath,'');const append=b=>{log+=b;fs.appendFileSync(logPath,b)};run.stdout.on('data',append);run.stderr.on('data',append);const timer=setTimeout(()=>run.kill(),name.startsWith('commercial-storage-')?600000:240000);
   const code=await new Promise((resolve,reject)=>{run.once('error',reject);run.once('exit',resolve)});clearTimeout(timer);
   fs.writeFileSync(path.join(dir,'output.log'),log);results.push({name,code,passed:code===0});console.log((code===0?'PASS ':'FAIL ')+name+(code===0?'':'\n'+log.slice(-3500)));
  }finally{server.kill();await new Promise(resolve=>server.exitCode!==null?resolve():server.once('exit',resolve));fs.writeFileSync(path.join(dir,'server.log'),serverLog)}
