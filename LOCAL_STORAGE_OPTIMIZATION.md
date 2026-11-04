@@ -199,3 +199,12 @@ No promise can prevent browser/site-data deletion, device failure, origin-wide
 quota imposed by unrelated code, or loss in private mode; external backups remain
 necessary. Testing used Chrome only; other engines/codec fallbacks warrant
 controlled validation before rollout. Publication remains blocked pending review.
+
+## Final mobile blocker follow-up
+
+The later continuous audit exposed a read/write ordering defect also reproduced
+on main. A minimal checkpoint-boundary fence prevents an obsolete read from
+undoing a newer confirmed revision. This is an explicitly reviewed read-state
+correction, not a change to the write protocol or commercial rules. The original
+validation above remains historical; see [PR26_READ_WRITE_ORDERING.md](PR26_READ_WRITE_ORDERING.md)
+for the cause, local timing evidence, targeted cases and fresh integrated results.

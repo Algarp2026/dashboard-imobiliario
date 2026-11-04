@@ -1,0 +1,76 @@
+{
+  "date": "2026-11-04",
+  "branch": "codex/optimize-local-recovery-storage",
+  "reviewedHead": "9f8d79bdc0e829e753111aa04019aaa5ac7a60e6",
+  "mainControl": "8148c67eb8dee274b201ae570026c5dd45b798e0",
+  "productionAccess": false,
+  "node": {
+    "command": "node tests/commercial-client-complete-regression.cjs",
+    "passed": 67,
+    "failed": 0,
+    "reportSha256": "cd1f24f318d36a9c2238b6a0d3c91bbf9af3a9a84f55ad9e352af779b2be5965"
+  },
+  "browser": {
+    "command": "node tests/commercial-browser-regression.cjs",
+    "engine": "Chrome",
+    "passed": 33,
+    "failed": 0,
+    "singleContinuousRun": true,
+    "temporaryInstrumentationEnabled": false,
+    "dedicatedLoopbackPort": 53397,
+    "reportSha256": "70df83dbd15d50cf79421901f47263676e6fbbbc8513bbb0f393a887e975efca"
+  },
+  "syntax": {
+    "command": "node --check for every repository .js/.cjs/.mjs file excluding node_modules and outputs",
+    "passed": 155,
+    "failed": 0
+  },
+  "targetedRegression": {
+    "deterministicNodeCases": 9,
+    "nativeDesktopAndMobilePassed": true,
+    "originalSyncedTimeoutMs": 15000,
+    "originalTimeoutUnchanged": true,
+    "singleAcknowledgedPost": true,
+    "reloadWithoutDuplicateWrite": true,
+    "cacheMetadataAndRevisionCoherent": true,
+    "pendingRequestIdentitiesPreserved": true,
+    "unrelatedCommercialDataPreserved": true
+  },
+  "nativeOrderingProbe": {
+    "beforeFixMainAndPr": {
+      "serverWriteConfirmed": true,
+      "phaseBeforeOldReadResumes": "synced",
+      "phaseAfterOldReadResumes": "pending",
+      "busy": false,
+      "dirty": false,
+      "verified": true,
+      "pendingRequest": false,
+      "cacheMatchesBaseAfterOldRead": false,
+      "activeOperationsAfterOldRead": 0
+    },
+    "afterFix": {
+      "serverWriteConfirmed": true,
+      "phaseAfterOldReadResumes": "synced",
+      "busy": false,
+      "dirty": false,
+      "verified": true,
+      "pendingRequest": false,
+      "cacheMatchesBaseAfterOldRead": true,
+      "activeOperationsAfterOldRead": 0
+    }
+  },
+  "protectedPathsUnchangedSinceReviewedHead": [
+    "api", "server", "google_apps_script.gs", "google_commercial_integrity.gs",
+    "data.json", "data.xlsx", "config.js", "plantas", "commercial.html",
+    "commercial.css", "commercial-client-workflow.js", "commercial-opportunities.js",
+    "commercial-opportunity-ui.js"
+  ],
+  "commercialJsSha256": "fcadba2ccde93b6debef4eb56fdfedbeb71394f5a1e3515f5259e345f370c3eb",
+  "limitations": [
+    "Original historical failure had no internal trace; the same symptom and a sufficient preexisting cause are reproduced deterministically.",
+    "Timings are local fictitious-source measurements, not Google measurements.",
+    "Firefox, WebKit and private-mode storage limits were not exercised.",
+    "No merge, deployment or production recovery was performed; PR remains Draft."
+  ],
+  "recommendation": "APTA PARA MERGE, subject to user approval; no automatic publication"
+}

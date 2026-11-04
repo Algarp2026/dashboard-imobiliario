@@ -5011,11 +5011,12 @@ function loadRemoteData(options={}){
   return commercialLoadInFlight;
 }
 async function applyRemoteData({automatic=false}={}){
-  const generation=sharedSync.generation;
+  const generation=sharedSync.generation,revisionAtStart=sharedSync.revision;
   const editVersion=commercialDraftGuard?.version(),storedBefore=localStorage.getItem(KEY),memoryBefore=syncComparable(state.data);
   // localStorage is shared by tabs. Keep this instance's confirmed baseline,
   // captured before the asynchronous read, not another tab's later metadata.
   const metaAtStart=sharedSync.base&&sharedSync.revision?{base:JSON.parse(JSON.stringify(sharedSync.base)),revision:sharedSync.revision}:readSyncMeta();
+  const readSuperseded=()=>sharedSync.revision!==revisionAtStart||automatic&&(generation!==sharedSync.generation||storedBefore!==localStorage.getItem(KEY));
   sharedSync.checking=true;sharedSync.received=false;
   if(!automatic)sharedSync.verified=false;
   renderSharedSyncStatus({refresh:!automatic});
@@ -5048,9 +5049,14 @@ async function applyRemoteData({automatic=false}={}){
       }
     }
     const checkpoint=await latestLocalCheckpoint();
+    // Checkpoint I/O may finish after a newer write has already been confirmed.
+    if(readSuperseded())return{revision:sharedSync.revision,applied:false};
     if(checkpoint){
       const saved=JSON.parse(checkpoint.raw);
-      if(syncComparable(normalizeData(saved.data))===syncComparable(remote))await acknowledgeLocalCheckpoint(checkpoint);
+      if(syncComparable(normalizeData(saved.data))===syncComparable(remote)){
+        await acknowledgeLocalCheckpoint(checkpoint);
+        if(readSuperseded())return{revision:sharedSync.revision,applied:false};
+      }
       else if(syncComparable(normalizeData(saved.data))!==syncComparable(state.data)){
         sharedSync.phase='conflict';sharedSync.error='LOCAL_RECOVERY_AVAILABLE';return {shouldSave:false};
       }
