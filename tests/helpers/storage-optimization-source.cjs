@@ -10,7 +10,7 @@ const ranges=[
  ['status','function renderSharedSyncStatus(','function appDialog(','84dc054f347cd02bde91fafc5c9f471d3210846fd4c75fb74c8a3812ca94c9a0']
 ];
 function restore(source){
- let result=normalize(require('./profile-followup-source.cjs').restore(source));const base=baseline('commercial.js');
+ let result=normalize(require('./profile-followup-source.cjs').restore(require('./active-write-capacity-source.cjs').restore(source)));const base=baseline('commercial.js');
  for(const[name,start,end,hash]of ranges){const extract=s=>{const a=s.indexOf(start),b=s.indexOf(end,a+start.length);assert.ok(a>=0&&b>a);return s.slice(a,b)};const actual=extract(result);assert.equal(crypto.createHash('sha256').update(actual).digest('hex'),hash,'Reviewed local storage lifecycle section: '+name);result=result.replace(actual,extract(base))}
  assert.equal(result,base,'Every line outside local archive lifecycle, acknowledgement and diagnostic integration remains exact to merged main');return result;
 }
