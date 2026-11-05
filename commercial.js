@@ -4486,20 +4486,21 @@ async function confirmCommercialRequestArchive(key,payload,result=null){
   const confirmations=new Map();
   if(result){
     if(result.protocol!=='tv-cas-v1'||result.persisted!==true||result.requestId!==payload.requestId||!/^[a-f0-9]{64}$/.test(result.revision||''))throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A confirmação não corresponde ao pedido original.');
-    for(const [id,raw]of verified){const record=await inflateRecoveryRecord(JSON.parse(raw)),snapshot=recoveryPayload(JSON.parse(record.raw));const method=commercialRequestConfirmationMethod(snapshot,payload,baseline,record.needsReview);if(method){const proof=await createRecoveryConfirmation(JSON.parse(record.raw),{method,revision:result.revision,baseRevision:payload.baseRevision,requestId:payload.requestId,confirmedAt:result.confirmedAt,data:payload.data},record.raw);if(proof)confirmations.set(id,proof)}}
+    for(const [id,raw]of verified){if((key===LOCAL_ACTIVE_WRITE_ID||reservedWriteCopy({id}))&&id!==key)continue;const record=await inflateRecoveryRecord(JSON.parse(raw)),snapshot=recoveryPayload(JSON.parse(record.raw));const method=commercialRequestConfirmationMethod(snapshot,payload,baseline,record.needsReview);if(method){const proof=await createRecoveryConfirmation(JSON.parse(record.raw),{method,revision:result.revision,baseRevision:payload.baseRevision,requestId:payload.requestId,confirmedAt:result.confirmedAt,data:payload.data},record.raw);if(proof)confirmations.set(id,proof)}}
     if(!confirmations.has(key))throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A revisão confirmada não corresponde ao conteúdo do pedido original.');
   }
   await localVaultTransaction('readwrite',(store,done,abort)=>{const request=store.getAll();request.onsuccess=()=>{
     if(!request.result.some(record=>record.id===key&&JSON.stringify(record)===verified.get(key))){abort(localArchiveError('LOCAL_BACKUP_CHANGED','O arquivo do pedido mudou durante a confirmação. Preserve o pedido original.'));return}
     const updates=[];
     for(const record of request.result){try{
+      if((key===LOCAL_ACTIVE_WRITE_ID||reservedWriteCopy(record))&&record.id!==key)continue;
       if(verified.get(record.id)!==JSON.stringify(record)||!record.protected&&!record.needsReview)continue;
       const snapshot=recoveryPayload(JSON.parse(record.raw));
       if(!knownRecoveryPayload(snapshot))continue;
       const method=commercialRequestConfirmationMethod(snapshot,payload,baseline,record.needsReview);
       if(method){record.protected=false;record.needsReview=false;record.confirmation={requestId:payload.requestId,baseRevision:payload.baseRevision,method};if(confirmations.has(record.id))record.confirmationReceipt=confirmations.get(record.id);updates.push(record)}
     }catch{}}
-    if(request.result.length>LOCAL_BACKUP_LIMIT||request.result.reduce((sum,copy)=>sum+localRecordBytes(copy),0)>LOCAL_BACKUP_BYTES){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','Não há espaço para arquivar a confirmação. O pedido original foi preservado.'));return}
+    if(!localRecoveryCapacityFits(request.result)){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','Não há espaço para arquivar a confirmação. O pedido original foi preservado.'));return}
     try{for(const record of updates)store.put(record);done(true)}catch(error){abort(localArchiveError('LOCAL_VAULT_ABORTED','A confirmação local foi interrompida; o pedido original foi preservado.',error))}
   }});
   scheduleLocalRecoveryMaintenance();
@@ -4536,6 +4537,7 @@ function persistSyncMeta(){
   catch{throw Object.assign(new Error('Metadados locais não confirmados.'),{code:'LOCAL_STORAGE_FAILED'})}
 }
 const LOCAL_BACKUP_LIMIT=64,LOCAL_BACKUP_BYTES=16*1024*1024,LOCAL_CONFIRMED_BACKUPS=5;
+const LOCAL_ACTIVE_WRITE_ID='active-write.v1',LOCAL_CONFIRMED_WRITE_ID='active-write-confirmed.v1',LOCAL_ACTIVE_WRITE_BYTES=6*1024*1024;
 let localVaultPromise=null;
 const localPackedRecords=new WeakMap(),localReceiptProofs=new Map(),localInflationCache=new Map();
 const localArchiveMetrics={avoided:0,consolidated:0,compressionFallbacks:0,stalePlans:0};
@@ -4544,6 +4546,41 @@ function storedRecoveryRecord(copy){return localPackedRecords.get(copy)||copy}
 function exactRecoveryKeys(value,keys){return !!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key))}
 function localRecordBytes(copy){
   try{const {raw,signature='',rawChecksum='',...metadata}=storedRecoveryRecord(copy);if(typeof raw!=='string'||typeof signature!=='string'||typeof rawChecksum!=='string')return LOCAL_BACKUP_BYTES+1;return 2*(raw.length+signature.length+rawChecksum.length+JSON.stringify(metadata).length)}catch{return LOCAL_BACKUP_BYTES+1}
+}
+function reservedWriteCopy(copy){return copy?.id===LOCAL_ACTIVE_WRITE_ID||copy?.id===LOCAL_CONFIRMED_WRITE_ID}
+function localRecoveryCapacityFits(copies){
+  const history=copies.filter(copy=>!reservedWriteCopy(copy)),active=copies.filter(reservedWriteCopy);
+  return history.length<=LOCAL_BACKUP_LIMIT&&history.reduce((sum,copy)=>sum+localRecordBytes(copy),0)<=LOCAL_BACKUP_BYTES&&active.length<=2&&new Set(active.map(copy=>copy.id)).size===active.length&&active.every(copy=>localRecordBytes(copy)<=LOCAL_ACTIVE_WRITE_BYTES);
+}
+async function protectActiveCommercialWrite(value){
+  const payload=recoveryPayload(value),request=payload?.pendingWrite;
+  if(!knownRecoveryPayload(payload)||!request||syncComparable(payload.data)!==syncComparable(request.data)||payload.syncMeta.revision!==request.baseRevision)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','O pedido original não tem um formato recuperável.');
+  const raw=JSON.stringify(value),signature=await recoveryChecksum(recoveryContent(value));
+  const entry={id:LOCAL_ACTIVE_WRITE_ID,kind:'write-request',raw,signature,rawChecksum:await recoveryChecksum(raw),createdAt:new Date().toISOString(),protected:true,needsReview:false};
+  if(!await verifiedLocalRecoveryRecord(entry)||localRecordBytes(entry)+8192>LOCAL_ACTIVE_WRITE_BYTES)throw localArchiveError('LOCAL_BACKUP_CAPACITY','O pedido excede a reserva local de proteção. Exporte os dados antes de continuar.');
+  const copies=await localVaultCopies(),previous=copies.find(copy=>copy.id===LOCAL_ACTIVE_WRITE_ID),confirmed=copies.find(copy=>copy.id===LOCAL_CONFIRMED_WRITE_ID);
+  const sameRequest=copy=>{try{const saved=recoveryPayload(JSON.parse(copy.raw));return copy.kind==='write-request'&&knownRecoveryPayload(saved)&&saved.pendingWrite?.requestId===request.requestId&&saved.pendingWrite.baseRevision===request.baseRevision&&syncComparable(saved.pendingWrite.data)===syncComparable(request.data)&&syncComparable(saved.data)===syncComparable(request.data)}catch{return false}};
+  const exactPrevious=previous&&!previous.needsReview&&await verifiedLocalRecoveryRecord(previous)&&sameRequest(previous);
+  // A confirmed slot may rotate only with its persisted, exact-request proof.
+  const proven=async copy=>!copy||copy.kind==='write-request'&&!copy.needsReview&&await verifiedLocalRecoveryRecord(copy)&&copy.confirmationReceipt?.method==='exact-request'&&await verifiedRecoveryConfirmation(copy);
+  if((previous&&!exactPrevious&&!await proven(previous))||(previous&&!exactPrevious&&confirmed&&!await proven(confirmed)))throw localArchiveError('LOCAL_BACKUP_CHANGED','Existe um pedido reservado por confirmar ou uma cópia que exige revisão. O original foi preservado.');
+  if([previous,confirmed].some(copy=>copy?.confirmationReceipt?.requestId===request.requestId&&!sameRequest(copy)))throw localArchiveError('LOCAL_BACKUP_INTEGRITY','O identificador original não pode ser reutilizado com outro conteúdo.');
+  const physical=copies.map(storedRecoveryRecord),expected=syncComparable(physical);
+  const unchangedRequest=()=>{const saved=JSON.parse(localStorage.getItem(LOCAL_SYNC_REQUEST_KEY)||'null'),cache=localStorage.getItem(KEY);return saved?.requestId===request.requestId&&saved.baseRevision===request.baseRevision&&syncComparable(saved.data)===syncComparable(request.data)&&(!cache||syncComparable(normalizeData(JSON.parse(cache)))===syncComparable(normalizeData(request.data)))};
+  if(!unchangedRequest())throw localArchiveError('LOCAL_BACKUP_CHANGED','O pedido ou os dados locais mudaram antes da proteção.');
+  const kept=exactPrevious?storedRecoveryRecord(previous):entry;
+  const rotated=previous&&!exactPrevious?{...previous,id:LOCAL_CONFIRMED_WRITE_ID}:null;
+  await localVaultTransaction('readwrite',(store,done,abort)=>{const read=store.getAll();read.onsuccess=()=>{try{
+    if(syncComparable(read.result)!==expected||!unchangedRequest()){abort(localArchiveError('LOCAL_BACKUP_CHANGED','Outro separador alterou o pedido ou o arquivo. Nada foi substituído.'));return}
+    const after=read.result.filter(copy=>copy.id!==LOCAL_ACTIVE_WRITE_ID&&(!rotated||copy.id!==LOCAL_CONFIRMED_WRITE_ID));after.push(kept);if(rotated)after.push(rotated);
+    if(!localRecoveryCapacityFits(after)){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','Não existe capacidade lógica suficiente para proteger o pedido.'));return}
+    if(rotated)store.put(rotated);if(!exactPrevious)store.put(entry);done(true);
+  }catch(error){abort(isLocalArchiveError(error)?error:localArchiveError(error.name==='QuotaExceededError'?'LOCAL_STORAGE_FAILED':'LOCAL_VAULT_ABORTED','A proteção do pedido foi interrompida; os originais foram preservados.',error))}}},{durability:'strict'});
+  const stored=await localVaultTransaction('readonly',(store,done)=>{const read=store.get(LOCAL_ACTIVE_WRITE_ID);read.onsuccess=()=>done(read.result)});
+  const logical=stored&&await inflateRecoveryRecord(stored);
+  if(!stored||JSON.stringify(stored)!==JSON.stringify(kept)||!await verifiedLocalRecoveryRecord(logical)||!sameRequest(logical)||!unchangedRequest())throw localArchiveError('LOCAL_BACKUP_INTEGRITY','Não foi possível confirmar a proteção durável do pedido.');
+  if(sharedSync.archiveWarning==='LOCAL_BACKUP_CAPACITY')sharedSync.archiveWarning='';
+  return LOCAL_ACTIVE_WRITE_ID;
 }
 async function recoveryDataHash(value){return recoveryChecksum(syncComparable(value))}
 async function createRecoveryConfirmation(value,ack=null,originalRaw=JSON.stringify(value)){
@@ -4673,10 +4710,10 @@ function openLocalVault(){
   }).catch(error=>{localVaultPromise=null;throw error});
   return localVaultPromise;
 }
-async function localVaultTransaction(mode,action){
+async function localVaultTransaction(mode,action,{durability}={}){
   const db=await openLocalVault();
   return new Promise((resolve,reject)=>{
-    let tx;try{tx=db.transaction('copies',mode)}catch(error){localVaultPromise=null;reject(localArchiveError('LOCAL_VAULT_UNAVAILABLE','Não foi possível iniciar a operação do arquivo local.',error));return}let result,failure;
+    let tx;try{tx=db.transaction('copies',mode,durability?{durability}:undefined)}catch(error){localVaultPromise=null;reject(localArchiveError('LOCAL_VAULT_UNAVAILABLE','Não foi possível iniciar a operação do arquivo local.',error));return}let result,failure;
     const timer=setTimeout(()=>{failure=localArchiveError('LOCAL_VAULT_TIMEOUT','O arquivo local não confirmou a operação a tempo.');try{tx.abort()}catch{}},10000);
     tx.oncomplete=()=>{clearTimeout(timer);resolve(result)};
     tx.onabort=tx.onerror=()=>{clearTimeout(timer);reject(failure||localArchiveError(tx.error?.name==='QuotaExceededError'?'LOCAL_STORAGE_FAILED':'LOCAL_VAULT_ABORTED','A operação do arquivo local foi interrompida; nenhuma limpeza foi confirmada.',tx.error))};
@@ -4712,6 +4749,7 @@ async function maintainLocalRecoveryArchive({force=false,keepId=''}={}){
   localMaintenanceRunning=(async()=>{
     const copies=await localVaultCopies(),before=copies.map(storedRecoveryRecord),prepared=[],eligible=[];
     for(const copy of copies){
+      if(reservedWriteCopy(copy))continue;
       if(copy.needsReview||!await verifiedLocalRecoveryRecord(copy))continue;
       let candidate=copy;
       if(!copy.confirmationReceipt){
@@ -4737,7 +4775,7 @@ async function maintainLocalRecoveryArchive({force=false,keepId=''}={}){
     }
     const after=before.filter(copy=>!remove.has(copy.id)).map(copy=>prepared.find(item=>item.id===copy.id)||copy),used=after.reduce((sum,copy)=>sum+localRecordBytes(copy),0);
     if(!remove.size&&!prepared.length){localMaintenanceAt=Date.now();return{removed:0,replaced:0,bytes:used,protected:copies.length-eligible.length}}
-    if(after.length>LOCAL_BACKUP_LIMIT||used>LOCAL_BACKUP_BYTES)throw localArchiveError('LOCAL_BACKUP_CAPACITY','A manutenção não pode confirmar espaço suficiente. As cópias originais foram preservadas.');
+    if(!localRecoveryCapacityFits(after))throw localArchiveError('LOCAL_BACKUP_CAPACITY','A manutenção não pode confirmar espaço suficiente. As cópias originais foram preservadas.');
     await localVaultTransaction('readwrite',(store,done,abort)=>{const read=store.getAll();read.onsuccess=()=>{try{
       if(JSON.stringify(read.result)!==JSON.stringify(before)){localArchiveMetrics.stalePlans++;abort(localArchiveError('LOCAL_BACKUP_CHANGED','Outro separador alterou o arquivo. A manutenção não eliminou cópias.'));return}
       for(const copy of prepared)store.put(copy);for(const id of remove)store.delete(id);done(true);
@@ -4748,7 +4786,7 @@ async function maintainLocalRecoveryArchive({force=false,keepId=''}={}){
   return localMaintenanceRunning;
 }
 async function localRecoveryDiagnostics(){
-  const copies=await localVaultCopies(),reasons={},confirmed=[];let bytes=0,expandedBytes=0,review=0;
+  const all=await localVaultCopies(),copies=all.filter(copy=>!reservedWriteCopy(copy)),active=all.filter(reservedWriteCopy),reasons={},confirmed=[];let bytes=0,expandedBytes=0,review=0;
   for(const copy of copies){
     bytes+=localRecordBytes(copy);expandedBytes+=2*copy.raw.length;let reason='aguarda-confirmacao';
     if(copy.needsReview){reason='checkpoint-por-rever';review++}
@@ -4761,7 +4799,7 @@ async function localRecoveryDiagnostics(){
   const identities=new Set();let retained=0,recoverableBytes=0;
   for(const copy of confirmed){const identity=recoveryRetentionIdentity(copy);if(identities.has(identity)||retained>=LOCAL_CONFIRMED_BACKUPS)recoverableBytes+=localRecordBytes(copy);else{identities.add(identity);retained++}}
   let browser=null;try{if(typeof navigator!=='undefined'&&navigator.storage?.estimate){const value=await navigator.storage.estimate();browser={usage:value.usage??null,quota:value.quota??null}}}catch{}
-  return{total:copies.length,confirmed:confirmed.length,protected:copies.length-confirmed.length,review,estimatedBytes:bytes,expandedBytes,recoverableBytes,limits:{records:LOCAL_BACKUP_LIMIT,bytes:LOCAL_BACKUP_BYTES,confirmed:LOCAL_CONFIRMED_BACKUPS},reasons,metrics:{...localArchiveMetrics},browser};
+  return{total:copies.length,confirmed:confirmed.length,protected:copies.length-confirmed.length,review,estimatedBytes:bytes,expandedBytes,recoverableBytes,limits:{records:LOCAL_BACKUP_LIMIT,bytes:LOCAL_BACKUP_BYTES,confirmed:LOCAL_CONFIRMED_BACKUPS},activeWrite:{records:active.length,estimatedBytes:active.reduce((sum,copy)=>sum+localRecordBytes(copy),0),limitPerRecord:LOCAL_ACTIVE_WRITE_BYTES},reasons,metrics:{...localArchiveMetrics},browser};
 }
 async function showLocalRecoveryDiagnostics(){
   try{
@@ -4788,10 +4826,13 @@ async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
     return key;
   }
   let copies=await localVaultCopies();
+  if(kind==='write-request'&&copies.some(copy=>copy.id===LOCAL_ACTIVE_WRITE_ID))return protectActiveCommercialWrite(value);
+  copies=copies.filter(copy=>!reservedWriteCopy(copy));
   if(copies.length>=LOCAL_BACKUP_LIMIT-4||copies.reduce((sum,copy)=>sum+localRecordBytes(copy),0)>=LOCAL_BACKUP_BYTES*.85){
     try{await maintainLocalRecoveryArchive({force:true})}catch(error){if(error.code!=='LOCAL_BACKUP_CHANGED')throw error}
-    copies=await localVaultCopies();
+    copies=(await localVaultCopies()).filter(copy=>!reservedWriteCopy(copy));
   }
+  if(kind==='write-request'&&(copies.length>=LOCAL_BACKUP_LIMIT-4||copies.reduce((sum,copy)=>sum+localRecordBytes(copy),0)>=LOCAL_BACKUP_BYTES*.85))return protectActiveCommercialWrite(value);
   const signature=typeof crypto!=='undefined'&&crypto.subtle?await recoveryChecksum(content):content;
   const entry={id:Date.now()+'.'+id(),kind,raw,signature,createdAt:new Date().toISOString(),protected:!confirmed,needsReview:kind==='storage-failure'};
   if(typeof crypto!=='undefined'&&crypto.subtle)entry.rawChecksum=await recoveryChecksum(raw);
@@ -4808,7 +4849,8 @@ async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
   }
   const entryConfirmed=!entry.needsReview&&await verifiedRecoveryConfirmation(entry);
   let avoided=false;
-  const stored=await localVaultTransaction('readwrite',(store,done,abort)=>{
+  let stored;
+  try{stored=await localVaultTransaction('readwrite',(store,done,abort)=>{
     const request=store.getAll();request.onsuccess=()=>{try{
       const physical=request.result,byId=new Map(copies.map(copy=>[copy.id,copy]));
       if(entry.needsReview){const last=physical.reduce((max,copy)=>Math.max(max,Number.isSafeInteger(copy.checkpointOrder)?copy.checkpointOrder:0),0);if(last>=Number.MAX_SAFE_INTEGER)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A ordenação do arquivo exige revisão administrativa.');entry.checkpointOrder=last+1}
@@ -4820,7 +4862,7 @@ async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
         if(entry.needsReview){replacement={...duplicate,protected:true,needsReview:true,checkpointAt:entry.createdAt,checkpointOrder:entry.checkpointOrder}}
         else if(!proven.has(duplicate.id)){replacement={...duplicate,protected:duplicate.protected||entry.protected}}
         const after=entries.map(copy=>copy.id===duplicate.id?replacement:copy);
-        if(after.length>LOCAL_BACKUP_LIMIT||after.reduce((sum,copy)=>sum+localRecordBytes(copy),0)>LOCAL_BACKUP_BYTES){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','A confirmação excederia a capacidade do arquivo. As cópias originais foram preservadas.'));return}
+        if(!localRecoveryCapacityFits(after)){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','A confirmação excederia a capacidade do arquivo. As cópias originais foram preservadas.'));return}
         for(const [id,copy]of prepared)if(stable.has(id)&&id!==duplicate.id)store.put(copy);
         store.put(replacement);avoided=true;done(replacement);return;
       }
@@ -4828,14 +4870,14 @@ async function archiveRecoveryCopy(kind,value,{confirmed=false}={}){
       const remove=new Set(eligible.slice(LOCAL_CONFIRMED_BACKUPS).map(copy=>copy.id));
       let kept=candidates.filter(copy=>!remove.has(copy.id));
       for(const copy of eligible.slice().reverse()){
-        if(kept.length<=LOCAL_BACKUP_LIMIT&&kept.reduce((sum,item)=>sum+localRecordBytes(item),0)<=LOCAL_BACKUP_BYTES)break;
+        if(localRecoveryCapacityFits(kept))break;
         if(copy.id===entry.id)continue;remove.add(copy.id);kept=kept.filter(item=>item.id!==copy.id);
       }
-      if(kept.length>LOCAL_BACKUP_LIMIT||kept.reduce((sum,copy)=>sum+localRecordBytes(copy),0)>LOCAL_BACKUP_BYTES){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','Arquivo cheio de cópias protegidas ou por confirmar. Os pedidos e conflitos foram preservados; consulte o diagnóstico do arquivo.'));return}
+      if(!localRecoveryCapacityFits(kept)){abort(localArchiveError('LOCAL_BACKUP_CAPACITY','Arquivo cheio de cópias protegidas ou por confirmar. Os pedidos e conflitos foram preservados; consulte o diagnóstico do arquivo.'));return}
       for(const [id,copy]of prepared)if(stable.has(id)&&!remove.has(id))store.put(copy);
       store.add(entry);for(const id of remove)store.delete(id);done(entry);
     }catch(error){abort(isLocalArchiveError(error)?error:localArchiveError(error.name==='QuotaExceededError'?'LOCAL_STORAGE_FAILED':'LOCAL_VAULT_ABORTED','A operação do arquivo foi interrompida; as cópias anteriores foram preservadas.',error))}};
-  });
+  })}catch(error){if(kind==='write-request'&&error.code==='LOCAL_BACKUP_CAPACITY')return protectActiveCommercialWrite(value);throw error}
   const physical=await localVaultTransaction('readonly',(store,done)=>{const request=store.get(stored.id);request.onsuccess=()=>done(request.result)}),logical=physical&&await inflateRecoveryRecord(physical),expected=await inflateRecoveryRecord(stored);
   if(!physical||logical.raw!==expected.raw||logical.signature!==signature||logical.rawChecksum&&await recoveryChecksum(logical.raw)!==logical.rawChecksum)throw localArchiveError('LOCAL_BACKUP_INTEGRITY','A cópia do arquivo não passou a verificação. Preserve os dados e exporte uma cópia.');
   if(['LOCAL_BACKUP_CAPACITY','LOCAL_VAULT_UNAVAILABLE','LOCAL_VAULT_BLOCKED','LOCAL_VAULT_ABORTED','LOCAL_VAULT_TIMEOUT'].includes(sharedSync.archiveWarning))sharedSync.archiveWarning='';
