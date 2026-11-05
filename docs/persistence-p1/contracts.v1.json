@@ -1,0 +1,45 @@
+{
+  "contract": "the-view-commercial-persistence",
+  "version": 1,
+  "status": "design-and-tests-only",
+  "productionEnabled": false,
+  "decisions": ["D01", "D02", "D03", "D04", "D05", "D06", "D07"],
+  "states": ["UI_DIRTY", "LOCAL_DURABLE", "SENDING", "REMOTE_UNKNOWN", "REMOTE_COMMITTED", "LOCAL_ACK_PENDING", "SYNCED", "CONFLICT", "STORAGE_BLOCKED"],
+  "transitions": [
+    {"from": "UI_DIRTY", "to": "LOCAL_DURABLE", "requires": ["localTransactionComplete", "reconstructionVerified"]},
+    {"from": "UI_DIRTY", "to": "STORAGE_BLOCKED", "requires": ["storageFailure"]},
+    {"from": "UI_DIRTY", "to": "CONFLICT", "requires": ["branchDurable"]},
+    {"from": "LOCAL_DURABLE", "to": "SENDING", "requires": ["localTransactionComplete", "reconstructionVerified", "freshReadTicket", "revisionVerified", "writerCompatible", "pendingSourceResolved"]},
+    {"from": "LOCAL_DURABLE", "to": "CONFLICT", "requires": ["branchDurable"]},
+    {"from": "SENDING", "to": "REMOTE_UNKNOWN", "requires": ["outcomeUncertain"]},
+    {"from": "SENDING", "to": "CONFLICT", "requires": ["branchDurable", "sourceConflict"]},
+    {"from": "SENDING", "to": "REMOTE_COMMITTED", "requires": ["matchingActivationProof"]},
+    {"from": "REMOTE_UNKNOWN", "to": "REMOTE_COMMITTED", "requires": ["matchingActivationProof"]},
+    {"from": "REMOTE_UNKNOWN", "to": "SENDING", "requires": ["exactOriginalRetryAuthorized", "freshReadTicket", "revisionVerified", "writerCompatible", "pendingSourceResolved"]},
+    {"from": "REMOTE_UNKNOWN", "to": "CONFLICT", "requires": ["branchDurable"]},
+    {"from": "REMOTE_COMMITTED", "to": "LOCAL_ACK_PENDING", "requires": ["localAckFailed"]},
+    {"from": "REMOTE_COMMITTED", "to": "SYNCED", "requires": ["localAckTransactionComplete", "noLaterDraft"]},
+    {"from": "LOCAL_ACK_PENDING", "to": "SYNCED", "requires": ["matchingActivationProof", "localAckTransactionComplete", "noLaterDraft"]}
+  ],
+  "records": {
+    "workspace": {"required": ["version", "workspaceId", "localRevision", "headRef", "baseRef", "baseRemoteRevision", "activeOperationId", "writerEpoch"]},
+    "operation": {"required": ["version", "operationId", "requestId", "instanceId", "expectedLocalRevision", "baseRemoteRevision", "baseRef", "payloadRef", "payloadHash", "requestHash", "originalRequest", "phase", "writerEpoch"]},
+    "body": {"required": ["version", "bodyRef", "rawHash", "codec", "mediaType", "decodedBytes", "encodedBytes", "bytes"]},
+    "branch": {"required": ["version", "branchId", "operationId", "baseRef", "payloadRef", "expectedLocalRevision", "observedLocalRevision", "conflictPaths"]},
+    "receipt": {"required": ["version", "requestId", "baseRevision", "resultRevision", "payloadHash", "requestHash", "commitRef", "status", "confirmedAt", "sourceId"]},
+    "migration": {"required": ["version", "sourceKey", "sourceRawHash", "destinationRefs", "phase", "cursor"]},
+    "export": {"required": ["version", "kind", "instanceId", "data", "base", "baseRevision", "operation", "receipts", "snapshotRevision", "checksum"]}
+  },
+  "migrationStates": ["DISCOVERED", "COPYING", "VERIFIED", "READY", "ACTIVATED"],
+  "migrationEdges": ["DISCOVERED>COPYING", "COPYING>VERIFIED", "VERIFIED>READY", "READY>ACTIVATED"],
+  "receiptStatuses": ["COMMITTED", "PENDING", "BLOCKED", "NOT_FOUND", "UNKNOWN"],
+  "compatibility": {
+    "inactiveInP1": true,
+    "proposedWriterEpoch": 2,
+    "futureWriteRequires": ["frontendEpoch", "apiEpoch", "sourceEpoch"],
+    "oldOfflineCacheIsProtectedByRemoteFence": false,
+    "legacyRecovery": "exact-original-request-through-validated-adapter-only",
+    "missingHistoricalReceiptMeansNeverExecuted": false
+  },
+  "invariants": ["I-LOCAL-CAS", "I-ATOMIC-SNAPSHOT", "I-IMMUTABLE-REQUEST", "I-DURABLE-BEFORE-SEND", "I-EXACT-RECEIPT", "I-NO-HISTORICAL-ACTIVATION", "I-PROTECTED-REFERENCES", "I-UNKNOWN-BYTES", "I-NO-FALSE-SYNC", "I-MIXED-WRITERS"]
+}
