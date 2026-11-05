@@ -1,0 +1,962 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-05",
+  "baseMain": "0eb44f20ebf0404a86e26be507769c285e259109",
+  "branch": "codex/p1-commercial-contracts",
+  "scope": "P1 contracts and tests only",
+  "node": {
+    "passed": 70,
+    "failed": 0,
+    "suites": [
+      {
+        "name": "access-routes.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-agent-module-guard.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-apartment16-recovery.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-archive-verifier.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-audit-defects.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-auto-sync.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-browser-policy.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-capacity.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-chunk-storage.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-followup.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-preferences.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-report-grouping.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-reports.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-tabs.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-workflow.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-client-workspace.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-composition-d2.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-concurrency.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-construction.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-consultation-guards.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-contact-history.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-contacts.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-cycle-boundaries.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-d2-platform.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-event-provenance.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-followups.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-fraction-draft.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-fraction-recommendations.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-home-entry.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-integrity-server.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-latency.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-loading-persistence.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-local-backups.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-opportunities.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-opportunity-cards.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-opportunity-matrix.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-pending-local.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-persistence-p1-contracts.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-persistence-p1-current.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-persistence-performance.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-post-audit-api.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-post-audit.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-presentation-pdf.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-progressive-flow.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-read-commit-order.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-read-contention.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-recommendations-ui.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-recommendations.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-recovery-archive.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-recovery-client-api.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-reform-defects.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-safe-reconciliation.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-smoke.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-source-integrity.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-stage-engine.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-storage-lifecycle.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-sync-api.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-sync-client.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-sync-final-audit.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-ticket-renewal.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-ux.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-write-integrity.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-write-recovery.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "comparator-belaformosa.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "compset.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "google-read-check.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "pr20-main-integration.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "pr21-main-integration.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "pr22-main-integration.test.js",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "pricing-analysis.test.js",
+        "code": 0,
+        "passed": true
+      }
+    ],
+    "contractCases": 15,
+    "latestContractRerun": "15/15 after independent required-send guard assertions"
+  },
+  "syntax": {
+    "passed": 166,
+    "failed": 0
+  },
+  "existingBrowser": {
+    "passed": 10,
+    "failed": 0,
+    "suites": [
+      {
+        "name": "commercial-storage-reliability-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-storage-growth-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-recovery-archive-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-loading-persistence-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-safe-reconciliation-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-auto-sync-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-profile-followup-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-presentation-pdf-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-fraction-draft-browser.mjs",
+        "code": 0,
+        "passed": true
+      },
+      {
+        "name": "commercial-pending-local-browser.mjs",
+        "code": 0,
+        "passed": true
+      }
+    ]
+  },
+  "laboratory": {
+    "referenceModelOnly": true,
+    "realGoogle": false,
+    "nativeQuotaTested": false,
+    "safariApplicationTested": false,
+    "engines": [
+      {
+        "engine": "chromium",
+        "version": "157.0.8103.39",
+        "status": "passed",
+        "errors": [],
+        "externalRequests": 0,
+        "commercialWrites": 0,
+        "checks": [
+          {
+            "id": "P1-CUR-01",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-CUR-02",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-IDB-01",
+            "status": "reference-model-demonstrated",
+            "proposals": 2,
+            "branches": 1,
+            "exportsCoherent": true,
+            "originalRequestPreserved": true
+          },
+          {
+            "id": "P1-IDB-02",
+            "status": "reference-model-demonstrated",
+            "abortAtomic": true,
+            "quotaFailure": "injected-not-native"
+          },
+          {
+            "id": "P1-IDB-03",
+            "status": "reference-model-demonstrated",
+            "incompatibleProposalsPreserved": true
+          },
+          {
+            "id": "P1-MIX-02",
+            "status": "reference-model-demonstrated",
+            "newHeadIsolated": true,
+            "oldCacheStillMutable": true,
+            "realApiOrSourceFenceImplemented": false
+          },
+          {
+            "id": "P1-MIG-03",
+            "status": "reference-model-demonstrated",
+            "gracefulRestart": true,
+            "powerLossTested": false,
+            "unknownOriginalPreserved": true
+          }
+        ],
+        "benchmarks": [
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 180091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 0.8999999994412065,
+                "p95": 1.099999999627471,
+                "mean": 0.7624999999534339
+              },
+              "hashingMs": {
+                "median": 0.19999999925494194,
+                "p95": 0.20000000018626451,
+                "mean": 0.14999999990686774
+              },
+              "compressionMs": {
+                "median": 3.900000000372529,
+                "p95": 5.300000000745058,
+                "mean": 4
+              },
+              "transactionMs": {
+                "median": 4.8999999994412065,
+                "p95": 5.400000000372529,
+                "mean": 4.749999999767169
+              },
+              "verificationMs": {
+                "median": 1.400000000372529,
+                "p95": 1.7999999998137355,
+                "mean": 1.3625000001629815
+              }
+            }
+          },
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 450091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 1.7000000001862645,
+                "p95": 2.2000000001862645,
+                "mean": 1.5000000001164153
+              },
+              "hashingMs": {
+                "median": 0.2999999998137355,
+                "p95": 0.2999999998137355,
+                "mean": 0.27499999990686774
+              },
+              "compressionMs": {
+                "median": 8.199999999254942,
+                "p95": 11.900000000372529,
+                "mean": 8.73749999993015
+              },
+              "transactionMs": {
+                "median": 5.599999999627471,
+                "p95": 5.7000000001862645,
+                "mean": 5.449999999953434
+              },
+              "verificationMs": {
+                "median": 1.7000000001862645,
+                "p95": 2.1000000005587935,
+                "mean": 1.7625000000698492
+              }
+            }
+          },
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 850091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 2.900000000372529,
+                "p95": 3.599999999627471,
+                "mean": 2.8250000001862645
+              },
+              "hashingMs": {
+                "median": 0.5,
+                "p95": 0.900000000372529,
+                "mean": 0.5249999997904524
+              },
+              "compressionMs": {
+                "median": 14.5,
+                "p95": 20.200000000186265,
+                "mean": 14.962500000023283
+              },
+              "transactionMs": {
+                "median": 6,
+                "p95": 6.599999999627471,
+                "mean": 6.074999999720603
+              },
+              "verificationMs": {
+                "median": 2.400000000372529,
+                "p95": 3,
+                "mean": 2.537499999976717
+              }
+            }
+          }
+        ]
+      },
+      {
+        "engine": "firefox",
+        "version": "153.0",
+        "status": "passed",
+        "errors": [],
+        "externalRequests": 0,
+        "commercialWrites": 0,
+        "checks": [
+          {
+            "id": "P1-CUR-01",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-CUR-02",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-IDB-01",
+            "status": "reference-model-demonstrated",
+            "proposals": 2,
+            "branches": 1,
+            "exportsCoherent": true,
+            "originalRequestPreserved": true
+          },
+          {
+            "id": "P1-IDB-02",
+            "status": "reference-model-demonstrated",
+            "abortAtomic": true,
+            "quotaFailure": "injected-not-native"
+          },
+          {
+            "id": "P1-IDB-03",
+            "status": "reference-model-demonstrated",
+            "incompatibleProposalsPreserved": true
+          },
+          {
+            "id": "P1-MIX-02",
+            "status": "reference-model-demonstrated",
+            "newHeadIsolated": true,
+            "oldCacheStillMutable": true,
+            "realApiOrSourceFenceImplemented": false
+          },
+          {
+            "id": "P1-MIG-03",
+            "status": "reference-model-demonstrated",
+            "gracefulRestart": true,
+            "powerLossTested": false,
+            "unknownOriginalPreserved": true
+          }
+        ],
+        "benchmarks": [
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 180091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 1,
+                "p95": 2,
+                "mean": 1.125
+              },
+              "hashingMs": {
+                "median": 0,
+                "p95": 1,
+                "mean": 0.125
+              },
+              "compressionMs": {
+                "median": 2,
+                "p95": 5,
+                "mean": 2.625
+              },
+              "transactionMs": {
+                "median": 3,
+                "p95": 4,
+                "mean": 2.5
+              },
+              "verificationMs": {
+                "median": 1,
+                "p95": 2,
+                "mean": 1.25
+              }
+            }
+          },
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 450091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 2,
+                "p95": 3,
+                "mean": 2
+              },
+              "hashingMs": {
+                "median": 0,
+                "p95": 1,
+                "mean": 0.125
+              },
+              "compressionMs": {
+                "median": 6,
+                "p95": 9,
+                "mean": 6.25
+              },
+              "transactionMs": {
+                "median": 5,
+                "p95": 6,
+                "mean": 5.375
+              },
+              "verificationMs": {
+                "median": 2,
+                "p95": 2,
+                "mean": 1.5
+              }
+            }
+          },
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 850091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 3,
+                "p95": 4,
+                "mean": 3
+              },
+              "hashingMs": {
+                "median": 1,
+                "p95": 2,
+                "mean": 1
+              },
+              "compressionMs": {
+                "median": 12,
+                "p95": 13,
+                "mean": 11.625
+              },
+              "transactionMs": {
+                "median": 11,
+                "p95": 13,
+                "mean": 10.125
+              },
+              "verificationMs": {
+                "median": 4,
+                "p95": 6,
+                "mean": 3.75
+              }
+            }
+          }
+        ]
+      },
+      {
+        "engine": "webkit",
+        "version": "26.5",
+        "status": "passed",
+        "errors": [],
+        "externalRequests": 0,
+        "commercialWrites": 0,
+        "checks": [
+          {
+            "id": "P1-CUR-01",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-CUR-02",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-IDB-01",
+            "status": "reference-model-demonstrated",
+            "proposals": 2,
+            "branches": 1,
+            "exportsCoherent": true,
+            "originalRequestPreserved": true
+          },
+          {
+            "id": "P1-IDB-02",
+            "status": "reference-model-demonstrated",
+            "abortAtomic": true,
+            "quotaFailure": "injected-not-native"
+          },
+          {
+            "id": "P1-IDB-03",
+            "status": "reference-model-demonstrated",
+            "incompatibleProposalsPreserved": true
+          },
+          {
+            "id": "P1-MIX-02",
+            "status": "reference-model-demonstrated",
+            "newHeadIsolated": true,
+            "oldCacheStillMutable": true,
+            "realApiOrSourceFenceImplemented": false
+          },
+          {
+            "id": "P1-MIG-03",
+            "status": "reference-model-demonstrated",
+            "gracefulRestart": true,
+            "powerLossTested": false,
+            "unknownOriginalPreserved": true
+          }
+        ],
+        "benchmarks": [
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 180091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 1,
+                "p95": 1,
+                "mean": 1
+              },
+              "hashingMs": {
+                "median": 14,
+                "p95": 15,
+                "mean": 13.375
+              },
+              "compressionMs": {
+                "median": 16,
+                "p95": 16,
+                "mean": 15.5
+              },
+              "transactionMs": {
+                "median": 34,
+                "p95": 35,
+                "mean": 34
+              },
+              "verificationMs": {
+                "median": 27,
+                "p95": 29,
+                "mean": 27.375
+              }
+            }
+          },
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 450091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 1,
+                "p95": 2,
+                "mean": 1.125
+              },
+              "hashingMs": {
+                "median": 14,
+                "p95": 15,
+                "mean": 12.875
+              },
+              "compressionMs": {
+                "median": 15,
+                "p95": 16,
+                "mean": 15.375
+              },
+              "transactionMs": {
+                "median": 34,
+                "p95": 36,
+                "mean": 34.375
+              },
+              "verificationMs": {
+                "median": 27,
+                "p95": 28,
+                "mean": 26.625
+              }
+            }
+          },
+          {
+            "id": "P1-PERF-01",
+            "payloadBytes": 850091,
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "warmups": 2,
+            "samples": 8,
+            "durability": [
+              "strict"
+            ],
+            "roundtripVerified": true,
+            "summary": {
+              "serializationMs": {
+                "median": 1,
+                "p95": 2,
+                "mean": 1.25
+              },
+              "hashingMs": {
+                "median": 14,
+                "p95": 15,
+                "mean": 12.875
+              },
+              "compressionMs": {
+                "median": 16,
+                "p95": 17,
+                "mean": 15.75
+              },
+              "transactionMs": {
+                "median": 36,
+                "p95": 37,
+                "mean": 35.875
+              },
+              "verificationMs": {
+                "median": 25,
+                "p95": 26,
+                "mean": 25
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "safety": {
+    "runtimeUnchanged": true,
+    "sourceComparison": "Git diff and LF-normalized text; Windows checkout uses CRLF",
+    "productionAccessed": false,
+    "realBackupsTouched": false,
+    "push": false,
+    "pullRequest": false,
+    "merge": false,
+    "deployment": false
+  },
+  "limitations": [
+    "Current P1 defects reproduced, not fixed",
+    "Reference models are not production implementations",
+    "Injected quota, not physical exhaustion",
+    "Graceful restart, not power loss",
+    "WebKit is not Safari/iOS",
+    "Small benchmark sample, not production SLO",
+    "Local origin/main used; no GitHub remote operations"
+  ]
+}

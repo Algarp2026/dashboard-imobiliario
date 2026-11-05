@@ -1,0 +1,41 @@
+id;requisito;fonte;decisao;contrato;teste_especifico;resultado;estado;alcance
+P1-R01;Branch independente e base identificada;Pedido P1 secao 1;D01;CONTRACTS referencia de origem;git status e git rev-parse;Branch codex/p1-commercial-contracts baseada em 0eb44f20ebf0404a86e26be507769c285e259109;demonstrado;Referencia local origin/main sem operacoes GitHub remotas
+P1-R02;Workspace versionado;v1.0 6.1 e pedido P1 1;D01 D02;records.workspace;P1-FMT-01/workspace;Campos obrigatorios e versao verificados no manifesto;demonstrado;Contrato e modelo apenas - validador e armazenamento de producao pendentes
+P1-R03;Operacao versionada;v1.0 4.1 e pedido P1 1;D04;records.operation;P1-FMT-01/operation e P1-OP-02;Pedido imutavel e manifesto verificados;demonstrado;Modelo puro sem novo percurso de envio
+P1-R04;Corpos versionados;v1.0 6.2 e pedido P1 1;D04;records.body e hashes;P1-FMT-01/body;Presenca e versao demonstradas;demonstrado;Tipos completos e codecs de producao sao P2-P4
+P1-R05;Branches versionadas;adenda 1 e pedido P1 1;D02;records.branch;P1-FMT-01/branch e P1-IDB-03;Propostas incompativeis permanecem exportaveis;demonstrado;Referencia browser apenas
+P1-R06;Comprovativos versionados;v1.0 7.2;D06;records.receipt;P1-FMT-01/receipt e P1-OP-03;Campos e incompatibilidades de identidade rejeitados;demonstrado;Validacao autenticada na fonte ainda pendente
+P1-R07;Migracao versionada;v1.0 6.6;D05;records.migration;P1-FMT-01/migration e P1-MIG-04;Retoma por checkpoint em todas fases;demonstrado;Modelo puro nao e migracao do produto
+P1-R08;Transicoes formais e guards;v1.0 5;D02 D06;transitions;P1-ST-01;Todas arestas passam com provas e falham com cada guard falso;demonstrado;A maquina nao esta ligada a UI ou rede
+P1-R09;Ack antigo nao confirma edicao posterior;v1.0 5 e 15 concorrencia;D02 D06;I-NO-FALSE-SYNC;P1-ST-02;SYNCED recusado com noLaterDraft falso;demonstrado;Integracao por operacao ainda pendente
+P1-R10;Reproduzir cache offline sobrescrita;adenda 1 e pedido P1 2;D02;I-LOCAL-CAS;P1-CUR-01;Defeito atual reproduzido Node e tres motores;demonstrado;Nao corrigido nesta P1
+P1-R11;CAS local transacional esperado;adenda 1;D02;I-LOCAL-CAS;P1-IDB-01;Duas propostas concorrentes preservadas com uma branch;demonstrado;Prototipo isolado nao integrado
+P1-R12;Propostas incompativeis recuperaveis;adenda 1;D02;records.branch;P1-IDB-03;Duas edicoes do mesmo campo preservadas em operacoes diferentes;demonstrado;Sem fusao automatica implementada
+P1-R13;Recuperacao local apos reinicio;adenda 1;D02 D05;I-PROTECTED-REFERENCES;P1-MIG-03;Quatro operacoes e duas branches recuperadas apos reabertura;demonstrado;Fecho normal nao perda de energia
+P1-R14;Reproduzir export com base de outra instancia;adenda 2 e pedido P1 2;D03;I-ATOMIC-SNAPSHOT;P1-CUR-02;Defeito atual e falsa reconciliacao sem conflitos reproduzidos;demonstrado;Nao corrigido nesta P1
+P1-R15;Fotografia de exportacao coerente;adenda 2;D03;records.export;P1-EX-01 e P1-IDB-01;Base e pedido de cada proposta mantidos - base misturada rejeitada;demonstrado;No modelo - exportador real e P3
+P1-R16;Exportacao forense sem base verificavel;adenda 2;D03;records.export kind forensic;P1-EX-02;Dados disponiveis preservados com base nula e rotulo forense;demonstrado;Sem base inventada
+P1-R17;Nao trocar identidade de instancia no export;adenda 2;D03;records.export.instanceId;P1-EX-03;Envelope com instancia trocada rejeitado mesmo com novo checksum;demonstrado;Referencia pura
+P1-R18;Identificadores unicos;v1.0 4.1;D04;records.operation.requestId;P1-OP-01;Mil IDs aleatorios distintos;demonstrado;Nao e prova matematica de impossibilidade de colisao
+P1-R19;Imutabilidade e retry identico;v1.0 4.2;D04;I-IMMUTABLE-REQUEST;P1-OP-02 e P1-IDB-01;Retry nao duplica e ID com outro conteudo e rejeitado;demonstrado;So modelo - sistema atual preservado
+P1-R20;Preservar resultado incerto;v1.0 8;D06;I-IMMUTABLE-REQUEST;P1-OP-04;REMOTE_UNKNOWN conserva pedido original e bloqueia SYNCED ou retry sem provas;demonstrado;Novo coordenador de recuperacao ainda nao implementado
+P1-R21;Rejeitar comprovativos incompativeis;v1.0 7.2 e 8;D06;I-EXACT-RECEIPT;P1-OP-03;Oito campos de prova incompativeis rejeitados;demonstrado;Objeto bem formado nao substitui prova de ativacao
+P1-R22;Recibo antigo sem retrocesso;adenda 6;D06;I-NO-HISTORICAL-ACTIVATION;P1-REC-01;A confirmado apos B sem mudar a cabeca B;demonstrado;Cadeia em memoria - consulta autenticada real e P5
+P1-R23;Orfao e indice ausente nao fabricam confirmacao;v1.0 7.4;D06;Consulta historica de resultado;P1-REC-01;Orfao nao confirmado e prova alcancavel nao depende de indice;demonstrado;Falhas reais de Sheets e lookup sao P5
+P1-R24;Interrupcao entre etapas de migracao;v1.0 6.6;D05;migrationStates;P1-MIG-04;Cada checkpoint reabre e conclui sem salto de cursor;demonstrado;Modelo puro com serializacao de checkpoint
+P1-R25;Retoma de lote em navegador;pedido P1 2 migracao;D05;records.migration;P1-MIG-03;Primeiro lote intacto e segundo retomado apos reabrir;demonstrado;Referencia browser apenas
+P1-R26;Originais desconhecidos exatos;v1.0 6.5 e 6.6;D04 D05;I-UNKNOWN-BYTES;P1-MIG-01 e P1-MIG-03;NUL acento e surrogate isolado preservados;demonstrado;UTF-16LE para hash de texto bruto legacy
+P1-R27;Quota insuficiente sem perder origem;pedido P1 2 migracao;D05;I-PROTECTED-REFERENCES;P1-MIG-02 e P1-IDB-02;Quota injetada aborta cabeca corpos cursor e preserva legacy;demonstrado;Nao e teste de esgotamento fisico
+P1-R28;Quota nativa e interrupcao abrupta;v1.0 15 e complemento de navegadores;D05;Gates de P2;P2-Q-NATIVE e P2-CRASH;Nao executados nesta P1;bloqueado;Sem esgotar disco real - requer ambiente descartavel controlado
+P1-R29;Convivencia antigo novo;pedido P1 3;D07;compatibility e tabela de corte;P1-MIX-01 e P1-MIX-02;Modelo exige frontend API e fonte compativeis e cache antiga nao altera cabeca nova;demonstrado;Fences reais nao implementados nem ativados
+P1-R30;Bloqueio efetivo em API e fonte;pedido P1 3;D07;compatibility.futureWriteRequires;P3-FENCE-API e P3-FENCE-SOURCE;Apenas contrato definido - implementacao nao autorizada na P1;pendente;Nao confiar em cooperacao de JS antigo
+P1-R31;Pedido antigo incerto conserva identidade;v1.0 4.2 e pedido P1 3;D06 D07;compatibility.legacyRecovery;P1-OP-04 e P1-MIX-01;Contrato exige adapter exato e ausencia de recibo nao prova nao execucao;demonstrado;Adapter real e teste fonte antiga sao P3-P5
+P1-R32;Durabilidade antes de envio;v1.0 4.1 e 5;D02;I-DURABLE-BEFORE-SEND;P1-ST-01;Envio recusado sem cada prova local ticket revisao compatibilidade e diagnostico;demonstrado;Guards de especificacao sem alterar envio atual
+P1-R33;Sem novo percurso ativo;pedido P1 1 e restricoes;D01;Limite desta entrega;git diff --name-only 0eb44f2 e revisao de imports;Apenas documentacao e testes novos - zero alteracoes de runtime;demonstrado;Verificado no diff final
+P1-R34;Regressoes Node atuais;pedido P1 4;D01 D02;Preservacao da main;Todas as suites tests/*.test.js;70 suites aprovadas;demonstrado;Inclui duas novas suites P1
+P1-R35;Regressoes browser relevantes;pedido P1 4;D01 D02;Preservacao da main;Dez suites listadas em VALIDATION.md;Dez aprovadas com fontes ficticias;demonstrado;Nao e o catalogo browser integral
+P1-R36;Payloads representativos e custos separados;pedido P1 6;D01 D02 D04;Benchmark strict;P1-PERF-01;Tres tamanhos em tres motores com amostras separadas;demonstrado;Modelo local - nao e latencia Google
+P1-R37;Investigar diferenca WebKit sem relaxar durabilidade;pedido P1 6;D02;Benchmark strict;P1-PERF-01/WebKit;Durabilidade strict verificada em todas amostras;demonstrado;Fases medidas nao isolam causa interna do motor
+P1-R38;Safari real e navegadores adicionais;complemento navegadores reais;D01 D05;Gates de P2;P2-SAFARI-REAL;WebKit nao equivale a Safari ou iOS;bloqueado;Safari real indisponivel neste Windows
+P1-R39;Matriz precisa sem aprovacao generica;pedido P1 5;D01;Esta matriz;Revisao de cada linha e IDs executados;Cada criterio tem contrato teste resultado estado e alcance;demonstrado;Requisitos futuros continuam pendentes ou bloqueados
+P1-R40;Sem operacoes remotas nem dados reais;pedido P1 7 e restricoes;D12;Limite desta entrega;Revisao do diff e rede loopback;Sem push PR merge deploy ou fonte comercial real;demonstrado;Fixtures e logs sinteticos
