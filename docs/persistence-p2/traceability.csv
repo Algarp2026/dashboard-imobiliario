@@ -1,0 +1,31 @@
+id;requisito_P2;decisao;teste_especifico;estado;alcance
+P2-R01;Base atualizada e branch isolada;D01;git rev-parse origin/main e git status;implementado-verificado;eb85a7d85b11ad1ab53c43ec05066da226b6d73a sem alteracoes anteriores
+P2-R02;Cache metadata pedidos e marcador;D01 D04;P2-READ-01 P2-PENDING-01;implementado-testado;Originais preservados e nenhuma confirmacao inferida
+P2-R03;Arquivo legacy protegido e checkpoints;D05;P2-FORMATS-01 P2-PENDING-01 P2-MIG-01;implementado-testado;Wrapper original preservado sem limpeza
+P2-R04;Gzip existente com integridade;D04;P2-FORMATS-01;implementado-testado;Codec comprimento checksum e bytes comprimidos originais
+P2-R05;Duas reservas PR29;D05;P2-READ-01 commercial-active-write-browser.mjs;implementado-testado;Formato e mecanismos atuais inalterados
+P2-R06;Prova nao equivale a confirmacao;D06;P2-RECEIPT-01;implementado-testado;ID base hashes metodo e UNKNOWN remoto
+P2-R07;Cinco classes e campos desconhecidos;D03 D05;P2-READ-01 P2-OPAQUE-01 P2-REF-02;implementado-testado;Desconhecidos protegidos sem interpretacao
+P2-R08;Nao inventar base entre instancias;D01 D02;P2-REF-01 P2-REQUEST-01;implementado-testado;Hash candidato nao autentica instancia
+P2-R09;Hash canonico servidor;D04;P2-HASH-01;implementado-testado;Comparacao com serializedStore real
+P2-R10;Raw hash Unicode NUL surrogate;D04;P2-RAW-01 P2-GRAPH-01 P2-GRAPH-02;implementado-testado;Code units e structured-clone representavel
+P2-R11;DISCOVERED COPYING VERIFIED READY;D05;P2-CHECKPOINT-01;implementado-testado;Reabertura por fase sem ACTIVATED
+P2-R12;Cursor corpos referencias atomicos;D02 D05;P2-TX-01 P2-CHECKPOINT-01;implementado-testado;Transacao strict sem efeitos parciais
+P2-R13;Lotes limitados e repeticao;D05;P2-MIG-01;implementado-testado;Limites de itens bytes e deduplicacao
+P2-R14;Variantes da origem durante copia;D02 D05;P2-MIG-03 P2-MIG-02;implementado-testado;Ambas variantes bloqueiam READY
+P2-R15;Referencias ausentes nao passam por flag;D04 D05;P2-REF-03;implementado-testado;Corpo removido com READY continua a falhar
+P2-R16;Schema isolado e projecoes P1;D01 D04;P2-SCOPE-01 P2-MIG-01;implementado-testado;Stores preparados workspace nao ativado
+P2-R17;Nenhuma transacao operacional de escrita;D01 D05;P2-MIG-01;implementado-testado;Contadores de escrita e versionchange zero na origem
+P2-R18;Writer antigo nao altera destino;D07;P2-MIX-01;implementado-testado;Origens distintas nao cooperacao ficticia
+P2-R19;15 historicos 14.84MiB slots e edicoes novas;D05;P2-MIG-01 commercial-active-write-browser.mjs;implementado-testado;Fixture grande desktop tres motores e hotfix desktop/mobile
+P2-R20;Quota e retoma sem eliminar;D05;P2-TX-01;simulado-testado;Erro quota injetado atomico sem limpeza
+P2-R21;Quota fisica nativa;D05;Sonda Chromium overrideQuotaForOrigin;pendente;Alocacao limitada nao provocou erro nativo nao e prova de esgotamento
+P2-R22;Crash abrupto Chromium;D05;P2-MIG-01 ensaio processo descartavel;implementado-testado;Reabertura apos terminacao forcada nao power loss
+P2-R23;Crash Firefox e WebKit;D05;Sem mecanismo portavel exercitado;pendente;Reabertura normal testada nao equivale a crash
+P2-R24;Tres motores desktop mobile;D07;commercial-persistence-p2-browser.mjs;implementado-testado;Seis combinacoes viewport nao dispositivos fisicos
+P2-R25;Safari real iOS;D07;Ambiente indisponivel;pendente;WebKit nao substitui Safari real
+P2-R26;Protecoes atuais mantidas;D01 D06 D07;72 suites Node dez browser e active-write;implementado-testado;CAS tickets recuperacao integridade e hotfix sem alteracao
+P2-R27;Nao ativar runtime ou enviar pedidos;D01 D07;git diff origin/main e P2-SCOPE-01;implementado-verificado;Somente ficheiros novos sem inicializacao comercial
+P2-R28;Contratos schema formatos matriz riscos;D01 D05 D07;SCHEMA FORMATS MIGRATION VALIDATION;documentado;Separacao explicita entre implementado simulado e pendente
+P2-R29;Fencing e identidade operacional;D07;Nao implementado P2;bloqueado-para-P3;Requer autorizacao coordenada de frontend API fonte
+P2-R30;Fotografia atomica e concorrencia do produto;D01 D02;Caracterizacao P1 atual mantida;pendente;P2 nao corrige ABA nem exportacao comercial incoerente

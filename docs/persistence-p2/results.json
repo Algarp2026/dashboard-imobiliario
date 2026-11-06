@@ -1,0 +1,779 @@
+{
+  "base": "eb85a7d85b11ad1ab53c43ec05066da226b6d73a",
+  "productionEnabled": false,
+  "node": [
+    {
+      "name": "access-routes.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-active-write-capacity.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-agent-module-guard.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-apartment16-recovery.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-archive-verifier.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-audit-defects.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-auto-sync.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-browser-policy.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-capacity.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-chunk-storage.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-followup.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-preferences.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-report-grouping.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-reports.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-tabs.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-workflow.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-client-workspace.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-composition-d2.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-concurrency.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-construction.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-consultation-guards.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-contact-history.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-contacts.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-cycle-boundaries.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-d2-platform.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-event-provenance.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-followups.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-fraction-draft.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-fraction-recommendations.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-home-entry.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-integrity-server.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-latency.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-loading-persistence.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-local-backups.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-opportunities.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-opportunity-cards.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-opportunity-matrix.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-pending-local.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-persistence-p1-contracts.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-persistence-p1-current.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-persistence-p2-reader.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-persistence-performance.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-post-audit-api.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-post-audit.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-presentation-pdf.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-progressive-flow.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-read-commit-order.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-read-contention.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-recommendations-ui.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-recommendations.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-recovery-archive.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-recovery-client-api.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-reform-defects.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-safe-reconciliation.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-smoke.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-source-integrity.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-stage-engine.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-storage-lifecycle.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-sync-api.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-sync-client.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-sync-final-audit.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-ticket-renewal.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-ux.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-write-integrity.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "commercial-write-recovery.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "comparator-belaformosa.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "compset.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "google-read-check.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "pr20-main-integration.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "pr21-main-integration.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "pr22-main-integration.test.js",
+      "passed": true,
+      "code": 0
+    },
+    {
+      "name": "pricing-analysis.test.js",
+      "passed": true,
+      "code": 0
+    }
+  ],
+  "syntax": {
+    "total": 179,
+    "passed": 179,
+    "failed": 0
+  },
+  "existingBrowser": [
+    {
+      "name": "commercial-storage-reliability-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-storage-growth-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-recovery-archive-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-loading-persistence-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-safe-reconciliation-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-auto-sync-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-presentation-pdf-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pending-local-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-fraction-draft-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-profile-followup-browser.mjs",
+      "code": 0,
+      "passed": true
+    }
+  ],
+  "p2Browser": {
+    "results": [
+      {
+        "engine": "chromium",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": true
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-demonstrated-with-bounded-allocation",
+        "abruptCrash": "browser-process-crash-and-reopen-passed",
+        "version": "157.0.8103.39",
+        "status": "passed"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": false
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "157.0.8103.39",
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": true
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "153.0",
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": false
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "153.0",
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": true
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "26.5",
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": false
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "26.5",
+        "status": "passed"
+      }
+    ],
+    "deniedMethods": 0,
+    "realGoogle": false,
+    "safariReal": false
+  },
+  "readerCases": 14,
+  "hotfixBrowser": {
+    "desktop": "passed",
+    "mobile": "passed",
+    "fixtureHistoricalMiB": 14.839998245239258
+  },
+  "remaining": [
+    "native quota exhaustion",
+    "Firefox/WebKit abrupt crash",
+    "real Safari/iOS",
+    "power loss",
+    "P3 operational workspace and fencing"
+  ]
+}
