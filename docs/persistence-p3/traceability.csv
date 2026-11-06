@@ -1,0 +1,43 @@
+id;requisito;contrato;teste_especifico;tipo_evidencia;limite
+P3-R01;Main atual com P2 e branch limpa;D01;git fetch rev-parse status;verificado;Base 9f37202d04fb06c3821010e391423a9a2b55646d sem publicacao
+P3-R02;Nucleo experimental nao ativado;D01 D07;P3-ISOLATION P3-RUNTIME-NOT-ACTIVATED e diff;implementado-testado;Nenhum import ou escritor novo no produto
+P3-R03;Workspace versionado e identidade estavel;D01;P3-CAS-01 P3-HASH-RACE-01;implementado-testado;Capacidade local nao autentica pessoa
+P3-R04;Revisao local independente e monotona;D02;P3-CAS-01;implementado-testado;10 para 11 sem substituir pela revisao remota
+P3-R05;CAS real entre separadores;D02;P3-CAS-01;implementado-testado;Duas paginas mesma origem e DB nativa
+P3-R06;Branches duraveis e originais recuperaveis;D02 D04;P3-CAS-01 P3-BRANCH-QUOTA-01;implementado-testado;Nenhuma fusao automatica
+P3-R07;Cabeca alterada durante hashing;D02;P3-HASH-RACE-01;implementado-testado;Barreira deterministica fora da transacao
+P3-R08;oncomplete e strict sem awaits na transacao;D02;P3-QUOTA-01 P3-BRANCH-QUOTA-01 e revisao de mutate;implementado-testado;Strict nao prova resistencia a falha fisica
+P3-R09;Pedido original imutavel e ID idempotente;D04;P3-IMMUTABLE-01 P3-ID-AND-DEDUP-01;implementado-testado;Mesmo ID outro conteudo rejeitado
+P3-R10;Corpos sem duplicacao desnecessaria;D04;P3-ID-AND-DEDUP-01;implementado-testado;Sem nova compressao ou GC
+P3-R11;Colisao operationId preserva anterior;D04;P3-ID-AND-DEDUP-01;implementado-testado;UUID nao substitui verificacao de unicidade
+P3-R12;Indice ausente nao permite reutilizar pedido;D04;P3-INDEX-INTEGRITY-01;implementado-testado;Exportacao incompleta e forense
+P3-R13;Maquina de estados com provas derivadas;D02 D06;P3-STATE-CONTRACT P3-STATES-01;implementado-testado;Sem metodo publico para forcar fase
+P3-R14;Interrupcao antes e depois durabilidade;D02;P3-QUOTA-01 P3-STATES-01;implementado-testado;Proposta staged distinta de cabeca aceite
+P3-R15;Resposta perdida apos commit;D06;P3-LOSS-01;simulado-testado;Simulador fora do processo do navegador nao e Google
+P3-R16;Falha apos preparacao incerta;D06;P3-PREPARED-01;simulado-testado;PENDING bloqueia retoma sem novo ID
+P3-R17;Falha de rede antes commit e retry autorizado;D06;P3-NETWORK-01;simulado-testado;UNKNOWN nao autoriza envio por si
+P3-R18;Ack local falhado;D06;P3-QUOTA-01;implementado-testado;LOCAL_ACK_PENDING recuperado sem duplicar escrita ficticia
+P3-R19;Nova edicao posterior nao recebe ack antigo;D02 D06;P3-LATER-EDIT-01 P3-HISTORICAL-ACK-01;implementado-testado;headSynced deriva da cabeca e propostas atuais
+P3-R20;Base remota ultrapassada bloqueia;D06;P3-LATER-EDIT-01 P3-PENDING-AND-CAS;simulado-testado;Nenhuma substituicao forcada
+P3-R21;Reabrir nove estados;D02;P3-STATES-01 P3-CAS-01 P3-LOSS-01 P3-QUOTA-01 P3-STORAGE-STATE-01 P3-REOPEN-STATES-01;implementado-testado;Estados persistidos sem depender da UI global
+P3-R22;Fotografia de export em readonly unica;D03;P3-EXPORT-01;implementado-testado;Hash e reconstrucao depois da transacao
+P3-R23;Instancias com bases distintas;D03;P3-BASES-01;implementado-testado;Sem readSyncMeta ou LS global
+P3-R24;Export concorrente com alteracao de workspace;D03;P3-EXPORT-01;implementado-testado;Snapshot proprio continua coerente
+P3-R25;Export FORENSIC sem referencia ou integridade;D03 D04;P3-EXPORT-01 P3-INDEX-INTEGRITY-01 P3-BODY-INTEGRITY-01;implementado-testado;Nao promete recuperacao automatica
+P3-R26;Edicoes apenas em memoria nao sao duraveis;D03;P3-EXPORT-01;implementado-testado;memoryDraft separado e explicitamente forense
+P3-R27;Fence frontend API fonte independente;D07;P3-FENCE-MATRIX P3-SOURCE-INDEPENDENT-FENCE;simulado-testado;Nenhuma barreira publicada na API ou Apps Script
+P3-R28;Comprovativo deve pertencer ao pedido;D06;P3-LOSS-AND-PROOF P3-STATES-01;simulado-testado;Prova sintetica nao e cadeia B6 autenticada
+P3-R29;Lookup historico nao reativa fonte;D06;P3-SOURCE-IDEMPOTENCE P3-HISTORICAL-ACK-01;simulado-testado;Read do simulador nao altera sua revisao
+P3-R30;Legacy slots checkpoints gzip opacos preservados;D05;P3-LEGACY-01 e regressao P2;implementado-testado;Origem sintetica separada e hash integral antes depois
+P3-R31;Quota nao limpa protegidos nem inventa durabilidade;D05;P3-QUOTA-01 P3-BRANCH-QUOTA-01;simulado-testado;Quota injetada nao e quota fisica
+P3-R32;Reinicio e encerramento abrupto;D02 D05;P3-CAS-01 e sonda Chromium;implementado-testado;Crash apenas processo Chromium descartavel sem power loss
+P3-R33;Chromium Firefox WebKit desktop mobile;D07;commercial-persistence-p3-browser.mjs;implementado-testado;Viewport mobile nao dispositivo fisico
+P3-R34;Compatibilidade P1 P2 e hotfix29;D01 D05;Suites Node e laboratorios P1 P2 active-write;regressao-real;Codigo existente e expectativas inalterados
+P3-R35;Regressao comercial integral aplicavel;D01 D11;commercial-browser-regression.cjs;regressao-real;Resultados individuais em results.json sem dados reais
+P3-R36;Preco reserva venda comissao e campos desconhecidos intactos;D04 D11;P3-CAS-01 e suites comerciais;implementado-testado;Comparacao integral dos payloads sinteticos
+P3-R37;Safari iOS quota nativa eviction;D05 D07;Ambiente nao exercitado;pendente;WebKit nao equivale a Safari real
+P3-R38;Publicacao coordenada e rollback;D07;ACTIVATION_GATES.md;apenas-especificado;Exige aprovacao separada e provas autenticadas P5
+P3-R39;Sem alteracoes operacionais ou comerciais;D01 D12;git diff name-status e P3-RUNTIME-NOT-ACTIVATED;verificado;Somente ficheiros novos experimentais testes e docs
+P3-R40;Branch conserva base original apos ack de outra operacao;D02 D03;P3-ORIGINAL-BASE-01;implementado-testado;Export nao herda a base atual de uma proposta diferente
+P3-R41;Base inicial confirmada por leitura ficticia;D01 D06;P3-BASES-01;implementado-testado;Hash plausivel sozinho nao cria workspace
+P3-R42;Revisao monotona e revisao explicita da branch;D02;P3-ORIGINAL-BASE-01;implementado-testado;Revisao observada nao recua e proposta nova exige refresh
