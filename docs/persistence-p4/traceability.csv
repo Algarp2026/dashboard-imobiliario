@@ -1,0 +1,26 @@
+requirement,evidence,status,limit
+isolamento,P4-SCOPE-01 e P4-RUNTIME-01,implemented-tested,apenas laboratorio 127.0.0.1 com opt-in
+identidades separadas,P4-UTF16-01 e P4-P3-CAS-EXPORT,implemented-tested,sem comprovativo Google real
+deduplicacao entre abas,P4-DEDUP-TABS,implemented-tested,dominio experimental separado
+branches e operacoes independentes,P4-SHARED-OPERATIONS-BRANCHES,implemented-tested,P3 ja deduplicava identity
+campos desconhecidos e bytes,P4-GRAPH-01 e P4-LEGACY-01,implemented-tested,tipos P2 suportados
+compressao reversivel,P4-UTF16-01 e P4-GRAPH-01,implemented-tested,gzip depende do codec disponivel
+limite real de expansao,P4-BOMB-01,implemented-tested,32 MiB por corpo
+codec e integridade,P4-INTEGRITY-01 e P4-CORRUPT-PRESERVED e P4-CODEC-UNAVAILABLE,implemented-tested,erro explicito sem descarte
+quatro categorias,P4-RETENTION-01 e inventory,implemented-tested,nenhum pruning comercial
+referencias desconhecidas,P4-EMBEDDED-01 e P4-UNKNOWN-PRESERVED,implemented-tested,protecao conservadora
+provas estruturais,P4-WORKSPACE-PROOF-01 e P4-ARCHIVE-PROOF-01,implemented-tested,checksum nao confirma commit
+dry run e CAS final,P4-RETENTION-CAS,implemented-tested,apenas scratch comprovado
+GC versus nova referencia,P4-DELETE-REFERENCE-RACE,implemented-tested,sem Web Locks como substituto
+COW e reinicio,P4-COW-RESTART,implemented-tested,nao prova falha de energia
+compressao concorrente,P4-COMPRESSION-RACE,implemented-tested,aborta fotografia obsoleta
+quota e atomicidade,P4-QUOTA-ATOMIC e P4-COW-RESTART,implemented-tested,quota injetada
+quota nativa,sonda Chromium limitada a 2 MiB,not-demonstrated,nao encher disco
+crash abrupto,Chromium desktop processo terminado e reaberto,implemented-tested,Firefox WebKit apenas restart normal
+origem legacy e hotfix,P4-LEGACY-PROTECTION e commercial-active-write-browser.mjs,implemented-tested,22 fragmentos ficticios sem escrita na origem
+exportacao e recibos,P4-P3-CAS-EXPORT e matriz P3 original,implemented-tested,recibos sinteticos apenas
+P1 P2 P3,matrizes originais sem alteracao,implemented-tested,ativacao real continua bloqueada
+benchmarks,seis cenarios em results.json,measured-local,bytes de corpos e cabecalhos nao alocacao nativa
+Safari e iOS real,nao disponiveis,not-verified,WebKit Playwright nao equivale Safari real
+runtime comercial,git diff e P4-RUNTIME-01,unchanged,sem API Apps Script HTML CSS ou dados alterados
+publicacao,nenhuma operacao de publicacao,not-executed,push e Draft PR reservados ao utilizador
