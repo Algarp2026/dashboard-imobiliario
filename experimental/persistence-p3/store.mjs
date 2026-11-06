@@ -6,41 +6,45 @@ export const STORES=['workspaces','instances','bodies','operations','requests','
 const clone=v=>structuredClone(v);
 const error=code=>Object.assign(new Error(code),{code});
 const bump=value=>{if(!Number.isSafeInteger(value)||value<0||value>=Number.MAX_SAFE_INTEGER)fail('P3_REVISION_EXHAUSTED');return value+1;};
-const bodyEqual=(a,b)=>a?.version===1&&b?.version===1&&Object.keys(a).length===8&&Object.keys(b).length===8&&a.bodyRef===b.bodyRef&&a.rawHash===b.rawHash&&a.mediaType===b.mediaType&&a.codec===b.codec&&a.encodedBytes===b.encodedBytes&&a.decodedBytes===b.decodedBytes&&a.bytes instanceof Uint8Array&&b.bytes instanceof Uint8Array&&a.bytes.length===b.bytes.length&&a.bytes.every((v,i)=>v===b.bytes[i]);
-async function dataBody(data){if(dataIssues(data).length)fail('P3_INVALID_DATA');return encodeOriginal(JSON.stringify(data));}
+const defaultBodyEqual=(a,b)=>a?.version===1&&b?.version===1&&Object.keys(a).length===8&&Object.keys(b).length===8&&a.bodyRef===b.bodyRef&&a.rawHash===b.rawHash&&a.mediaType===b.mediaType&&a.codec===b.codec&&a.encodedBytes===b.encodedBytes&&a.decodedBytes===b.decodedBytes&&a.bytes instanceof Uint8Array&&b.bytes instanceof Uint8Array&&a.bytes.length===b.bytes.length&&a.bytes.every((v,i)=>v===b.bytes[i]);
 
-export async function openLocal({factory,origin,name='the-view-p3-lab.v1',synthetic=false,remote=null}={}){
+export async function openLocal({factory,origin,name='the-view-p3-lab.v1',synthetic=false,remote=null,bodyCodec=null,extensionStores=[]}={}){
   lab(origin,name,synthetic);if(!factory||remote&&(!remote.labOnly||!/^fiction-p3-/.test(remote.sourceId)))fail('P3_LAB_ONLY');
+  if(bodyCodec&&(!bodyCodec.labOnly||bodyCodec.formatVersion!==2||['encodeOriginal','decodeOriginal','samePhysicalBody','equivalent'].some(k=>typeof bodyCodec[k]!=='function'))||!Array.isArray(extensionStores)||extensionStores.some(k=>!['p4Audit','p4Pins','p4Archive','p4Migration','p4Prepared'].includes(k))||new Set(extensionStores).size!==extensionStores.length)fail('P3_EXTENSION');
+  const stores=[...STORES,...extensionStores],bodyEqual=bodyCodec?.samePhysicalBody||defaultBodyEqual,decodeBody=bodyCodec?.decodeOriginal||decodeOriginal;
+  async function dataBody(data){if(dataIssues(data).length)fail('P3_INVALID_DATA');return (bodyCodec?.encodeOriginal||encodeOriginal)(JSON.stringify(data));}
   const db=await new Promise((resolve,reject)=>{
-    const r=factory.open(name,1);let stopped=false;
-    r.onupgradeneeded=()=>{for(const s of STORES)r.result.createObjectStore(s,{keyPath:s==='bodies'?'bodyRef':s==='workspaces'?'workspaceId':s==='instances'?'instanceId':s==='operations'?'operationId':s==='requests'?'requestId':s==='branches'?'branchId':'requestId'});};
+    const r=factory.open(name,extensionStores.length?2:1);let stopped=false;
+    r.onupgradeneeded=()=>{for(const s of stores)if(!r.result.objectStoreNames.contains(s))r.result.createObjectStore(s,{keyPath:s.startsWith('p4')?'id':s==='bodies'?'bodyRef':s==='workspaces'?'workspaceId':s==='instances'?'instanceId':s==='operations'?'operationId':s==='requests'?'requestId':s==='branches'?'branchId':'requestId'});};
     r.onerror=r.onblocked=()=>{stopped=true;reject(error('P3_DATABASE_UNAVAILABLE'));};
     r.onsuccess=()=>{if(stopped){r.result.close();return;}r.result.onversionchange=()=>r.result.close();resolve(r.result);};
   });
   function transaction(mode,action){return new Promise((resolve,reject)=>{
     let tx,result,cause;
-    try{tx=db.transaction(STORES,mode,mode==='readwrite'?{durability:'strict'}:undefined);}catch{reject(error('P3_TRANSACTION_UNAVAILABLE'));return;}
+    try{tx=db.transaction(stores,mode,mode==='readwrite'?{durability:'strict'}:undefined);}catch{reject(error('P3_TRANSACTION_UNAVAILABLE'));return;}
     const abort=e=>{cause ||= typeof e?.code==='string'&&e.code.startsWith('P3_')?e:error(e?.name==='QuotaExceededError'?'P3_QUOTA':'P3_ABORT');try{tx.abort();}catch{}};
     tx.onabort=()=>reject(cause||error(tx.error?.name==='QuotaExceededError'?'P3_QUOTA':'P3_ABORT'));
     tx.onerror=e=>{e.preventDefault();abort(e.target.error);};tx.oncomplete=()=>resolve(result);
     try{action(tx,v=>result=v,abort);}catch(e){abort(e);}
   });}
   function snapshot(){return transaction('readonly',(tx,done,abort)=>{
-    const rows={};let left=STORES.length;for(const s of STORES){const r=tx.objectStore(s).getAll();r.onsuccess=()=>{try{rows[s]=r.result;if(!--left)done(rows);}catch(e){abort(e);}};}
+    const rows={};let left=stores.length;for(const s of stores){const r=tx.objectStore(s).getAll();r.onsuccess=()=>{try{rows[s]=r.result;if(!--left)done(rows);}catch(e){abort(e);}};}
   });}
   // Compare the complete captured metadata and immutable bodies in the transaction.
   // Crypto, reconstruction, adapters and timers are all outside this critical section.
-  function mutate(before,rows,bodies=[],result=null){return transaction('readwrite',(tx,done,abort)=>{
-    const now={};let left=STORES.length;
-    for(const s of STORES){const r=tx.objectStore(s).getAll();r.onsuccess=()=>{try{
+  async function mutate(before,rows,bodies=[],result=null){
+    if(bodyCodec){const selected=[];for(const b of bodies){const old=before.bodies.find(x=>x.bodyRef===b.bodyRef);if(old&&!bodyEqual(old,b)){if(!await bodyCodec.equivalent(old,b))fail('P3_IMMUTABLE_BODY');selected.push(old);}else selected.push(b);}bodies=selected;}
+    return transaction('readwrite',(tx,done,abort)=>{
+    const now={};let left=stores.length;
+    for(const s of stores){const r=tx.objectStore(s).getAll();r.onsuccess=()=>{try{
       now[s]=r.result;if(--left)return;
-      if(!STORES.every(k=>k==='bodies'?now[k].length===before[k].length&&now[k].every((b,i)=>bodyEqual(b,before[k][i])):same(now[k],before[k])))fail('P3_CONCURRENT_CHANGE');
+      if(!stores.every(k=>k==='bodies'?now[k].length===before[k].length&&now[k].every((b,i)=>bodyEqual(b,before[k][i])):same(now[k],before[k])))fail('P3_CONCURRENT_CHANGE');
       for(const b of bodies){const old=now.bodies.find(x=>x.bodyRef===b.bodyRef);if(old&&!bodyEqual(old,b))fail('P3_IMMUTABLE_BODY');if(!old)tx.objectStore('bodies').add(b);}
       for(const [store,list]of Object.entries(rows))for(const row of list)tx.objectStore(store).put(row);
       done(result);
     }catch(e){abort(e);}};}
   });}
-  async function decode(ref,s){const b=s.bodies.find(x=>x.bodyRef===ref);if(!b)fail('P3_MISSING_BODY');const value=await decodeOriginal(b);if(typeof value!=='string')fail('P3_BODY_TYPE');const data=JSON.parse(value);if(dataIssues(data).length)fail('P3_INVALID_DATA');return data;}
+  async function decode(ref,s){const b=s.bodies.find(x=>x.bodyRef===ref);if(!b)fail('P3_MISSING_BODY');const value=await decodeBody(b);if(typeof value!=='string')fail('P3_BODY_TYPE');const data=JSON.parse(value);if(dataIssues(data).length)fail('P3_INVALID_DATA');return data;}
   async function instance(handle,s){
     if(!id(handle?.instanceId)||typeof handle?.token!=='string')fail('P3_INSTANCE');
     const row=s.instances.find(x=>x.instanceId===handle.instanceId);await check(row);
@@ -176,7 +180,7 @@ export async function openLocal({factory,origin,name='the-view-p3-lab.v1',synthe
     for(const row of [...operations,...branches,...receipts])try{await check(row);}catch(e){issues.push(e.code);}
     for(const r of receipts){const o=operations.find(o=>o.requestId===r.requestId);if(!o||r.requestHash!==o.requestHash||r.payloadHash!==o.payloadHash||r.resultRevision!==o.payloadHash||r.baseRevision!==o.baseRemoteRevision||r.sourceId!==o.sourceId||r.status!=='COMMITTED'||r.laboratoryOnly!==true)issues.push('P3_RECEIPT_REFERENCE');}
     for(const o of operations)try{decodedOps.push({...o,originalRequest:await reconstruct(o,s)});}catch(e){issues.push(e.code||'P3_OPERATION_INTEGRITY');}
-    const bodies=[];for(const ref of refs){const b=s.bodies.find(x=>x.bodyRef===ref);if(!b){issues.push('P3_MISSING_BODY');continue;}try{await decodeOriginal(b);}catch(e){issues.push(e.code||'P3_BODY_INTEGRITY');}bodies.push({...b,bytes:Array.from(b.bytes)});}
+    const bodies=[];for(const ref of refs){const b=s.bodies.find(x=>x.bodyRef===ref);if(!b){issues.push('P3_MISSING_BODY');continue;}try{await decodeBody(b);}catch(e){issues.push(e.code||'P3_BODY_INTEGRITY');}bodies.push({...b,bytes:Array.from(b.bytes)});}
     if(memoryDraft!==undefined)issues.push('MEMORY_DRAFT_NOT_DURABLE');
     const envelope={version:1,kind:issues.length?'FORENSIC':'RECOVERABLE',instanceId:i.instanceId,workspaceId:i.workspaceId,snapshotRevision:selected.localRevision,view:clone(selected),data,base,baseRevision:selected.baseRemoteRevision,operation:decodedOps.find(o=>o.operationId===selected.activeOperationId)||null,operations:decodedOps,branches:clone(branches),receipts:clone(receipts),bodies,integrity:{issues:[...new Set(issues)],remoteConfirmation:'LABORATORY_ONLY',automaticRemoteRestore:false},limitations:['Experimental local snapshot, not Google activation proof',...(memoryDraft!==undefined?['Unsaved memory proposal preserved separately, not durable']:[])],...(memoryDraft!==undefined?{memoryDraft:clone(memoryDraft)}:{})};
     return {...envelope,checksum:await commercialHash(envelope)};

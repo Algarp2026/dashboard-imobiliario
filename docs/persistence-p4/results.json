@@ -1,0 +1,5729 @@
+{
+  "version": 1,
+  "phase": "P4",
+  "date": "2026-11-06",
+  "branch": "codex/p4-content-storage-retention",
+  "base": "b2411d7026ee53dab98e581c3fbf547b90be3e19",
+  "scope": "isolated synthetic laboratory only",
+  "productionActivated": false,
+  "realGoogle": false,
+  "sourceSHA256": {
+    "experimental/persistence-p3/store.mjs": "46ef2869a9a2c45671eab883439facb5e1cfe1da1a33d740f0991e829981312e",
+    "experimental/persistence-p4/codecs.mjs": "df07b715b42511d490bfa56b6184dbb71e480446ec5ee4a9c075dbf0ca80df75",
+    "experimental/persistence-p4/references.mjs": "f975a2525fb82563b9b8844b87b5c4c5c39d861f79a07b1f377da37610fe6547",
+    "experimental/persistence-p4/store.mjs": "c4701894f0945704970b14e418fa1071c58c148852e1f245a9884f6ed0e531cb",
+    "tests/commercial-persistence-p4.test.js": "fd21f97083e79432e12b1d012c4b1dd8c5bf6e85c16b51ccf9fb0b04b3d02369",
+    "tests/commercial-persistence-p4-browser.mjs": "dc5e469aa402a345e371c12a82254351e2344564212c2e3f46b1bdd12bb00d5c"
+  },
+  "node": {
+    "results": [
+      {
+        "suite": "access-routes.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-active-write-capacity.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-agent-module-guard.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-apartment16-recovery.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-archive-verifier.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-audit-defects.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-auto-sync.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-browser-policy.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-capacity.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-chunk-storage.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-followup.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-preferences.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-report-grouping.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-reports.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-tabs.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-workflow.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-client-workspace.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-composition-d2.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-concurrency.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-construction.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-consultation-guards.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-contact-history.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-contacts.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-cycle-boundaries.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-d2-platform.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-event-provenance.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-followups.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-fraction-draft.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-fraction-recommendations.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-home-entry.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-integrity-server.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-latency.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-loading-persistence.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-local-backups.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-opportunities.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-opportunity-cards.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-opportunity-matrix.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-pending-local.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-persistence-p1-contracts.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-persistence-p1-current.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-persistence-p2-reader.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-persistence-p3.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-persistence-p4.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-persistence-performance.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-post-audit-api.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-post-audit.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-presentation-pdf.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-progressive-flow.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-read-commit-order.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-read-contention.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-recommendations-ui.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-recommendations.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-recovery-archive.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-recovery-client-api.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-reform-defects.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-safe-reconciliation.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-smoke.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-source-integrity.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-stage-engine.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-storage-lifecycle.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-sync-api.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-sync-client.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-sync-final-audit.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-ticket-renewal.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-ux.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-write-integrity.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "commercial-write-recovery.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "comparator-belaformosa.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "compset.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "google-read-check.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "pr20-main-integration.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "pr21-main-integration.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "pr22-main-integration.test.js",
+        "status": "passed",
+        "exitCode": 0
+      },
+      {
+        "suite": "pricing-analysis.test.js",
+        "status": "passed",
+        "exitCode": 0
+      }
+    ],
+    "passed": 74,
+    "failed": 0
+  },
+  "syntax": {
+    "total": 189,
+    "failed": 0
+  },
+  "commercialBrowser": [
+    {
+      "name": "commercial-profile-followup-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-storage-growth-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-storage-reliability-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-consultation-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-fraction-draft-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-recovery-archive-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-loading-persistence-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-presentation-pdf-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-safe-reconciliation-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "comparator-belaformosa-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-auto-sync-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-safety-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-report-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-post-audit-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-local-quota-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pending-local-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-followup-layout-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-audit-defects-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-stage-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2a-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-phase2b-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-complete-exports.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-contacts-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-pr6-regression-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-profile-routing-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-home-entry-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-client-report-grouping-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-audit.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "client-workspace-dialogs.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "composition-d2-history-routing-probe.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "composition-d2-platform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "visual-audit-browser.mjs",
+      "code": 0,
+      "passed": true
+    }
+  ],
+  "p1": {
+    "referenceModelOnly": true,
+    "realGoogle": false,
+    "nativeQuotaTested": false,
+    "safariApplicationTested": false,
+    "reports": [
+      {
+        "engine": "chromium",
+        "checks": [
+          {
+            "id": "P1-CUR-01",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-CUR-02",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-IDB-01",
+            "status": "reference-model-demonstrated",
+            "proposals": 2,
+            "branches": 1,
+            "exportsCoherent": true,
+            "originalRequestPreserved": true
+          },
+          {
+            "id": "P1-IDB-02",
+            "status": "reference-model-demonstrated",
+            "abortAtomic": true,
+            "quotaFailure": "injected-not-native"
+          },
+          {
+            "id": "P1-IDB-03",
+            "status": "reference-model-demonstrated",
+            "incompatibleProposalsPreserved": true
+          },
+          {
+            "id": "P1-MIX-02",
+            "status": "reference-model-demonstrated",
+            "newHeadIsolated": true,
+            "oldCacheStillMutable": true,
+            "realApiOrSourceFenceImplemented": false
+          },
+          {
+            "id": "P1-MIG-03",
+            "status": "reference-model-demonstrated",
+            "gracefulRestart": true,
+            "powerLossTested": false,
+            "unknownOriginalPreserved": true
+          }
+        ],
+        "benchmarks": [
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 180000,
+            "samples": [
+              {
+                "serializationMs": 1.199999988079071,
+                "hashingMs": 0.30000001192092896,
+                "compressionMs": 9.699999988079071,
+                "transactionMs": 7.800000011920929,
+                "verificationMs": 2.199999988079071,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 1.2000000178813934,
+                "hashingMs": 0,
+                "compressionMs": 5.699999988079071,
+                "transactionMs": 8.299999982118607,
+                "verificationMs": 2.5,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 1.300000011920929,
+                "hashingMs": 0.19999998807907104,
+                "compressionMs": 5.700000017881393,
+                "transactionMs": 8.199999988079071,
+                "verificationMs": 2.4000000059604645,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 0.800000011920929,
+                "hashingMs": 0.19999998807907104,
+                "compressionMs": 5.5999999940395355,
+                "transactionMs": 6.699999988079071,
+                "verificationMs": 2.600000023841858,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 0.8999999761581421,
+                "hashingMs": 0.20000001788139343,
+                "compressionMs": 5.4000000059604645,
+                "transactionMs": 8.099999994039536,
+                "verificationMs": 2.4000000059604645,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 1.5999999940395355,
+                "hashingMs": 0.10000002384185791,
+                "compressionMs": 7.199999988079071,
+                "transactionMs": 6.4000000059604645,
+                "verificationMs": 2.2000000178813934,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 0.7999999821186066,
+                "hashingMs": 0.20000001788139343,
+                "compressionMs": 5.299999982118607,
+                "transactionMs": 6.5,
+                "verificationMs": 2.199999988079071,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 0.800000011920929,
+                "hashingMs": 0.19999998807907104,
+                "compressionMs": 6,
+                "transactionMs": 7.199999988079071,
+                "verificationMs": 2.4000000059604645,
+                "payloadBytes": 180091,
+                "packedBytes": 92941,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 1.199999988079071,
+                "p95": 1.5999999940395355,
+                "mean": 1.074999999254942
+              },
+              "hashingMs": {
+                "median": 0.19999998807907104,
+                "p95": 0.30000001192092896,
+                "mean": 0.17500000447034836
+              },
+              "compressionMs": {
+                "median": 5.700000017881393,
+                "p95": 9.699999988079071,
+                "mean": 6.324999995529652
+              },
+              "transactionMs": {
+                "median": 7.800000011920929,
+                "p95": 8.299999982118607,
+                "mean": 7.399999994784594
+              },
+              "verificationMs": {
+                "median": 2.4000000059604645,
+                "p95": 2.600000023841858,
+                "mean": 2.3625000044703484
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          },
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 450000,
+            "samples": [
+              {
+                "serializationMs": 2.399999976158142,
+                "hashingMs": 0.6000000238418579,
+                "compressionMs": 15.199999988079071,
+                "transactionMs": 9.599999994039536,
+                "verificationMs": 3.9000000059604645,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2.199999988079071,
+                "hashingMs": 0.5,
+                "compressionMs": 16.200000017881393,
+                "transactionMs": 10.800000011920929,
+                "verificationMs": 3.199999988079071,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2.2000000178813934,
+                "hashingMs": 0.29999998211860657,
+                "compressionMs": 13,
+                "transactionMs": 8.199999988079071,
+                "verificationMs": 3.600000023841858,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 0.3999999761581421,
+                "compressionMs": 15.900000005960464,
+                "transactionMs": 8.300000011920929,
+                "verificationMs": 3.5999999940395355,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 1.9000000059604645,
+                "hashingMs": 0.3999999761581421,
+                "compressionMs": 15,
+                "transactionMs": 7.4000000059604645,
+                "verificationMs": 3.0999999940395355,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2.0999999940395355,
+                "hashingMs": 0.4000000059604645,
+                "compressionMs": 12.900000005960464,
+                "transactionMs": 9.199999988079071,
+                "verificationMs": 3.5999999940395355,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2.9000000059604645,
+                "hashingMs": 0.4000000059604645,
+                "compressionMs": 18.099999994039536,
+                "transactionMs": 7.700000017881393,
+                "verificationMs": 4.5999999940395355,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2.5,
+                "hashingMs": 0.30000001192092896,
+                "compressionMs": 15.799999982118607,
+                "transactionMs": 7.899999976158142,
+                "verificationMs": 3.7000000178813934,
+                "payloadBytes": 450091,
+                "packedBytes": 244124,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 2.2000000178813934,
+                "p95": 2.9000000059604645,
+                "mean": 2.274999998509884
+              },
+              "hashingMs": {
+                "median": 0.4000000059604645,
+                "p95": 0.6000000238418579,
+                "mean": 0.4124999977648258
+              },
+              "compressionMs": {
+                "median": 15.799999982118607,
+                "p95": 18.099999994039536,
+                "mean": 15.262499999254942
+              },
+              "transactionMs": {
+                "median": 8.300000011920929,
+                "p95": 10.800000011920929,
+                "mean": 8.637499999254942
+              },
+              "verificationMs": {
+                "median": 3.600000023841858,
+                "p95": 4.5999999940395355,
+                "mean": 3.662500001490116
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          },
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 850000,
+            "samples": [
+              {
+                "serializationMs": 4.0999999940395355,
+                "hashingMs": 0.800000011920929,
+                "compressionMs": 23.799999982118607,
+                "transactionMs": 9.199999988079071,
+                "verificationMs": 5.100000023841858,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4.699999988079071,
+                "hashingMs": 1.0999999940395355,
+                "compressionMs": 24.200000017881393,
+                "transactionMs": 11.299999982118607,
+                "verificationMs": 6,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 5.300000011920929,
+                "hashingMs": 0.7999999821186066,
+                "compressionMs": 28.700000017881393,
+                "transactionMs": 9.600000023841858,
+                "verificationMs": 6.299999982118607,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6.5,
+                "hashingMs": 0.9000000059604645,
+                "compressionMs": 28.69999998807907,
+                "transactionMs": 10.5,
+                "verificationMs": 7.300000011920929,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4.5999999940395355,
+                "hashingMs": 0.9000000059604645,
+                "compressionMs": 33.400000005960464,
+                "transactionMs": 18.299999982118607,
+                "verificationMs": 5,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3.4000000059604645,
+                "hashingMs": 0.699999988079071,
+                "compressionMs": 25.100000023841858,
+                "transactionMs": 10.099999994039536,
+                "verificationMs": 4.5,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3.5999999940395355,
+                "hashingMs": 0.800000011920929,
+                "compressionMs": 26.69999998807907,
+                "transactionMs": 9.800000011920929,
+                "verificationMs": 4.299999982118607,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4.700000017881393,
+                "hashingMs": 0.9000000059604645,
+                "compressionMs": 26.69999998807907,
+                "transactionMs": 10,
+                "verificationMs": 4,
+                "payloadBytes": 850091,
+                "packedBytes": 467968,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 4.699999988079071,
+                "p95": 6.5,
+                "mean": 4.612500000745058
+              },
+              "hashingMs": {
+                "median": 0.9000000059604645,
+                "p95": 1.0999999940395355,
+                "mean": 0.8625000007450581
+              },
+              "compressionMs": {
+                "median": 26.69999998807907,
+                "p95": 33.400000005960464,
+                "mean": 27.162500001490116
+              },
+              "transactionMs": {
+                "median": 10.099999994039536,
+                "p95": 18.299999982118607,
+                "mean": 11.099999997764826
+              },
+              "verificationMs": {
+                "median": 5.100000023841858,
+                "p95": 7.300000011920929,
+                "mean": 5.3125
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          }
+        ],
+        "errors": [],
+        "externalRequests": 0,
+        "commercialWrites": 0,
+        "version": "157.0.8103.39",
+        "storageEstimateAvailable": true,
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "checks": [
+          {
+            "id": "P1-CUR-01",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-CUR-02",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-IDB-01",
+            "status": "reference-model-demonstrated",
+            "proposals": 2,
+            "branches": 1,
+            "exportsCoherent": true,
+            "originalRequestPreserved": true
+          },
+          {
+            "id": "P1-IDB-02",
+            "status": "reference-model-demonstrated",
+            "abortAtomic": true,
+            "quotaFailure": "injected-not-native"
+          },
+          {
+            "id": "P1-IDB-03",
+            "status": "reference-model-demonstrated",
+            "incompatibleProposalsPreserved": true
+          },
+          {
+            "id": "P1-MIX-02",
+            "status": "reference-model-demonstrated",
+            "newHeadIsolated": true,
+            "oldCacheStillMutable": true,
+            "realApiOrSourceFenceImplemented": false
+          },
+          {
+            "id": "P1-MIG-03",
+            "status": "reference-model-demonstrated",
+            "gracefulRestart": true,
+            "powerLossTested": false,
+            "unknownOriginalPreserved": true
+          }
+        ],
+        "benchmarks": [
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 180000,
+            "samples": [
+              {
+                "serializationMs": 2,
+                "hashingMs": 0,
+                "compressionMs": 6,
+                "transactionMs": 10,
+                "verificationMs": 1,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 0,
+                "compressionMs": 5,
+                "transactionMs": 12,
+                "verificationMs": 3,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 0,
+                "compressionMs": 6,
+                "transactionMs": 8,
+                "verificationMs": 2,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 0,
+                "compressionMs": 5,
+                "transactionMs": 7,
+                "verificationMs": 2,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 0,
+                "compressionMs": 5,
+                "transactionMs": 7,
+                "verificationMs": 2,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 1,
+                "compressionMs": 4,
+                "transactionMs": 10,
+                "verificationMs": 3,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 0,
+                "compressionMs": 5,
+                "transactionMs": 9,
+                "verificationMs": 3,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 0,
+                "compressionMs": 6,
+                "transactionMs": 6,
+                "verificationMs": 3,
+                "payloadBytes": 180091,
+                "packedBytes": 93069,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 2,
+                "p95": 3,
+                "mean": 2.25
+              },
+              "hashingMs": {
+                "median": 0,
+                "p95": 1,
+                "mean": 0.125
+              },
+              "compressionMs": {
+                "median": 5,
+                "p95": 6,
+                "mean": 5.25
+              },
+              "transactionMs": {
+                "median": 9,
+                "p95": 12,
+                "mean": 8.625
+              },
+              "verificationMs": {
+                "median": 3,
+                "p95": 3,
+                "mean": 2.375
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          },
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 450000,
+            "samples": [
+              {
+                "serializationMs": 3,
+                "hashingMs": 1,
+                "compressionMs": 11,
+                "transactionMs": 11,
+                "verificationMs": 3,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4,
+                "hashingMs": 0,
+                "compressionMs": 12,
+                "transactionMs": 10,
+                "verificationMs": 3,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 5,
+                "hashingMs": 0,
+                "compressionMs": 11,
+                "transactionMs": 14,
+                "verificationMs": 4,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 1,
+                "compressionMs": 12,
+                "transactionMs": 12,
+                "verificationMs": 3,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 5,
+                "hashingMs": 0,
+                "compressionMs": 12,
+                "transactionMs": 11,
+                "verificationMs": 4,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6,
+                "hashingMs": 0,
+                "compressionMs": 12,
+                "transactionMs": 9,
+                "verificationMs": 3,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 0,
+                "compressionMs": 12,
+                "transactionMs": 13,
+                "verificationMs": 3,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4,
+                "hashingMs": 1,
+                "compressionMs": 13,
+                "transactionMs": 13,
+                "verificationMs": 3,
+                "payloadBytes": 450091,
+                "packedBytes": 244355,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 4,
+                "p95": 6,
+                "mean": 4.125
+              },
+              "hashingMs": {
+                "median": 0,
+                "p95": 1,
+                "mean": 0.375
+              },
+              "compressionMs": {
+                "median": 12,
+                "p95": 13,
+                "mean": 11.875
+              },
+              "transactionMs": {
+                "median": 12,
+                "p95": 14,
+                "mean": 11.625
+              },
+              "verificationMs": {
+                "median": 3,
+                "p95": 4,
+                "mean": 3.25
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          },
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 850000,
+            "samples": [
+              {
+                "serializationMs": 8,
+                "hashingMs": 0,
+                "compressionMs": 26,
+                "transactionMs": 26,
+                "verificationMs": 9,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6,
+                "hashingMs": 1,
+                "compressionMs": 25,
+                "transactionMs": 25,
+                "verificationMs": 5,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 9,
+                "hashingMs": 1,
+                "compressionMs": 28,
+                "transactionMs": 33,
+                "verificationMs": 8,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6,
+                "hashingMs": 3,
+                "compressionMs": 24,
+                "transactionMs": 24,
+                "verificationMs": 11,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 7,
+                "hashingMs": 1,
+                "compressionMs": 28,
+                "transactionMs": 29,
+                "verificationMs": 14,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6,
+                "hashingMs": 1,
+                "compressionMs": 24,
+                "transactionMs": 43,
+                "verificationMs": 16,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 7,
+                "hashingMs": 1,
+                "compressionMs": 28,
+                "transactionMs": 43,
+                "verificationMs": 16,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 8,
+                "hashingMs": 2,
+                "compressionMs": 23,
+                "transactionMs": 53,
+                "verificationMs": 22,
+                "payloadBytes": 850091,
+                "packedBytes": 468318,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 7,
+                "p95": 9,
+                "mean": 7.125
+              },
+              "hashingMs": {
+                "median": 1,
+                "p95": 3,
+                "mean": 1.25
+              },
+              "compressionMs": {
+                "median": 26,
+                "p95": 28,
+                "mean": 25.75
+              },
+              "transactionMs": {
+                "median": 33,
+                "p95": 53,
+                "mean": 34.5
+              },
+              "verificationMs": {
+                "median": 14,
+                "p95": 22,
+                "mean": 12.625
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          }
+        ],
+        "errors": [],
+        "externalRequests": 0,
+        "commercialWrites": 0,
+        "version": "153.0",
+        "storageEstimateAvailable": true,
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "checks": [
+          {
+            "id": "P1-CUR-01",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-CUR-02",
+            "status": "defect-reproduced-not-fixed"
+          },
+          {
+            "id": "P1-IDB-01",
+            "status": "reference-model-demonstrated",
+            "proposals": 2,
+            "branches": 1,
+            "exportsCoherent": true,
+            "originalRequestPreserved": true
+          },
+          {
+            "id": "P1-IDB-02",
+            "status": "reference-model-demonstrated",
+            "abortAtomic": true,
+            "quotaFailure": "injected-not-native"
+          },
+          {
+            "id": "P1-IDB-03",
+            "status": "reference-model-demonstrated",
+            "incompatibleProposalsPreserved": true
+          },
+          {
+            "id": "P1-MIX-02",
+            "status": "reference-model-demonstrated",
+            "newHeadIsolated": true,
+            "oldCacheStillMutable": true,
+            "realApiOrSourceFenceImplemented": false
+          },
+          {
+            "id": "P1-MIG-03",
+            "status": "reference-model-demonstrated",
+            "gracefulRestart": true,
+            "powerLossTested": false,
+            "unknownOriginalPreserved": true
+          }
+        ],
+        "benchmarks": [
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 180000,
+            "samples": [
+              {
+                "serializationMs": 1,
+                "hashingMs": 12,
+                "compressionMs": 23,
+                "transactionMs": 43,
+                "verificationMs": 26,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 13,
+                "compressionMs": 17,
+                "transactionMs": 40,
+                "verificationMs": 21,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 13,
+                "compressionMs": 17,
+                "transactionMs": 41,
+                "verificationMs": 21,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 1,
+                "hashingMs": 14,
+                "compressionMs": 20,
+                "transactionMs": 123,
+                "verificationMs": 80,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 5,
+                "hashingMs": 22,
+                "compressionMs": 62,
+                "transactionMs": 132,
+                "verificationMs": 85,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 17,
+                "compressionMs": 67,
+                "transactionMs": 116,
+                "verificationMs": 68,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 13,
+                "compressionMs": 58,
+                "transactionMs": 72,
+                "verificationMs": 42,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 16,
+                "compressionMs": 51,
+                "transactionMs": 75,
+                "verificationMs": 57,
+                "payloadBytes": 180091,
+                "packedBytes": 93065,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 3,
+                "p95": 5,
+                "mean": 2.5
+              },
+              "hashingMs": {
+                "median": 14,
+                "p95": 22,
+                "mean": 15
+              },
+              "compressionMs": {
+                "median": 51,
+                "p95": 67,
+                "mean": 39.375
+              },
+              "transactionMs": {
+                "median": 75,
+                "p95": 132,
+                "mean": 80.25
+              },
+              "verificationMs": {
+                "median": 57,
+                "p95": 85,
+                "mean": 50
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          },
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 450000,
+            "samples": [
+              {
+                "serializationMs": 3,
+                "hashingMs": 11,
+                "compressionMs": 42,
+                "transactionMs": 37,
+                "verificationMs": 23,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 13,
+                "compressionMs": 30,
+                "transactionMs": 73,
+                "verificationMs": 19,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 13,
+                "compressionMs": 38,
+                "transactionMs": 36,
+                "verificationMs": 20,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 12,
+                "compressionMs": 34,
+                "transactionMs": 38,
+                "verificationMs": 19,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 13,
+                "compressionMs": 38,
+                "transactionMs": 34,
+                "verificationMs": 21,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 13,
+                "compressionMs": 35,
+                "transactionMs": 45,
+                "verificationMs": 29,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4,
+                "hashingMs": 12,
+                "compressionMs": 35,
+                "transactionMs": 31,
+                "verificationMs": 20,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 2,
+                "hashingMs": 14,
+                "compressionMs": 33,
+                "transactionMs": 45,
+                "verificationMs": 25,
+                "payloadBytes": 450091,
+                "packedBytes": 244350,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 3,
+                "p95": 4,
+                "mean": 2.625
+              },
+              "hashingMs": {
+                "median": 13,
+                "p95": 14,
+                "mean": 12.625
+              },
+              "compressionMs": {
+                "median": 35,
+                "p95": 42,
+                "mean": 35.625
+              },
+              "transactionMs": {
+                "median": 38,
+                "p95": 73,
+                "mean": 42.375
+              },
+              "verificationMs": {
+                "median": 21,
+                "p95": 29,
+                "mean": 22
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          },
+          {
+            "syntheticClients": 65,
+            "syntheticEvents": 106,
+            "requestedCharacters": 850000,
+            "samples": [
+              {
+                "serializationMs": 4,
+                "hashingMs": 8,
+                "compressionMs": 53,
+                "transactionMs": 30,
+                "verificationMs": 19,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 12,
+                "compressionMs": 63,
+                "transactionMs": 39,
+                "verificationMs": 18,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4,
+                "hashingMs": 12,
+                "compressionMs": 69,
+                "transactionMs": 48,
+                "verificationMs": 22,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 3,
+                "hashingMs": 10,
+                "compressionMs": 62,
+                "transactionMs": 34,
+                "verificationMs": 18,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 4,
+                "hashingMs": 14,
+                "compressionMs": 56,
+                "transactionMs": 39,
+                "verificationMs": 24,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6,
+                "hashingMs": 17,
+                "compressionMs": 88,
+                "transactionMs": 64,
+                "verificationMs": 38,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 5,
+                "hashingMs": 15,
+                "compressionMs": 67,
+                "transactionMs": 44,
+                "verificationMs": 28,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              },
+              {
+                "serializationMs": 6,
+                "hashingMs": 10,
+                "compressionMs": 76,
+                "transactionMs": 47,
+                "verificationMs": 27,
+                "payloadBytes": 850091,
+                "packedBytes": 468309,
+                "roundtripVerified": true,
+                "durability": "strict"
+              }
+            ],
+            "summary": {
+              "serializationMs": {
+                "median": 4,
+                "p95": 6,
+                "mean": 4.375
+              },
+              "hashingMs": {
+                "median": 12,
+                "p95": 17,
+                "mean": 12.25
+              },
+              "compressionMs": {
+                "median": 67,
+                "p95": 88,
+                "mean": 66.75
+              },
+              "transactionMs": {
+                "median": 44,
+                "p95": 64,
+                "mean": 43.125
+              },
+              "verificationMs": {
+                "median": 24,
+                "p95": 38,
+                "mean": 24.25
+              }
+            },
+            "scope": "Local reference model, full synthetic snapshot puts; not application or Google latency"
+          }
+        ],
+        "errors": [],
+        "externalRequests": 0,
+        "commercialWrites": 0,
+        "version": "26.5",
+        "storageEstimateAvailable": false,
+        "status": "passed"
+      }
+    ]
+  },
+  "p2": {
+    "results": [
+      {
+        "engine": "chromium",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": true
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-demonstrated-with-bounded-allocation",
+        "abruptCrash": "browser-process-crash-and-reopen-passed",
+        "version": "157.0.8103.39",
+        "status": "passed"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": false
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "157.0.8103.39",
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": true
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "153.0",
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": false
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "153.0",
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": true
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "26.5",
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P2-TX-01",
+            "status": "implemented-tested",
+            "abortAndInjectedQuotaAtomic": true
+          },
+          {
+            "id": "P2-MIG-01",
+            "status": "implemented-tested",
+            "normalRestart": true,
+            "idempotentBatches": true,
+            "byteExactReconstruction": true,
+            "noSourceWrites": true,
+            "noSourceVersionChange": true,
+            "activationUnavailable": true,
+            "largeHistoricalFixture": false
+          },
+          {
+            "id": "P2-MIX-01",
+            "status": "implemented-tested",
+            "oldOriginCannotAlterDestination": true,
+            "oldWriterNotCooperative": true
+          },
+          {
+            "id": "P2-REF-03",
+            "status": "implemented-tested",
+            "readyFlagDoesNotHideMissingBody": true
+          },
+          {
+            "id": "P2-CHECKPOINT-01",
+            "status": "implemented-tested",
+            "everyPhaseReopen": true,
+            "failedCheckpointAtomic": true
+          },
+          {
+            "id": "P2-MIG-03",
+            "status": "implemented-tested",
+            "twoCaptureVariantsRetained": true,
+            "completionBlocked": true
+          },
+          {
+            "id": "P2-MIG-02",
+            "status": "implemented-tested",
+            "oldAndNewVariantsRetained": true,
+            "readyBlockedOnSourceChange": true
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "pending-not-portable",
+        "abruptCrash": "pending-not-portable",
+        "version": "26.5",
+        "status": "passed"
+      }
+    ],
+    "deniedMethods": 0,
+    "realGoogle": false,
+    "safariReal": false
+  },
+  "p3": {
+    "results": [
+      {
+        "engine": "chromium",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P3-CAS-01",
+            "status": "passed",
+            "expected": 10,
+            "sharedRevision": 11,
+            "bothProposalsRecovered": true,
+            "realTabs": 2
+          },
+          {
+            "id": "P3-IMMUTABLE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-LOSS-01",
+            "status": "passed",
+            "noDuplicateWrite": true
+          },
+          {
+            "id": "P3-LATER-EDIT-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HISTORICAL-ACK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-QUOTA-01",
+            "status": "passed",
+            "injected": true,
+            "ackRecovered": true
+          },
+          {
+            "id": "P3-NETWORK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-PREPARED-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STORAGE-STATE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HASH-RACE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BRANCH-QUOTA-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-REOPEN-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-ID-AND-DEDUP-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BASES-01",
+            "status": "passed",
+            "unverifiedBaseRejected": true
+          },
+          {
+            "id": "P3-ORIGINAL-BASE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-INDEX-INTEGRITY-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-EXPORT-01",
+            "status": "passed",
+            "coherentConcurrentSnapshot": true,
+            "missingReferenceForensic": true
+          },
+          {
+            "id": "P3-LEGACY-01",
+            "status": "passed",
+            "historyMiB": 14.84,
+            "operationalSourceUntouched": true
+          },
+          {
+            "id": "P3-BODY-INTEGRITY-01",
+            "status": "passed"
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-tested-injected-only",
+        "abruptCrash": "chromium-process-terminated-and-reopened",
+        "status": "passed",
+        "version": "157.0.8103.39"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P3-CAS-01",
+            "status": "passed",
+            "expected": 10,
+            "sharedRevision": 11,
+            "bothProposalsRecovered": true,
+            "realTabs": 2
+          },
+          {
+            "id": "P3-IMMUTABLE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-LOSS-01",
+            "status": "passed",
+            "noDuplicateWrite": true
+          },
+          {
+            "id": "P3-LATER-EDIT-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HISTORICAL-ACK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-QUOTA-01",
+            "status": "passed",
+            "injected": true,
+            "ackRecovered": true
+          },
+          {
+            "id": "P3-NETWORK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-PREPARED-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STORAGE-STATE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HASH-RACE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BRANCH-QUOTA-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-REOPEN-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-ID-AND-DEDUP-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BASES-01",
+            "status": "passed",
+            "unverifiedBaseRejected": true
+          },
+          {
+            "id": "P3-ORIGINAL-BASE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-INDEX-INTEGRITY-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-EXPORT-01",
+            "status": "passed",
+            "coherentConcurrentSnapshot": true,
+            "missingReferenceForensic": true
+          },
+          {
+            "id": "P3-LEGACY-01",
+            "status": "passed",
+            "historyMiB": 14.84,
+            "operationalSourceUntouched": true
+          },
+          {
+            "id": "P3-BODY-INTEGRITY-01",
+            "status": "passed"
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-tested-injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "157.0.8103.39"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P3-CAS-01",
+            "status": "passed",
+            "expected": 10,
+            "sharedRevision": 11,
+            "bothProposalsRecovered": true,
+            "realTabs": 2
+          },
+          {
+            "id": "P3-IMMUTABLE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-LOSS-01",
+            "status": "passed",
+            "noDuplicateWrite": true
+          },
+          {
+            "id": "P3-LATER-EDIT-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HISTORICAL-ACK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-QUOTA-01",
+            "status": "passed",
+            "injected": true,
+            "ackRecovered": true
+          },
+          {
+            "id": "P3-NETWORK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-PREPARED-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STORAGE-STATE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HASH-RACE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BRANCH-QUOTA-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-REOPEN-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-ID-AND-DEDUP-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BASES-01",
+            "status": "passed",
+            "unverifiedBaseRejected": true
+          },
+          {
+            "id": "P3-ORIGINAL-BASE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-INDEX-INTEGRITY-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-EXPORT-01",
+            "status": "passed",
+            "coherentConcurrentSnapshot": true,
+            "missingReferenceForensic": true
+          },
+          {
+            "id": "P3-LEGACY-01",
+            "status": "passed",
+            "historyMiB": 14.84,
+            "operationalSourceUntouched": true
+          },
+          {
+            "id": "P3-BODY-INTEGRITY-01",
+            "status": "passed"
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-tested-injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "153.0"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P3-CAS-01",
+            "status": "passed",
+            "expected": 10,
+            "sharedRevision": 11,
+            "bothProposalsRecovered": true,
+            "realTabs": 2
+          },
+          {
+            "id": "P3-IMMUTABLE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-LOSS-01",
+            "status": "passed",
+            "noDuplicateWrite": true
+          },
+          {
+            "id": "P3-LATER-EDIT-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HISTORICAL-ACK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-QUOTA-01",
+            "status": "passed",
+            "injected": true,
+            "ackRecovered": true
+          },
+          {
+            "id": "P3-NETWORK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-PREPARED-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STORAGE-STATE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HASH-RACE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BRANCH-QUOTA-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-REOPEN-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-ID-AND-DEDUP-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BASES-01",
+            "status": "passed",
+            "unverifiedBaseRejected": true
+          },
+          {
+            "id": "P3-ORIGINAL-BASE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-INDEX-INTEGRITY-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-EXPORT-01",
+            "status": "passed",
+            "coherentConcurrentSnapshot": true,
+            "missingReferenceForensic": true
+          },
+          {
+            "id": "P3-LEGACY-01",
+            "status": "passed",
+            "historyMiB": 14.84,
+            "operationalSourceUntouched": true
+          },
+          {
+            "id": "P3-BODY-INTEGRITY-01",
+            "status": "passed"
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-tested-injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "153.0"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P3-CAS-01",
+            "status": "passed",
+            "expected": 10,
+            "sharedRevision": 11,
+            "bothProposalsRecovered": true,
+            "realTabs": 2
+          },
+          {
+            "id": "P3-IMMUTABLE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-LOSS-01",
+            "status": "passed",
+            "noDuplicateWrite": true
+          },
+          {
+            "id": "P3-LATER-EDIT-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HISTORICAL-ACK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-QUOTA-01",
+            "status": "passed",
+            "injected": true,
+            "ackRecovered": true
+          },
+          {
+            "id": "P3-NETWORK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-PREPARED-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STORAGE-STATE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HASH-RACE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BRANCH-QUOTA-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-REOPEN-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-ID-AND-DEDUP-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BASES-01",
+            "status": "passed",
+            "unverifiedBaseRejected": true
+          },
+          {
+            "id": "P3-ORIGINAL-BASE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-INDEX-INTEGRITY-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-EXPORT-01",
+            "status": "passed",
+            "coherentConcurrentSnapshot": true,
+            "missingReferenceForensic": true
+          },
+          {
+            "id": "P3-LEGACY-01",
+            "status": "passed",
+            "historyMiB": 14.84,
+            "operationalSourceUntouched": true
+          },
+          {
+            "id": "P3-BODY-INTEGRITY-01",
+            "status": "passed"
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-tested-injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "26.5"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P3-CAS-01",
+            "status": "passed",
+            "expected": 10,
+            "sharedRevision": 11,
+            "bothProposalsRecovered": true,
+            "realTabs": 2
+          },
+          {
+            "id": "P3-IMMUTABLE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-LOSS-01",
+            "status": "passed",
+            "noDuplicateWrite": true
+          },
+          {
+            "id": "P3-LATER-EDIT-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HISTORICAL-ACK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-QUOTA-01",
+            "status": "passed",
+            "injected": true,
+            "ackRecovered": true
+          },
+          {
+            "id": "P3-NETWORK-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-PREPARED-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-STORAGE-STATE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-HASH-RACE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BRANCH-QUOTA-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-REOPEN-STATES-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-ID-AND-DEDUP-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-BASES-01",
+            "status": "passed",
+            "unverifiedBaseRejected": true
+          },
+          {
+            "id": "P3-ORIGINAL-BASE-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-INDEX-INTEGRITY-01",
+            "status": "passed"
+          },
+          {
+            "id": "P3-EXPORT-01",
+            "status": "passed",
+            "coherentConcurrentSnapshot": true,
+            "missingReferenceForensic": true
+          },
+          {
+            "id": "P3-LEGACY-01",
+            "status": "passed",
+            "historyMiB": 14.84,
+            "operationalSourceUntouched": true
+          },
+          {
+            "id": "P3-BODY-INTEGRITY-01",
+            "status": "passed"
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-tested-injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "26.5"
+      }
+    ],
+    "realGoogle": false,
+    "productionActivated": false,
+    "safariReal": false
+  },
+  "hotfix29": {
+    "results": [
+      {
+        "viewport": "desktop",
+        "historyRecords": 15,
+        "historyMiB": 14.839998245239258,
+        "historicalCopiesUnchanged": true,
+        "saveReload": true,
+        "proofBoundRotation": true,
+        "lostResponseIdempotentRecovery": true,
+        "quotaInjectedAtomicRollback": true,
+        "noPostWithoutDurableRequest": true,
+        "exportAfterStorageFailure": true,
+        "oldUncertainRequestAndNewerEditsPreserved": true,
+        "reservationsPricesEventsAndUnrelatedClientsUnchanged": true
+      },
+      {
+        "viewport": "mobile",
+        "historyRecords": 15,
+        "historyMiB": 14.839998245239258,
+        "historicalCopiesUnchanged": true,
+        "saveReload": true,
+        "proofBoundRotation": true,
+        "lostResponseIdempotentRecovery": true,
+        "quotaInjectedAtomicRollback": true,
+        "noPostWithoutDurableRequest": true,
+        "exportAfterStorageFailure": true,
+        "oldUncertainRequestAndNewerEditsPreserved": true,
+        "reservationsPricesEventsAndUnrelatedClientsUnchanged": true
+      }
+    ],
+    "errors": [],
+    "realGoogle": false
+  },
+  "p4": {
+    "reports": [
+      {
+        "engine": "chromium",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P4-DEDUP-TABS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-RETENTION-CAS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-DELETE-REFERENCE-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-QUOTA-ATOMIC",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COW-RESTART",
+            "status": "passed"
+          },
+          {
+            "id": "P4-P3-CAS-EXPORT",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COMPRESSION-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CODEC-UNAVAILABLE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CORRUPT-PRESERVED",
+            "status": "passed"
+          },
+          {
+            "id": "P4-SHARED-OPERATIONS-BRANCHES",
+            "status": "passed"
+          },
+          {
+            "id": "P4-LEGACY-PROTECTION",
+            "status": "passed"
+          },
+          {
+            "id": "P4-UNKNOWN-PRESERVED",
+            "status": "passed"
+          }
+        ],
+        "benchmarks": [
+          {
+            "case": "shared-branches",
+            "samples": [
+              {
+                "mode": "p3",
+                "writesMs": 36.29999998211861,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 282314,
+                "allReconstructible": true
+              },
+              {
+                "mode": "p4",
+                "writesMs": 46.599999994039536,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 2859,
+                "allReconstructible": true
+              }
+            ]
+          },
+          {
+            "case": "small",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 22.099999994039536,
+                "writesMs": [
+                  13.700000017881393,
+                  13.800000011920929,
+                  16.69999998807907,
+                  16.599999994039536
+                ],
+                "readMs": 2.7999999821186066,
+                "recoveryMs": 4.300000011920929,
+                "exportMs": 10.800000011920929,
+                "verificationMs": 7.200000017881393,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 0,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 0,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 18.786000000000058
+              },
+              {
+                "mode": "p4",
+                "createdMs": 20.599999994039536,
+                "writesMs": [
+                  15.300000011920929,
+                  14.800000011920929,
+                  17.5,
+                  15.400000005960464
+                ],
+                "readMs": 2.7999999821186066,
+                "recoveryMs": 3.300000011920929,
+                "exportMs": 8.699999988079071,
+                "verificationMs": 6.5999999940395355,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 0,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 0,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 23.27349999999933
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "representative",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 75.40000000596046,
+                "writesMs": [
+                  66.09999999403954,
+                  65.40000000596046,
+                  72.7999999821186,
+                  90.69999998807907
+                ],
+                "readMs": 11.5,
+                "recoveryMs": 14.900000005960464,
+                "exportMs": 438.09999999403954,
+                "verificationMs": 104.30000001192093,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 4.800000011920929,
+                  "compressionMs": 7.4000000059604645,
+                  "decompressionMs": 1.5999999940395355,
+                  "verificationMs": 11.400000005960464,
+                  "encodedHashMs": 0.20000001788139343,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 132.1193999999996
+              },
+              {
+                "mode": "p4",
+                "createdMs": 80.30000001192093,
+                "writesMs": [
+                  62.30000001192093,
+                  59,
+                  58.30000001192093,
+                  60.30000001192093
+                ],
+                "readMs": 12,
+                "recoveryMs": 16.799999982118607,
+                "exportMs": 114.10000002384186,
+                "verificationMs": 75.7999999821186,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 3.199999988079071,
+                  "compressionMs": 6.200000017881393,
+                  "decompressionMs": 1.699999988079071,
+                  "verificationMs": 8.900000005960464,
+                  "encodedHashMs": 0,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 14385,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 71.11069999999927
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "successive-small-changes",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 59.69999998807907,
+                "writesMs": [
+                  48.599999994039536,
+                  57.099999994039536,
+                  75.7999999821186,
+                  83.7000000178814
+                ],
+                "readMs": 10.099999994039536,
+                "recoveryMs": 15.099999994039536,
+                "exportMs": 424.2000000178814,
+                "verificationMs": 89.2000000178814,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 2.2999999821186066,
+                  "compressionMs": 7.200000017881393,
+                  "decompressionMs": 2,
+                  "verificationMs": 6.799999982118607,
+                  "encodedHashMs": 0.09999999403953552,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 103.15350000000035
+              },
+              {
+                "mode": "p4",
+                "createdMs": 60.5,
+                "writesMs": [
+                  56.5,
+                  49.900000005960464,
+                  55.29999998211861,
+                  52.30000001192093
+                ],
+                "readMs": 10.400000005960464,
+                "recoveryMs": 17.599999994039536,
+                "exportMs": 99.5,
+                "verificationMs": 77.30000001192093,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 1.5999999940395355,
+                  "compressionMs": 3.5,
+                  "decompressionMs": 1.5,
+                  "verificationMs": 6.299999982118607,
+                  "encodedHashMs": 0.09999999403953552,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 14385,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 48.858100000001286
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "low-compressibility",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 27.599999994039536,
+                "writesMs": [
+                  21.80000001192093,
+                  19,
+                  16.19999998807907,
+                  20.899999976158142
+                ],
+                "readMs": 3.600000023841858,
+                "recoveryMs": 4.0999999940395355,
+                "exportMs": 51.79999998211861,
+                "verificationMs": 11,
+                "codecMetrics": {
+                  "originalBytes": 29324,
+                  "originalCost": 29598,
+                  "sourceVerificationMs": 0.20000001788139343,
+                  "compressionMs": 3.2999999821186066,
+                  "decompressionMs": 1.5,
+                  "verificationMs": 1.4000000059604645,
+                  "encodedHashMs": 0.19999998807907104,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25823,
+                  "compressedCost": 26191,
+                  "candidateSavedBytes": 3407
+                },
+                "encodedBytes": 146668,
+                "metadataBytes": 1370,
+                "originalBytes": 146668,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14662,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 31.505800000000818
+              },
+              {
+                "mode": "p4",
+                "createdMs": 39.19999998807907,
+                "writesMs": [
+                  26.30000001192093,
+                  24.100000023841858,
+                  25.099999994039536,
+                  26.900000005960464
+                ],
+                "readMs": 2.5,
+                "recoveryMs": 3.899999976158142,
+                "exportMs": 53.10000002384186,
+                "verificationMs": 9.5,
+                "codecMetrics": {
+                  "originalBytes": 29324,
+                  "originalCost": 29598,
+                  "sourceVerificationMs": 0.30000001192092896,
+                  "compressionMs": 2.0999999940395355,
+                  "decompressionMs": 0.9000000059604645,
+                  "verificationMs": 1.7000000178813934,
+                  "encodedHashMs": 0.09999999403953552,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25823,
+                  "compressedCost": 26191,
+                  "candidateSavedBytes": 3407
+                },
+                "encodedBytes": 146668,
+                "metadataBytes": 1370,
+                "originalBytes": 146668,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14662,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 32.810700000001816
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "protected-history",
+            "logicalHistoricalMiB": 14.84,
+            "records": 15,
+            "recoveryCopies": 18,
+            "sourceFragments": 22,
+            "baselineIdentityBytes": 7804375,
+            "baselineMetadataBytes": 6348,
+            "p4EncodedBytes": 2103399,
+            "p4MetadataBytes": 7454,
+            "safeReclaimableBytes": 0,
+            "blockers": [
+              "OPAQUE_ARCHIVE_REVIEW_REQUIRED"
+            ]
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "not-demonstrated-bounded-2MiB-probe",
+        "abruptCrash": "chromium-process-terminated-and-reopened",
+        "nativeQuotaInitialUsage": 1398227,
+        "status": "passed",
+        "version": "157.0.8103.39"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P4-DEDUP-TABS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-RETENTION-CAS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-DELETE-REFERENCE-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-QUOTA-ATOMIC",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COW-RESTART",
+            "status": "passed"
+          },
+          {
+            "id": "P4-P3-CAS-EXPORT",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COMPRESSION-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CODEC-UNAVAILABLE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CORRUPT-PRESERVED",
+            "status": "passed"
+          },
+          {
+            "id": "P4-SHARED-OPERATIONS-BRANCHES",
+            "status": "passed"
+          },
+          {
+            "id": "P4-LEGACY-PROTECTION",
+            "status": "passed"
+          },
+          {
+            "id": "P4-UNKNOWN-PRESERVED",
+            "status": "passed"
+          }
+        ],
+        "benchmarks": [
+          {
+            "case": "shared-branches",
+            "samples": [
+              {
+                "mode": "p3",
+                "writesMs": 51.400000005960464,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 282314,
+                "allReconstructible": true
+              },
+              {
+                "mode": "p4",
+                "writesMs": 39.80000001192093,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 2859,
+                "allReconstructible": true
+              }
+            ]
+          },
+          {
+            "case": "small",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 24.799999982118607,
+                "writesMs": [
+                  14,
+                  11.400000005960464,
+                  12.699999988079071,
+                  11.400000005960464
+                ],
+                "readMs": 2.300000011920929,
+                "recoveryMs": 2.2999999821186066,
+                "exportMs": 6.5,
+                "verificationMs": 8.099999994039536,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 0,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 0,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 19.307499999995343
+              },
+              {
+                "mode": "p4",
+                "createdMs": 17.099999994039536,
+                "writesMs": [
+                  12.100000023841858,
+                  11.199999988079071,
+                  10.5,
+                  10
+                ],
+                "readMs": 2,
+                "recoveryMs": 1.5,
+                "exportMs": 6,
+                "verificationMs": 5.5999999940395355,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 0,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 0,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 18.1304999999993
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "representative",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 57.099999994039536,
+                "writesMs": [
+                  44.19999998807907,
+                  50.400000005960464,
+                  62.599999994039536,
+                  61.70000001788139
+                ],
+                "readMs": 7.699999988079071,
+                "recoveryMs": 17.900000005960464,
+                "exportMs": 361.19999998807907,
+                "verificationMs": 71.69999998807907,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 4,
+                  "compressionMs": 4.200000017881393,
+                  "decompressionMs": 3,
+                  "verificationMs": 7.9000000059604645,
+                  "encodedHashMs": 0,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 108.72540000000299
+              },
+              {
+                "mode": "p4",
+                "createdMs": 57.20000001788139,
+                "writesMs": [
+                  42.5,
+                  44,
+                  46.400000005960464,
+                  45.599999994039536
+                ],
+                "readMs": 9.599999994039536,
+                "recoveryMs": 15.5,
+                "exportMs": 86.80000001192093,
+                "verificationMs": 62.80000001192093,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 1.699999988079071,
+                  "compressionMs": 3.5,
+                  "decompressionMs": 1.199999988079071,
+                  "verificationMs": 6.5,
+                  "encodedHashMs": 0.10000002384185791,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 14385,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 47.24790000000212
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "successive-small-changes",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 46.5,
+                "writesMs": [
+                  50.29999998211861,
+                  48.599999994039536,
+                  54.5,
+                  57.5
+                ],
+                "readMs": 7.5999999940395355,
+                "recoveryMs": 11.599999994039536,
+                "exportMs": 301.40000000596046,
+                "verificationMs": 70.09999999403954,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 2.0999999940395355,
+                  "compressionMs": 6.100000023841858,
+                  "decompressionMs": 1.5999999940395355,
+                  "verificationMs": 5.9000000059604645,
+                  "encodedHashMs": 0.09999999403953552,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 95.93139999999403
+              },
+              {
+                "mode": "p4",
+                "createdMs": 60.70000001788139,
+                "writesMs": [
+                  52.19999998807907,
+                  47.099999994039536,
+                  51.19999998807907,
+                  46.599999994039536
+                ],
+                "readMs": 10.300000011920929,
+                "recoveryMs": 14.799999982118607,
+                "exportMs": 86.90000000596046,
+                "verificationMs": 60.29999998211861,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 1.800000011920929,
+                  "compressionMs": 4.0999999940395355,
+                  "decompressionMs": 1.7000000178813934,
+                  "verificationMs": 6.699999988079071,
+                  "encodedHashMs": 0,
+                  "savedBytes": 279363,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 2859,
+                  "compressedCost": 3227,
+                  "candidateSavedBytes": 279363
+                },
+                "encodedBytes": 14385,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 45.548500000004424
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "low-compressibility",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 20.80000001192093,
+                "writesMs": [
+                  17,
+                  16.30000001192093,
+                  15.799999982118607,
+                  15.300000011920929
+                ],
+                "readMs": 2,
+                "recoveryMs": 3.0999999940395355,
+                "exportMs": 39.900000005960464,
+                "verificationMs": 9.5,
+                "codecMetrics": {
+                  "originalBytes": 29390,
+                  "originalCost": 29664,
+                  "sourceVerificationMs": 0.10000002384185791,
+                  "compressionMs": 2.5999999940395355,
+                  "decompressionMs": 1.2999999821186066,
+                  "verificationMs": 0.8000000417232513,
+                  "encodedHashMs": 0.09999999403953552,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25821,
+                  "compressedCost": 26189,
+                  "candidateSavedBytes": 3475
+                },
+                "encodedBytes": 146998,
+                "metadataBytes": 1370,
+                "originalBytes": 146998,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14695,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 28.469600000003993
+              },
+              {
+                "mode": "p4",
+                "createdMs": 36.400000005960464,
+                "writesMs": [
+                  26.099999994039536,
+                  22.200000017881393,
+                  21.69999998807907,
+                  23.69999998807907
+                ],
+                "readMs": 2.300000011920929,
+                "recoveryMs": 3.199999988079071,
+                "exportMs": 43.599999994039536,
+                "verificationMs": 10.599999994039536,
+                "codecMetrics": {
+                  "originalBytes": 29390,
+                  "originalCost": 29664,
+                  "sourceVerificationMs": 0.19999998807907104,
+                  "compressionMs": 2.800000011920929,
+                  "decompressionMs": 1.2999999821186066,
+                  "verificationMs": 1.300000011920929,
+                  "encodedHashMs": 0.09999999403953552,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25821,
+                  "compressedCost": 26189,
+                  "candidateSavedBytes": 3475
+                },
+                "encodedBytes": 146998,
+                "metadataBytes": 1370,
+                "originalBytes": 146998,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14695,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 32.200599999996484
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "protected-history",
+            "logicalHistoricalMiB": null,
+            "records": 15,
+            "recoveryCopies": 18,
+            "sourceFragments": 22,
+            "baselineIdentityBytes": 57397,
+            "baselineMetadataBytes": 6280,
+            "p4EncodedBytes": 53718,
+            "p4MetadataBytes": 6374,
+            "safeReclaimableBytes": 0,
+            "blockers": [
+              "OPAQUE_ARCHIVE_REVIEW_REQUIRED"
+            ]
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "157.0.8103.39"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P4-DEDUP-TABS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-RETENTION-CAS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-DELETE-REFERENCE-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-QUOTA-ATOMIC",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COW-RESTART",
+            "status": "passed"
+          },
+          {
+            "id": "P4-P3-CAS-EXPORT",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COMPRESSION-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CODEC-UNAVAILABLE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CORRUPT-PRESERVED",
+            "status": "passed"
+          },
+          {
+            "id": "P4-SHARED-OPERATIONS-BRANCHES",
+            "status": "passed"
+          },
+          {
+            "id": "P4-LEGACY-PROTECTION",
+            "status": "passed"
+          },
+          {
+            "id": "P4-UNKNOWN-PRESERVED",
+            "status": "passed"
+          }
+        ],
+        "benchmarks": [
+          {
+            "case": "shared-branches",
+            "samples": [
+              {
+                "mode": "p3",
+                "writesMs": 60,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 282314,
+                "allReconstructible": true
+              },
+              {
+                "mode": "p4",
+                "writesMs": 63,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 3593,
+                "allReconstructible": true
+              }
+            ]
+          },
+          {
+            "case": "small",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 32,
+                "writesMs": [
+                  19,
+                  15,
+                  13,
+                  17
+                ],
+                "readMs": 3,
+                "recoveryMs": 4,
+                "exportMs": 11,
+                "verificationMs": 5,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 0,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 0,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 29.490200000000186
+              },
+              {
+                "mode": "p4",
+                "createdMs": 20,
+                "writesMs": [
+                  22,
+                  21,
+                  22,
+                  17
+                ],
+                "readMs": 5,
+                "recoveryMs": 4,
+                "exportMs": 16,
+                "verificationMs": 8,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 1,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 1,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 60.37129999999888
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "representative",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 77,
+                "writesMs": [
+                  69,
+                  90,
+                  92,
+                  105
+                ],
+                "readMs": 24,
+                "recoveryMs": 39,
+                "exportMs": 633,
+                "verificationMs": 91,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 6,
+                  "compressionMs": 2,
+                  "decompressionMs": 1,
+                  "verificationMs": 14,
+                  "encodedHashMs": 0,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 184.5917000000045
+              },
+              {
+                "mode": "p4",
+                "createdMs": 64,
+                "writesMs": [
+                  79,
+                  92,
+                  85,
+                  76
+                ],
+                "readMs": 22,
+                "recoveryMs": 28,
+                "exportMs": 174,
+                "verificationMs": 86,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 6,
+                  "compressionMs": 1,
+                  "decompressionMs": 1,
+                  "verificationMs": 14,
+                  "encodedHashMs": 0,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 18051,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 63.58540000001085
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "successive-small-changes",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 165,
+                "writesMs": [
+                  135,
+                  156,
+                  160,
+                  173
+                ],
+                "readMs": 43,
+                "recoveryMs": 47,
+                "exportMs": 765,
+                "verificationMs": 104,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 10,
+                  "compressionMs": 1,
+                  "decompressionMs": 1,
+                  "verificationMs": 22,
+                  "encodedHashMs": 1,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 160.5722999999998
+              },
+              {
+                "mode": "p4",
+                "createdMs": 117,
+                "writesMs": [
+                  71,
+                  88,
+                  68,
+                  82
+                ],
+                "readMs": 14,
+                "recoveryMs": 21,
+                "exportMs": 147,
+                "verificationMs": 74,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 3,
+                  "compressionMs": 1,
+                  "decompressionMs": 1,
+                  "verificationMs": 13,
+                  "encodedHashMs": 0,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 18051,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 65.91250000000582
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "low-compressibility",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 62,
+                "writesMs": [
+                  31,
+                  26,
+                  19,
+                  25
+                ],
+                "readMs": 4,
+                "recoveryMs": 6,
+                "exportMs": 64,
+                "verificationMs": 15,
+                "codecMetrics": {
+                  "originalBytes": 29296,
+                  "originalCost": 29570,
+                  "sourceVerificationMs": 1,
+                  "compressionMs": 1,
+                  "decompressionMs": 0,
+                  "verificationMs": 2,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25840,
+                  "compressedCost": 26208,
+                  "candidateSavedBytes": 3362
+                },
+                "encodedBytes": 146528,
+                "metadataBytes": 1370,
+                "originalBytes": 146528,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14648,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 35.78080000000773
+              },
+              {
+                "mode": "p4",
+                "createdMs": 34,
+                "writesMs": [
+                  35,
+                  33,
+                  32,
+                  37
+                ],
+                "readMs": 6,
+                "recoveryMs": 8,
+                "exportMs": 71,
+                "verificationMs": 19,
+                "codecMetrics": {
+                  "originalBytes": 29296,
+                  "originalCost": 29570,
+                  "sourceVerificationMs": 1,
+                  "compressionMs": 1,
+                  "decompressionMs": 2,
+                  "verificationMs": 2,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25840,
+                  "compressedCost": 26208,
+                  "candidateSavedBytes": 3362
+                },
+                "encodedBytes": 146528,
+                "metadataBytes": 1370,
+                "originalBytes": 146528,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14648,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 47.508499999996275
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "protected-history",
+            "logicalHistoricalMiB": 14.84,
+            "records": 15,
+            "recoveryCopies": 18,
+            "sourceFragments": 22,
+            "baselineIdentityBytes": 7804375,
+            "baselineMetadataBytes": 6348,
+            "p4EncodedBytes": 2103480,
+            "p4MetadataBytes": 7454,
+            "safeReclaimableBytes": 0,
+            "blockers": [
+              "OPAQUE_ARCHIVE_REVIEW_REQUIRED"
+            ]
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "153.0"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P4-DEDUP-TABS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-RETENTION-CAS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-DELETE-REFERENCE-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-QUOTA-ATOMIC",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COW-RESTART",
+            "status": "passed"
+          },
+          {
+            "id": "P4-P3-CAS-EXPORT",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COMPRESSION-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CODEC-UNAVAILABLE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CORRUPT-PRESERVED",
+            "status": "passed"
+          },
+          {
+            "id": "P4-SHARED-OPERATIONS-BRANCHES",
+            "status": "passed"
+          },
+          {
+            "id": "P4-LEGACY-PROTECTION",
+            "status": "passed"
+          },
+          {
+            "id": "P4-UNKNOWN-PRESERVED",
+            "status": "passed"
+          }
+        ],
+        "benchmarks": [
+          {
+            "case": "shared-branches",
+            "samples": [
+              {
+                "mode": "p3",
+                "writesMs": 69,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 282314,
+                "allReconstructible": true
+              },
+              {
+                "mode": "p4",
+                "writesMs": 64,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 3593,
+                "allReconstructible": true
+              }
+            ]
+          },
+          {
+            "case": "small",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 31,
+                "writesMs": [
+                  20,
+                  20,
+                  13,
+                  19
+                ],
+                "readMs": 4,
+                "recoveryMs": 5,
+                "exportMs": 18,
+                "verificationMs": 9,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 0,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 0,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 28.93029999997816
+              },
+              {
+                "mode": "p4",
+                "createdMs": 27,
+                "writesMs": [
+                  32,
+                  28,
+                  22,
+                  24
+                ],
+                "readMs": 6,
+                "recoveryMs": 5,
+                "exportMs": 21,
+                "verificationMs": 12,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 1,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 1,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 42.56460000001243
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "representative",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 74,
+                "writesMs": [
+                  74,
+                  103,
+                  85,
+                  95
+                ],
+                "readMs": 26,
+                "recoveryMs": 36,
+                "exportMs": 537,
+                "verificationMs": 98,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 9,
+                  "compressionMs": 2,
+                  "decompressionMs": 1,
+                  "verificationMs": 15,
+                  "encodedHashMs": 1,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 154.63610000000335
+              },
+              {
+                "mode": "p4",
+                "createdMs": 71,
+                "writesMs": [
+                  81,
+                  76,
+                  88,
+                  72
+                ],
+                "readMs": 20,
+                "recoveryMs": 26,
+                "exportMs": 176,
+                "verificationMs": 80,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 6,
+                  "compressionMs": 2,
+                  "decompressionMs": 0,
+                  "verificationMs": 15,
+                  "encodedHashMs": 0,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 18051,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 77.89900000000489
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "successive-small-changes",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 58,
+                "writesMs": [
+                  70,
+                  82,
+                  109,
+                  107
+                ],
+                "readMs": 31,
+                "recoveryMs": 31,
+                "exportMs": 493,
+                "verificationMs": 78,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 7,
+                  "compressionMs": 1,
+                  "decompressionMs": 1,
+                  "verificationMs": 15,
+                  "encodedHashMs": 0,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 141.7216999999946
+              },
+              {
+                "mode": "p4",
+                "createdMs": 72,
+                "writesMs": [
+                  59,
+                  57,
+                  62,
+                  55
+                ],
+                "readMs": 18,
+                "recoveryMs": 21,
+                "exportMs": 173,
+                "verificationMs": 65,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 5,
+                  "compressionMs": 1,
+                  "decompressionMs": 1,
+                  "verificationMs": 14,
+                  "encodedHashMs": 0,
+                  "savedBytes": 278629,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3593,
+                  "compressedCost": 3961,
+                  "candidateSavedBytes": 278629
+                },
+                "encodedBytes": 18051,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 68.69610000000102
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "low-compressibility",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 29,
+                "writesMs": [
+                  22,
+                  19,
+                  19,
+                  21
+                ],
+                "readMs": 4,
+                "recoveryMs": 5,
+                "exportMs": 63,
+                "verificationMs": 14,
+                "codecMetrics": {
+                  "originalBytes": 29368,
+                  "originalCost": 29642,
+                  "sourceVerificationMs": 1,
+                  "compressionMs": 1,
+                  "decompressionMs": 1,
+                  "verificationMs": 2,
+                  "encodedHashMs": 1,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25879,
+                  "compressedCost": 26247,
+                  "candidateSavedBytes": 3395
+                },
+                "encodedBytes": 146888,
+                "metadataBytes": 1370,
+                "originalBytes": 146888,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14684,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 49.74989999999525
+              },
+              {
+                "mode": "p4",
+                "createdMs": 48,
+                "writesMs": [
+                  30,
+                  33,
+                  29,
+                  35
+                ],
+                "readMs": 6,
+                "recoveryMs": 7,
+                "exportMs": 79,
+                "verificationMs": 15,
+                "codecMetrics": {
+                  "originalBytes": 29368,
+                  "originalCost": 29642,
+                  "sourceVerificationMs": 1,
+                  "compressionMs": 1,
+                  "decompressionMs": 0,
+                  "verificationMs": 3,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25879,
+                  "compressedCost": 26247,
+                  "candidateSavedBytes": 3395
+                },
+                "encodedBytes": 146888,
+                "metadataBytes": 1370,
+                "originalBytes": 146888,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14684,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 58.98889999999665
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "protected-history",
+            "logicalHistoricalMiB": null,
+            "records": 15,
+            "recoveryCopies": 18,
+            "sourceFragments": 22,
+            "baselineIdentityBytes": 57397,
+            "baselineMetadataBytes": 6280,
+            "p4EncodedBytes": 53727,
+            "p4MetadataBytes": 6374,
+            "safeReclaimableBytes": 0,
+            "blockers": [
+              "OPAQUE_ARCHIVE_REVIEW_REQUIRED"
+            ]
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "153.0"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "desktop",
+        "checks": [
+          {
+            "id": "P4-DEDUP-TABS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-RETENTION-CAS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-DELETE-REFERENCE-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-QUOTA-ATOMIC",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COW-RESTART",
+            "status": "passed"
+          },
+          {
+            "id": "P4-P3-CAS-EXPORT",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COMPRESSION-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CODEC-UNAVAILABLE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CORRUPT-PRESERVED",
+            "status": "passed"
+          },
+          {
+            "id": "P4-SHARED-OPERATIONS-BRANCHES",
+            "status": "passed"
+          },
+          {
+            "id": "P4-LEGACY-PROTECTION",
+            "status": "passed"
+          },
+          {
+            "id": "P4-UNKNOWN-PRESERVED",
+            "status": "passed"
+          }
+        ],
+        "benchmarks": [
+          {
+            "case": "shared-branches",
+            "samples": [
+              {
+                "mode": "p3",
+                "writesMs": 910,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 282314,
+                "allReconstructible": true
+              },
+              {
+                "mode": "p4",
+                "writesMs": 1271,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 3805,
+                "allReconstructible": true
+              }
+            ]
+          },
+          {
+            "case": "small",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 553,
+                "writesMs": [
+                  851,
+                  840,
+                  633,
+                  549
+                ],
+                "readMs": 110,
+                "recoveryMs": 200,
+                "exportMs": 485,
+                "verificationMs": 261,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 7,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 7,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 267.2210999999952
+              },
+              {
+                "mode": "p4",
+                "createdMs": 878,
+                "writesMs": [
+                  1165,
+                  1070,
+                  972,
+                  1000
+                ],
+                "readMs": 217,
+                "recoveryMs": 314,
+                "exportMs": 659,
+                "verificationMs": 266,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 15,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 15,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 529.1860000000161
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "representative",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 570,
+                "writesMs": [
+                  865,
+                  846,
+                  653,
+                  684
+                ],
+                "readMs": 112,
+                "recoveryMs": 182,
+                "exportMs": 2142,
+                "verificationMs": 366,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 19,
+                  "compressionMs": 18,
+                  "decompressionMs": 12,
+                  "verificationMs": 44,
+                  "encodedHashMs": 1,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 489.03100000001723
+              },
+              {
+                "mode": "p4",
+                "createdMs": 1002,
+                "writesMs": [
+                  1317,
+                  1034,
+                  954,
+                  880
+                ],
+                "readMs": 238,
+                "recoveryMs": 257,
+                "exportMs": 1200,
+                "verificationMs": 447,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 22,
+                  "compressionMs": 9,
+                  "decompressionMs": 13,
+                  "verificationMs": 58,
+                  "encodedHashMs": 16,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 19094,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 622.7710000000079
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "successive-small-changes",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 582,
+                "writesMs": [
+                  870,
+                  789,
+                  704,
+                  855
+                ],
+                "readMs": 164,
+                "recoveryMs": 204,
+                "exportMs": 2395,
+                "verificationMs": 378,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 12,
+                  "compressionMs": 23,
+                  "decompressionMs": 32,
+                  "verificationMs": 46,
+                  "encodedHashMs": 13,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 413.1860999999917
+              },
+              {
+                "mode": "p4",
+                "createdMs": 973,
+                "writesMs": [
+                  1248,
+                  1232,
+                  1215,
+                  1065
+                ],
+                "readMs": 271,
+                "recoveryMs": 375,
+                "exportMs": 1202,
+                "verificationMs": 439,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 11,
+                  "compressionMs": 11,
+                  "decompressionMs": 9,
+                  "verificationMs": 43,
+                  "encodedHashMs": 4,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 19094,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 526.712200000009
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "low-compressibility",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 587,
+                "writesMs": [
+                  878,
+                  699,
+                  663,
+                  621
+                ],
+                "readMs": 122,
+                "recoveryMs": 162,
+                "exportMs": 895,
+                "verificationMs": 313,
+                "codecMetrics": {
+                  "originalBytes": 29626,
+                  "originalCost": 29900,
+                  "sourceVerificationMs": 8,
+                  "compressionMs": 23,
+                  "decompressionMs": 10,
+                  "verificationMs": 27,
+                  "encodedHashMs": 3,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 26007,
+                  "compressedCost": 26375,
+                  "candidateSavedBytes": 3525
+                },
+                "encodedBytes": 148178,
+                "metadataBytes": 1370,
+                "originalBytes": 148178,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14813,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 324.31439999997383
+              },
+              {
+                "mode": "p4",
+                "createdMs": 942,
+                "writesMs": [
+                  1233,
+                  1104,
+                  1016,
+                  1197
+                ],
+                "readMs": 228,
+                "recoveryMs": 272,
+                "exportMs": 937,
+                "verificationMs": 331,
+                "codecMetrics": {
+                  "originalBytes": 29626,
+                  "originalCost": 29900,
+                  "sourceVerificationMs": 17,
+                  "compressionMs": 34,
+                  "decompressionMs": 16,
+                  "verificationMs": 49,
+                  "encodedHashMs": 12,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 26007,
+                  "compressedCost": 26375,
+                  "candidateSavedBytes": 3525
+                },
+                "encodedBytes": 148178,
+                "metadataBytes": 1370,
+                "originalBytes": 148178,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14813,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 518.6216999999597
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "protected-history",
+            "logicalHistoricalMiB": 14.84,
+            "records": 15,
+            "recoveryCopies": 18,
+            "sourceFragments": 22,
+            "baselineIdentityBytes": 7804375,
+            "baselineMetadataBytes": 6348,
+            "p4EncodedBytes": 2103492,
+            "p4MetadataBytes": 7454,
+            "safeReclaimableBytes": 0,
+            "blockers": [
+              "OPAQUE_ARCHIVE_REVIEW_REQUIRED"
+            ]
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "26.5"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "mobile",
+        "checks": [
+          {
+            "id": "P4-DEDUP-TABS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-RETENTION-CAS",
+            "status": "passed"
+          },
+          {
+            "id": "P4-DELETE-REFERENCE-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-QUOTA-ATOMIC",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COW-RESTART",
+            "status": "passed"
+          },
+          {
+            "id": "P4-P3-CAS-EXPORT",
+            "status": "passed"
+          },
+          {
+            "id": "P4-COMPRESSION-RACE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CODEC-UNAVAILABLE",
+            "status": "passed"
+          },
+          {
+            "id": "P4-CORRUPT-PRESERVED",
+            "status": "passed"
+          },
+          {
+            "id": "P4-SHARED-OPERATIONS-BRANCHES",
+            "status": "passed"
+          },
+          {
+            "id": "P4-LEGACY-PROTECTION",
+            "status": "passed"
+          },
+          {
+            "id": "P4-UNKNOWN-PRESERVED",
+            "status": "passed"
+          }
+        ],
+        "benchmarks": [
+          {
+            "case": "shared-branches",
+            "samples": [
+              {
+                "mode": "p3",
+                "writesMs": 924,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 282314,
+                "allReconstructible": true
+              },
+              {
+                "mode": "p4",
+                "writesMs": 1171,
+                "uniqueBodies": 1,
+                "operations": 2,
+                "branches": 1,
+                "encodedBytes": 3805,
+                "allReconstructible": true
+              }
+            ]
+          },
+          {
+            "case": "small",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 541,
+                "writesMs": [
+                  849,
+                  850,
+                  867,
+                  888
+                ],
+                "readMs": 189,
+                "recoveryMs": 261,
+                "exportMs": 787,
+                "verificationMs": 383,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 15,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 15,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 378.8434000000125
+              },
+              {
+                "mode": "p4",
+                "createdMs": 888,
+                "writesMs": [
+                  1167,
+                  1124,
+                  1150,
+                  1268
+                ],
+                "readMs": 221,
+                "recoveryMs": 349,
+                "exportMs": 813,
+                "verificationMs": 359,
+                "codecMetrics": {
+                  "originalBytes": 1634,
+                  "originalCost": 1906,
+                  "sourceVerificationMs": 15,
+                  "compressionMs": 0,
+                  "decompressionMs": 0,
+                  "verificationMs": 15,
+                  "encodedHashMs": 0,
+                  "savedBytes": 0,
+                  "metadataBytes": 272,
+                  "selected": "identity",
+                  "reason": "below-threshold"
+                },
+                "encodedBytes": 8218,
+                "metadataBytes": 1360,
+                "originalBytes": 8218,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 817,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 536.140400000033
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "representative",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 558,
+                "writesMs": [
+                  923,
+                  904,
+                  827,
+                  853
+                ],
+                "readMs": 180,
+                "recoveryMs": 180,
+                "exportMs": 2425,
+                "verificationMs": 386,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 22,
+                  "compressionMs": 27,
+                  "decompressionMs": 18,
+                  "verificationMs": 58,
+                  "encodedHashMs": 13,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 425.8908999999985
+              },
+              {
+                "mode": "p4",
+                "createdMs": 965,
+                "writesMs": [
+                  1336,
+                  1323,
+                  1341,
+                  1335
+                ],
+                "readMs": 332,
+                "recoveryMs": 423,
+                "exportMs": 1427,
+                "verificationMs": 605,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 25,
+                  "compressionMs": 20,
+                  "decompressionMs": 26,
+                  "verificationMs": 53,
+                  "encodedHashMs": 2,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 19094,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 651.9075999999768
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "successive-small-changes",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 596,
+                "writesMs": [
+                  825,
+                  889,
+                  892,
+                  942
+                ],
+                "readMs": 192,
+                "recoveryMs": 276,
+                "exportMs": 3346,
+                "verificationMs": 416,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 19,
+                  "compressionMs": 23,
+                  "decompressionMs": 26,
+                  "verificationMs": 54,
+                  "encodedHashMs": 4,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 1407922,
+                "metadataBytes": 1380,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 499.20759999996517
+              },
+              {
+                "mode": "p4",
+                "createdMs": 958,
+                "writesMs": [
+                  1351,
+                  1403,
+                  1357,
+                  1348
+                ],
+                "readMs": 322,
+                "recoveryMs": 388,
+                "exportMs": 1406,
+                "verificationMs": 601,
+                "codecMetrics": {
+                  "originalBytes": 282314,
+                  "originalCost": 282590,
+                  "sourceVerificationMs": 20,
+                  "compressionMs": 12,
+                  "decompressionMs": 16,
+                  "verificationMs": 69,
+                  "encodedHashMs": 14,
+                  "savedBytes": 278417,
+                  "metadataBytes": 368,
+                  "selected": "gzip",
+                  "reason": "net-benefit",
+                  "compressedBytes": 3805,
+                  "compressedCost": 4173,
+                  "candidateSavedBytes": 278417
+                },
+                "encodedBytes": 19094,
+                "metadataBytes": 1840,
+                "originalBytes": 1407922,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip",
+                  "gzip"
+                ],
+                "snapshotCharacters": 141157,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 642.9114999999874
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "low-compressibility",
+            "samples": [
+              {
+                "mode": "p3",
+                "createdMs": 561,
+                "writesMs": [
+                  859,
+                  859,
+                  884,
+                  849
+                ],
+                "readMs": 193,
+                "recoveryMs": 254,
+                "exportMs": 1029,
+                "verificationMs": 359,
+                "codecMetrics": {
+                  "originalBytes": 29376,
+                  "originalCost": 29650,
+                  "sourceVerificationMs": 11,
+                  "compressionMs": 40,
+                  "decompressionMs": 17,
+                  "verificationMs": 47,
+                  "encodedHashMs": 5,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25927,
+                  "compressedCost": 26295,
+                  "candidateSavedBytes": 3355
+                },
+                "encodedBytes": 146928,
+                "metadataBytes": 1370,
+                "originalBytes": 146928,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14688,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 374.5091000000248
+              },
+              {
+                "mode": "p4",
+                "createdMs": 932,
+                "writesMs": [
+                  1257,
+                  1262,
+                  1230,
+                  1265
+                ],
+                "readMs": 249,
+                "recoveryMs": 347,
+                "exportMs": 1000,
+                "verificationMs": 382,
+                "codecMetrics": {
+                  "originalBytes": 29376,
+                  "originalCost": 29650,
+                  "sourceVerificationMs": 19,
+                  "compressionMs": 17,
+                  "decompressionMs": 8,
+                  "verificationMs": 39,
+                  "encodedHashMs": 14,
+                  "savedBytes": 0,
+                  "metadataBytes": 274,
+                  "selected": "identity",
+                  "reason": "insufficient-net-benefit",
+                  "compressedBytes": 25927,
+                  "compressedCost": 26295,
+                  "candidateSavedBytes": 3355
+                },
+                "encodedBytes": 146928,
+                "metadataBytes": 1370,
+                "originalBytes": 146928,
+                "uniqueBodies": 5,
+                "references": 12,
+                "codecs": [
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity",
+                  "identity"
+                ],
+                "snapshotCharacters": 14688,
+                "exportRecoverable": true,
+                "reopenAndReadWallMs": 547.0077000000165
+              }
+            ],
+            "scope": "local coded bytes and serialized metadata, not native disk allocation or Google latency"
+          },
+          {
+            "case": "protected-history",
+            "logicalHistoricalMiB": null,
+            "records": 15,
+            "recoveryCopies": 18,
+            "sourceFragments": 22,
+            "baselineIdentityBytes": 57397,
+            "baselineMetadataBytes": 6280,
+            "p4EncodedBytes": 53727,
+            "p4MetadataBytes": 6374,
+            "safeReclaimableBytes": 0,
+            "blockers": [
+              "OPAQUE_ARCHIVE_REVIEW_REQUIRED"
+            ]
+          }
+        ],
+        "errors": [],
+        "nativeQuota": "injected-only",
+        "abruptCrash": "not-exercised",
+        "status": "passed",
+        "version": "26.5"
+      }
+    ],
+    "productionActivated": false,
+    "realGoogle": false,
+    "safariReal": false
+  },
+  "limitations": [
+    "Native quota not demonstrated by bounded 2 MiB probe; injected failures passed",
+    "Chrome process crash tested; no power loss",
+    "WebKit Playwright is not real Safari or iOS",
+    "Encoded-body and serialized-body-header bytes are not complete IndexedDB disk allocation",
+    "WebKit local latency increased in several operations; production activation blocked pending further validation",
+    "Opaque histories remain protected; zero GC reclaim in protected historical corpus",
+    "Historical per-stage timing not isolated; no invented timings",
+    "P1 characterization defects remain intentionally reproduced, not claimed fixed"
+  ]
+}
