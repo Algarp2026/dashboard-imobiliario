@@ -1,0 +1,8 @@
+import {copy,fail,laboratory} from './contracts.mjs';
+export function memoryBackend(initial=null){let durable=copy(initial);return Object.freeze({labOnly:true,load:async()=>copy(durable),compareExchange:async(g,next)=>{if((durable?.generation??null)!==g)fail('P5_STORAGE_CAS');durable=copy(next);},image:()=>copy(durable)});}
+export async function indexedBackend({factory,origin,synthetic=false,name='the-view-p5-lab.source.v1'}={}){
+ laboratory(origin,synthetic);if(!/^the-view-p5-lab\.[a-z0-9.-]{1,64}$/.test(name))fail('P5_LAB_ONLY');
+ const db=await new Promise((resolve,reject)=>{const r=factory.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore('source');r.onblocked=r.onerror=()=>reject(Error('P5_DATABASE'));r.onsuccess=()=>{r.result.onversionchange=()=>r.result.close();resolve(r.result);};});
+ function tx(mode,action){return new Promise((resolve,reject)=>{let result,cause;const t=db.transaction('source',mode,mode==='readwrite'?{durability:'strict'}:undefined);t.oncomplete=()=>resolve(result);t.onerror=e=>{e.preventDefault();cause=e.target.error;try{t.abort();}catch{}};t.onabort=()=>reject(Object.assign(Error(cause?.name==='QuotaExceededError'?'P5_QUOTA':cause?.code||'P5_ABORT'),{code:cause?.name==='QuotaExceededError'?'P5_QUOTA':cause?.code||'P5_ABORT'}));const r=t.objectStore('source').get('state');r.onsuccess=()=>{try{result=action(r.result??null,t.objectStore('source'));}catch(e){cause=e;t.abort();}};});}
+ return Object.freeze({labOnly:true,load:()=>tx('readonly',s=>s),compareExchange:(g,next)=>tx('readwrite',(s,store)=>{if((s?.generation??null)!==g)fail('P5_STORAGE_CAS');store.put(copy(next),'state');}),close:()=>db.close()});
+}

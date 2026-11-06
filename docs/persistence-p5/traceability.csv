@@ -1,0 +1,37 @@
+requirement,evidence,status,scope
+manifestos imutaveis,P5-EXACT-IDENTITY e source.mjs,implemented-tested,laboratorio sem Google
+ancora B6 atual,P5-HISTORY-ABC,implemented-tested,A B C fora de ordem sem alterar fonte
+manifesto orfao,P5-ORPHAN-NOT-COMMITTED,implemented-tested,PENDING nunca COMMITTED
+manifesto falsificado,P5-NEGATIVE-CHAIN forged,implemented-tested,UNKNOWN
+hash correto sem ligacao,P5-ORPHAN-NOT-COMMITTED,implemented-tested,nao confirma por checksum
+ID correto conteudo diferente,P5-EXACT-IDENTITY,implemented-tested,BLOCKED
+conteudo correto ID diferente,P5-EXACT-IDENTITY,implemented-tested,nao considera mesma operacao
+UUIDs e operacoes de conteudo igual,P5-P3-UUID-AND-NOOP-IDENTITIES,implemented-tested,IDs preservados e dois commits somente se explicitamente pedidos
+ancestral corrompido,P5-NEGATIVE-CHAIN ancestor,implemented-tested,UNKNOWN
+referencia circular,P5-NEGATIVE-CHAIN cycle,implemented-tested,hash ou ciclo invalido falha fechado
+cadeia truncada,P5-NEGATIVE-CHAIN truncated,implemented-tested,UNKNOWN
+limite de historico,P5-LIMITS-AND-OLD-HISTORY e benchmarks bounded,implemented-tested,UNKNOWN sem NOT_FOUND falso
+versao historica ausente,P5-NEGATIVE-CHAIN version,implemented-tested,UNKNOWN
+descritor anterior incompativel,P5-LINKED-PARENT-AND-BACKUP-PROOFS e negative descriptor,implemented-tested,base ou descritor invalido
+blocos incompletos e reordenados,P5-FAILURE-MATRIX partial-chunks e negative reordered,implemented-tested,nao ativa por mera preparacao
+B5 apos commit,P5-FAILURE-MATRIX after-b6 e HISTORY-ABC,implemented-tested,COMMITTED exige cadeia valida
+resposta perdida,P5-HISTORY-ABC e P5-REMOTE-UNKNOWN-DURABLE,implemented-tested,original preservado
+A depois de B,P5-HISTORY-ABC e P5-HISTORICAL-ACK-PRESERVES-LATER-HEAD,implemented-tested,sem rollback
+B depois de C,P5-HISTORY-ABC,implemented-tested,consultas fora de ordem
+consulta concorrente com escrita,P5-SOURCE-MOVED e P5-LOOKUP-CONCURRENT-WRITE,implemented-tested,UNKNOWN se fonte mover
+fonte alterada durante consulta,P5-SOURCE-MOVED,implemented-tested,geracao e ancora verificadas novamente
+acesso negado,P5-AUTHORIZATION e P5-AUTH-AND-FORGED-RECEIPT,implemented-tested,autenticacao simulada nao OAuth
+fonte e epoch incompativeis,P5-AUTHORIZATION e P5-COMPATIBILITY-FENCE,implemented-tested,fence na fonte antes de B5
+backup sem ativacao,P5-LINKED-PARENT-AND-BACKUP-PROOFS,implemented-tested,UNKNOWN
+falhas antes depois B5 B6,P5-FAILURE-MATRIX,implemented-tested,dez etapas com JSON grande ficticio
+quota e retomada,P5-READ-FAILURE-AND-QUOTA e P5-NATIVE-QUOTA-RESUME-IDEMPOTENT,implemented-tested,injetada em transacao IDB nativa
+erro assincrono IndexedDB,P5-ASYNCHRONOUS-IDB-ABORT,implemented-tested,ConstraintError nativo deve abortar sem falso sucesso
+intencao semanticamente invalida,P5-INVALID-INTENT-SEMANTICS,implemented-tested,checksum recalculado nao autoriza ativacao
+reinicio fonte,P5-DURABLE-RESTART e P5-SOURCE-AND-LOCAL-RESTART,implemented-tested,ficheiro temporario e perfil IDB
+P3 sem SYNCED falso,P5-HISTORICAL-ACK-PRESERVES-LATER-HEAD,implemented-tested,cabeca posterior preservada
+P4 sem limpeza de provas,inventory no teste nativo P5,implemented-tested,recibos continuam protegidos
+harness fonte atual,P5-REAL-GAS-HARNESS,implemented-tested,Apps Script inalterado em VM
+historico antigo sem provas,P5-LIMITS-AND-OLD-HISTORY,implemented-tested,UNKNOWN sem fabricar cadeia
+runtime comercial,P5-OPERATIONAL-ISOLATION e git diff,unchanged,nenhuma rota ou escritor ativo
+Google OAuth Execution API real,nao executado,not-verified,gate de ativacao futura
+Safari iOS fisico,nao disponivel,not-verified,WebKit Playwright nao e Safari real
