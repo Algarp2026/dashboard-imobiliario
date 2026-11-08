@@ -1,0 +1,37 @@
+requirement,evidence,status,limit
+base atualizada,fetch e parent 145736d9ee77b9abdd614e991be01f69d5d10e27,verified,branch local sem publicacao
+fonte coerente formato 2,P6-CRITICAL-OPERATIONAL-PARTIAL,implemented-tested,prova somente B6 atual
+fonte coerente formato 3,P6-STALE-P5-AND-PLAN,implemented-tested,cadeia P5 verificada
+legado e desconhecido,P6-SOURCE-FAILS-CLOSED,implemented-tested,sem fallback B2
+seis projecoes reais,P6-VM-FIDELITY,implemented-tested,VM nao Google locale formulas
+dependencias desconhecidas e reescrita seletiva,P6-REAL-SELECTIVE-WRITER,implemented-tested,funcoes operacionais inalteradas
+headers tipos ordem comissoes precos,P6-VM-FIDELITY,implemented-tested,dados exclusivamente sinteticos
+Clientes R1 Eventos R0 B6 R0,P6-CRITICAL-OPERATIONAL-PARTIAL,implemented-tested,operacao incerta preservada
+ausencia parcial manual truncado misto,P6-DIAGNOSTIC-DIVERGENCES,implemented-tested,UNKNOWN quando falta proveniencia
+antigo com prova P5,P6-STALE-P5-AND-PLAN,implemented-tested,mirrorRevision nao inferida por semelhanca
+diagnostico durante escrita,P6-SOURCE-FAILS-CLOSED e benchmarks concurrentCapture,implemented-tested,SOURCE_CHANGED
+B5 pendente bloqueado desconhecido,P6-B5-UNKNOWN-AND-BLOCKED e critical,implemented-tested,permit limitado nao confirma operacao
+plano readonly e antigo,P6-STALE-P5-AND-PLAN,implemented-tested,autoridade regras e derivados revalidados
+repair sem alterar autoridade,P6-CRITICAL-OPERATIONAL-PARTIAL,implemented-tested,B5 B6 versoes backups intactos
+reparacao interrompida,P6-REPAIR-INTERRUPTION,implemented-tested,PARTIAL e novo plano
+idempotencia,P6-DIAGNOSTIC-DIVERGENCES e native activation,implemented-tested,ALREADY_CONSISTENT sem escrita
+duas reparacoes e lock,P6-LOCK-AND-CONCURRENCY,implemented-tested,CAS sem limpeza automatica
+escritor versus reparacao,P6-WRITER-REPAIR-FENCE,implemented-tested,mesmo lock P5
+fonte muda durante reparacao,P6-MOVED-DURING-REPAIR,implemented-tested,parar sem restaurar fonte
+crash com lock persistido,P6-CRASH-PRESERVES-LOCK-AND-COPY,implemented-tested,processo Chromium apenas nao energia
+copia integral imutavel,P6-COPY-IMMUTABLE-INDEPENDENT,implemented-tested,nao comprova versao mais recente
+backend independente,P6-INDEPENDENT-IO-AND-MOVING-SOURCE e native failure domains,implemented-tested,mesmo computador/perfil nao servicos independentes
+quota e escrita interrompida,P6-COPY-FAULTS-AND-RACES e native quota,implemented-tested,quota injetada nao fisica
+corpo referencia manifesto adulterado,P6-COPY-CORRUPTION,implemented-tested,FORENSIC sem substituir
+envelope e versoes desconhecidas,P6-VERSIONED-METADATA e P6-COPY-CORRUPTION,implemented-tested,checksum recalculado nao autoriza interpretacao
+reinicio e resposta perdida,P6-FILE-RESTART e copy faults e native restart,implemented-tested,sem restauracao automatica
+duas copias simultaneas,P6-COPY-FAULTS-AND-RACES,implemented-tested,CAS e deduplicacao
+ID reutilizado outra revisao,P6-COPY-IMMUTABLE-INDEPENDENT,implemented-tested,COPY_ID_COLLISION
+copia durante mudanca da fonte,P6-INDEPENDENT-IO-AND-MOVING-SOURCE,implemented-tested,copia fica associada a captura nao latest
+P3 P4 pendencias preservadas,P6-RESTART-PRESERVES-P3-P4-P5,implemented-tested,nenhum ack fabricado
+P5 A depois de B,P6-STALE-PLAN-COPY-CORRUPTION-NO-ROLLBACK,implemented-tested,A historica nao reativa
+recuperacao so planeamento,P6-RECOVERY-NO-RESTORE,implemented-tested,mayChangeAuthority false
+autorizacao e isolamento,P6-AUTH-AND-ISOLATION,implemented-tested,scopes sinteticos nao OAuth
+sete benchmarks,commercial-persistence-p6-benchmarks.mjs,measured-local,sem latencia Google ou espaco fisico garantido
+arquivo protegido 14.84 MiB,benchmark protectedHistoryUnchanged,implemented-tested,nenhuma compactacao/limpeza do historico
+runtime P1-P5 e hotfix,regressoes e git diff,unchanged,sem fontes reais ou publicacao
