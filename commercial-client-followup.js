@@ -54,6 +54,9 @@
   root.createClientFollowupUI=function(a){
     const drafts=new Map(),esc=a.esc;let busy=false;
     const baseline=c=>JSON.stringify([c.followupV1,c.contactStateHistory,c.priorityHistory]);
+    const fields=['response','pendingDescription','lastInteraction','waitingSince','observation'];
+    const editable=d=>clone(Object.fromEntries([...fields,'reminder'].map(key=>[key,d[key]])));
+    const same=(x,y)=>JSON.stringify(x)===JSON.stringify(y);
     const field=(label,name,value,type='text')=>`<label class="field"><span>${label}</span><input type="${type}" name="${name}" value="${esc(value||'')}"></label>`;
     function historyMarkup(entries){
       const labels={response:'Resposta pendente',neutralState:'Estado interno preservado',pendingDescription:'Pendência',lastInteraction:'Última interação',waitingSince:'Início da espera',observation:'Observação',reminder:'Lembrete'};
@@ -69,10 +72,10 @@
     }
     function bind(c,container){
       const form=container.querySelector('[data-client-followup]');if(!form)return;
-      const read=event=>{
-        const info=current(c),d=drafts.get(c.id)||{...info,original:baseline(c)};
-        for(const key of ['response','pendingDescription','lastInteraction','waitingSince','observation'])d[key]=form.elements[key].value;
-        if(event?.target?.name==='lastInteraction')d.lastInteractionEdited=true;
+      const read=()=>{
+        let d=drafts.get(c.id);
+        if(!d){const info=current(c);d={...info,initial:editable(info),original:baseline(c)}}
+        for(const key of fields)d[key]=form.elements[key].value;
         d.priority=form.elements.priority.checked;
         if(form.elements.reminderDate)d.reminder={...(d.reminder||{}),date:form.elements.reminderDate.value,state:form.elements.reminderState.value};
         d.feedback='Alterações do formulário por guardar.';drafts.set(c.id,d);form.querySelector('[data-followup-status]').textContent=d.feedback;return d;
@@ -83,15 +86,20 @@
       form.onsubmit=async event=>{
         event.preventDefault();if(busy)return;
         if(!drafts.has(c.id)){form.querySelector('[data-followup-status]').textContent='Sem alterações por guardar.';return}
-        const d=read();busy=true;form.querySelector('fieldset').disabled=true;form.querySelector('[data-followup-status]').textContent='A guardar e confirmar a sincronização…';
+        const d=read(),values=editable(d),changed=!same(d.initial,values);
+        if(!changed&&d.priority===a.priority(c)&&!d.savedLocally){
+          drafts.delete(c.id);form.querySelector('[data-followup-status]').textContent='Sem alterações por guardar.';return;
+        }
+        busy=true;form.querySelector('fieldset').disabled=true;form.querySelector('[data-followup-status]').textContent='A guardar e confirmar a sincronização…';
         try{
           const live=a.client(c.id);if(baseline(live)!==d.original)throw Error('O seguimento mudou. Preserve as alterações e reveja a versão atual antes de guardar.');
-          const input={...d,lastInteraction:!d.lastInteractionEdited&&live.followupV1?live.followupV1.lastInteraction:d.lastInteraction};
-          const updated=update(live,input,{id:a.id(),recordedAt:new Date().toISOString(),legacyState:a.contactInfo(live).state});
+          // A date derived from historical events is not a manual interaction date.
+          const input={...values,lastInteraction:values.lastInteraction===d.initial.lastInteraction?live.followupV1?.lastInteraction||'':values.lastInteraction};
+          const updated=changed?update(live,input,{id:a.id(),recordedAt:new Date().toISOString(),legacyState:a.contactInfo(live).state}):clone(live);
           a.setPriority(updated,d.priority);
           if(JSON.stringify(updated)===JSON.stringify(live)&&!d.savedLocally){drafts.delete(c.id);a.feedback(true,'Sem alterações por guardar.');return}
-          Object.assign(live,updated);d.savedLocally=true;
-          const confirmed=await a.persist();d.original=baseline(live);
+          Object.assign(live,updated);d.savedLocally=true;d.initial=values;d.original=baseline(live);
+          const confirmed=await a.persist();
           if(confirmed){drafts.delete(c.id);a.feedback(true,'Seguimento guardado e sincronizado.')}
           else d.feedback='Alterações locais preservadas. Confirmação remota pendente.';
         }catch(error){d.feedback=error.message}finally{busy=false;a.render()}
