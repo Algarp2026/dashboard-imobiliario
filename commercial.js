@@ -3733,7 +3733,7 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
 
   const publicArea=v=>Math.max(0,Math.floor((+v||0)-2));
   const presentationPriceFor=f=>presentationPrices[f.number]||finalPrice(f);
-  const ptDisclaimer='Documento meramente informativo e de apresentação comercial. Os valores, áreas e condições aqui indicados não constituem proposta contratual, reserva, promessa de venda ou proposta oficial, estando sujeitos a confirmação e aprovação pela entidade promotora.';
+  const ptDisclaimer='Documento meramente informativo, com imagens ilustrativas. Projeto em construção, sujeito a ajustamentos técnicos, arquitetónicos e de licenciamento. Os vidros das guardas e caixilharias são planos, não curvos; o ripado, a sua cor e o alinhamento das guardas das varandas podem ser alterados. Acabamentos e decoração não contratuais. Valores, áreas e condições sujeitos a confirmação pela entidade promotora, não constituindo proposta contratual, reserva ou promessa de venda. Em caso de divergência, prevalece o contrato-promessa de compra e venda, quando celebrado.';
   const copies={
     'pt-fr':{
       price:'Preço de apresentação / Prix de présentation',
@@ -3742,7 +3742,8 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
       total:'Área total aprox. / Surface totale approximative',
       typology:'Tipologia / Type de bien',
       missing:'Planta indisponível para esta fração. / Plan indisponible pour cette unité.',
-      disclaimer:ptDisclaimer+'\n\nCe document est fourni uniquement à titre informatif et de présentation commerciale. Les prix, surfaces et conditions indiqués ne constituent ni une proposition contractuelle, ni une réservation, ni une promesse de vente, ni une offre officielle, et restent soumis à confirmation et approbation par le promoteur.'
+      disclaimerLang:'fr',
+      disclaimer:'Document fourni à titre purement informatif, avec des images à titre d’illustration. Le projet est en cours de construction et peut faire l’objet d’ajustements techniques, architecturaux et liés aux autorisations. Les vitrages des garde-corps et des menuiseries sont plats, et non courbes ; le revêtement à lames, sa couleur et l’alignement des garde-corps des balcons peuvent être modifiés. Les finitions et la décoration ne sont pas contractuelles. Les prix, les surfaces et les conditions doivent être confirmés par le promoteur. Les indications fournies ne constituent ni une offre contractuelle, ni une réservation, ni une promesse de vente. En cas de divergence, le contrat de promesse d’achat et de vente prévaut, s’il a été conclu.'
     },
     'pt-en':{
       price:'Preço de apresentação / Presentation Price',
@@ -3751,7 +3752,8 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
       total:'Área total aprox. / Approx. Total Area',
       typology:'Tipologia / Unit Type',
       missing:'Planta indisponível para esta fração. / Floor plan unavailable for this unit.',
-      disclaimer:ptDisclaimer+'\n\nThis document is for informational and commercial presentation purposes only. The prices, areas and conditions shown herein do not constitute a contractual proposal, reservation, promissory sale agreement or official offer, and are subject to confirmation and approval by the developer.'
+      disclaimerLang:'en',
+      disclaimer:'This document is for information only and contains illustrative images. The development is under construction and is subject to changes for technical, architectural or permitting reasons. The glazing in the balustrades and window and door frames is flat, not curved. The slatted cladding, its colour and the alignment of the balcony balustrades may change. Finishes and décor are non-contractual. The prices, areas and terms shown are subject to confirmation by the developer. They do not constitute a contractual offer, a reservation or a promise to sell. In the event of any discrepancy, the promissory purchase and sale agreement shall prevail, if entered into.'
     }
   };
   const copy=copies[language]||copies['pt-en'];
@@ -3783,7 +3785,8 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
       ${include?`<div class="pdf-plant-wrap">${plant?`<img class="pdf-plant" src="${plant}" />`:`<div class="pdf-missing">${esc(copy.missing)}</div>`}</div>`:''}
 
       <footer class="pdf-footer">
-        <p>${esc(copy.disclaimer).replace(/\n/g,'<br>')}</p>
+        <p lang="pt">${esc(ptDisclaimer)}</p>
+        <p lang="${copy.disclaimerLang}">${esc(copy.disclaimer)}</p>
       </footer>
     </section>`;
   }).join('');
@@ -3812,8 +3815,9 @@ function generateClientPresentationPdf(fs, include, presentationPrices={}, langu
   .pdf-plant-wrap{flex:1 1 auto;min-height:172mm;display:flex;justify-content:center;align-items:center;border:1px solid #e1e9f2;border-radius:14px;overflow:hidden;padding:2mm;background:#fff}
   .pdf-plant{width:100%;height:100%;max-width:100%;max-height:182mm;object-fit:contain;display:block}
   .pdf-missing{color:#63748d;font-size:11pt}
-  .pdf-footer{margin-top:auto;border-top:1px solid #d9e1eb;padding-top:3mm}
-  .pdf-footer p{margin:0;color:#62738a;font-size:7.6pt;line-height:1.35;text-align:justify}
+  .pdf-footer{margin-top:auto;border-top:1px solid #d9e1eb;padding-top:2mm;break-inside:avoid}
+  .pdf-footer p{margin:0;color:#62738a;font:8pt/1.25 Arial,sans-serif}
+  .pdf-footer p+p{margin-top:1.5mm}
   @media print{body{background:#fff}.pdf-page{break-after:page}.pdf-page.last{break-after:auto}}
   </style></head><body>${pages}
   <script>
