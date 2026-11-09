@@ -2437,6 +2437,7 @@ function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   if(idx<0)return false;
   if(state.data.events.filter(ev=>ev.id===oldEv.id).length!==1)throw Error('A origem do evento é ambígua. A integridade exige revisão antes da edição.');
   const error=protectedEventEditError(oldEv,newEv);if(error)throw Error(error);
+  const historyError=window.THE_VIEW_CLIENT_WORKFLOW?.legacyPresentationCorrectionError?.(oldEv,newEv,state.data.events);if(historyError)throw Error(historyError);
   if(restrictedEventEdit(oldEv,newEv)){
     state.data.events[idx]={...oldEv,...Object.fromEntries(['notes','objections'].filter(key=>Object.hasOwn(newEv,key)).map(key=>[key,newEv[key]]))};
     return true;
@@ -3019,7 +3020,8 @@ function renderEventPriceRows(initialRows=null){
   }));
 }
 function isCommercialPresentationEvent(ev){return ev?.type==='Apresentação comercial'}
-function commercialInteractionCounts(){return{presentations:(state.data.events||[]).filter(isCommercialPresentationEvent).length,documentation:(state.data.events||[]).filter(ev=>ev.type==='Documentação enviada').length}}
+function isCountedCommercialPresentation(ev){return isCommercialPresentationEvent(ev)&&!(ev.opportunityVersion===1&&ev.opportunityAction==='present'&&ev.corrects)}
+function commercialInteractionCounts(){return{presentations:(state.data.events||[]).filter(isCountedCommercialPresentation).length,documentation:(state.data.events||[]).filter(ev=>ev.type==='Documentação enviada').length}}
 // Presentation format uses the existing channel field; old records need no migration.
 function eventChannelOptions(type,value='',preserveExisting=false){
   const presentation=isCommercialPresentationEvent({type}),options=presentation?PRESENTATION_FORMATS:EVENT_CHANNELS;
@@ -4348,7 +4350,7 @@ function filterFractions(fil={}){
 
 function syncProposal(){const next={search:el.proposalSearch.value,typology:el.proposalTypology.value,floor:el.proposalFloor.value,status:el.proposalStatus.value};if(Object.keys(next).every(key=>next[key]===state.pf[key]))return;state.pf=next;renderProposals()}
 function syncPrice(){const next={search:el.priceSearch.value,typology:el.priceTypology.value,floor:el.priceFloor.value,status:el.priceStatus.value};if(Object.keys(next).every(key=>next[key]===state.rf[key]))return;state.rf=next;renderPrices()}
-function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCommercialPresentationEvent).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
+function metrics(n){const evs=state.data.events.filter(e=>(e.fractions||[]).includes(n));const presentations=evs.filter(isCountedCommercialPresentation).length;const visits=evs.filter(e=>['Visita','Reunião realizada'].includes(e.type)).length;const interested=evs.filter(e=>['Interessado','Reunião com cliente','Preferências recebidas','Frações apresentadas'].includes(e.type)).length;const proposalTypes=['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Reserva','Reserva efetuada','Venda','Venda concluída'];const offers=evs.filter(e=>proposalTypes.includes(e.type)&&e.amount).map(e=>e.amount);const last=evs.slice().sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b))).pop();return{presentations,visits,interested,proposals:evs.filter(e=>proposalTypes.includes(e.type)).length,lastOffer:offers[offers.length-1]||0,lastAction:last?`${last.type} · ${last.date}`:''}}
 function ensureHistory(){let changed=false;state.data.priceHistory=state.data.priceHistory||{};state.fractions.forEach(f=>{if(!state.data.priceHistory[f.number]){state.data.priceHistory[f.number]=[{date:today(),price:finalPrice(f),reason:'Preço inicial definido'}];changed=true}});return changed}
 function getF(n){return state.fractions.find(f=>f.number===n)}
 function client(id){return state.data.clients.find(c=>c.id===id)}

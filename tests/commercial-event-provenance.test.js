@@ -6,6 +6,13 @@ let writes=0,requests=0;
 const context={console,document:{readyState:'loading',addEventListener(){},getElementById(){return null},querySelectorAll(){return[]}},window:{THE_VIEW_CONFIG:{},THE_VIEW_CLIENT_WORKFLOW:model,createClientWorkflow:a=>a},localStorage:{getItem(){return null},setItem(){writes++}},fetch(){requests++;throw Error('Forbidden network')}};
 vm.createContext(context);const end=source.lastIndexOf('})();');vm.runInContext(source.slice(0,end)+'globalThis.app={state,el,normalizeData,hasCriticalCommercialEventChange,replaceEventAndReapplyBusinessRules,clientWorkflow,buildEventFromForm};'+source.slice(end),context);
 const app=context.app;
+const legacy={id:'legacy-presented',type:'Apresentação comercial',clientId:'fiction',date:'2026-10-01',fractions:[9]};
+app.state.data=app.normalizeData(input(legacy,{}));
+app.state.data.events.push({id:'global-exit',type:'Desistência',clientId:legacy.clientId,date:'2026-10-02',fractions:[],scope:'global'});
+const legacyBefore=JSON.stringify(app.state.data);
+assert.throws(()=>app.replaceEventAndReapplyBusinessRules(legacy,{...legacy,date:'2026-10-03'}),/apresentação histórica/);
+assert.equal(JSON.stringify(app.state.data),legacyBefore);
+assert.equal(app.replaceEventAndReapplyBusinessRules(legacy,{...legacy,notes:'Nota fictícia'}),true);
 const admin={id:'manual-status-9',type:'Alteração de estado',clientId:'',date:'2026-10-01',time:'10:00',fractions:[9],notes:'Fictitious reason',unknown:{preserved:true}};
 function input(event,refs={statusEventIds:{9:event.id}}){return{clients:[{id:'fiction',name:'Fictitious client',preferences:{typology:'T3'},manualPreferences:{typology:'T3'},preferencesManuallyEdited:true,fractions:[9]},{id:'other',name:'Fictitious other'}],events:[copy(event)],statuses:{9:'Indisponível',24:'Disponível'},finalPrices:{9:500000},salePrices:{},saleCommissions:{},...refs}}
 const critical=[{type:'Outro'},{fractions:[24]},{clientId:'other'},{date:'2026-10-02'},{time:'11:00'},{id:'replacement'},{amount:100},{source:'different'},{createdAt:'2026-10-02T00:00:00Z'},{unknown:{preserved:false}}];

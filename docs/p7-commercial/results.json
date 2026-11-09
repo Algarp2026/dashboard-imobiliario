@@ -1,0 +1,565 @@
+{
+  "branch": "codex/p7-commercial-followup",
+  "base": "3e89cb769533d8e8bd75bbf5dc69bdac74f6cc43",
+  "previousP7": "063684cea8472cdf3048bf8b63e36c68a0e4aa9d",
+  "recommendation": "ready-for-technical-review",
+  "publication": "blocked-until-coordinated-approval",
+  "realGoogle": false,
+  "productionAccess": false,
+  "publicationPerformed": false,
+  "persistenceActivated": false,
+  "productFiles": [
+    "commercial.js",
+    "commercial-client-workflow.js",
+    "commercial-opportunities.js",
+    "server/commercial-integrity.js",
+    "commercial-integrity.js",
+    "google_commercial_integrity.gs"
+  ],
+  "unchanged": [
+    "api/",
+    "google_apps_script.gs",
+    "commercial-client-followup.js",
+    "experimental/",
+    "commercial.html",
+    "commercial.css",
+    "data.json",
+    "data.xlsx",
+    "config.js",
+    "plantas/"
+  ],
+  "sharedIntegritySourceSha256": "b24b0fe85a228c774d96a885b2d9316828cfe1113897de91840a1f8ca694dc53",
+  "baselineBrowser": [
+    {
+      "name": "commercial-profile-followup-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "crm-reform-browser.mjs",
+      "code": 0,
+      "passed": true
+    },
+    {
+      "name": "commercial-stage-browser.mjs",
+      "code": 0,
+      "passed": true
+    }
+  ],
+  "defects": [
+    {
+      "id": "P7-03",
+      "status": "fixed",
+      "browserPostsBefore": 1,
+      "browserPostsAfter": 0
+    },
+    {
+      "id": "P7-08",
+      "status": "fixed",
+      "dashboardPresentationsBefore": 9,
+      "dashboardPresentationsAfter": 8
+    },
+    {
+      "id": "P7-11",
+      "status": "fixed-locally",
+      "test": "tests/commercial-p7-cycle-integrity.test.js",
+      "baseline": {
+        "commit": "063684c",
+        "before": {
+          "stage": "Desistiu",
+          "active": false
+        },
+        "after": {
+          "stage": "Apresentado",
+          "active": true
+        },
+        "httpStatus": 200,
+        "persisted": true
+      },
+      "corrected": {
+        "forgedHttp": 422,
+        "safeHttp": 200,
+        "staleHttp": 409,
+        "replayIdempotent": true,
+        "originalPreserved": true,
+        "availabilityPreserved": true,
+        "b5b6PreservedOnRejection": true,
+        "legacyChronologyProtected": true,
+        "incompatibleLegacyB5Preserved": true
+      },
+      "oldSourceUnsafe": true,
+      "oldTabNeedsRefresh": true,
+      "scope": "authenticated local API, Apps Script in VM"
+    },
+    {
+      "id": "P1-CUR-01",
+      "status": "preexisting-defect-reproduced-not-fixed"
+    },
+    {
+      "id": "P1-CUR-02",
+      "status": "preexisting-defect-reproduced-not-fixed"
+    }
+  ],
+  "node": {
+    "total": 77,
+    "passed": 77,
+    "failed": [],
+    "historicalAggregatorPassed": true,
+    "suites": [
+      "access-routes.test.js",
+      "commercial-active-write-capacity.test.js",
+      "commercial-agent-module-guard.test.js",
+      "commercial-apartment16-recovery.test.js",
+      "commercial-archive-verifier.test.js",
+      "commercial-audit-defects.test.js",
+      "commercial-auto-sync.test.js",
+      "commercial-browser-policy.test.js",
+      "commercial-capacity.test.js",
+      "commercial-chunk-storage.test.js",
+      "commercial-client-followup.test.js",
+      "commercial-client-preferences.test.js",
+      "commercial-client-report-grouping.test.js",
+      "commercial-client-reports.test.js",
+      "commercial-client-tabs.test.js",
+      "commercial-client-workflow.test.js",
+      "commercial-client-workspace.test.js",
+      "commercial-composition-d2.test.js",
+      "commercial-concurrency.test.js",
+      "commercial-construction.test.js",
+      "commercial-consultation-guards.test.js",
+      "commercial-contact-history.test.js",
+      "commercial-contacts.test.js",
+      "commercial-cycle-boundaries.test.js",
+      "commercial-d2-platform.test.js",
+      "commercial-event-provenance.test.js",
+      "commercial-followups.test.js",
+      "commercial-fraction-draft.test.js",
+      "commercial-fraction-recommendations.test.js",
+      "commercial-home-entry.test.js",
+      "commercial-integrity-server.test.js",
+      "commercial-latency.test.js",
+      "commercial-loading-persistence.test.js",
+      "commercial-local-backups.test.js",
+      "commercial-opportunities.test.js",
+      "commercial-opportunity-cards.test.js",
+      "commercial-opportunity-matrix.test.js",
+      "commercial-p7-cycle-integrity.test.js",
+      "commercial-pending-local.test.js",
+      "commercial-persistence-p1-contracts.test.js",
+      "commercial-persistence-p1-current.test.js",
+      "commercial-persistence-p2-reader.test.js",
+      "commercial-persistence-p3.test.js",
+      "commercial-persistence-p4.test.js",
+      "commercial-persistence-p5.test.js",
+      "commercial-persistence-p6.test.js",
+      "commercial-persistence-performance.test.js",
+      "commercial-post-audit-api.test.js",
+      "commercial-post-audit.test.js",
+      "commercial-presentation-pdf.test.js",
+      "commercial-progressive-flow.test.js",
+      "commercial-read-commit-order.test.js",
+      "commercial-read-contention.test.js",
+      "commercial-recommendations-ui.test.js",
+      "commercial-recommendations.test.js",
+      "commercial-recovery-archive.test.js",
+      "commercial-recovery-client-api.test.js",
+      "commercial-reform-defects.test.js",
+      "commercial-safe-reconciliation.test.js",
+      "commercial-smoke.test.js",
+      "commercial-source-integrity.test.js",
+      "commercial-stage-engine.test.js",
+      "commercial-storage-lifecycle.test.js",
+      "commercial-sync-api.test.js",
+      "commercial-sync-client.test.js",
+      "commercial-sync-final-audit.test.js",
+      "commercial-ticket-renewal.test.js",
+      "commercial-ux.test.js",
+      "commercial-write-integrity.test.js",
+      "commercial-write-recovery.test.js",
+      "comparator-belaformosa.test.js",
+      "compset.test.js",
+      "google-read-check.test.js",
+      "pr20-main-integration.test.js",
+      "pr21-main-integration.test.js",
+      "pr22-main-integration.test.js",
+      "pricing-analysis.test.js"
+    ]
+  },
+  "syntax": {
+    "total": 212,
+    "passed": 212,
+    "failed": []
+  },
+  "browser": {
+    "total": 35,
+    "passed": 35,
+    "failed": [],
+    "catalog": [
+      {
+        "name": "commercial-p7-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-profile-followup-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-storage-growth-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-storage-reliability-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-consultation-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-fraction-draft-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-recovery-archive-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-loading-persistence-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-presentation-pdf-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-safe-reconciliation-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "comparator-belaformosa-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-auto-sync-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "crm-reform-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "crm-reform-safety-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "crm-reform-report-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "crm-post-audit-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-local-quota-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-pending-local-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-followup-layout-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-audit-defects-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "final-retest"
+      },
+      {
+        "name": "commercial-stage-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-client-phase2a-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-client-phase2b-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-client-complete-exports.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-contacts-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-pr6-regression-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-profile-routing-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-home-entry-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "commercial-client-report-grouping-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "client-workspace-audit.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "client-workspace-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "client-workspace-dialogs.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "composition-d2-history-routing-probe.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "composition-d2-platform-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      },
+      {
+        "name": "visual-audit-browser.mjs",
+        "code": 0,
+        "passed": true,
+        "batch": "full-catalog-after-final-adjustment"
+      }
+    ],
+    "p7Engines": [
+      {
+        "engine": "chromium",
+        "viewport": "desktop",
+        "width": 1440,
+        "height": 900,
+        "status": "passed"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "laptop",
+        "width": 1366,
+        "height": 768,
+        "status": "passed"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "tablet",
+        "width": 820,
+        "height": 1080,
+        "status": "passed"
+      },
+      {
+        "engine": "chromium",
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "desktop",
+        "width": 1440,
+        "height": 900,
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "laptop",
+        "width": 1366,
+        "height": 768,
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "tablet",
+        "width": 820,
+        "height": 1080,
+        "status": "passed"
+      },
+      {
+        "engine": "firefox",
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "desktop",
+        "width": 1440,
+        "height": 900,
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "laptop",
+        "width": 1366,
+        "height": 768,
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "tablet",
+        "width": 820,
+        "height": 1080,
+        "status": "passed"
+      },
+      {
+        "engine": "webkit",
+        "viewport": "mobile",
+        "width": 390,
+        "height": 844,
+        "status": "passed"
+      }
+    ],
+    "physicalSafariTested": false
+  },
+  "persistenceLabs": [
+    {
+      "checks": 21,
+      "phase": "P1",
+      "combinations": 3,
+      "passed": 3
+    },
+    {
+      "checks": 42,
+      "phase": "P2",
+      "combinations": 6,
+      "passed": 6
+    },
+    {
+      "checks": 120,
+      "phase": "P3",
+      "combinations": 6,
+      "passed": 6
+    },
+    {
+      "checks": 72,
+      "phase": "P4",
+      "combinations": 6,
+      "passed": 6
+    },
+    {
+      "checks": 48,
+      "phase": "P5",
+      "combinations": 6,
+      "passed": 6
+    },
+    {
+      "checks": 49,
+      "phase": "P6",
+      "combinations": 6,
+      "passed": 6
+    }
+  ],
+  "hotfix29": [
+    {
+      "viewport": "desktop",
+      "historyRecords": 15,
+      "historyMiB": 14.839998245239258,
+      "historicalCopiesUnchanged": true,
+      "saveReload": true,
+      "proofBoundRotation": true,
+      "lostResponseIdempotentRecovery": true,
+      "quotaInjectedAtomicRollback": true,
+      "noPostWithoutDurableRequest": true,
+      "exportAfterStorageFailure": true,
+      "oldUncertainRequestAndNewerEditsPreserved": true,
+      "reservationsPricesEventsAndUnrelatedClientsUnchanged": true
+    },
+    {
+      "viewport": "mobile",
+      "historyRecords": 15,
+      "historyMiB": 14.839998245239258,
+      "historicalCopiesUnchanged": true,
+      "saveReload": true,
+      "proofBoundRotation": true,
+      "lostResponseIdempotentRecovery": true,
+      "quotaInjectedAtomicRollback": true,
+      "noPostWithoutDurableRequest": true,
+      "exportAfterStorageFailure": true,
+      "oldUncertainRequestAndNewerEditsPreserved": true,
+      "reservationsPricesEventsAndUnrelatedClientsUnchanged": true
+    }
+  ]
+}
