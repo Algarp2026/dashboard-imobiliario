@@ -13,11 +13,16 @@ function validate(previous,next){
   const oldEvents=new Map(previous.events.map(e=>[e.id,e]));
   const approvedReleases=new Set();
   const approvedEffects=new Set();
+  const legacyAnchors=[];
   const effectFields=['type','clientId','date','time','fractions','amount','releaseReservation','withAgent','agentId','commissionType','commissionValue','commissionAmount'];
   const closing=e=>['Reserva','Reserva efetuada','Venda','Venda concluída','Reserva cancelada'].includes(e?.type)||e?.type==='Desistência'&&e.releaseReservation;
   for(const old of previous.events){
     if(old.opportunityVersion===1&&!next.events.some(e=>e.id===old.id&&equal(e,old)))reject('opportunity history removed or changed');
     const current=next.events.find(e=>e.id===old.id),referenced=Object.values(previous.statusEventIds).includes(old.id)||Object.values(previous.salePriceEventIds).includes(old.id)||Object.values(previous.saleCommissions).some(c=>c?.eventId===old.id);
+    if(current&&!equal(old,current)&&model.legacyPresentationNeedsAnchor(old,current,next.events)){
+      if(model.legacyPresentationCorrectionError(old,current,next.events))reject('legacy presentation chronology changed');
+      legacyAnchors.push(old);
+    }
     const boundary=old.type==='Alteração de estado'||old.globalWithdrawal!==undefined||old.scope!==undefined||old.requalificationConfirmed!==undefined||model.globalWithdrawal(old);
     if(referenced||boundary){
       if(!current)reject('commercial provenance removed');
@@ -25,12 +30,13 @@ function validate(previous,next){
       if(keys.some(key=>!sameCommercialField(old,current,key))&&!(closing(old)&&closing(current)))reject('commercial provenance changed');
     }
   }
+  if(!ops.correctionOrderPreserved(previous.events,next.events,legacyAnchors))reject('historical correction chronology reordered');
   for(const e of next.events){
     const old=oldEvents.get(e.id);if(equal(e,old))continue;
     if(e.opportunityVersion!==undefined){
       if(old&&!equal(e,old))reject('existing opportunity record changed');
       if(e.opportunityVersion!==1)reject();
-      let built;try{built=ops.build({...e,action:e.opportunityAction,rows:e.informedPrices},next)}catch{reject('opportunity schema')}
+      let built;try{built=ops.build({...e,action:e.opportunityAction,rows:e.informedPrices},next)}catch{reject(e.corrects?'invalid historical correction':'opportunity schema')}
       for(const key of Object.keys(built))if(!equal(e[key],built[key]))reject('opportunity field '+key);
     }
     if(closing(e)&&(!old||effectFields.some(key=>!sameCommercialField(old,e,key)))){

@@ -10,30 +10,37 @@ reinicializava a fonte depois da autenticação/navegação e o navegador seguin
 retinha a revisão anterior: o teste foi corrigido para reinicializar antes de
 carregar o CRM. Não houve aumento de timeout nem redução de asserções.
 
-O diagnóstico de ciclo é executado à parte e **não é aprovação**: comprova que
-a correção atravessando desistência global continua a poder ser gravada e a
-reativar a oportunidade. Ver [matriz](STATE_MATRIX.md).
+O diagnóstico antigo (`063684c:tests/commercial-p7-cycle-diagnostic.cjs`)
+foi reproduzido antes da correção: API autenticada HTTP 200, confirmação
+positiva e cliente de Desistiu para Apresentado. A regressão permanente testa
+de novo a aceitação antiga carregando o bundle anterior em VM. Com o bundle
+novo: correção incompatível HTTP 422, sem alteração a B5/B6, eventos, preços,
+comissões, espelhos ou backups; correção segura HTTP 200; revisão antiga HTTP
+409; replay sem duplicação. Testa ainda a edição legada, fronteiras no mesmo
+dia, cadeias de versões, requalificação, novo movimento, reserva/venda e um B5
+antigo incompatível. Ver [matriz](STATE_MATRIX.md).
 
 ## Baterias concluídas
 
 | Execução | Resultado |
 |---|---|
-| Suites Node `tests/*.test.js` | 76/76 |
-| Sintaxe JS/CJS/MJS e parse GS | 211/211 |
+| Suites Node `tests/*.test.js` | 77/77 |
+| Sintaxe JS/CJS/MJS e parse GS | 212/212 |
 | Catálogo comercial de navegador | 35/35, sem falhas finais |
 | P7 em Chromium, Firefox e WebKit | 12/12 combinações dos quatro tamanhos |
 | Laboratórios P1 a P6 | 33/33 combinações; 352 verificações |
 | Hotfix #29 | 2/2, desktop e mobile |
-| Diagnóstico de ciclo | Defeito reproduzido; API local HTTP 200 com confirmação |
+| Regressão de ciclo | 422 antes de B5; 200 para correção segura; 409 para CAS; B5 legado preservado |
 
 Os dois testes históricos do catálogo mantêm a comparação exata e incluem
-explicitamente a suite nova. O guard histórico do hotfix verifica todos os
-bytes fora do predicado e das duas chamadas de contagem P7.
+explicitamente a suite nova. Os guards históricos aceitam apenas a chamada
+exata no editor legado, as alterações P7 anteriores e os ficheiros de
+integridade com hashes revistos. Ambos os bundles são regenerados das fontes
+partilhadas e verificados por `node scripts/build-commercial-integrity.js --check`.
 
-Para garantir a versão final, as 12 suites já iniciadas quando o predicado
-foi restringido aos contadores foram reexecutadas. A suite nova P7 também
-foi repetida com catálogo inteiramente fictício. O lote de cada resultado
-está identificado em [results.json](results.json).
+As 20 suites de navegador iniciadas antes do ajuste final da edição legada
+foram repetidas. O lote de cada resultado está identificado em
+[results.json](results.json).
 
 ## Reprodução isolada
 
@@ -48,7 +55,7 @@ Get-ChildItem tests -Filter '*.test.js' | Sort-Object Name | ForEach-Object {
   node $_.FullName
   if ($LASTEXITCODE) { throw $_.Name }
 }
-node tests/commercial-p7-cycle-diagnostic.cjs
+node tests/commercial-p7-cycle-integrity.test.js
 $env:COMMERCIAL_TEST_PORT = '53922'
 node tests/commercial-browser-regression.cjs
 node tests/commercial-browser-regression.cjs commercial-p7-browser.mjs

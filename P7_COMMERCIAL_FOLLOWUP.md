@@ -3,11 +3,9 @@
 Branch local `codex/p7-commercial-followup`, a partir de
 `3e89cb769533d8e8bd75bbf5dc69bdac74f6cc43` (`origin/main`).
 
-**Não apta para merge.** A fonte aceita uma correção histórica que atravessa uma
-desistência global e reabre uma oportunidade sem requalificação. A reprodução usa
-o construtor e o motor reais com Apps Script em VM; não houve acesso ao Google.
-Uma correção só no navegador não garantiria integridade. A proposta para alinhar
-cliente, API e fonte está em [Matriz de estados](docs/p7-commercial/STATE_MATRIX.md).
+**P7-11 corrigido localmente.** A revisão técnica do código é independente da
+publicação. Não fazer merge que desencadeie publicação automática, nem autorizar
+escrita sem cumprir o [plano coordenado](docs/p7-commercial/COORDINATED_RELEASE.md).
 
 ## Correções locais
 
@@ -17,12 +15,20 @@ cliente, API e fonte está em [Matriz de estados](docs/p7-commercial/STATE_MATRI
 2. O Dashboard e as métricas das frações contam apresentações reais, não
    correções versionadas. Não se eliminam nem reescrevem registos, e uma nova
    apresentação continua a contar.
+3. As correções versionadas atualizam detalhes na posição do movimento original.
+   Uma mudança de data que atravesse uma desistência global ou requalificação
+   é rejeitada pelo cliente e pela fonte. Registos versionados incompatíveis
+   já gravados continuam auditáveis, sem efeito na projeção nem no último contacto.
+   A edição legada no próprio registo também protege a cronologia, mas mantém
+   as correções de valores e notas que não alteram a identidade do movimento.
 
-Código de produto: `commercial-client-followup.js` e `commercial.js`.
-O resto são testes, fixtures e documentação. Sem CSS, layout, dados analíticos,
-reservas, vendas, comissões, PDFs, plantas, configuração, API ou Apps Script
-alterados. Sem migração ou ativação P1–P6. **Um merge poderá colocar as duas
-correções operacionais em produção.**
+Além de `commercial-client-followup.js` e `commercial.js`, já concluídos no
+commit `063684c`, a correção mexe em `commercial-opportunities.js`,
+`commercial-client-workflow.js`, `server/commercial-integrity.js` e nos dois
+bundles gerados. `commercial.js` chama ainda a mesma política no editor
+legado, antes da mutação local. A rota da API, `google_apps_script.gs`, CAS, read tickets,
+B5/B6, dados, D2, preços, vendas e reservas não foram alterados. Sem migração
+ou ativação P1–P6. **O bundle novo do Apps Script requer publicação coordenada.**
 
 ## Evidência
 

@@ -6,9 +6,13 @@
   const clone=x=>JSON.parse(JSON.stringify(x));
   const validDate=x=>/^\d{4}-\d{2}-\d{2}$/.test(x||'')&&Number.isFinite(Date.parse(x))&&new Date(x+'T12:00:00Z').toISOString().slice(0,10)===x;
   const key=e=>[e.date||'',e.time||'',e.recordedAt||e.createdAt||'',String(e.id||'')].join('\u0000');
-  const sorted=(events,source=events)=>{
-    const recordedDays=new Set(source.filter(e=>e.opportunityVersion===1&&!e.time).map(e=>e.date)),positions=new Map(source.map((e,index)=>[e,index]));
-    return events.slice().sort((a,b)=>a.date===b.date&&recordedDays.has(a.date)?positions.get(a)-positions.get(b):key(a).localeCompare(key(b)));
+  const sorted=(events,source=events,anchors=new Map())=>{
+    const recordedDays=new Set(source.filter(e=>e.opportunityVersion===1&&!e.corrects&&!e.time).map(e=>e.date)),positions=new Map(source.map((e,index)=>[e,index]));
+    return events.slice().sort((a,b)=>{
+      const x=anchors.get(a)||a,y=anchors.get(b)||b;
+      if(x===y)return positions.get(a)-positions.get(b);
+      return x.date===y.date&&recordedDays.has(x.date)?positions.get(x)-positions.get(y):key(x).localeCompare(key(y));
+    });
   };
   const priceRows=e=>e.presentationHistory?.at(-1)?.state==='draft'||e.type==='Apresentação em preparação'?[]:e.presentationHistory?.at(-1)?.rows||e.informedPrices||[];
   const priced=(e,n)=>validDate(e.date)&&priceRows(e).some(r=>Number(r.fraction||r.unitId)===n&&Number.isFinite(Number(r.informedPrice))&&Number(r.informedPrice)>0);
@@ -16,9 +20,51 @@
   const isGlobal=e=>e?.type==='Desistência'&&validDate(e.date)&&!e.releaseReservation&&!(e.globalWithdrawal===false&&e.scope==='global'||e.globalWithdrawal===true&&e.scope!==undefined&&e.scope!=='global'||e.globalWithdrawal!==undefined&&typeof e.globalWithdrawal!=='boolean'||e.scope!==undefined&&!['global','fraction'].includes(e.scope))&&(e.globalWithdrawal===true||e.scope==='global'||e.globalWithdrawal===undefined&&e.scope===undefined&&!e.administrative&&!(e.fractions||[]).length&&e.negotiationVersion!==1);
   const isQualification=e=>e?.type==='Preferências recebidas'&&e.requalificationConfirmed===true&&validDate(e.date)&&e.presentationHistory?.at(-1)?.state!=='draft';
   const priorEvents=(data,id)=>{const index=data.events.findIndex(e=>e.id===id);return index<0?data.events:data.events.slice(0,index)};
-  function correctionTarget(e,events){
-    const target=events.find(old=>old.id===e.corrects);
-    return target&&target.opportunityVersion===1&&target.opportunityAction===e.opportunityAction&&target.clientId===e.clientId&&JSON.stringify(target.fractions)===JSON.stringify(e.fractions)&&events.indexOf(target)<events.indexOf(e)&&events.filter(other=>other.corrects===target.id).length===1?target:null;
+  const correctable=['present','round','refuse','close'];
+  const correctionShape=(target,e)=>target?.opportunityVersion===1&&target.opportunityAction===e.opportunityAction&&target.clientId===e.clientId&&JSON.stringify(target.fractions)===JSON.stringify(e.fractions)&&correctable.includes(e.opportunityAction);
+  function correctionPlan(events){
+    const counts=new Map(),prior=new Map(),boundaries=new Map(),anchors=new Map(),errors=new Map();
+    for(const e of events){
+      if(e.corrects)counts.set(e.corrects,(counts.get(e.corrects)||0)+1);
+      if(isGlobal(e)||isQualification(e)){
+        if(!boundaries.has(e.clientId))boundaries.set(e.clientId,[]);
+        boundaries.get(e.clientId).push(e.date);
+      }
+    }
+    for(const e of events){
+      if(e.opportunityVersion===1&&e.corrects){
+        const target=prior.get(e.corrects),root=target?.corrects?anchors.get(target):target;
+        if(!correctionShape(target,e)||!root||!validDate(root.date)||!validDate(e.date)||counts.get(e.corrects)!==1){
+          errors.set(e,'Correção sem origem válida ou ambígua');
+        }else{
+          const [first,last]=[root.date,e.date].sort();
+          // A different date touching a boundary is ambiguous without an effective time.
+          if(first!==last&&boundaries.get(e.clientId)?.some(date=>first<=date&&date<=last)){
+            errors.set(e,'A correção não pode mudar a data efetiva através de uma desistência global ou requalificação.');
+          }else anchors.set(e,root);
+        }
+      }
+      prior.set(e.id,prior.has(e.id)?null:e);
+    }
+    return{anchors,errors};
+  }
+  function correctionOrderPreserved(previous,next,legacyAnchors=[]){
+    const days=new Map();
+    const roots=[...legacyAnchors,...correctionPlan(previous).anchors.values(),...correctionPlan(next).anchors.values()];
+    for(const root of roots){
+      if(!days.has(root.clientId))days.set(root.clientId,new Set());
+      days.get(root.clientId).add(root.date);
+    }
+    if(!days.size)return true;
+    const retained=new Map(next.map(e=>[e.id,e])),position=new Map(next.map((e,index)=>[e.id,index])),last=new Map();
+    for(const e of previous){
+      const current=retained.get(e.id);
+      if(!current||current.clientId!==e.clientId||current.date!==e.date||!days.get(e.clientId)?.has(e.date))continue;
+      const day=JSON.stringify([e.clientId,e.date]),index=position.get(e.id);
+      if(last.has(day)&&last.get(day)>index)return false;
+      last.set(day,index);
+    }
+    return true;
   }
   function cycleInfo(data,cid,at={date:'9999-12-31'}){
     const source=priorEvents(data,at.id),boundaries=source.filter(e=>e.clientId===cid&&validDate(e.date)&&(e.date<at.date||e.date===at.date&&(!at.time||!e.time||e.time<=at.time))&&(isGlobal(e)||isQualification(e)));
@@ -28,20 +74,19 @@
     for(const e of timeline){if(isGlobal(e)){withdrawal=e;qualification=null}else if(withdrawal&&isQualification(e))qualification=e}
     return{withdrawal,qualification,blocked:!!withdrawal&&!qualification};
   }
-  function effectiveRounds(events,cid,n){
+  function effectiveRounds(events,cid,n,plan=correctionPlan(events)){
     let rounds=[];
-    for(const e of sorted(events.filter(e=>e.clientId===cid&&validDate(e.date)&&(isGlobal(e)||isQualification(e)||e.fractions?.map(Number).includes(Number(n)))),events)){
+    for(const e of sorted(events.filter(e=>e.clientId===cid&&!plan.errors.has(e)&&validDate(e.date)&&(isGlobal(e)||isQualification(e)||e.fractions?.map(Number).includes(Number(n)))),events,plan.anchors)){
       if(isGlobal(e)||isQualification(e)||['refuse','close','reopen'].includes(e.opportunityAction)||e.type==='Desistência'||e.type==='Acompanhamento da fração'&&e.interest==='Sem interesse'){rounds=[];continue}
       if(e.opportunityVersion===1&&e.opportunityAction==='round')rounds.push(e);
     }
-    const invalid=new Set(rounds.filter(e=>e.corrects&&!correctionTarget(e,events)).map(e=>e.id));
     const ambiguous=new Set(rounds.filter(e=>events.filter(other=>other.corrects===e.id).length>1).map(e=>e.id));
-    const superseded=new Set(rounds.filter(e=>e.corrects&&!invalid.has(e.id)).map(e=>e.corrects));
+    const superseded=new Set(rounds.filter(e=>e.corrects).map(e=>e.corrects));
     const replaced=new Set(events.filter(e=>e.clientId===cid&&e.opportunityVersion===1&&['decision','agreement'].includes(e.opportunityAction)&&e.decision==='Substituída'&&e.fractions?.map(Number).includes(Number(n))).map(e=>e.respondsTo));
-    return rounds.filter(e=>!invalid.has(e.id)&&!ambiguous.has(e.id)&&!superseded.has(e.id)&&!replaced.has(e.id));
+    return rounds.filter(e=>!ambiguous.has(e.id)&&!superseded.has(e.id)&&!replaced.has(e.id));
   }
   function hasNegotiation(data,cid,n,at){
-    const prior=priorEvents(data,at?.id),source=at?[...prior,at]:prior,timeline=sorted(source.filter(e=>e===at||e.clientId===cid&&validDate(e.date)&&(isGlobal(e)||isQualification(e)||e.fractions?.map(Number).includes(Number(n)))),source);
+    const prior=priorEvents(data,at?.id),source=at?[...prior,at]:prior,timeline=sorted(source.filter(e=>e===at||!(e.opportunityVersion===1&&e.corrects)&&e.clientId===cid&&validDate(e.date)&&(isGlobal(e)||isQualification(e)||e.fractions?.map(Number).includes(Number(n)))),source);
     let negotiated=false;
     for(const e of timeline){if(e===at)break;if(isGlobal(e)||isQualification(e)||['refuse','close','reopen'].includes(e.opportunityAction)||e.type==='Desistência'||e.type==='Acompanhamento da fração'&&e.interest==='Sem interesse'){negotiated=false;continue}if((e.opportunityAction==='round'||!e.opportunityVersion&&['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada'].includes(e.type))&&(Number(e.amount)>0||String(e.terms||'').trim()))negotiated=true}
     return negotiated;
@@ -55,9 +100,12 @@
     if(['select','remove','reopen'].includes(input.action)){e.administrative=true;e.actualCommunication=false}
     if(input.corrects){
       const position=data.events.findIndex(old=>old.id===input.id),prior=position<0?data.events:data.events.slice(0,position),target=prior.find(old=>old.id===input.corrects);
-      if(!target||target.id===input.id||target.opportunityVersion!==1||target.opportunityAction!==input.action||target.clientId!==input.clientId||JSON.stringify(target.fractions)!==JSON.stringify(input.fractions)||!['present','round','refuse','close'].includes(input.action))throw Error('A correção não corresponde ao registo original.');
+      if(target?.id===input.id||!correctionShape(target,e))throw Error('A correção não corresponde ao registo original.');
       if(prior.some(old=>old.corrects===target.id))throw Error('Este registo já foi corrigido. Consulte a versão mais recente.');
       e.corrects=target.id;
+      const events=position<0?[...prior,e]:data.events.map((old,index)=>index===position?e:old);
+      const error=correctionPlan(events).errors.get(e);
+      if(error)throw Error(error);
     }
     if(['refuse','close'].includes(input.action)){
       if(!String(input.reason||'').trim())throw Error('Indique o motivo.');
@@ -101,19 +149,23 @@
     const n=Number(number),c=data.clients.find(c=>c.id===cid)||{},all=data.events||[];
     const history=sorted(all.filter(e=>e.clientId===cid&&(e.fractions||[]).map(Number).includes(n)&&e.presentationHistory?.at(-1)?.state!=='draft'&&e.type!=='Apresentação em preparação'),all);
     const globals=sorted(all.filter(e=>e.clientId===cid&&helpers.globalWithdrawal(e)),all);
-    const review=[...(legacy.review||[])],rounds=[];
-    const superseded=new Set(),invalidCorrections=new Set();for(const e of history.filter(e=>e.opportunityVersion===1&&e.corrects)){const target=correctionTarget(e,all);if(target)superseded.add(target.id);else{review.push('Correção sem origem válida ou ambígua: '+e.id);invalidCorrections.add(e.id)}}
+    const review=[...(legacy.review||[])],rounds=[],plan=correctionPlan(all);
+    const superseded=new Set();
+    for(const e of history){
+      if(plan.anchors.has(e))superseded.add(e.corrects);
+      if(plan.errors.has(e))review.push(plan.errors.get(e)+' '+e.id);
+    }
     let state=null,last=null,informed=null,closure=null,selected=false,cycleStart=null;
     const evidence=e=>e.opportunityVersion===1||priced(e,n)||['Frações apresentadas','Apresentação comercial','Preços informados','Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Aceitação','Rejeição','Desistência','Acompanhamento da fração','Reserva','Reserva efetuada','Venda','Venda concluída','Reserva cancelada','Interessado'].includes(e.type)&&!e.administrative;
     const qualifications=all.filter(e=>e.clientId===cid&&helpers.confirmedRequalification(e));
-    for(const e of sorted([...new Map([...history.filter(e=>(!superseded.has(e.id)||e.opportunityAction==='round')&&!invalidCorrections.has(e.id)),...globals,...qualifications].map(e=>[e.id,e])).values()],all)){
+    for(const e of sorted([...new Map([...history.filter(e=>(!superseded.has(e.id)||e.opportunityAction==='round')&&!plan.errors.has(e)),...globals,...qualifications].map(e=>[e.id,e])).values()],all,plan.anchors)){
       if(!validDate(e.date)){if(evidence(e))review.push('Registo sem data efetiva válida: '+e.id);continue}
       if(helpers.confirmedRequalification(e)){cycleStart=e;if(state&&!['Recusada','Não concretizada'].includes(state)){state='Não concretizada';closure=e;informed=null;last=e}continue}
       if(helpers.globalWithdrawal(e)){cycleStart=null;if(state){state='Não concretizada';closure=e;informed=null;last=e}continue}
       if(!evidence(e))continue;
       if(e.type==='Desistência'&&!helpers.movementState(e)){review.push('Desistência contraditória: '+e.id);continue}
       const a=e.opportunityVersion===1?e.opportunityAction:'';
-      if(['reopen','present','round','decision','agreement'].includes(a)&&!e.corrects&&cycleInfo(data,cid,e).blocked){review.push('Movimento sem requalificação confirmada após desistência global: '+e.id);continue}
+      if(['reopen','present','round','decision','agreement'].includes(a)&&cycleInfo(data,cid,plan.anchors.get(e)||e).blocked){review.push('Movimento sem requalificação confirmada após desistência global: '+e.id);continue}
       if(a==='select'){selected=true;if(cycleInfo(data,cid,e).blocked){review.push('Seleção após desistência global sem requalificação confirmada: '+e.id);continue}if(!state||cycleStart&&closure){state='Por apresentar';closure=null;informed=null}last=e;continue}
       if(a==='remove'){selected=false;if(state==='Por apresentar')state=null;last=e;continue}
       if(a==='refuse'||e.type==='Acompanhamento da fração'&&e.interest==='Sem interesse'){state='Recusada';closure=e;last=e;continue}
@@ -122,7 +174,7 @@
       if(priced(e,n)){state='Apresentada';closure=null;informed={...priceRows(e).find(r=>Number(r.fraction||r.unitId)===n),eventId:e.id,date:e.date};last=e;continue}
       if(!e.opportunityVersion&&['Frações apresentadas','Apresentação comercial','Preços informados'].includes(e.type)){state='Apresentada';closure=null;last=e;review.push('Apresentação histórica sem preço comunicado confirmado: '+e.id);continue}
       if(a==='round'){
-        rounds.push({...clone(e),decision:'Em análise',supersededBy:history.find(correction=>correction.corrects===e.id&&!invalidCorrections.has(correction.id))?.id||null});if(!superseded.has(e.id)){state='Em negociação';closure=null;last=e}continue;
+        rounds.push({...clone(e),decision:'Em análise',supersededBy:history.find(correction=>correction.corrects===e.id&&plan.anchors.has(correction))?.id||null});if(!superseded.has(e.id)){state='Em negociação';closure=null;last=e}continue;
       }
       if(a==='decision'||a==='agreement'){
         const r=rounds.find(r=>r.id===e.respondsTo);if(!r){review.push('Decisão sem proposta correspondente: '+e.id);continue}
@@ -143,14 +195,14 @@
     const effect=helpers.effectiveEffect(data,n),own=effect?.event.clientId===cid,availability=data.statuses?.[n];
     if(own){state=effect.status==='Vendido'?'Vendida':'Reservada';last=effect.event;origin={event:effect.event,label:state}}
     else if(effect?.status==='Vendido'&&state&&!['Recusada','Não concretizada'].includes(state)){state='Não concretizada';last=effect.event;origin={event:effect.event,label:'Fração vendida a outro cliente'}}
-    const effectiveIds=new Set(effectiveRounds(all,cid,n).map(e=>e.id)),currentRounds=rounds.filter(r=>effectiveIds.has(r.id));
+    const effectiveIds=new Set(effectiveRounds(all,cid,n,plan).map(e=>e.id)),currentRounds=rounds.filter(r=>effectiveIds.has(r.id));
     const current=currentRounds.at(-1),latestDecision=currentRounds.filter(r=>r.response).sort((a,b)=>key(a.response).localeCompare(key(b.response))).at(-1);
     const agreement=latestDecision?.decision==='Aceite'&&(!current||key(latestDecision.response)>=key(current))?latestDecision:null;
     const situation=agreement?'Acordo alcançado':current?.decision==='Em análise'?(current.party==='cliente'?'Aguardar empresa':'Aguardar cliente'):'Negociação aberta sem resposta pendente';
     const legacyStates={'Por apresentar':'Interessado','Apresentada':'Apresentado','Recusada':'Sem interesse','Em negociação':'Em negociação','Não concretizada':'Desistiu','Reservada':'Reservado','Vendida':'Vendido'};
     return{...legacy,number:n,commercialState:state,state:state?legacyStates[state]:legacy.state,history,selected,informed,rounds,effectiveRounds:currentRounds,situation,agreement,origin,last:last||history.at(-1)||null,presented:state==='Apresentada'||!!informed,active:!!state&&!['Recusada','Não concretizada'].includes(state)&&(own||availability==='Disponível'),effect:own?effect:null,review:[...new Set(review)]};
   }
-  const api={states,decisions,reasons,actions,validDate,build,project,priceRows,effectiveRounds,hasNegotiation,cycleInfo};
+  const api={states,decisions,reasons,actions,validDate,build,project,priceRows,effectiveRounds,hasNegotiation,cycleInfo,correctionOrderPreserved};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.THE_VIEW_OPPORTUNITIES=api;
 })(typeof window==='object'?window:null);

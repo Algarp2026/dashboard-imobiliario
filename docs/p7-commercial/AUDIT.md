@@ -10,7 +10,8 @@ Toda a evidência vem de fixtures isoladas.
 | Guardar sem alterações | Sim | IMPLEMENTADO COM DEFEITO REPRODUZIDO | `commercial-p7-browser` na base: editar e apagar observação de cliente sem `followupV1` enviou 1 POST em vez de 0 | O adaptador inicializa `followupV1` com valores derivados mesmo sem alteração efetiva. Separar a comparação da ficha visível da decisão de persistir |
 | Precedência de decisões, dados legados e desconhecidos | Sim | IMPLEMENTADO E VALIDADO | Modelo `decisionState`, `contactInfo`, `priority`; testes dirigidos de campos desconhecidos, dois contadores e prioridade | Preservar a precedência aprovada |
 | Apresentação e preparação | Sim | IMPLEMENTADO E VALIDADO | `commercial-client-workflow`, `commercial-pr6-regression-browser`; [9,24,30] passa a [9,30] e mantém-se após correção de preço e refresh | Preservar seleção e original |
-| Correção datada após desistência global | Sim | IMPLEMENTADO COM DEFEITO REPRODUZIDO / BLOQUEADO POR DEPENDÊNCIA | Núcleo real + Apps Script em VM: o original é preservado, mas a correção passa de Desistiu a Apresentado e a fonte aceita | Exige alinhar validação e projeção no cliente/API/fonte; sem correção parcial |
+| Correção datada após desistência global | Sim | DEFEITO REPRODUZIDO NA BASE E CORRIGIDO LOCALMENTE | Antes: Desistiu para Apresentado, HTTP 200. Depois: projeção fechada e HTTP 422, sem alteração durável | Regra partilhada e bundles verificados; publicação coordenada obrigatória |
+| Edição de apresentação legada no próprio registo | Sim | DEFEITO REPRODUZIDO E CORRIGIDO LOCALMENTE | A alteração de data tinha o mesmo efeito; o adaptador bloqueia antes de mutação local e a fonte responde 422 | Manter notas e preços históricos editáveis; não reconstruir registos já sobrescritos |
 | Relações por fração e precedência de reserva/venda | Sim | IMPLEMENTADO E VALIDADO | Projeções `relation`, `project`, `clientProjection`; `commercial-p7-browser` e `commercial-stage-engine` | Sem alteração às regras de stock; exceção de cronologia acima |
 | Contagem de apresentações no Dashboard e em Frações/Vendas | Sim | IMPLEMENTADO COM DEFEITO REPRODUZIDO | Dashboard Chromium fictício: 9 em vez de 8, incluindo a correção histórica | O predicado conta pelo tipo e não distingue a correção de uma apresentação efetiva |
 | Relatórios e PDF | Sim | IMPLEMENTADO E VALIDADO | `commercial-presentation-pdf-browser`, `commercial-client-complete-exports`, `crm-reform-report-browser` | Sem alteração |
@@ -25,6 +26,7 @@ da ficha, `commercial-client-workflow-ui.js` trata comunicações históricas.
 A navegação D2 e os overlays são geridos por `view-workspace.js`,
 `commercial-client-workspace.js` e pelos estilos existentes. A validação
 de efeito e proveniência é partilhada com `server/commercial-integrity.js`
-e `google_commercial_integrity.gs`; a auditoria não altera esse contrato.
+e `google_commercial_integrity.gs`; a revisão P7-11 altera apenas a regra
+comercial, não o protocolo ou o armazenamento.
 
 Ver `VALIDATION.md` e a matriz de rastreabilidade para o resultado final.

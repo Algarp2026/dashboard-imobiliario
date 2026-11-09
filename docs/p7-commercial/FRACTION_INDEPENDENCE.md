@@ -20,5 +20,6 @@
   também a contagem específica da fração e confirma histórico byte a byte.
 
 As correções de preço dentro do mesmo ciclo não consomem preparação nem
-representam novo contacto. O caso de correção que atravessa desistência global
-continua bloqueador; ver [matriz de estados](STATE_MATRIX.md).
+representam novo contacto. A fonte agora recusa correções que atravessem uma
+desistência global e conserva versões antigas para auditoria; ver
+[matriz de estados](STATE_MATRIX.md).

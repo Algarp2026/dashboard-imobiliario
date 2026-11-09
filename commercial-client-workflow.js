@@ -18,7 +18,21 @@
   const confirmedRequalification=ev=>ev?.type==='Preferências recebidas'&&ev.requalificationConfirmed===true&&validDate(ev.date)&&!isDraft(ev);
   const movementStates={'Proposta recebida':'Em negociação','Nova proposta recebida':'Em negociação','Contra-proposta recebida':'Em negociação','Contra-proposta enviada':'Aguardar decisão','Aceitação':'Aceite','Rejeição':'Em negociação','Desistência':'Desistiu','Reserva cancelada':'Interessado'};
   const presentedEvent=ev=>!isDraft(ev)&&(!!latest(ev)||['Frações apresentadas','Preços informados','Visita','Reunião realizada','Reunião com cliente','Apresentação comercial'].includes(ev.type));
-  const reopensOpportunity=ev=>validDate(ev.date)&&unitNumbers(ev).some(n=>Number.isInteger(n)&&n>=1&&n<=39)&&!isDraft(ev)&&!ev.administrative&&ev.actualCommunication!==false&&(presentedEvent(ev)||['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Aceitação','Interessado'].includes(ev.type)||ev.type==='Acompanhamento da fração'&&['Interessado','Em negociação','Aguardar decisão','Aceite'].includes(ev.interest));
+  const isOpportunityCorrection=ev=>ev?.opportunityVersion===1&&!!ev.corrects;
+  const reopensOpportunity=ev=>!isOpportunityCorrection(ev)&&validDate(ev.date)&&unitNumbers(ev).some(n=>Number.isInteger(n)&&n>=1&&n<=39)&&!isDraft(ev)&&!ev.administrative&&ev.actualCommunication!==false&&(presentedEvent(ev)||['Proposta recebida','Nova proposta recebida','Contra-proposta recebida','Contra-proposta enviada','Aceitação','Interessado'].includes(ev.type)||ev.type==='Acompanhamento da fração'&&['Interessado','Em negociação','Aguardar decisão','Aceite'].includes(ev.interest));
+  function legacyPresentationNeedsAnchor(old,next,events){
+    return !!next&&old?.opportunityVersion===undefined&&!isDraft(old)
+      &&(latest(old)?.state==='realized'||['Frações apresentadas','Preços informados','Apresentação comercial'].includes(old?.type))
+      &&events.some(ev=>(ev.clientId===old.clientId||ev.clientId===next.clientId)&&(globalWithdrawal(ev)||confirmedRequalification(ev)));
+  }
+  function legacyPresentationCorrectionError(old,next,events){
+    if(!legacyPresentationNeedsAnchor(old,next,events))return '';
+    const fields=['id','clientId','type','date','time','createdAt','recordedAt','actualCommunication','administrative'];
+    if(fields.some(key=>(old[key]??'')!==(next[key]??''))||isDraft(next)||JSON.stringify(unitNumbers(old).sort())!==JSON.stringify(unitNumbers(next).sort())){
+      return 'A apresentação histórica não pode mudar de data, cliente ou frações quando existe uma desistência global ou requalificação. Preserve o registo e reveja a operação.';
+    }
+    return '';
+  }
   function movementState(ev){
     if(withdrawalConflict(ev))return'';
     if(reserve(ev))return'Reservado';
@@ -176,6 +190,7 @@
   const contactStates=['Resposta nossa pendente','A aguardar cliente','Em acompanhamento','Sem contacto'];
   const validDate=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return false;const d=new Date(value+'T12:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===value};
   function isEffectiveContact(ev){
+    if(isOpportunityCorrection(ev))return false;
     if(ev?.actualCommunication===false||isDraft(ev)||ev?.administrative===true||ev?.previousPreferences)return false;
     if(ev?.communicationVersion===1)return ev.actualCommunication!==false;
     if(ev?.type==='Pedido de informação recebido')return validDate(ev.date);
@@ -209,7 +224,7 @@
     if(JSON.stringify(existing?.communicationHistory?.at(-1))===JSON.stringify(snapshot))return clone(existing);
     return{...clone(existing||{}),id:input.id,clientId:input.clientId,type:input.direction==='received'?'Contacto recebido':'Contacto enviado',communicationVersion:1,actualCommunication:true,date:input.date,time:input.time||'',channel:input.channel,notes:input.notes||'',fractions:existing?.fractions||[],communicationHistory:[...(existing?.communicationHistory||[]),snapshot]};
   }
-  const api={latest,isDraft,prices,channels,movementTypes,states,buildPresentation,negotiation,closingError,contactStates,validDate,isEffectiveContact,contactInfo,priority,validateDecisions,decision,portfolio,buildCommunication,eventKey,ordered,globalWithdrawal,confirmedRequalification,reopensOpportunity,movementState,effectiveEffect,effectTransition,relation,clientProjection};
+  const api={latest,isDraft,prices,channels,movementTypes,states,buildPresentation,negotiation,closingError,contactStates,validDate,isEffectiveContact,contactInfo,priority,validateDecisions,decision,portfolio,buildCommunication,eventKey,ordered,globalWithdrawal,confirmedRequalification,reopensOpportunity,movementState,effectiveEffect,effectTransition,relation,clientProjection,legacyPresentationNeedsAnchor,legacyPresentationCorrectionError};
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.THE_VIEW_CLIENT_WORKFLOW=api;
 })(typeof window==='object'?window:null);

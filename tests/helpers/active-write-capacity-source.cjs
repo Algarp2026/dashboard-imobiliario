@@ -2,7 +2,7 @@
 // Pin the entire hotfix diff before the existing historical integrity chain runs.
 const cp=require('node:child_process'),crypto=require('node:crypto'),assert=require('node:assert/strict'),path=require('node:path');
 function restore(source){
-  const current=source.replace(/\r\n/g,'\n');if(!current.includes("LOCAL_ACTIVE_WRITE_ID='active-write.v1'"))return current;
+  const current=require('./p7-cycle-source.cjs').restoreLegacyEditor(source.replace(/\r\n/g,'\n'));if(!current.includes("LOCAL_ACTIVE_WRITE_ID='active-write.v1'"))return current;
   const baseline=cp.execFileSync('git',['show','cc5da5d04a10b7b078dd116bc6852d9729af7d89:commercial.js'],{cwd:path.resolve(__dirname,'../..'),encoding:'utf8',maxBuffer:4000000}).replace(/\r\n/g,'\n');
   const p7="function isCountedCommercialPresentation(ev){return isCommercialPresentationEvent(ev)&&!(ev.opportunityVersion===1&&ev.opportunityAction==='present'&&ev.corrects)}\n";
   let result=current;

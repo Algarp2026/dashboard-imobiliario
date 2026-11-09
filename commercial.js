@@ -2437,6 +2437,7 @@ function replaceEventAndReapplyBusinessRules(oldEv,newEv){
   if(idx<0)return false;
   if(state.data.events.filter(ev=>ev.id===oldEv.id).length!==1)throw Error('A origem do evento é ambígua. A integridade exige revisão antes da edição.');
   const error=protectedEventEditError(oldEv,newEv);if(error)throw Error(error);
+  const historyError=window.THE_VIEW_CLIENT_WORKFLOW?.legacyPresentationCorrectionError?.(oldEv,newEv,state.data.events);if(historyError)throw Error(historyError);
   if(restrictedEventEdit(oldEv,newEv)){
     state.data.events[idx]={...oldEv,...Object.fromEntries(['notes','objections'].filter(key=>Object.hasOwn(newEv,key)).map(key=>[key,newEv[key]]))};
     return true;
