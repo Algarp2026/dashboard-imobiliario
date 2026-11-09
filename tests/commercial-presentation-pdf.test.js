@@ -39,6 +39,6 @@ for(const count of [1,2])for(const plants of [false,true])for(const language of 
  if(showPrice){const previous=render(base,units,plants,prices,language);const normalized=html.replace(/<title>[^<]*<\/title>/,'<title>The View · Proposta Cliente</title>').replace('  .pdf-header--no-price{grid-template-columns:1fr;gap:0}\n','');assert.equal(withoutFooter(normalized),withoutFooter(previous),'Price-enabled output outside the reviewed footer stays identical to published generator')}
  cases++;
 }
-const defaults=render(source,[fraction(21)],true,{21:543210},'pt-en',undefined);assert.ok(defaults.includes('<div class="pdf-price">'));
-const modal=source.slice(source.indexOf('function openPresentationPriceModal('),source.indexOf('function generateClientPresentationPdf('));assert.match(modal,/id="presentationPdfShowPrice" type="checkbox" checked/);assert.match(modal,/generateClientPresentationPdf\(fs, includePlants, priceMap, pdfLanguage, showPrice\)/);
-console.log('Presentation PDF: '+cases+' combinations passed; default enabled, original priced output preserved, titles, languages, plans, areas, pagination and immutable inputs');
+const defaults=render(source,[fraction(21)],true,{21:543210},'pt-en',undefined);assert.ok(!defaults.includes('<div class="pdf-price">'));
+const modal=source.slice(source.indexOf('function openPresentationPriceModal('),source.indexOf('function generateClientPresentationPdf('));assert.match(modal,/id="presentationPdfShowPrice" type="checkbox" \/>/);assert.match(modal,/generateClientPresentationPdf\(fs, includePlants, priceMap, pdfLanguage, showPrice\)/);
+console.log('Presentation PDF: '+cases+' combinations passed; price hidden by default, original opt-in priced output preserved, titles, languages, plans, areas, pagination and immutable inputs');

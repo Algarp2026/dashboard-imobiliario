@@ -3662,7 +3662,7 @@ function openPresentationPriceModal(fs, includePlants){
         </select>
       </label>
 
-      <label class="toggle-pill"><input id="presentationPdfShowPrice" type="checkbox" checked /> <span>Apresentar preço no PDF</span></label>
+      <label class="toggle-pill"><input id="presentationPdfShowPrice" type="checkbox" /> <span>Apresentar preço no PDF</span></label>
 
       <div class="table-wrap presentation-price-table-wrap">
         <table class="data-table">
@@ -3727,7 +3727,7 @@ function openPresentationPriceModal(fs, includePlants){
   });
 }
 
-function generateClientPresentationPdf(fs, include, presentationPrices={}, language='pt-en', showPrice=true){
+function generateClientPresentationPdf(fs, include, presentationPrices={}, language='pt-en', showPrice=false){
   const w=window.open('','_blank');
   if(!w){notifyUser('Autorize pop-ups para gerar o PDF.','Propostas Clientes');return}
 

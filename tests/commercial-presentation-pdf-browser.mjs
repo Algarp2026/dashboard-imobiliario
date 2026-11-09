@@ -25,7 +25,7 @@ try{
  for(const count of [1,2])for(const language of ['pt-en','pt-fr'])for(const price of [true,false])for(const plants of [true,false]){
   await page.locator('#proposalIncludePlants').setChecked(plants);
   for(const n of [21,22])await page.locator('[data-proposal-select="'+n+'"]').setChecked(n===21||count===2);
-  await page.locator('#exportClientPdf').click();const checkbox=page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true});assert.equal(await checkbox.isChecked(),true);await checkbox.setChecked(price);await page.locator('#presentationPdfLanguage').selectOption(language);
+  await page.locator('#exportClientPdf').click();const checkbox=page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true});assert.equal(await checkbox.isChecked(),false);if(price)await checkbox.check();await page.locator('#presentationPdfLanguage').selectOption(language);
   for(const n of count===1?[21]:[21,22])await page.locator('[data-presentation-price="'+n+'"]').fill(String(543210+n));
   await page.evaluate(()=>window.__loadingPersistenceTest.read());
   assert.equal(await checkbox.isChecked(),price);assert.equal(await page.locator('#presentationPdfLanguage').inputValue(),language);
@@ -56,7 +56,7 @@ try{
   await print.pdf({path:file,preferCSSPageSize:true,printBackground:true});
   results.push({file,title,language,price,plants,count,plansLoaded:plants,noEmptyPriceTrack:!price,optionsPreservedAcrossRemoteRead:true,footers});await print.close();
  }
- await page.locator('#exportClientPdf').click();await page.setViewportSize({width:390,height:844});assert.equal(await page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true}).uncheck();await page.screenshot({path:'presentation-modal-mobile.png',fullPage:true});await page.locator('#presentationPriceModal [data-close-price-modal]').last().click();
+ await page.locator('#exportClientPdf').click();await page.setViewportSize({width:390,height:844});assert.equal(await page.getByRole('checkbox',{name:'Apresentar preço no PDF',exact:true}).isChecked(),false);await page.screenshot({path:'presentation-modal-mobile.png',fullPage:true});await page.locator('#presentationPriceModal [data-close-price-modal]').last().click();
  const after=await read();assert.equal(after.revision,before.revision);assert.deepEqual(after.data,before.data);assert.equal((await(await context.request.get(origin+'/api/test-meta')).json()).writes,writes);assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),cached);assert.deepEqual(errors,[]);
  await fs.writeFile('presentation-pdf-results.json',JSON.stringify({results,errors,commercialCacheUnchanged:true,remoteWrites:0,production:false},null,2));console.log(JSON.stringify({pdfs:results.length,errors,commercialDataUnchanged:true,remoteWrites:0}));
 }finally{await context.close();await browser.close()}

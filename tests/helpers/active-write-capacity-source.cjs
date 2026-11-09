@@ -4,11 +4,12 @@ const cp=require('node:child_process'),crypto=require('node:crypto'),assert=requ
 function restore(source){
   const current=source.replace(/\r\n/g,'\n');if(!current.includes("LOCAL_ACTIVE_WRITE_ID='active-write.v1'"))return current;
   const baseline=cp.execFileSync('git',['show','cc5da5d04a10b7b078dd116bc6852d9729af7d89:commercial.js'],{cwd:path.resolve(__dirname,'../..'),encoding:'utf8',maxBuffer:4000000}).replace(/\r\n/g,'\n');
-  let result=current;
+  let result=current.replace('<input id="presentationPdfShowPrice" type="checkbox" />','<input id="presentationPdfShowPrice" type="checkbox" checked />');
   const presentation=s=>s.slice(s.indexOf('function generateClientPresentationPdf('),s.indexOf('\nfunction fractionPriceSummary('));
   const pdf=presentation(current),previousPdf=presentation(baseline);
   if(pdf!==previousPdf){
-    assert.equal(crypto.createHash('sha256').update(pdf).digest('hex'),'78f8287cb68b7a841f440b349da3ba54ac17cfebd954c5fa3a7bcd2b560985a4','Exact reviewed PDF footer update');
+    const reviewedPdf=pdf.replace("language='pt-en', showPrice=false){","language='pt-en', showPrice=true){");
+    assert.equal(crypto.createHash('sha256').update(reviewedPdf).digest('hex'),'78f8287cb68b7a841f440b349da3ba54ac17cfebd954c5fa3a7bcd2b560985a4','Exact reviewed PDF footer and default update');
     result=result.replace(pdf,previousPdf);
   }
   for(const [start,end,hash]of [
