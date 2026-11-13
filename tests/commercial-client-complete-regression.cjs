@@ -28,7 +28,7 @@ require('./helpers/loading-persistence-source.cjs')();
 require('./helpers/presentation-pdf-source.cjs')();
 assert.ok(suites.includes('comparator-belaformosa.test.js'),'Authorized analytical data changes require exact source/table preservation tests');
 const protectedPaths=['api/access.js','api/logout.js','config.js','plantas','server/session.js'];
-for(const file of protectedPaths)assert.equal(cp.execFileSync('git',['diff',file==='plantas'?'8c5026c':recoveryBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
+for(const file of protectedPaths)assert.equal(require('./helpers/apartment-plan-assets.cjs').protectedDiff(file==='plantas'?'8c5026c':recoveryBase,file),'',file);
 assert.equal(read('middleware.ts').replace(/^    "\/(?:google_commercial_integrity\.gs|commercial-integrity\.js|commercial-opportunities\.js|commercial-opportunity-ui\.js)",\n/gm,''),historical('middleware.ts'),'Only protect the new module paths; authentication behavior unchanged');
 function functions(source,indent=''){
   const matches=[...source.matchAll(new RegExp('^'+indent+'(?:async )?function (\\w+)\\(','gm'))];
@@ -59,7 +59,7 @@ const appBefore=functions(base),appAfter=functions(current);
 for(const name of ['save','backupBeforeMajucaImport','applyMajucaImportMigration','resetLocal','hasCriticalCommercialEventChange','protectedEventEditError','replaceEventAndReapplyBusinessRules','applyEventBusinessRules','exportPdf','generateClientsSummaryPdf'])assert.equal(appAfter[name],appBefore[name],'Unrelated persistence/business function frozen: '+name);
 run(['scripts/build-commercial-integrity.js','--check']);
 const commercialPaths=['commercial-client-preferences.js','commercial-fraction-recommendations.js','commercial-recommendations.js','config.js','plantas'];
-for(const file of commercialPaths)if(file==='commercial-fraction-recommendations.js')assert.equal(require('./helpers/profile-followup-source.cjs').restoreRecommendations(read(file)),historical(file),'All recommendation criteria remain exact except the explicit orientation tie-break');else assert.equal(cp.execFileSync('git',['diff',file==='plantas'?'8c5026c':mainBase,'--',file],{cwd:repo,encoding:'utf8'}),'',file);
+for(const file of commercialPaths)if(file==='commercial-fraction-recommendations.js')assert.equal(require('./helpers/profile-followup-source.cjs').restoreRecommendations(read(file)),historical(file),'All recommendation criteria remain exact except the explicit orientation tie-break');else assert.equal(require('./helpers/apartment-plan-assets.cjs').protectedDiff(file==='plantas'?'8c5026c':mainBase,file),'',file);
 const hashes=Object.fromEntries(syntax.slice(0,4).map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,file))).digest('hex')]));
 const report={base:recoveryBase,mainBase,suiteCount:suites.length,suites,syntax,protectedPathsUnchanged:protectedPaths,commercialPathsUnchanged:commercialPaths.filter(file=>file!=='commercial-fraction-recommendations.js'),reviewedRecommendationChange:'Only the exact requested full-match orientation tie-break',reviewedSyncFunctions,reviewedSourceLatencyFunctions:latencyFunctions,wholePublishedSyncBlockUnchanged:false,unmodifiedSyncFunctionsFrozen:true,backendUnchangedSincePr18:true,sharedIntegrityBundleVerified:true,hashes,productionAccess:false};
 fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'regression-results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
