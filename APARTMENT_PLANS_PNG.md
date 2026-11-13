@@ -1,5 +1,9 @@
 # Atualizacao das plantas dos apartamentos
 
+Relatorio historico da primeira entrega (`194a513`). A otimizacao posterior,
+o mapeamento WebP atual e a data de impressao estao documentados em
+[APARTMENT_PLANS_OPTIMIZATION.md](APARTMENT_PLANS_OPTIMIZATION.md).
+
 Branch local: `codex/update-apartment-plans-png`.
 Base: `f44ad5e0c5d6aceff213d8b2f6cea9b9a4ab35cf` (main, incluindo PR #36).
 Nao incorpora nem altera a PR #35.

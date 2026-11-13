@@ -44,7 +44,7 @@ for case in results:
         # PDF coordinates start at the bottom. The entire notice must be below the plan.
         footer_top = min([150] + [bounds[1] - 1 for bounds in images])
         footer = pdf_page.get_textpage().get_text_bounded(left=20, bottom=20, right=width - 20, top=footer_top)
-        expected_footer = " ".join(p["text"] for p in case["footers"][index]["paragraphs"])
+        expected_footer = " ".join(p["text"] for p in case["footers"][index]["paragraphs"]) + " " + case["footers"][index]["generated"]
         assert normalize(footer) == normalize(expected_footer), (file.name, index + 1)
         image = pdf_page.render(scale=1.5).to_pil()
         assert image.convert("L").getextrema()[0] < 128, "Blank rendered page"

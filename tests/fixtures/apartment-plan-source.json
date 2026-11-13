@@ -1,0 +1,9 @@
+{
+  "filename": "sapotransfer-65ff0d04a9c8dqA.zip",
+  "sha256": "73c6cfcb99389c71f2364d3e0792ea003f43ca3ace816271a71a964cb2b934e6",
+  "images": 32,
+  "width": 3000,
+  "height": 2222,
+  "format": "RGBA",
+  "conversion": {"format": "WebP", "lossless": true, "quality": 100, "method": 6, "exact": true}
+}

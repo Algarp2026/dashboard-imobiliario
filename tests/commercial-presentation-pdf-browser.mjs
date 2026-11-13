@@ -15,7 +15,7 @@ if(process.env.PDF_FONT_ASSETS){
   r.fulfill({contentType:'font/ttf',path:path.join(process.env.PDF_FONT_ASSETS,file)}));
 }
 await context.route(origin+'/isolated-print-render',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><html><body></body></html>'}));
-await context.addInitScript(()=>{window.print=()=>{};const open=window.open;window.open=function(...args){const p=open.apply(this,args);if(p)p.print=()=>{};return p}});
+await context.addInitScript(()=>{const RealDate=Date;window.Date=class extends RealDate{constructor(...args){super(...(args.length?args:['2026-07-15T23:30:00Z']))}};window.print=()=>{};const open=window.open;window.open=function(...args){const p=open.apply(this,args);if(p)p.print=()=>{};return p}});
 const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto(origin+'/commercial.html');await page.locator('#password').fill('View-Phase2A-Teste');await page.getByRole('button',{name:'Entrar',exact:true}).click();await page.locator('[data-open-profile="demo-0"]').waitFor();
@@ -44,10 +44,11 @@ try{
   const footers=await print.locator('.pdf-page').evaluateAll(sections=>sections.map(section=>{
     const footer=section.querySelector('footer'),box=footer.getBoundingClientRect();
     const preceding=footer.previousElementSibling.getBoundingClientRect();
-    return {paragraphs:[...footer.querySelectorAll('p')].map(p=>({lang:p.lang,text:p.textContent,size:parseFloat(getComputedStyle(p).fontSize)})),
+    return {generated:footer.querySelector('.pdf-generated-date')?.textContent,paragraphs:[...footer.querySelectorAll('p')].map(p=>({lang:p.lang,text:p.textContent,size:parseFloat(getComputedStyle(p).fontSize)})),
       bottom:box.bottom-section.getBoundingClientRect().top,gap:box.top-preceding.bottom};
   }));
   for(const footer of footers){
+    assert.equal(footer.generated,`Impresso em: 16/07/2026 · ${language==='pt-fr'?'Généré le :':'Generated on:'} 16/07/2026`);
     assert.deepEqual(footer.paragraphs.map(p=>p.lang),['pt',language.slice(3)]);
     assert.ok(footer.paragraphs.every(p=>p.size>=8*96/72-.01));
     assert.ok(footer.gap>=0&&footer.bottom<=1063,JSON.stringify({count,language,price,plants,...footer}));

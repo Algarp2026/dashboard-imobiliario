@@ -29,7 +29,7 @@ allowed.add('commercial-opportunity-ui.js');
 allowed.add('commercial-client-workspace.js');
 allowed.add('commercial-client-workspace.css');
 if(entryTests)for(const name of ['comparador.html','app.js','style.css'])allowed.add(name);
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.jpg':'image/jpeg','.pdf':'application/pdf','.png':'image/png'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.jpg':'image/jpeg','.pdf':'application/pdf','.png':'image/png','.webp':'image/webp'};
 http.createServer(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');const url=new URL(req.url,'http://127.0.0.1:'+port),name=url.pathname.slice(1)||'commercial.html';
   const reply={statusCode:200,setHeader:(key,value)=>res.setHeader(key,value),status(value){this.statusCode=value;return this},json(body){res.statusCode=this.statusCode;res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));return this}};

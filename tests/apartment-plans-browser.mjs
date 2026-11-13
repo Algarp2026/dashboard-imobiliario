@@ -83,6 +83,7 @@ try{
    for(let n=1;n<=39;n++){
     const image=maps[0][n].image,record=records.find(record=>record.path===image);
     const response=await context.request.get(origin+'/'+image);assert.equal(response.status(),200);
+    assert.match(response.headers()['content-type'],/^image\/webp/);
     assert.equal(createHash('sha256').update(await response.body()).digest('hex'),record.sha256);
     const dimensions=await page.locator('#asset').evaluate(async(img,src)=>{img.src=src;await img.decode();return[img.naturalWidth,img.naturalHeight]},origin+'/'+image);
     assert.deepEqual(dimensions,[3000,2222]);seen.add(image);
