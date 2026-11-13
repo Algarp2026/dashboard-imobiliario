@@ -1,0 +1,425 @@
+[
+  {
+    "source": "Planta_01.png",
+    "path": "plantas/planta-apartamento-01.webp",
+    "fractions": [
+      1
+    ],
+    "sha256": "10548d4a223eaaa4f01a7e4a6e6cdf403337c566a520c1506311521e4adf2637",
+    "bytes": 1955818,
+    "originalPath": "plantas/planta-apartamento-01.png",
+    "originalBytes": 11706510,
+    "originalSha256": "f2ca864d5034989dedf0f1d25b02300be7d01c58429e70ce21b5a5629e623e01",
+    "rgbaSha256": "867a55e42687ab16574947e1f524297db102955b7cbb6546a6da73fd1d0c6462"
+  },
+  {
+    "source": "Planta_02, 10, 17, 24 e 31_01.png",
+    "path": "plantas/planta-apartamento-02-10-17-24-31.webp",
+    "fractions": [
+      2,
+      10,
+      17,
+      24,
+      31
+    ],
+    "sha256": "778fec079561925f7790429b9f5781f11defae71b61344047ad3342fd2111692",
+    "bytes": 2314740,
+    "originalPath": "plantas/planta-apartamento-02-10-17-24-31.png",
+    "originalBytes": 13436428,
+    "originalSha256": "279a63d211be7414a2508d0afc85b9363031be0a4fa1f421f0428a59ff7d9dc1",
+    "rgbaSha256": "0d9040b52a44c210920a159a34eefeb9eb37785fca8946d9a374e91fa620eea9"
+  },
+  {
+    "source": "Planta_03.png",
+    "path": "plantas/planta-apartamento-03.webp",
+    "fractions": [
+      3
+    ],
+    "sha256": "9240202130e3aaf540f9733f4badc6518caebdd3c075c49180a643481267b781",
+    "bytes": 1308640,
+    "originalPath": "plantas/planta-apartamento-03.png",
+    "originalBytes": 7565274,
+    "originalSha256": "dd268ccc11197f3b3dc371fa459ec86d5eee43e48eb79b22c94c10a031098ce5",
+    "rgbaSha256": "961d5bbf9e94b9da9e2b6d3ed5fd3ca028edb30f95ebc175c0e9dea18c5dc2fd"
+  },
+  {
+    "source": "Planta_04.png",
+    "path": "plantas/planta-apartamento-04.webp",
+    "fractions": [
+      4
+    ],
+    "sha256": "486953c649af6464d96a2157482a2f34b4241419da3d0e7d3e19863a836f518c",
+    "bytes": 1671882,
+    "originalPath": "plantas/planta-apartamento-04.png",
+    "originalBytes": 9573485,
+    "originalSha256": "430c3c92c65e1a2dba2c5746b845f577ac46fb3e86d8a185e9a3d9a58c4c77a9",
+    "rgbaSha256": "f263d052e9fd2e208f62ed472a4f39f09e4dde23e02ac7d89123b67e2f123163"
+  },
+  {
+    "source": "Planta_05.png",
+    "path": "plantas/planta-apartamento-05.webp",
+    "fractions": [
+      5
+    ],
+    "sha256": "f55c2222c064c90aeba4bcb3f78106458ff85c24958522cb46b92af6ff6513e1",
+    "bytes": 1586442,
+    "originalPath": "plantas/planta-apartamento-05.png",
+    "originalBytes": 9195976,
+    "originalSha256": "a80c47544a6eb07b396ca9764b9f2268fd995656cc565965ff02160344421008",
+    "rgbaSha256": "8ebb97cc5d3282cf38b0123968aeebf5dab4733a31f93d92b883e5a01db823c3"
+  },
+  {
+    "source": "Planta_06.png",
+    "path": "plantas/planta-apartamento-06.webp",
+    "fractions": [
+      6
+    ],
+    "sha256": "9618574eb47c5f2eb6fa965fe359a498b7c7588237e8b798b1374bffc7910e50",
+    "bytes": 2159704,
+    "originalPath": "plantas/planta-apartamento-06.png",
+    "originalBytes": 12876440,
+    "originalSha256": "dbe3ede1d2b5c0476414d0bdcc9acb487759f8a3e2a8653d99a7fdc123e68a84",
+    "rgbaSha256": "32322cf841a5d3ed0761de8874e52625a6ddb3987bd04d8a6a0cff717ee54d7e"
+  },
+  {
+    "source": "Planta_07 e 15.png",
+    "path": "plantas/planta-apartamento-07-15.webp",
+    "fractions": [
+      7,
+      15
+    ],
+    "sha256": "97e9a7e1ba7711fc1ce3e41cda9a527e0ae7048e7793294bb6bd3e27348065c8",
+    "bytes": 1901020,
+    "originalPath": "plantas/planta-apartamento-07-15.png",
+    "originalBytes": 11515044,
+    "originalSha256": "a547486004b641248d1861c7b5393ca7545c4193ec3e11138a43f10121097298",
+    "rgbaSha256": "30e68985d7983096e4e42c49b86b17c08078db2c476890c88d93f1374cd2db64"
+  },
+  {
+    "source": "Planta_08.png",
+    "path": "plantas/planta-apartamento-08.webp",
+    "fractions": [
+      8
+    ],
+    "sha256": "0c770d27cd40540180421aa56ff5c19657e8c431e6e37ef80bdb7613c4300eaf",
+    "bytes": 1033662,
+    "originalPath": "plantas/planta-apartamento-08.png",
+    "originalBytes": 6157413,
+    "originalSha256": "ce9a238d257d110cf7de6dc51e17cfc51e9ba58fc6b4903c11c8b73cd7f95a9d",
+    "rgbaSha256": "32dc70ea7b195a7344c87cd9f2b88d1279e91b353f742c340a5f4ff0aaed99bb"
+  },
+  {
+    "source": "Planta_09 e 16.png",
+    "path": "plantas/planta-apartamento-09-16.webp",
+    "fractions": [
+      9,
+      16
+    ],
+    "sha256": "58c71f3b65baea0a187ab4e7ad76bc1e831411e6431e9831b97f11eac22e3346",
+    "bytes": 2946790,
+    "originalPath": "plantas/planta-apartamento-09-16.png",
+    "originalBytes": 17642683,
+    "originalSha256": "d4683e5603459f29b0bed08e580e514532c97656ebf75792d8ae1d06d4ac8918",
+    "rgbaSha256": "7adf8c08cf74df1f2ec32f25806f1532e6fd11bdf623a583b7a2469ca6b8e4fe"
+  },
+  {
+    "source": "Planta_11.png",
+    "path": "plantas/planta-apartamento-11.webp",
+    "fractions": [
+      11
+    ],
+    "sha256": "043f29fcdaf313a10631776f4e5090ff313d165e797a63fb51ce1e19706e5d67",
+    "bytes": 1235554,
+    "originalPath": "plantas/planta-apartamento-11.png",
+    "originalBytes": 7448243,
+    "originalSha256": "1ecfe4c2d1bd569e625182b247a8239bf549f803a4ee7b1a212f586a1b8d10dd",
+    "rgbaSha256": "0b353b4ffd326ce51bf69b76367cceb45087ee1bda34c0bb3a41fb858e3a6161"
+  },
+  {
+    "source": "Planta_12.png",
+    "path": "plantas/planta-apartamento-12.webp",
+    "fractions": [
+      12
+    ],
+    "sha256": "0d6549e1a77e7c08bb9a87e14acd5bcb197796e886a2b5e26fb60b395a74a148",
+    "bytes": 1577026,
+    "originalPath": "plantas/planta-apartamento-12.png",
+    "originalBytes": 9378770,
+    "originalSha256": "e1fbdd4c53ed6d202192a89a85b3547d0620c5a52d6363eb3dfb4ef50dd19e87",
+    "rgbaSha256": "de9bfded80db6346575773aa73f96864e06eaa79c93e076f221576656d8be625"
+  },
+  {
+    "source": "Planta_13.png",
+    "path": "plantas/planta-apartamento-13.webp",
+    "fractions": [
+      13
+    ],
+    "sha256": "8489ad9deaaf9f519466f0857b7ecfc505ad4fe404e1ac5249b2c26a64028faf",
+    "bytes": 1558428,
+    "originalPath": "plantas/planta-apartamento-13.png",
+    "originalBytes": 9179536,
+    "originalSha256": "331e597418462a6e30c367d0b99b7cde9c59fcd5b2729fd9b20158e7fad28cbf",
+    "rgbaSha256": "754b8c04d9ab99a5e36160746472147089dff0d8caed42a9b7aae8206e8ac809"
+  },
+  {
+    "source": "Planta_14.png",
+    "path": "plantas/planta-apartamento-14.webp",
+    "fractions": [
+      14
+    ],
+    "sha256": "e0d3aa9e7515b1dfe25613a5a053ed6df9d43f33985257d27695a66653251eca",
+    "bytes": 2169304,
+    "originalPath": "plantas/planta-apartamento-14.png",
+    "originalBytes": 12887737,
+    "originalSha256": "e04f0de217a1cf213cf35c1ba6cfc06f6427e944cd62285e25861d75cda0ecbf",
+    "rgbaSha256": "165fcf4c977b54739a8b78d56b5d494e544356865487ff1a4a305148ad167596"
+  },
+  {
+    "source": "Planta_18.png",
+    "path": "plantas/planta-apartamento-18.webp",
+    "fractions": [
+      18
+    ],
+    "sha256": "f639227329c2276824d92270e0232d33942d60570b173bbeefe4b180b29f94b4",
+    "bytes": 1250006,
+    "originalPath": "plantas/planta-apartamento-18.png",
+    "originalBytes": 7460041,
+    "originalSha256": "753cb0b83bee8a46f658762be483fb8728912481c7885d5b79f3afe51ba34f17",
+    "rgbaSha256": "391f4f01fa162981caf49eaba5297233d148a210937635eb9f967714eb8a69a3"
+  },
+  {
+    "source": "Planta_19.png",
+    "path": "plantas/planta-apartamento-19.webp",
+    "fractions": [
+      19
+    ],
+    "sha256": "a6a15c3dcc76f5f5da3ee9af731d821d2f27b96a5e0ff454d2dc14c07c8ca9bf",
+    "bytes": 1312192,
+    "originalPath": "plantas/planta-apartamento-19.png",
+    "originalBytes": 7638836,
+    "originalSha256": "cd134f5904e4e049208e6d79b7d85c82e2f259d9f19249ada5fe4c246a7bd038",
+    "rgbaSha256": "92e61f7628f9161d759d903e0dba26d54ebf649e183781a6e3ade16ff8b112fc"
+  },
+  {
+    "source": "Planta_20.png",
+    "path": "plantas/planta-apartamento-20.webp",
+    "fractions": [
+      20
+    ],
+    "sha256": "7b8f6c90652e4146a92c7930a41df749b8541c85ed7e4db1fd6fa25d2db1f727",
+    "bytes": 1269160,
+    "originalPath": "plantas/planta-apartamento-20.png",
+    "originalBytes": 7322147,
+    "originalSha256": "67681197be520eaecc6a61e2bca75a2331f25616fa1087a4531c9488ebf728a4",
+    "rgbaSha256": "b731c5163097fa6a662927e6c4939372ce0bbf47d07f97b56eb69033d11d5838"
+  },
+  {
+    "source": "Planta_21.png",
+    "path": "plantas/planta-apartamento-21.webp",
+    "fractions": [
+      21
+    ],
+    "sha256": "57ad780cbee4c7d0fcd5880814c43d5f140f804f69dd96c465e49bfc8ec03d25",
+    "bytes": 1931172,
+    "originalPath": "plantas/planta-apartamento-21.png",
+    "originalBytes": 11186597,
+    "originalSha256": "0acbbae170febd457ca352f940ea3fc34fcf73c4afe286adfca20d879c080069",
+    "rgbaSha256": "3fff24867e4c57b0a44a289f57cce9937ff30d9c4dd543d4cf8812851e4486f6"
+  },
+  {
+    "source": "Planta_22.png",
+    "path": "plantas/planta-apartamento-22.webp",
+    "fractions": [
+      22
+    ],
+    "sha256": "04136db737715cb5c724a1e08b6a55e38a79c12e6f1801ff93fb5c161c1050bc",
+    "bytes": 1938254,
+    "originalPath": "plantas/planta-apartamento-22.png",
+    "originalBytes": 11596545,
+    "originalSha256": "7653e32c93e0ab756d0d370e1c5db455f22ddb32958384f8be9d3e4509eb7986",
+    "rgbaSha256": "f91d9d6397eef2add8ad51470417b32199b7c49f234d47607994c77264080980"
+  },
+  {
+    "source": "Planta_23 e 30.png",
+    "path": "plantas/planta-apartamento-23-30.webp",
+    "fractions": [
+      23,
+      30
+    ],
+    "sha256": "4858f450f3dd54107a0c0301cf1dc4653baec50f06259a7f7c209ed14cab4e10",
+    "bytes": 2107310,
+    "originalPath": "plantas/planta-apartamento-23-30.png",
+    "originalBytes": 12610520,
+    "originalSha256": "92f52150408cee4ac6d2d7377d695d26ad0671630af3c3231693de05d874cdd4",
+    "rgbaSha256": "8e681bdb797fb69e2cf9631a04a1ae3f78cd859bc76ea10b3670c191b24f2fe0"
+  },
+  {
+    "source": "Planta_25.png",
+    "path": "plantas/planta-apartamento-25.webp",
+    "fractions": [
+      25
+    ],
+    "sha256": "0faa315e0d8e9a882987df87d2b6f092bf1ba8b7208e8573c67fc663523a776d",
+    "bytes": 1332414,
+    "originalPath": "plantas/planta-apartamento-25.png",
+    "originalBytes": 7667414,
+    "originalSha256": "9aa495c4dfe80a7a5b718da1399bcf6a12dc654697bfc916a6e5266bc918e492",
+    "rgbaSha256": "f9c1d7f60d501ffa3f32e91510e0449afd1caf709f42420945dbc287642065f9"
+  },
+  {
+    "source": "Planta_26.png",
+    "path": "plantas/planta-apartamento-26.webp",
+    "fractions": [
+      26
+    ],
+    "sha256": "ad164df0344aede3c4257341270185e9a3b38ab5e842b33cffdcd2e69ef8c9a2",
+    "bytes": 1901312,
+    "originalPath": "plantas/planta-apartamento-26.png",
+    "originalBytes": 11272446,
+    "originalSha256": "f4e2ed276e1751ceee72b62e17faeea35961c2abc59725dd4f112299e1872823",
+    "rgbaSha256": "48eb54704e91bf451ace87d592dde8c4a468d753c964d9cd9490865a61ddf345"
+  },
+  {
+    "source": "Planta_27.png",
+    "path": "plantas/planta-apartamento-27.webp",
+    "fractions": [
+      27
+    ],
+    "sha256": "5d5fa8df77b52ad6fb87dfc9a5134054ff8893e53acf8a75de294904e1d1674e",
+    "bytes": 1560076,
+    "originalPath": "plantas/planta-apartamento-27.png",
+    "originalBytes": 9026133,
+    "originalSha256": "6c83ccc968c2b43d7bbb0a04e841371c8c00c00ea87e49b20d343c30ca10e02f",
+    "rgbaSha256": "f354d3647fb43bc54080b145b113efc1a7da03687b65a6ac3d6ed4c3b6223c38"
+  },
+  {
+    "source": "Planta_28.png",
+    "path": "plantas/planta-apartamento-28.webp",
+    "fractions": [
+      28
+    ],
+    "sha256": "f4a1664c97254734e87a39f14a18a815764d36f268cf468e23384190908272dc",
+    "bytes": 1649470,
+    "originalPath": "plantas/planta-apartamento-28.png",
+    "originalBytes": 9450687,
+    "originalSha256": "1315c724e4cb526373244aca007be7d07d6c62acc5b946ab701dc873f70093b7",
+    "rgbaSha256": "e6a2fe3d497729e84a2474502202849f92a364d61ce1a5f2a46a3768bd2542db"
+  },
+  {
+    "source": "Planta_29.png",
+    "path": "plantas/planta-apartamento-29.webp",
+    "fractions": [
+      29
+    ],
+    "sha256": "961a2555d89d8ae3a14b1027db124ae03216fe993903fc27df86815bfa883cc9",
+    "bytes": 1383502,
+    "originalPath": "plantas/planta-apartamento-29.png",
+    "originalBytes": 8357715,
+    "originalSha256": "33323191c239b827c09ee42db1259e324bdd5e0ebac439cfe028d7a27f3012f8",
+    "rgbaSha256": "bd61d4497ef2e8294e0bc4ed27a94f221f31afb9a21f7e0eb793ea98ab8aa029"
+  },
+  {
+    "source": "Planta_32.png",
+    "path": "plantas/planta-apartamento-32.webp",
+    "fractions": [
+      32
+    ],
+    "sha256": "233c63c7cceb370fe594f375f326d88840992db7fd728b56f477d24f99d0e26e",
+    "bytes": 1276006,
+    "originalPath": "plantas/planta-apartamento-32.png",
+    "originalBytes": 7607658,
+    "originalSha256": "716c0c4e559957fb6ae3faed6842fe5fdf5824cafde18d17380c4fde714939da",
+    "rgbaSha256": "e6efb6e2e903adbb1777cc575bb3db3929808d02a92979f0666192ba82908f45"
+  },
+  {
+    "source": "Planta_33.png",
+    "path": "plantas/planta-apartamento-33.webp",
+    "fractions": [
+      33
+    ],
+    "sha256": "1d403c2591a4fb56c1ce533aba2d128fae0e8561abfe8e4e28216a98c30d4eaa",
+    "bytes": 1769470,
+    "originalPath": "plantas/planta-apartamento-33.png",
+    "originalBytes": 10401117,
+    "originalSha256": "4099bde687797992ab14f32766acd2c5ee982bbfcae6d18b34978156be9f4bca",
+    "rgbaSha256": "3cae56eb1f5d70099e5fc42e6830e4e2b30b35ba56c710abc307b888fcfebae8"
+  },
+  {
+    "source": "Planta_34.png",
+    "path": "plantas/planta-apartamento-34.webp",
+    "fractions": [
+      34
+    ],
+    "sha256": "cb79138eec9a44ddcf77073b7131cbcbbaaf8ccc0476ebb17ccfb23a98a1d581",
+    "bytes": 2379906,
+    "originalPath": "plantas/planta-apartamento-34.png",
+    "originalBytes": 14046752,
+    "originalSha256": "1c698759703aad7721820b7ea4375046636f3b4bfe45f45fc3579cb736b2c028",
+    "rgbaSha256": "81ef49c4ade3c73a035eefaac82f4ad914c1c10333585874e6f9eb275a3c44f8"
+  },
+  {
+    "source": "Planta_35.png",
+    "path": "plantas/planta-apartamento-35.webp",
+    "fractions": [
+      35
+    ],
+    "sha256": "8da7982bb7ec8165558ea9e3b0f32806207e340c710d69bd649706c194f5f250",
+    "bytes": 2262884,
+    "originalPath": "plantas/planta-apartamento-35.png",
+    "originalBytes": 13597749,
+    "originalSha256": "870acf7d3c3364849c2270cce848ad93d6c408554deac6a7b272b8e3660179f8",
+    "rgbaSha256": "a9bfa0aabc1cad8d686b00090241ff0434ba798f8932eb5d182fd53e66bf57aa"
+  },
+  {
+    "source": "Planta_36.png",
+    "path": "plantas/planta-apartamento-36.webp",
+    "fractions": [
+      36
+    ],
+    "sha256": "6314d186727c5036ef6dbcd2c885291c351c471d455a13e9d0d3759a88c92c03",
+    "bytes": 2962224,
+    "originalPath": "plantas/planta-apartamento-36.png",
+    "originalBytes": 17708349,
+    "originalSha256": "b7f68f91f80d62e43a32a8660ff0ab210ed89fa48d1942c816e514e178519d2f",
+    "rgbaSha256": "cb6c6781c720583eeeed87f31b704386a322879f250f9553d60d2428f2be2fef"
+  },
+  {
+    "source": "Planta_37.png",
+    "path": "plantas/planta-apartamento-37.webp",
+    "fractions": [
+      37
+    ],
+    "sha256": "168ed4cdf03418c8a7a88a8cd251ba4632cfc6b0b5b752d94aedf1fa5247b1de",
+    "bytes": 2278270,
+    "originalPath": "plantas/planta-apartamento-37.png",
+    "originalBytes": 13386943,
+    "originalSha256": "92886cae4b50635fc4e6bea105d96576778dc647523befdc07d00b3c4ee019f5",
+    "rgbaSha256": "83a2e29f49d646b7fa3891c5708e67ee90ffbbce3248ed379341e88a34fe8521"
+  },
+  {
+    "source": "Planta_38.png",
+    "path": "plantas/planta-apartamento-38.webp",
+    "fractions": [
+      38
+    ],
+    "sha256": "8649f18320d78ebaa7824da736675ab3dc8660df28fed1399bc1ac17525d8bff",
+    "bytes": 1349222,
+    "originalPath": "plantas/planta-apartamento-38.png",
+    "originalBytes": 7823111,
+    "originalSha256": "abf637e6915b570ad63feb8b1d47987ec525c001d45fd4c54030494e4becc703",
+    "rgbaSha256": "ca115e8a230f079ada102dd49df610525498478eb7abc02457611eb90ef34427"
+  },
+  {
+    "source": "Planta_39.png",
+    "path": "plantas/planta-apartamento-39.webp",
+    "fractions": [
+      39
+    ],
+    "sha256": "2144d6dc83a73ada9d0533e8834e47df73c7645d0f8d3b6ef22b6ecdca6c4c27",
+    "bytes": 2631966,
+    "originalPath": "plantas/planta-apartamento-39.png",
+    "originalBytes": 15613226,
+    "originalSha256": "254080a0a6b1af85a5ac997ead358ebb294f061443d2b20af3651ca45dcac6c1",
+    "rgbaSha256": "71d20c184efd9b6e5021916939913ccd02dc0af0f23cb8af698d8039736e0167"
+  }
+]

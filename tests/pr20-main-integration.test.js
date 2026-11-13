@@ -24,7 +24,7 @@ for(const file of changed.filter(file=>!combined.has(file))){
 }
 require('./helpers/presentation-pdf-source.cjs')();
 for(const file of ['style.css','scripts/data_workbook.py'])assert.equal(cp.execFileSync('git',['diff',reviewed,'--',file],{encoding:'utf8'}),'','Reviewed PR20 must remain exact: '+file);
-const analyticalApp=fs.readFileSync('app.js','utf8');
+const analyticalApp=require('./helpers/apartment-plan-assets.cjs').restoreMap(fs.readFileSync('app.js','utf8'),'app.js');
 assert.equal(analyticalApp.replace(/\r\n/g,'\n'),show('c19e297','app.js').replace(/\r\n/g,'\n')
  .replace('Decisão da gestão; não altera preços comerciais','Avaliação técnica independente; não altera preços comerciais')
  .replace("metric('Preço base'","metric('PVP original'")
